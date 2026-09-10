@@ -15,7 +15,7 @@ extension GetHabitCollection on Isar {
 
 const HabitSchema = CollectionSchema(
   name: r'Habit',
-  id: 3896650575830519340,
+  id: 5540497782411228,
   properties: {
     r'category': PropertySchema(
       id: 0,

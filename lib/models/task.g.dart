@@ -15,7 +15,7 @@ extension GetTaskCollection on Isar {
 
 const TaskSchema = CollectionSchema(
   name: r'Task62620',
-  id: 1546096356695618699,
+  id: 5865284134909238,
   properties: {
     r'activityId': PropertySchema(
       id: 0,
