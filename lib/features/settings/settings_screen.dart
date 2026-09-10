@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../models/app_settings.dart';
 import '../../providers/providers.dart';
-import '../../services/gcal_service.dart';
 import '../../services/secure_storage_service.dart';
 import '../../services/firebase_sync_service.dart';
 import '../../widgets/google_auth_dialog.dart';
@@ -1320,7 +1319,7 @@ class _GCalTileState extends ConsumerState<_GCalTile> {
               backgroundImage: NetworkImage(user.photoURL!),
             )
           : const Text('📅', style: TextStyle(fontSize: 22)),
-      title: Text(signedIn ? 'Terhubung: ${user?.displayName ?? "Akun Google"}' : 'Hubungkan Google Calendar'),
+      title: Text(signedIn ? 'Terhubung: ${user.displayName ?? "Akun Google"}' : 'Hubungkan Google Calendar'),
       subtitle: Text(
         signedIn
             ? '$userEmail • Sinkronisasi Cloud Firestore & Calendar aktif'

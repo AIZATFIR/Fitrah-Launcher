@@ -5,7 +5,6 @@ import 'package:focus_clock/features/sadar/sadar_home_screen.dart';
 import 'package:focus_clock/features/sadar/widgets/daily_fulfillment_banner.dart';
 import 'package:focus_clock/features/sadar/widgets/horizontal_timeline_grid.dart';
 import 'package:focus_clock/models/habit.dart';
-import 'package:focus_clock/providers/sadar_providers.dart';
 
 void main() {
   group('Sadar UI Widget Tests', () {

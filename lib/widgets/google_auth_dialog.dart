@@ -1,5 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme.dart';
 import '../providers/providers.dart';
 import '../services/firebase_sync_service.dart';
-import '../services/gcal_service.dart';
 
 Future<void> showGoogleAuthDialog(BuildContext context, WidgetRef ref) async {
   SystemSound.play(SystemSoundType.click);
