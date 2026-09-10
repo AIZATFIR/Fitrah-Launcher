@@ -189,25 +189,46 @@ class SadarRepository {
         .findAll();
   }
 
+  Future<Habit?> getHabitById(int id) async {
+    if (_isar == null) return _memHabits[id];
+    return _isar.habits.get(id);
+  }
+
   Future<HabitEntry> recordEntryStatus({
     required int habitId,
     required String dateString,
     required HabitStatus status,
     int? valueCompleted,
+    int? targetSnapshot,
+    int? actualDurationMinutes,
+    String? source,
+    DateTime? completedAt,
     String? note,
   }) async {
+    final now = DateTime.now();
+    final habit = await getHabitById(habitId);
+    final resolvedTargetSnapshot = targetSnapshot ?? habit?.target ?? 0;
+    final resolvedActualDuration = actualDurationMinutes ?? valueCompleted ?? (status == HabitStatus.yes ? resolvedTargetSnapshot : 0);
+    final resolvedSource = source ?? 'manual';
+    final resolvedCompletedAt = completedAt ?? (status == HabitStatus.yes ? now : null);
+
     if (_isar == null) {
       final key = '$habitId-$dateString';
       final existing = _memEntries[key];
       final entry = existing ?? (HabitEntry()
         ..id = _memEntryIdCounter++
         ..habitId = habitId
-        ..dateString = dateString);
+        ..dateString = dateString
+        ..createdAt = now);
 
       entry.status = status;
       if (valueCompleted != null) entry.valueCompleted = valueCompleted;
+      entry.targetSnapshot = entry.targetSnapshot > 0 ? entry.targetSnapshot : resolvedTargetSnapshot;
+      entry.actualDurationMinutes = resolvedActualDuration;
+      entry.completedAt = resolvedCompletedAt;
+      entry.source = resolvedSource;
       if (note != null) entry.note = note;
-      entry.updatedAt = DateTime.now();
+      entry.updatedAt = now;
 
       _memEntries[key] = entry;
       _entriesStreamCtrl.add(null);
@@ -223,12 +244,17 @@ class SadarRepository {
 
       final entry = existing ?? (HabitEntry()
         ..habitId = habitId
-        ..dateString = dateString);
+        ..dateString = dateString
+        ..createdAt = now);
 
       entry.status = status;
       if (valueCompleted != null) entry.valueCompleted = valueCompleted;
+      entry.targetSnapshot = entry.targetSnapshot > 0 ? entry.targetSnapshot : resolvedTargetSnapshot;
+      entry.actualDurationMinutes = resolvedActualDuration;
+      entry.completedAt = resolvedCompletedAt;
+      entry.source = resolvedSource;
       if (note != null) entry.note = note;
-      entry.updatedAt = DateTime.now();
+      entry.updatedAt = now;
 
       await _isar.habitEntrys.put(entry);
       return entry;

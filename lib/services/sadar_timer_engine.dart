@@ -187,7 +187,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _startTicker();
   }
 
-  void finishEarly() {
+  Future<void> finishEarly() async {
+    if (!state.isActive) return;
     _ticker?.cancel();
     state = TimerState(
       habitId: state.habitId,
@@ -197,7 +198,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       status: TimerStateStatus.completed,
       isFloating: state.isFloating,
     );
-    _completeSession(autoRecord: true);
+    await _completeSession(autoRecord: true);
   }
 
   void cancel() {
@@ -212,34 +213,50 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     }
   }
 
+  bool _isCompleting = false;
+
   Future<void> _completeSession({bool autoRecord = true}) async {
-    _ticker?.cancel();
-    await _repo.clearTimerSession();
+    if (_isCompleting) return;
+    _isCompleting = true;
 
     try {
-      SystemSound.play(SystemSoundType.alert);
-      HapticFeedback.heavyImpact();
-    } catch (_) {}
+      _ticker?.cancel();
+      await _repo.clearTimerSession();
 
-    if (_notifier != null && state.habitName.isNotEmpty) {
-      _notifier.showNotification(
-        id: 8888,
-        title: 'Selesai: ${state.habitName}',
-        body: 'Waktu fokus selesai. Satu tindakan bermakna telah terpenuhi hari ini.',
-      );
-    }
+      try {
+        SystemSound.play(SystemSoundType.alert);
+        HapticFeedback.heavyImpact();
+      } catch (_) {}
 
-    if (autoRecord && state.habitId > 0) {
-      final now = DateTime.now();
-      final dateStr = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-      final completedMinutes = (state.targetSeconds / 60).ceil();
+      if (_notifier != null && state.habitName.isNotEmpty) {
+        _notifier.showNotification(
+          id: 8888,
+          title: 'Selesai: ${state.habitName}',
+          body: 'Waktu fokus selesai. Satu tindakan bermakna telah terpenuhi hari ini.',
+        );
+      }
 
-      await _repo.recordEntryStatus(
-        habitId: state.habitId,
-        dateString: dateStr,
-        status: HabitStatus.yes,
-        valueCompleted: completedMinutes,
-      );
+      if (autoRecord && state.habitId > 0) {
+        final now = DateTime.now();
+        // PRD 3 §75: Midnight Boundary Resolution
+        // Attribute the session to the date it was started
+        final sessionStartDate = _startedAt ?? now;
+        final dateStr = '${sessionStartDate.year.toString().padLeft(4, '0')}-${sessionStartDate.month.toString().padLeft(2, '0')}-${sessionStartDate.day.toString().padLeft(2, '0')}';
+        final completedMinutes = (state.targetSeconds / 60).ceil();
+
+        await _repo.recordEntryStatus(
+          habitId: state.habitId,
+          dateString: dateStr,
+          status: HabitStatus.yes,
+          valueCompleted: completedMinutes,
+          targetSnapshot: completedMinutes,
+          actualDurationMinutes: completedMinutes,
+          source: 'timer',
+          completedAt: now,
+        );
+      }
+    } finally {
+      _isCompleting = false;
     }
   }
 

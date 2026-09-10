@@ -167,5 +167,52 @@ void main() {
       active = await repo.getActiveTimerSession();
       expect(active, isNull);
     });
+
+    test('Historical immutability: changing habit target does not alter past entry targetSnapshot (PRD 3 §59, §60)', () async {
+      final habit = Habit()
+        ..name = 'French Practice'
+        ..target = 15
+        ..unit = HabitUnit.min
+        ..createdAt = DateTime.now();
+
+      final habitId = await repo.upsertHabit(habit);
+
+      // Record entry when target is 15 min
+      await repo.recordEntryStatus(
+        habitId: habitId,
+        dateString: '2026-09-01',
+        status: HabitStatus.yes,
+      );
+
+      final entryBefore = (await repo.getEntriesForDateRange('2026-09-01', '2026-09-01')).first;
+      expect(entryBefore.targetSnapshot, 15);
+
+      // User later updates habit target to 45 min
+      habit.target = 45;
+      await repo.upsertHabit(habit);
+
+      // Historical entry must remain untouched with targetSnapshot == 15
+      final entryAfter = (await repo.getEntriesForDateRange('2026-09-01', '2026-09-01')).first;
+      expect(entryAfter.targetSnapshot, 15);
+    });
+
+    test('Duplicate entry status recording is idempotent (PRD 3 §16)', () async {
+      final habit = Habit()
+        ..name = 'Morning Walk'
+        ..target = 30
+        ..createdAt = DateTime.now();
+
+      final habitId = await repo.upsertHabit(habit);
+
+      // Record multiple times for the same habit and date
+      await repo.recordEntryStatus(habitId: habitId, dateString: '2026-09-05', status: HabitStatus.yes);
+      await repo.recordEntryStatus(habitId: habitId, dateString: '2026-09-05', status: HabitStatus.yes);
+      await repo.recordEntryStatus(habitId: habitId, dateString: '2026-09-05', status: HabitStatus.yes);
+
+      final entries = await repo.getEntriesForDateRange('2026-09-05', '2026-09-05');
+      expect(entries.length, 1);
+      expect(entries.first.habitId, habitId);
+      expect(entries.first.status, HabitStatus.yes);
+    });
   });
 }
