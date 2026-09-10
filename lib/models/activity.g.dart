@@ -15,7 +15,7 @@ extension GetActivityCollection on Isar {
 
 const ActivitySchema = CollectionSchema(
   name: r'Activity81850',
-  id: 7577928743684601,
+  id: 5438919079352502174,
   properties: {
     r'ampmHalf': PropertySchema(
       id: 0,
@@ -126,7 +126,7 @@ const ActivitySchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'date15200': IndexSchema(
-      id: 3846558610796325,
+      id: -1428298122893021244,
       name: r'date15200',
       unique: false,
       replace: false,
@@ -139,7 +139,7 @@ const ActivitySchema = CollectionSchema(
       ],
     ),
     r'groupId210300': IndexSchema(
-      id: 5336215921218833,
+      id: -5903386495188871263,
       name: r'groupId210300',
       unique: false,
       replace: false,
