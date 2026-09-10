@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 
@@ -12,7 +10,6 @@ import '../../models/activity.dart';
 import '../../models/preset.dart';
 import '../../providers/providers.dart';
 import '../activity_detail/activity_detail_sheet.dart';
-import '../ai_chat/voice_assistant_sheet.dart';
 import '../ai_chat/storytelling_sheet.dart';
 import '../presets/presets_tab.dart';
 import '../../widgets/command_palette.dart';
@@ -20,7 +17,6 @@ import '../../widgets/hotkeys_modal.dart';
 import '../../services/firebase_sync_service.dart';
 import 'analog_clock_face.dart';
 import 'widgets/now_next_card.dart';
-import 'widgets/focus_session_view.dart';
 
 /// Returns a Preset if user picked one, null if user chose "Custom".
 /// Returns false (via pop with no result) if user dismissed.
@@ -196,7 +192,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   int? _lastPanMinute;
   bool _isPrecisionMode = false;
   bool _hasDragged = false;
-  bool _isExiting = false;
+  final bool _isExiting = false;
   int? _dragClickMinute;
   int _dragValue = 0;
   
@@ -278,15 +274,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     return false;
   }
 
-  void _exitApp() {
-    setState(() {
-      _isExiting = true;
-    });
-    _exitCtrl.forward().then((_) {
-      SystemNavigator.pop();
-      exit(0);
-    });
-  }
+
 
   ({int start, int end})? _getFreeInterval(int hoverMin, int slotStart, int slotEnd, List<Activity> activities, {required bool is24h}) {
     List<({int start, int end})> freeIntervals = [
@@ -645,6 +633,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           isScrollControlled: true,
                           builder: (_) => const StorytellingSheet(),
                         );
+                      } else if (val == 'copy_day') {
+                        _showCopyScheduleDialog(context, ref.read(currentDateProvider));
                       } else if (val == 'command') {
                         showDialog(
                           context: context,
@@ -665,6 +655,16 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             Icon(Icons.auto_stories_rounded, size: 16, color: AppPalette.accent),
                             SizedBox(width: 10),
                             Text('Routine Templates', style: TextStyle(fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'copy_day',
+                        child: Row(
+                          children: [
+                            Icon(Icons.copy_rounded, size: 16, color: AppPalette.accent),
+                            SizedBox(width: 10),
+                            Text('Copy Schedule', style: TextStyle(fontSize: 13)),
                           ],
                         ),
                       ),
@@ -1166,7 +1166,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final endVal = _dragEndNotifier.value!;
     final end = (endVal - start) < 5 ? start + 5 : endVal;
     final date = ref.read(currentDateProvider);
-    final now = DateTime.now();
 
     _dragStartNotifier.value = null;
     _dragEndNotifier.value = null;

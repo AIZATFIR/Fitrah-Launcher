@@ -88,9 +88,9 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
 
     _titleCtrl = TextEditingController(text: isGenericDefault ? '' : a.title);
     _descCtrl = TextEditingController(
-        text: (isGenericDefault || (a.description?.contains('created via Simple Mode') ?? false))
+        text: (isGenericDefault || a.description.contains('created via Simple Mode'))
             ? ''
-            : (a.description ?? ''));
+            : a.description);
 
     _startDt = toDateTime(a.date, a.ampmHalf, a.startMinute);
     _endDt = toDateTime(a.date, a.ampmHalf, a.endMinute);

@@ -94,4 +94,18 @@ class NotificationService {
       await _plugin.cancel(id);
     } catch (_) {}
   }
+
+  /// Show an instant notification (e.g. for Sadar timer completion)
+  Future<void> showNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    if (!_ready) return;
+    try {
+      await _plugin.show(id, title, body, _details);
+    } catch (e) {
+      if (kDebugMode) debugPrint('showNotification failed: $e');
+    }
+  }
 }

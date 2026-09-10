@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:focus_clock/data/repositories/sadar_repository.dart';
 import 'package:focus_clock/models/habit.dart';
 import 'package:focus_clock/models/habit_entry.dart';
+import 'package:focus_clock/models/daily_reflection.dart';
+import 'package:focus_clock/models/timer_session.dart';
 
 void main() {
   group('SadarRepository Tests', () {
@@ -114,6 +116,56 @@ void main() {
       final stats = await repo.getAwarenessStats();
       expect(stats.habitCompletedCounts[h1.id], 3);
       expect(stats.habitCompletedCounts[h2.id] ?? 0, 0);
+    });
+
+    test('getWhatIRepeat aggregates repeated days and minutes', () async {
+      final habits = await repo.getHabits();
+      final h = habits.first;
+
+      await repo.recordEntryStatus(habitId: h.id, dateString: '2026-09-01', status: HabitStatus.yes, valueCompleted: 20);
+      await repo.recordEntryStatus(habitId: h.id, dateString: '2026-09-02', status: HabitStatus.yes, valueCompleted: 15);
+
+      final repeatStats = await repo.getWhatIRepeat();
+      expect(repeatStats.isNotEmpty, true);
+      final stat = repeatStats.firstWhere((s) => s.habit.id == h.id);
+      expect(stat.totalDays, 2);
+      expect(stat.totalMinutes, 35);
+    });
+
+    test('DailyReflection saves and retrieves proudOfToday and feeling', () async {
+      final reflection = DailyReflection()
+        ..dateString = '2026-09-10'
+        ..feeling = ReflectionFeeling.proud
+        ..proudOfToday = 'Practiced Quranic Arabic even though tired.'
+        ..note = 'Felt deeply focused after 10 minutes.';
+
+      await repo.saveDailyReflection(reflection);
+
+      final retrieved = await repo.getDailyReflection('2026-09-10');
+      expect(retrieved, isNotNull);
+      expect(retrieved!.feeling, ReflectionFeeling.proud);
+      expect(retrieved.proudOfToday, 'Practiced Quranic Arabic even though tired.');
+      expect(retrieved.note, 'Felt deeply focused after 10 minutes.');
+    });
+
+    test('TimerSession saves active session and clears on completion', () async {
+      final session = TimerSession()
+        ..habitId = 1
+        ..habitName = 'Quranic Arabic'
+        ..targetSeconds = 1200
+        ..startedAt = DateTime.now()
+        ..status = TimerStateStatus.running;
+
+      await repo.saveTimerSession(session);
+
+      var active = await repo.getActiveTimerSession();
+      expect(active, isNotNull);
+      expect(active!.habitName, 'Quranic Arabic');
+      expect(active.status, TimerStateStatus.running);
+
+      await repo.clearTimerSession();
+      active = await repo.getActiveTimerSession();
+      expect(active, isNull);
     });
   });
 }

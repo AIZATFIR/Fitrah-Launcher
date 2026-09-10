@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme.dart';
 import '../../../core/time_math.dart';
 import '../../../models/routine_blueprint.dart';
-import '../widgets/blueprint_clock_preview.dart';
 import 'apply_blueprint_dialog.dart';
 
 class BlueprintDetailDialog extends StatelessWidget {

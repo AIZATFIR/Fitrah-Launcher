@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import '../../models/routine_blueprint.dart';
 
 class BlueprintRepository {

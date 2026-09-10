@@ -27,18 +27,29 @@ const DailyReflectionSchema = CollectionSchema(
       name: r'dateString',
       type: IsarType.string,
     ),
-    r'proudNote': PropertySchema(
+    r'feeling': PropertySchema(
       id: 2,
-      name: r'proudNote',
+      name: r'feeling',
+      type: IsarType.byte,
+      enumMap: _DailyReflectionfeelingEnumValueMap,
+    ),
+    r'note': PropertySchema(
+      id: 3,
+      name: r'note',
+      type: IsarType.string,
+    ),
+    r'proudOfToday': PropertySchema(
+      id: 4,
+      name: r'proudOfToday',
       type: IsarType.string,
     ),
     r'totalCount': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'totalCount',
       type: IsarType.long,
     ),
     r'updatedAt': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -52,7 +63,7 @@ const DailyReflectionSchema = CollectionSchema(
     r'dateString': IndexSchema(
       id: 2390766547304188792,
       name: r'dateString',
-      unique: true,
+      unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
@@ -78,7 +89,8 @@ int _dailyReflectionEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.dateString.length * 3;
-  bytesCount += 3 + object.proudNote.length * 3;
+  bytesCount += 3 + object.note.length * 3;
+  bytesCount += 3 + object.proudOfToday.length * 3;
   return bytesCount;
 }
 
@@ -90,9 +102,11 @@ void _dailyReflectionSerialize(
 ) {
   writer.writeLong(offsets[0], object.completedCount);
   writer.writeString(offsets[1], object.dateString);
-  writer.writeString(offsets[2], object.proudNote);
-  writer.writeLong(offsets[3], object.totalCount);
-  writer.writeDateTime(offsets[4], object.updatedAt);
+  writer.writeByte(offsets[2], object.feeling.index);
+  writer.writeString(offsets[3], object.note);
+  writer.writeString(offsets[4], object.proudOfToday);
+  writer.writeLong(offsets[5], object.totalCount);
+  writer.writeDateTime(offsets[6], object.updatedAt);
 }
 
 DailyReflection _dailyReflectionDeserialize(
@@ -104,10 +118,14 @@ DailyReflection _dailyReflectionDeserialize(
   final object = DailyReflection();
   object.completedCount = reader.readLong(offsets[0]);
   object.dateString = reader.readString(offsets[1]);
+  object.feeling =
+      _DailyReflectionfeelingValueEnumMap[reader.readByteOrNull(offsets[2])] ??
+          ReflectionFeeling.notSatisfied;
   object.id = id;
-  object.proudNote = reader.readString(offsets[2]);
-  object.totalCount = reader.readLong(offsets[3]);
-  object.updatedAt = reader.readDateTime(offsets[4]);
+  object.note = reader.readString(offsets[3]);
+  object.proudOfToday = reader.readString(offsets[4]);
+  object.totalCount = reader.readLong(offsets[5]);
+  object.updatedAt = reader.readDateTime(offsets[6]);
   return object;
 }
 
@@ -123,15 +141,34 @@ P _dailyReflectionDeserializeProp<P>(
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (_DailyReflectionfeelingValueEnumMap[
+              reader.readByteOrNull(offset)] ??
+          ReflectionFeeling.notSatisfied) as P;
     case 3:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 4:
+      return (reader.readString(offset)) as P;
+    case 5:
+      return (reader.readLong(offset)) as P;
+    case 6:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
 }
+
+const _DailyReflectionfeelingEnumValueMap = {
+  'notSatisfied': 0,
+  'okay': 1,
+  'good': 2,
+  'proud': 3,
+};
+const _DailyReflectionfeelingValueEnumMap = {
+  0: ReflectionFeeling.notSatisfied,
+  1: ReflectionFeeling.okay,
+  2: ReflectionFeeling.good,
+  3: ReflectionFeeling.proud,
+};
 
 Id _dailyReflectionGetId(DailyReflection object) {
   return object.id;
@@ -144,62 +181,6 @@ List<IsarLinkBase<dynamic>> _dailyReflectionGetLinks(DailyReflection object) {
 void _dailyReflectionAttach(
     IsarCollection<dynamic> col, Id id, DailyReflection object) {
   object.id = id;
-}
-
-extension DailyReflectionByIndex on IsarCollection<DailyReflection> {
-  Future<DailyReflection?> getByDateString(String dateString) {
-    return getByIndex(r'dateString', [dateString]);
-  }
-
-  DailyReflection? getByDateStringSync(String dateString) {
-    return getByIndexSync(r'dateString', [dateString]);
-  }
-
-  Future<bool> deleteByDateString(String dateString) {
-    return deleteByIndex(r'dateString', [dateString]);
-  }
-
-  bool deleteByDateStringSync(String dateString) {
-    return deleteByIndexSync(r'dateString', [dateString]);
-  }
-
-  Future<List<DailyReflection?>> getAllByDateString(
-      List<String> dateStringValues) {
-    final values = dateStringValues.map((e) => [e]).toList();
-    return getAllByIndex(r'dateString', values);
-  }
-
-  List<DailyReflection?> getAllByDateStringSync(List<String> dateStringValues) {
-    final values = dateStringValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'dateString', values);
-  }
-
-  Future<int> deleteAllByDateString(List<String> dateStringValues) {
-    final values = dateStringValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'dateString', values);
-  }
-
-  int deleteAllByDateStringSync(List<String> dateStringValues) {
-    final values = dateStringValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'dateString', values);
-  }
-
-  Future<Id> putByDateString(DailyReflection object) {
-    return putByIndex(r'dateString', object);
-  }
-
-  Id putByDateStringSync(DailyReflection object, {bool saveLinks = true}) {
-    return putByIndexSync(r'dateString', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByDateString(List<DailyReflection> objects) {
-    return putAllByIndex(r'dateString', objects);
-  }
-
-  List<Id> putAllByDateStringSync(List<DailyReflection> objects,
-      {bool saveLinks = true}) {
-    return putAllByIndexSync(r'dateString', objects, saveLinks: saveLinks);
-  }
 }
 
 extension DailyReflectionQueryWhereSort
@@ -522,6 +503,62 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      feelingEqualTo(ReflectionFeeling value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'feeling',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      feelingGreaterThan(
+    ReflectionFeeling value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'feeling',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      feelingLessThan(
+    ReflectionFeeling value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'feeling',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      feelingBetween(
+    ReflectionFeeling lower,
+    ReflectionFeeling upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'feeling',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
       idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -578,13 +615,13 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteEqualTo(
+      noteEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'proudNote',
+        property: r'note',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -592,7 +629,7 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteGreaterThan(
+      noteGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -600,7 +637,7 @@ extension DailyReflectionQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'proudNote',
+        property: r'note',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -608,7 +645,7 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteLessThan(
+      noteLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -616,7 +653,7 @@ extension DailyReflectionQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'proudNote',
+        property: r'note',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -624,7 +661,7 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteBetween(
+      noteBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -633,7 +670,7 @@ extension DailyReflectionQueryFilter
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'proudNote',
+        property: r'note',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -644,13 +681,13 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteStartsWith(
+      noteStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'proudNote',
+        property: r'note',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -658,13 +695,13 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteEndsWith(
+      noteEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'proudNote',
+        property: r'note',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -672,10 +709,10 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteContains(String value, {bool caseSensitive = true}) {
+      noteContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
-        property: r'proudNote',
+        property: r'note',
         value: value,
         caseSensitive: caseSensitive,
       ));
@@ -683,10 +720,10 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteMatches(String pattern, {bool caseSensitive = true}) {
+      noteMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
-        property: r'proudNote',
+        property: r'note',
         wildcard: pattern,
         caseSensitive: caseSensitive,
       ));
@@ -694,20 +731,156 @@ extension DailyReflectionQueryFilter
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteIsEmpty() {
+      noteIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'proudNote',
+        property: r'note',
         value: '',
       ));
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudNoteIsNotEmpty() {
+      noteIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'proudNote',
+        property: r'note',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'proudOfToday',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'proudOfToday',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'proudOfToday',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'proudOfToday',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'proudOfToday',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'proudOfToday',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'proudOfToday',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'proudOfToday',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'proudOfToday',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+      proudOfTodayIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'proudOfToday',
         value: '',
       ));
     });
@@ -862,17 +1035,43 @@ extension DailyReflectionQuerySortBy
     });
   }
 
-  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByProudNote() {
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy> sortByFeeling() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'proudNote', Sort.asc);
+      return query.addSortBy(r'feeling', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByProudNoteDesc() {
+      sortByFeelingDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'proudNote', Sort.desc);
+      return query.addSortBy(r'feeling', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy> sortByNote() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'note', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
+      sortByNoteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'note', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
+      sortByProudOfToday() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'proudOfToday', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
+      sortByProudOfTodayDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'proudOfToday', Sort.desc);
     });
   }
 
@@ -935,6 +1134,19 @@ extension DailyReflectionQuerySortThenBy
     });
   }
 
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy> thenByFeeling() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'feeling', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
+      thenByFeelingDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'feeling', Sort.desc);
+    });
+  }
+
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -947,17 +1159,30 @@ extension DailyReflectionQuerySortThenBy
     });
   }
 
-  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByProudNote() {
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy> thenByNote() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'proudNote', Sort.asc);
+      return query.addSortBy(r'note', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByProudNoteDesc() {
+      thenByNoteDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'proudNote', Sort.desc);
+      return query.addSortBy(r'note', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
+      thenByProudOfToday() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'proudOfToday', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
+      thenByProudOfTodayDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'proudOfToday', Sort.desc);
     });
   }
 
@@ -1006,10 +1231,24 @@ extension DailyReflectionQueryWhereDistinct
     });
   }
 
-  QueryBuilder<DailyReflection, DailyReflection, QDistinct> distinctByProudNote(
+  QueryBuilder<DailyReflection, DailyReflection, QDistinct>
+      distinctByFeeling() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'feeling');
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QDistinct> distinctByNote(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'proudNote', caseSensitive: caseSensitive);
+      return query.addDistinctBy(r'note', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QDistinct>
+      distinctByProudOfToday({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'proudOfToday', caseSensitive: caseSensitive);
     });
   }
 
@@ -1049,9 +1288,23 @@ extension DailyReflectionQueryProperty
     });
   }
 
-  QueryBuilder<DailyReflection, String, QQueryOperations> proudNoteProperty() {
+  QueryBuilder<DailyReflection, ReflectionFeeling, QQueryOperations>
+      feelingProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'proudNote');
+      return query.addPropertyName(r'feeling');
+    });
+  }
+
+  QueryBuilder<DailyReflection, String, QQueryOperations> noteProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'note');
+    });
+  }
+
+  QueryBuilder<DailyReflection, String, QQueryOperations>
+      proudOfTodayProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'proudOfToday');
     });
   }
 

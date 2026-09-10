@@ -5,6 +5,15 @@ import 'package:focus_clock/features/sadar/sadar_home_screen.dart';
 import 'package:focus_clock/features/sadar/widgets/daily_fulfillment_banner.dart';
 import 'package:focus_clock/features/sadar/widgets/horizontal_timeline_grid.dart';
 import 'package:focus_clock/models/habit.dart';
+import 'package:focus_clock/services/secure_storage_service.dart';
+
+class FakeSecureStorageService extends SecureStorageService {
+  @override
+  Future<bool> isSadarOnboardingDone() async => true;
+
+  @override
+  Future<void> setSadarOnboardingDone(bool done) async {}
+}
 
 void main() {
   group('Sadar UI Widget Tests', () {
@@ -25,7 +34,8 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.textContaining('Did I live today'), findsOneWidget);
       expect(find.byType(DailyFulfillmentBanner), findsOneWidget);
@@ -64,27 +74,51 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Quranic Arabic'), findsOneWidget);
       expect(find.text('French'), findsOneWidget);
       expect(find.text('KEBIASAAN'), findsOneWidget);
     });
 
-    testWidgets('SadarHomeScreen displays header, habits, and FAB', (tester) async {
+    testWidgets('SadarHomeScreen displays header and all 4 navigation tabs', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        ProviderScope(
+          overrides: [
+            secureStorageServiceProvider.overrideWithValue(FakeSecureStorageService()),
+          ],
+          child: const MaterialApp(
             home: SadarHomeScreen(),
           ),
         ),
       );
 
-      await tester.pumpAndSettle();
+      // Pump for initial build and async storage check
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('SADAR'), findsOneWidget);
       expect(find.text('Way of Life'), findsOneWidget);
-      expect(find.text('Kebiasaan Baru'), findsOneWidget);
+      expect(find.text('Hari Ini'), findsOneWidget);
+      expect(find.text('Linimasa'), findsOneWidget);
+      expect(find.text('Repetisi'), findsOneWidget);
+      expect(find.text('Kesadaran'), findsOneWidget);
+
+      // Switch to Repetisi tab
+      await tester.tap(find.text('Repetisi'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('WHAT YOU REPEAT'), findsOneWidget);
+
+      // Switch to Kesadaran tab
+      await tester.tap(find.text('Kesadaran'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('PRINSIP KESADARAN'), findsOneWidget);
     });
   });
 }

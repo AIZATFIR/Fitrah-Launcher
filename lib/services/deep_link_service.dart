@@ -19,17 +19,19 @@ class TimerLaunchParams {
   });
 
   Uri toUri() {
+    final params = <String, String>{
+      'habitId': habitId.toString(),
+      'title': title,
+      'duration': durationMinutes.toString(),
+    };
+    if (iconKey != null) params['icon'] = iconKey!;
+    if (colorValue != null) params['color'] = colorValue!.toString();
+    if (callbackUrl != null) params['callback'] = callbackUrl!;
+
     return Uri(
       scheme: 'focusclock',
       host: 'timer',
-      queryParameters: {
-        'habitId': habitId.toString(),
-        'title': title,
-        'duration': durationMinutes.toString(),
-        'icon': ?iconKey,
-        'color': ?colorValue?.toString(),
-        'callback': ?callbackUrl,
-      },
+      queryParameters: params,
     );
   }
 

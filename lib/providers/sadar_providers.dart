@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/sadar_repository.dart';
 import '../models/habit.dart';
 import '../models/habit_entry.dart';
+import '../models/daily_reflection.dart';
+import '../models/timer_session.dart';
 import 'providers.dart';
 
 final sadarRepoProvider = Provider<SadarRepository>((ref) {
@@ -52,4 +54,17 @@ final dailyFulfillmentProvider =
 
 final awarenessStatsProvider = FutureProvider<AwarenessStats>((ref) {
   return ref.watch(sadarRepoProvider).getAwarenessStats();
+});
+
+final whatIRepeatProvider = FutureProvider<List<RepetitionStat>>((ref) {
+  return ref.watch(sadarRepoProvider).getWhatIRepeat();
+});
+
+final dailyReflectionProvider =
+    FutureProvider.family<DailyReflection?, String>((ref, dateString) {
+  return ref.watch(sadarRepoProvider).getDailyReflection(dateString);
+});
+
+final activeTimerSessionProvider = FutureProvider<TimerSession?>((ref) {
+  return ref.watch(sadarRepoProvider).getActiveTimerSession();
 });

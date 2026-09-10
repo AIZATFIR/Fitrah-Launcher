@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import '../../../core/theme.dart';
 import '../../../models/habit.dart';
 import '../../../models/habit_entry.dart';
 import '../../../providers/sadar_providers.dart';
+import '../../../services/sadar_timer_engine.dart';
 
 class SadarTimerView extends ConsumerStatefulWidget {
   const SadarTimerView({
@@ -147,6 +150,24 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                 },
               ),
             ),
+
+            // Desktop Floating Pip Top Right
+            if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS) && !_isCompleted)
+              Positioned(
+                top: 16,
+                right: 20,
+                child: IconButton(
+                  icon: const Icon(Icons.picture_in_picture_alt_rounded, color: AppPalette.textDim, size: 22),
+                  tooltip: 'Floating Timer',
+                  onPressed: () async {
+                    HapticFeedback.selectionClick();
+                    final engine = ref.read(timerEngineProvider.notifier);
+                    engine.start(widget.habit);
+                    await engine.makeFloatingWindow();
+                    widget.onClose();
+                  },
+                ),
+              ),
 
             Center(
               child: Padding(

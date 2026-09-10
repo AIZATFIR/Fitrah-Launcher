@@ -30,7 +30,6 @@ class NowNextCard extends ConsumerStatefulWidget {
 class _NowNextCardState extends ConsumerState<NowNextCard> {
   final TextEditingController _intentCtrl = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  bool _isInputActive = false;
 
   @override
   void dispose() {
@@ -54,7 +53,7 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
     } catch (_) {}
 
     _intentCtrl.clear();
-    setState(() => _isInputActive = false);
+    _focusNode.unfocus();
     HapticFeedback.mediumImpact();
 
     if (mounted) {

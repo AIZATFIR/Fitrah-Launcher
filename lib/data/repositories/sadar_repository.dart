@@ -4,6 +4,19 @@ import 'package:isar/isar.dart';
 import '../../models/habit.dart';
 import '../../models/habit_entry.dart';
 import '../../models/daily_reflection.dart';
+import '../../models/timer_session.dart';
+
+class RepetitionStat {
+  final Habit habit;
+  final int totalDays;
+  final int totalMinutes;
+
+  const RepetitionStat({
+    required this.habit,
+    required this.totalDays,
+    required this.totalMinutes,
+  });
+}
 
 class DailyFulfillmentSummary {
   final String dateString;
@@ -270,6 +283,42 @@ class SadarRepository {
     await _isar.writeTxn(() => _isar.dailyReflections.put(reflection));
   }
 
+  Future<List<RepetitionStat>> getWhatIRepeat() async {
+    final habits = await getHabits();
+    final stats = <RepetitionStat>[];
+
+    for (final h in habits) {
+      int days = 0;
+      int minutes = 0;
+      if (_isar == null) {
+        for (final entry in _memEntries.values) {
+          if (entry.habitId == h.id && entry.status == HabitStatus.yes) {
+            days++;
+            minutes += entry.valueCompleted > 0 ? entry.valueCompleted : h.target;
+          }
+        }
+      } else {
+        final entries = await _isar.habitEntrys
+            .filter()
+            .habitIdEqualTo(h.id)
+            .statusEqualTo(HabitStatus.yes)
+            .findAll();
+        days = entries.length;
+        for (final e in entries) {
+          minutes += e.valueCompleted > 0 ? e.valueCompleted : h.target;
+        }
+      }
+      stats.add(RepetitionStat(
+        habit: h,
+        totalDays: days,
+        totalMinutes: minutes,
+      ));
+    }
+
+    stats.sort((a, b) => b.totalDays.compareTo(a.totalDays));
+    return stats;
+  }
+
   Future<AwarenessStats> getAwarenessStats({int daysBack = 30}) async {
     final habits = await getHabits();
     final habitCompletedCounts = <int, int>{};
@@ -309,6 +358,33 @@ class SadarRepository {
       neglectedHabits: neglected,
       consistentHabits: consistent,
     );
+  }
+
+  TimerSession? _memTimerSession;
+
+  Future<TimerSession?> getActiveTimerSession() async {
+    if (_isar == null) {
+      return _memTimerSession;
+    }
+    return _isar.timerSessions.get(1);
+  }
+
+  Future<void> saveTimerSession(TimerSession session) async {
+    session.id = 1;
+    session.updatedAt = DateTime.now();
+    if (_isar == null) {
+      _memTimerSession = session;
+      return;
+    }
+    await _isar.writeTxn(() => _isar.timerSessions.put(session));
+  }
+
+  Future<void> clearTimerSession() async {
+    if (_isar == null) {
+      _memTimerSession = null;
+      return;
+    }
+    await _isar.writeTxn(() => _isar.timerSessions.delete(1));
   }
 
   String _formatDate(DateTime dt) {
