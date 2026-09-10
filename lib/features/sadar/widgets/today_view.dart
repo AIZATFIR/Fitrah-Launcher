@@ -124,9 +124,10 @@ class _TodayViewState extends ConsumerState<TodayView> {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680),
-        child: Column(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 1. Salutation & Core Philosophy Prompt
@@ -419,8 +420,9 @@ class _TodayViewState extends ConsumerState<TodayView> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   String _feelingLabel(ReflectionFeeling feeling) {
     switch (feeling) {

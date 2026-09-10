@@ -19,15 +19,15 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
 
-  final Set<String> _selectedTopics = {'Quran', 'Language', 'Exercise'};
+  final Set<String> _selectedTopics = {'Fokus', 'Olahraga', 'Membaca'};
 
   static const List<({String title, String icon, int target, int color})> _inspirations = [
-    (title: 'Quranic Arabic', icon: '📖', target: 20, color: 0xFF10B981),
-    (title: 'Language (French/etc)', icon: '🇫🇷', target: 15, color: 0xFF3B82F6),
-    (title: 'Exercise & Vitality', icon: '🏃', target: 30, color: 0xFFF97316),
-    (title: 'Deep Coding / Learning', icon: '💻', target: 60, color: 0xFFF59E0B),
-    (title: 'Reading', icon: '📚', target: 20, color: 0xFF8B5CF6),
-    (title: 'Daily Reflection / Calm', icon: '🧘', target: 10, color: 0xFF06B6D4),
+    (title: 'Fokus / Deep Work', icon: '💻', target: 45, color: 0xFF10B981),
+    (title: 'Olahraga / Health', icon: '🏃', target: 30, color: 0xFFF97316),
+    (title: 'Membaca / Reading', icon: '📚', target: 20, color: 0xFF8B5CF6),
+    (title: 'Meditasi / Mindfulness', icon: '🧘', target: 15, color: 0xFF06B6D4),
+    (title: 'Belajar Bahasa', icon: '🌐', target: 20, color: 0xFF3B82F6),
+    (title: 'Menulis / Journaling', icon: '✍️', target: 15, color: 0xFFF59E0B),
   ];
 
   void _nextPage() {
@@ -300,24 +300,24 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Quranic Arabic', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Fokus / Deep Work', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('45 minutes', style: TextStyle(color: AppPalette.accent)),
+                ],
+              ),
+              Divider(height: 20, color: AppPalette.stroke),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Olahraga / Exercise', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('30 minutes', style: TextStyle(color: AppPalette.accent)),
+                ],
+              ),
+              Divider(height: 20, color: AppPalette.stroke),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Membaca / Reading', style: TextStyle(fontWeight: FontWeight.bold)),
                   Text('20 minutes', style: TextStyle(color: AppPalette.accent)),
-                ],
-              ),
-              Divider(height: 20, color: AppPalette.stroke),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('French', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('15 minutes', style: TextStyle(color: AppPalette.accent)),
-                ],
-              ),
-              Divider(height: 20, color: AppPalette.stroke),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Exercise', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('1 session', style: TextStyle(color: AppPalette.accent)),
                 ],
               ),
             ],

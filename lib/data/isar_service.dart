@@ -110,48 +110,48 @@ class IsarService {
       await isar.writeTxn(() async {
         await isar.habits.putAll([
           Habit()
-            ..name = 'Quranic Arabic'
-            ..iconKey = '📖'
-            ..target = 15
+            ..name = 'Fokus / Deep Work'
+            ..iconKey = '💻'
+            ..target = 45
             ..unit = HabitUnit.min
             ..timerEnabled = true
             ..colorValue = 0xFF10B981 // Emerald
             ..orderIndex = 0
             ..createdAt = DateTime.now(),
           Habit()
-            ..name = 'French'
-            ..iconKey = '🇫🇷'
-            ..target = 20
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFF3B82F6 // Blue
-            ..orderIndex = 1
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Programming / Deep Work'
-            ..iconKey = '💻'
-            ..target = 60
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFFF59E0B // Amber
-            ..orderIndex = 2
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Exercise'
+            ..name = 'Olahraga / Exercise'
             ..iconKey = '🏃'
             ..target = 30
             ..unit = HabitUnit.min
             ..timerEnabled = true
             ..colorValue = 0xFFF97316 // Orange
-            ..orderIndex = 3
+            ..orderIndex = 1
             ..createdAt = DateTime.now(),
           Habit()
-            ..name = 'Reading'
+            ..name = 'Membaca / Reading'
             ..iconKey = '📚'
             ..target = 20
             ..unit = HabitUnit.min
             ..timerEnabled = true
             ..colorValue = 0xFF8B5CF6 // Purple
+            ..orderIndex = 2
+            ..createdAt = DateTime.now(),
+          Habit()
+            ..name = 'Meditasi / Mindfulness'
+            ..iconKey = '🧘'
+            ..target = 15
+            ..unit = HabitUnit.min
+            ..timerEnabled = true
+            ..colorValue = 0xFF06B6D4 // Cyan
+            ..orderIndex = 3
+            ..createdAt = DateTime.now(),
+          Habit()
+            ..name = 'Belajar Bahasa'
+            ..iconKey = '🌐'
+            ..target = 20
+            ..unit = HabitUnit.min
+            ..timerEnabled = true
+            ..colorValue = 0xFF3B82F6 // Blue
             ..orderIndex = 4
             ..createdAt = DateTime.now(),
         ]);

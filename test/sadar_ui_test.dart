@@ -45,19 +45,19 @@ void main() {
       final habits = [
         Habit()
           ..id = 1
-          ..name = 'Quranic Arabic'
-          ..iconKey = '📖'
-          ..target = 15
+          ..name = 'Fokus / Deep Work'
+          ..iconKey = '💻'
+          ..target = 45
           ..unit = HabitUnit.min
           ..colorValue = 0xFF10B981
           ..createdAt = DateTime.now(),
         Habit()
           ..id = 2
-          ..name = 'French'
-          ..iconKey = '🇫🇷'
-          ..target = 20
+          ..name = 'Olahraga / Exercise'
+          ..iconKey = '🏃'
+          ..target = 30
           ..unit = HabitUnit.min
-          ..colorValue = 0xFF3B82F6
+          ..colorValue = 0xFFF97316
           ..createdAt = DateTime.now(),
       ];
 
@@ -77,9 +77,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Quranic Arabic'), findsOneWidget);
-      expect(find.text('French'), findsOneWidget);
-      expect(find.text('KEBIASAAN'), findsOneWidget);
+      expect(find.text('Fokus / Deep Work'), findsOneWidget);
+      expect(find.text('Olahraga / Exercise'), findsOneWidget);
+      expect(find.text('Minggu Ini'), findsOneWidget);
     });
 
     testWidgets('SadarHomeScreen displays header and all 4 navigation tabs', (tester) async {

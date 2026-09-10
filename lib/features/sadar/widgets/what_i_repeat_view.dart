@@ -21,9 +21,10 @@ class WhatIRepeatView extends ConsumerWidget {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680),
-        child: Column(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header card
@@ -166,6 +167,7 @@ class WhatIRepeatView extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

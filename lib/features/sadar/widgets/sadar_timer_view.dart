@@ -112,7 +112,14 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
       dateString: dateStr,
       status: HabitStatus.yes,
       valueCompleted: elapsedMinutes,
+      completedAt: now,
+      source: 'timer',
     );
+
+    ref.invalidate(habitsStreamProvider);
+    ref.invalidate(dailyFulfillmentProvider);
+    ref.invalidate(whatIRepeatProvider);
+    ref.invalidate(awarenessStatsProvider);
   }
 
   @override
@@ -359,18 +366,18 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: AppPalette.bg,
+              color: const Color(0xFF22C55E).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppPalette.stroke),
+              border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.4)),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.spa_outlined, size: 16, color: AppPalette.accent),
+                Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF22C55E)),
                 SizedBox(width: 8),
                 Text(
-                  '+1 Tindakan Bermakna Terpenuhi',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppPalette.accent),
+                  'Otomatis Ditandai Selesai (Centang Hijau)',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF22C55E)),
                 ),
               ],
             ),

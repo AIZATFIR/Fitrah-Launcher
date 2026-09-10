@@ -148,7 +148,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
               style: const TextStyle(fontSize: 15, color: AppPalette.text),
               decoration: InputDecoration(
                 labelText: 'Nama Kebiasaan',
-                hintText: 'misal: Quranic Arabic, Belajar Bahasa, Coding',
+                hintText: 'misal: Deep Work, Olahraga, Belajar Bahasa, Membaca',
                 labelStyle: const TextStyle(color: AppPalette.textDim),
                 filled: true,
                 fillColor: AppPalette.bg,

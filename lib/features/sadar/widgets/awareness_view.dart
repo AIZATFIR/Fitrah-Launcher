@@ -15,9 +15,12 @@ class AwarenessView extends ConsumerWidget {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           // Philosophical Quote Banner
           Container(
             padding: const EdgeInsets.all(20),
@@ -251,6 +254,8 @@ class AwarenessView extends ConsumerWidget {
             error: (_, _) => const SizedBox.shrink(),
           ),
         ],
+      ),
+        ),
       ),
     );
   }
