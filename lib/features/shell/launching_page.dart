@@ -267,6 +267,86 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 18),
+
+                  // HERO CARD 3: SADAR (Way of Life)
+                  InkWell(
+                    onTap: () => _selectMode('sadar'),
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                      decoration: BoxDecoration(
+                        color: AppPalette.card,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.6), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            blurRadius: 18,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                            ),
+                            child: const Icon(Icons.spa_rounded, size: 26, color: Color(0xFF10B981)),
+                          ),
+                          const SizedBox(width: 18),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'SADAR',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF10B981),
+                                        letterSpacing: 2.0,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'WAY OF LIFE',
+                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF10B981), letterSpacing: 0.8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Fulfill your day, one meaningful action at a time.',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppPalette.text),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Timeline kebiasaan harian, self-validation, dan akumulasi kesadaran hidup.',
+                                  style: TextStyle(fontSize: 11, color: AppPalette.textDim),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Icon(Icons.arrow_forward_rounded, color: Color(0xFF10B981), size: 22),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 48),
 
                   // Rolling Subconscious Kind Affirmation Banner (Placed at bottom, BORDERLESS without outline)

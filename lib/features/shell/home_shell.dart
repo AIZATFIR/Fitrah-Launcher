@@ -13,6 +13,7 @@ import '../agenda/agenda_tab.dart';
 import '../ai_chat/ai_chat_sheet.dart';
 import '../focusclock/focusclock_tab.dart';
 import '../presets/presets_tab.dart';
+import '../sadar/sadar_home_screen.dart';
 import '../settings/settings_screen.dart';
 import 'left_panel.dart';
 import 'right_panel.dart';
@@ -117,6 +118,34 @@ class _HomeShellState extends ConsumerState<HomeShell>
             }
           },
           child: const SimpleModeView(),
+        ),
+      );
+    }
+
+    if (appMode == 'sadar') {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            SystemSound.play(SystemSoundType.click);
+            ref.read(selectedAppModeProvider.notifier).state = 'launching';
+          }
+        },
+        child: KeyboardListener(
+          focusNode: FocusNode()..requestFocus(),
+          onKeyEvent: (event) {
+            if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+              SystemSound.play(SystemSoundType.click);
+              ref.read(selectedAppModeProvider.notifier).state = 'launching';
+            }
+          },
+          child: SadarHomeScreen(
+            onBack: () {
+              SystemSound.play(SystemSoundType.click);
+              HapticFeedback.selectionClick();
+              ref.read(selectedAppModeProvider.notifier).state = 'launching';
+            },
+          ),
         ),
       );
     }
