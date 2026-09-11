@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 
@@ -148,10 +149,32 @@ final schedulingTaskProvider = StateProvider<Task?>((_) => null);
 final aiTranscriptProvider =
     StateProvider<List<ChatMessage>>((_) => <ChatMessage>[]);
 
-// ── Planning Mode State ──────────────────────────────────────────────────
+// ── Planning Mode & App Mode State ───────────────────────────────────────
 
-/// Tracks current app mode ('launching', 'simple', 'overview')
-final selectedAppModeProvider = StateProvider<String>((ref) => 'launching');
+/// Initial mode based on build flag (--dart-define=APP_MODE=...) or web URL parameter (?app=...)
+/// Defaults directly to 'fitrah' (Fitrah Launcher). NO landing page!
+final initialAppMode = () {
+  const envMode = String.fromEnvironment('APP_MODE', defaultValue: '');
+  if (envMode.isNotEmpty) return envMode;
+
+  if (kIsWeb) {
+    try {
+      final uri = Uri.base;
+      final q = uri.queryParameters['app'] ?? uri.queryParameters['mode'];
+      if (q != null && q.isNotEmpty) {
+        if (q == 'sadar') return 'sadar';
+        if (q == 'focus' || q == 'clock') return 'focus';
+        if (q == 'simple') return 'simple';
+        if (q == 'fitrah' || q == 'launcher') return 'fitrah';
+      }
+    } catch (_) {}
+  }
+
+  return 'fitrah';
+}();
+
+/// Tracks current app mode ('fitrah', 'sadar', 'focus', 'simple')
+final selectedAppModeProvider = StateProvider<String>((ref) => initialAppMode);
 
 /// Tracks whether the UI is in Planning Mode (Fullscreen Clock)
 final planningModeProvider = StateProvider<bool>((ref) => false);

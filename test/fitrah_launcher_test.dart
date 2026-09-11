@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focus_clock/features/launcher/fitrah_launcher_shell.dart';
+import 'package:focus_clock/features/launcher/models/launcher_settings.dart';
 import 'package:focus_clock/features/launcher/services/app_launcher_service.dart';
 import 'package:focus_clock/features/launcher/widgets/fitrah_home_view.dart';
 import 'package:focus_clock/features/launcher/widgets/minimalist_app_drawer.dart';
@@ -35,7 +36,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('AGENDA HARI INI'), findsOneWidget);
+      expect(find.text('JADWAL & GARIS WAKTU HARI INI'), findsOneWidget);
+      expect(find.text('Subuh'), findsOneWidget);
       expect(find.text('KEBIASAAN & FITRAH'), findsOneWidget);
       expect(find.text('Refleksi Hari Ini'), findsOneWidget);
     });
@@ -71,6 +73,28 @@ void main() {
 
       expect(find.byType(FitrahHomeView), findsOneWidget);
       expect(find.byType(PageView), findsOneWidget);
+    });
+
+    test('LauncherSettings serialization, defaults, and copyWith', () {
+      const settings = LauncherSettings();
+      expect(settings.wallpaperType, 'amoled_black');
+      expect(settings.is24h, true);
+      expect(settings.showSeconds, false);
+      expect(settings.dockPackages.length, 4);
+
+      final modified = settings.copyWith(
+        wallpaperType: 'midnight_slate',
+        showSeconds: true,
+        dockPackages: ['app1', 'app2', 'app3', 'app4'],
+      );
+      expect(modified.wallpaperType, 'midnight_slate');
+      expect(modified.showSeconds, true);
+
+      final jsonStr = modified.toJson();
+      final decoded = LauncherSettings.fromJson(jsonStr);
+      expect(decoded.wallpaperType, 'midnight_slate');
+      expect(decoded.showSeconds, true);
+      expect(decoded.dockPackages, ['app1', 'app2', 'app3', 'app4']);
     });
   });
 }

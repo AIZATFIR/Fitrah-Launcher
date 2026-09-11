@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +15,43 @@ import '../../../providers/sadar_providers.dart';
 import '../../../services/sadar_timer_engine.dart';
 import '../../sadar/widgets/reflection_sheet.dart';
 import '../../sadar/widgets/sadar_timer_view.dart';
+import '../models/prayer_schedule.dart';
+import '../providers/launcher_settings_provider.dart';
 import '../services/app_launcher_service.dart';
+import 'launcher_customization_sheet.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+enum UnifiedEventType {
+  focusClock,
+  prayer,
+  habit,
+}
+
+class UnifiedTimelineEvent {
+  final String title;
+  final String timeLabel;
+  final int startMinuteOfDay;
+  final int endMinuteOfDay;
+  final Color color;
+  final UnifiedEventType type;
+  final String subtitle;
+  final Activity? activity;
+  final Habit? habit;
+  final bool isDone;
+
+  const UnifiedTimelineEvent({
+    required this.title,
+    required this.timeLabel,
+    required this.startMinuteOfDay,
+    required this.endMinuteOfDay,
+    required this.color,
+    required this.type,
+    required this.subtitle,
+    this.activity,
+    this.habit,
+    this.isDone = false,
+  });
+}
 
 class FitrahHomeView extends ConsumerStatefulWidget {
   const FitrahHomeView({
@@ -84,6 +121,16 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
     );
   }
 
+  void _openLauncherSettings() {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => const LauncherCustomizationSheet(),
+    );
+  }
+
   String _formatDateIndonesian(DateTime dt) {
     const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
     const months = [
@@ -97,6 +144,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(launcherSettingsProvider);
     final activeTimer = ref.watch(timerEngineProvider);
     final activitiesAsync = ref.watch(activitiesByDateProvider);
     final habitsAsync = ref.watch(habitsStreamProvider);
@@ -104,7 +152,10 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
     final entriesAsync = ref.watch(habitEntriesStreamProvider(rangeQuery));
     final fulfillmentAsync = ref.watch(dailyFulfillmentProvider(_todayStr));
 
-    final timeStr = DateFormat('HH:mm').format(_currentTime);
+    final timePattern = settings.is24h
+        ? (settings.showSeconds ? 'HH:mm:ss' : 'HH:mm')
+        : (settings.showSeconds ? 'hh:mm:ss a' : 'hh:mm a');
+    final timeStr = DateFormat(timePattern).format(_currentTime);
     final dateStr = _formatDateIndonesian(_currentTime);
 
     final entriesMap = <int, HabitEntry>{};
@@ -114,169 +165,242 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
       }
     });
 
+    final currentMinute = _currentTime.hour * 60 + _currentTime.minute;
+    final List<UnifiedTimelineEvent> timelineEvents = [];
+
+    // 1. Focus Clock activities for today
+    activitiesAsync.whenData((activities) {
+      for (final act in activities) {
+        final startMinOfHalf = act.startMinute;
+        final startOfDay = act.ampmHalf == AmPmHalf.pm ? (startMinOfHalf + 720) : startMinOfHalf;
+        final endMinOfHalf = act.endMinute;
+        final endOfDay = act.ampmHalf == AmPmHalf.pm ? (endMinOfHalf + 720) : endMinOfHalf;
+        final startFormatted = formatMinuteOfHalf(act.startMinute, act.ampmHalf, is24h: settings.is24h);
+        final endFormatted = formatMinuteOfHalf(act.endMinute, act.ampmHalf, is24h: settings.is24h);
+        final durationMin = act.endMinute >= act.startMinute
+            ? act.endMinute - act.startMinute
+            : (act.endMinute - act.startMinute + 720);
+
+        timelineEvents.add(
+          UnifiedTimelineEvent(
+            title: act.title,
+            timeLabel: '$startFormatted – $endFormatted',
+            startMinuteOfDay: startOfDay,
+            endMinuteOfDay: endOfDay >= startOfDay ? endOfDay : (endOfDay + 1440),
+            color: Color(act.colorValue),
+            type: UnifiedEventType.focusClock,
+            subtitle: 'Focus Clock (${durationMin}m)',
+            activity: act,
+          ),
+        );
+      }
+    });
+
+    // 2. Prayer times (if settings.showPrayerTimes)
+    if (settings.showPrayerTimes) {
+      final prayers = [
+        {'name': 'Subuh', 'time': settings.prayerSubuh},
+        {'name': 'Syuruq', 'time': settings.prayerSyuruq},
+        {'name': 'Dzuhur', 'time': settings.prayerDzuhur},
+        {'name': 'Ashar', 'time': settings.prayerAshar},
+        {'name': 'Maghrib', 'time': settings.prayerMaghrib},
+        {'name': 'Isya', 'time': settings.prayerIsya},
+      ];
+
+      for (final p in prayers) {
+        final name = p['name'] as String;
+        final timeStr = p['time'] as String;
+        final minOfDay = PrayerItem.parseMinute(timeStr);
+
+        timelineEvents.add(
+          UnifiedTimelineEvent(
+            title: name,
+            timeLabel: timeStr,
+            startMinuteOfDay: minOfDay,
+            endMinuteOfDay: minOfDay + 20,
+            color: const Color(0xFF10B981),
+            type: UnifiedEventType.prayer,
+            subtitle: 'Waktu Sholat',
+          ),
+        );
+      }
+    }
+
+    timelineEvents.sort((a, b) => a.startMinuteOfDay.compareTo(b.startMinuteOfDay));
+
+    Color bgColor = const Color(0xFF000000); // Default AMOLED pure black
+    if (settings.wallpaperType == 'midnight_slate') bgColor = const Color(0xFF0B111E);
+    if (settings.wallpaperType == 'forest_night') bgColor = const Color(0xFF0A150E);
+    if (settings.wallpaperType == 'deep_obsidian') bgColor = const Color(0xFF101014);
+    if (settings.wallpaperType == 'warm_charcoal') bgColor = const Color(0xFF161412);
+
     return Scaffold(
-      backgroundColor: AppPalette.bg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 580),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: bgColor,
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onLongPress: _openLauncherSettings,
+        child: SafeArea(
+          bottom: false,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 580),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 1. Minimalist Top Header (Clock & Date)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
                       children: [
-                        // 1. Minimalist Top Header (Clock & Date)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              timeStr,
-                              style: const TextStyle(
-                                fontSize: 44,
-                                fontWeight: FontWeight.w200,
-                                letterSpacing: -1.5,
-                                color: AppPalette.text,
-                              ),
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.pie_chart_outline_rounded, size: 22, color: AppPalette.accent),
-                              tooltip: 'Focus Clock (Geser Kiri)',
-                              onPressed: widget.onOpenFocusClock,
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.grid_view_rounded, size: 22, color: AppPalette.textDim),
-                              tooltip: 'Aplikasi (Geser Kanan)',
-                              onPressed: widget.onOpenAppDrawer,
-                            ),
-                          ],
-                        ),
                         Text(
-                          dateStr,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.2,
-                            color: AppPalette.textDim,
+                          timeStr,
+                          style: TextStyle(
+                            fontSize: settings.showSeconds ? 36 : 44,
+                            fontWeight: FontWeight.w200,
+                            letterSpacing: -1.5,
+                            color: AppPalette.text,
                           ),
                         ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.tune_rounded, size: 20, color: AppPalette.accent),
+                          tooltip: 'Pengaturan Launcher & Wallpaper',
+                          onPressed: _openLauncherSettings,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.pie_chart_outline_rounded, size: 20, color: AppPalette.accent),
+                          tooltip: 'Focus Clock (Geser Kiri)',
+                          onPressed: widget.onOpenFocusClock,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.grid_view_rounded, size: 20, color: AppPalette.textDim),
+                          tooltip: 'Aplikasi (Geser Kanan)',
+                          onPressed: widget.onOpenAppDrawer,
+                        ),
+                      ],
+                    ),
+                    if (settings.showDate)
+                      Text(
+                        dateStr,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppPalette.textDim,
+                        ),
+                      ),
 
                         const SizedBox(height: 24),
 
-                        // 2. HERO: Ongoing Main Event Card (Event Sedang Berlangsung)
-                        _buildMainEventHero(activeTimer),
+                    // 2. HERO: Ongoing Main Event Card (Event Sedang Berlangsung)
+                    if (settings.showHeroEvent) ...[
+                      _buildMainEventHero(activeTimer),
+                      const SizedBox(height: 28),
+                    ],
 
-                        const SizedBox(height: 28),
-
-                        // 3. Section: Kotak-Kotak Event Hari Ini (Schedule Timeline)
-                        Row(
-                          children: [
-                            const Text(
-                              'AGENDA HARI INI',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.5,
-                                color: AppPalette.accent,
-                              ),
+                    // 3. Section: Kotak-Kotak Garis Waktu Hari Ini (Focus Clock + Waktu Sholat)
+                    if (settings.showAgendaWidget) ...[
+                      Row(
+                        children: [
+                          const Text(
+                            'JADWAL & GARIS WAKTU HARI INI',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                              color: AppPalette.accent,
                             ),
-                            const Spacer(),
-                            TextButton.icon(
-                              onPressed: widget.onOpenFocusClock,
-                              icon: const Icon(Icons.arrow_forward_rounded, size: 14, color: AppPalette.textDim),
-                              label: const Text(
-                                'Lihat Jam',
-                                style: TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.w600),
-                              ),
+                          ),
+                          const Spacer(),
+                          TextButton.icon(
+                            onPressed: widget.onOpenFocusClock,
+                            icon: const Icon(Icons.add_circle_outline_rounded, size: 14, color: AppPalette.accent),
+                            label: const Text(
+                              'Tambah Blok',
+                              style: TextStyle(fontSize: 11, color: AppPalette.accent, fontWeight: FontWeight.bold),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
 
-                        activitiesAsync.when(
-                          data: (activities) {
-                            if (activities.isEmpty) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                                decoration: BoxDecoration(
-                                  color: AppPalette.card,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppPalette.stroke),
+                      if (timelineEvents.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                          decoration: BoxDecoration(
+                            color: AppPalette.card,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppPalette.stroke),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today_outlined, size: 18, color: AppPalette.textDim),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  'Belum ada blok waktu di Focus Clock hari ini.',
+                                  style: TextStyle(fontSize: 12, color: AppPalette.textDim),
                                 ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today_outlined, size: 18, color: AppPalette.textDim),
-                                    const SizedBox(width: 12),
-                                    const Expanded(
-                                      child: Text(
-                                        'Belum ada blok waktu di Focus Clock hari ini.',
-                                        style: TextStyle(fontSize: 12, color: AppPalette.textDim),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: widget.onOpenFocusClock,
-                                      child: const Text('Buat Blok', style: TextStyle(fontSize: 12, color: AppPalette.accent)),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            return Column(
-                              children: activities.map((act) => _buildActivityBox(act)).toList(),
-                            );
-                          },
-                          loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
-                          error: (e, _) => Text('Error: $e', style: const TextStyle(color: Color(0xFFEF4444))),
-                        ),
-
-                        const SizedBox(height: 28),
-
-                        // 4. Section: Sadar Habits & Intentions (Alat Fitrah)
-                        Row(
-                          children: [
-                            const Text(
-                              'KEBIASAAN & FITRAH',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.5,
-                                color: AppPalette.textDim,
                               ),
-                            ),
-                            const Spacer(),
-                            fulfillmentAsync.when(
-                              data: (summary) => Text(
-                                '${summary.completedCount}/${summary.totalCount} Selesai',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppPalette.accent),
+                              TextButton(
+                                onPressed: widget.onOpenFocusClock,
+                                child: const Text('Buat Blok', style: TextStyle(fontSize: 12, color: AppPalette.accent)),
                               ),
-                              loading: () => const SizedBox.shrink(),
-                              error: (_, _) => const SizedBox.shrink(),
+                            ],
+                          ),
+                        )
+                      else
+                        Column(
+                          children: timelineEvents
+                              .map((evt) => _buildTimelineCard(evt, currentMinute))
+                              .toList(),
+                        ),
+                      const SizedBox(height: 28),
+                    ],
+
+                    // 4. Section: Sadar Habits & Intentions (Alat Fitrah)
+                    if (settings.showHabitsWidget) ...[
+                      Row(
+                        children: [
+                          const Text(
+                            'KEBIASAAN & FITRAH',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                              color: AppPalette.textDim,
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
+                          ),
+                          const Spacer(),
+                          fulfillmentAsync.when(
+                            data: (summary) => Text(
+                              '${summary.completedCount}/${summary.totalCount} Selesai',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppPalette.accent),
+                            ),
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, _) => const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
 
-                        habitsAsync.when(
-                          data: (habits) {
-                            if (habits.isEmpty) return const SizedBox.shrink();
-                            return Column(
-                              children: habits.map((habit) {
-                                final entry = entriesMap[habit.id];
-                                final isDone = entry?.status == HabitStatus.yes;
-                                return _buildHabitRow(habit, isDone);
-                              }).toList(),
-                            );
-                          },
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, _) => const SizedBox.shrink(),
-                        ),
-
-                        const SizedBox(height: 20),
+                      habitsAsync.when(
+                        data: (habits) {
+                          if (habits.isEmpty) return const SizedBox.shrink();
+                          return Column(
+                            children: habits.map((habit) {
+                              final entry = entriesMap[habit.id];
+                              final isDone = entry?.status == HabitStatus.yes;
+                              return _buildHabitRow(habit, isDone);
+                            }).toList(),
+                          );
+                        },
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, _) => const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
 
                         // 5. Daily Reflection Quick Card
                         InkWell(
@@ -319,10 +443,21 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                     ),
                   ),
                 ),
-
-                // 6. Minimalist Bottom Dock (Phone, Message, Browser, Camera)
-                _buildMinimalistDock(),
-              ],
+              ),
+          ),
+        ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          decoration: BoxDecoration(
+            color: bgColor.withValues(alpha: 0.94),
+            border: const Border(top: BorderSide(color: AppPalette.stroke, width: 1)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: _buildMinimalistDock(settings.dockPackages),
             ),
           ),
         ),
@@ -536,61 +671,158 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
     );
   }
 
-  Widget _buildActivityBox(Activity act) {
-    final startFormatted = formatMinuteOfHalf(act.startMinute, act.ampmHalf, is24h: true);
-    final endFormatted = formatMinuteOfHalf(act.endMinute, act.ampmHalf, is24h: true);
-    final durationMin = act.endMinute >= act.startMinute
-        ? act.endMinute - act.startMinute
-        : (act.endMinute - act.startMinute + 720);
+  Widget _buildTimelineCard(UnifiedTimelineEvent event, int currentMinute) {
+    final isCurrent = currentMinute >= event.startMinuteOfDay &&
+        currentMinute < event.endMinuteOfDay;
+    final isPast = currentMinute >= event.endMinuteOfDay;
+    final isPrayer = event.type == UnifiedEventType.prayer;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppPalette.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppPalette.stroke),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 3,
-            height: 32,
-            decoration: BoxDecoration(
-              color: Color(act.colorValue),
-              borderRadius: BorderRadius.circular(2),
-            ),
+    return Opacity(
+      opacity: isPast ? 0.6 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isCurrent
+              ? AppPalette.card
+              : (isPrayer
+                  ? const Color(0xFF10B981).withValues(alpha: 0.08)
+                  : AppPalette.card),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isCurrent
+                ? AppPalette.accent
+                : (isPrayer
+                    ? const Color(0xFF10B981).withValues(alpha: 0.35)
+                    : AppPalette.stroke),
+            width: isCurrent ? 1.5 : 1.0,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  act.title,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppPalette.text),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          boxShadow: isCurrent
+              ? [
+                  BoxShadow(
+                    color: AppPalette.accent.withValues(alpha: 0.18),
+                    blurRadius: 14,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            // Left: Time badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: isPrayer
+                    ? const Color(0xFF10B981).withValues(alpha: 0.18)
+                    : AppPalette.bg,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isPrayer
+                      ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                      : AppPalette.stroke,
                 ),
-                Text(
-                  '$startFormatted – $endFormatted ($durationMin m)',
-                  style: const TextStyle(fontSize: 11, color: AppPalette.textDim),
+              ),
+              child: Text(
+                event.timeLabel,
+                style: TextStyle(
+                  fontSize: isPrayer ? 12 : 11,
+                  fontWeight: FontWeight.bold,
+                  color: isPrayer ? const Color(0xFF34D399) : AppPalette.accent,
                 ),
-              ],
+              ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.play_arrow_outlined, size: 18, color: AppPalette.accent),
-            tooltip: 'Mulai Timer',
-            onPressed: () {
-              final habit = Habit()
-                ..name = act.title
-                ..target = durationMin > 0 ? durationMin : 25
-                ..unit = HabitUnit.min;
-              _startQuickTimer(habit);
-            },
-          ),
-        ],
+            const SizedBox(width: 12),
+
+            // Middle: Color bar & Event details
+            Container(
+              width: 3,
+              height: 32,
+              decoration: BoxDecoration(
+                color: event.color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          event.title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: isPast ? AppPalette.textDim : AppPalette.text,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isCurrent) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppPalette.accent.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'AKTIF',
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppPalette.accent),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    event.subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isPrayer ? const Color(0xFF10B981) : AppPalette.textDim,
+                      fontWeight: isPrayer ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Right: Action button
+            if (isPrayer)
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.brightness_3_outlined,
+                  size: 16,
+                  color: Color(0xFF34D399),
+                ),
+              )
+            else if (event.type == UnifiedEventType.focusClock && event.activity != null)
+              IconButton(
+                icon: const Icon(Icons.play_arrow_outlined, size: 20, color: AppPalette.accent),
+                tooltip: 'Mulai Timer',
+                onPressed: () {
+                  final act = event.activity!;
+                  final durationMin = act.endMinute >= act.startMinute
+                      ? act.endMinute - act.startMinute
+                      : (act.endMinute - act.startMinute + 720);
+                  final habit = Habit()
+                    ..name = act.title
+                    ..target = durationMin > 0 ? durationMin : 25
+                    ..unit = HabitUnit.min;
+                  _startQuickTimer(habit);
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -659,42 +891,76 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
     );
   }
 
-  Widget _buildMinimalistDock() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: const BoxDecoration(
-        color: AppPalette.card,
-        border: Border(top: BorderSide(color: AppPalette.stroke)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildDockIcon(Icons.phone_outlined, 'Telepon', 'com.android.dialer'),
-          _buildDockIcon(Icons.chat_bubble_outline_rounded, 'Pesan', 'com.android.mms'),
-          _buildDockIcon(Icons.language_rounded, 'Browser', 'com.android.browser'),
-          _buildDockIcon(Icons.camera_alt_outlined, 'Kamera', 'com.android.camera'),
-        ],
+  Widget _buildMinimalistDock(List<String> dockPackages) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: List.generate(4, (index) {
+        final pkg = index < dockPackages.length
+            ? dockPackages[index]
+            : 'com.android.browser';
+        return _buildDockIcon(pkg, index);
+      }),
+    );
+  }
+
+  Widget _buildDockIcon(String packageName, int slotIndex) {
+    final iconData = _resolveDockIcon(packageName, slotIndex);
+    final label = _resolveDockLabel(packageName, slotIndex);
+
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        onTap: () => _launchDockApp(packageName),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppPalette.card.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppPalette.stroke),
+          ),
+          child: Icon(iconData, size: 20, color: AppPalette.accent),
+        ),
       ),
     );
   }
 
-  Widget _buildDockIcon(IconData icon, String label, String packageName) {
-    return InkWell(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        ref.read(appLauncherServiceProvider).launchApp(packageName);
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          color: AppPalette.bg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppPalette.stroke),
-        ),
-        child: Icon(icon, size: 20, color: AppPalette.accent),
-      ),
-    );
+  IconData _resolveDockIcon(String pkg, int index) {
+    if (pkg.contains('dialer') || pkg.contains('phone')) return Icons.phone_outlined;
+    if (pkg.contains('mms') || pkg.contains('message')) return Icons.chat_bubble_outline_rounded;
+    if (pkg.contains('browser') || pkg.contains('chrome')) return Icons.language_rounded;
+    if (pkg.contains('camera')) return Icons.camera_alt_outlined;
+    return Icons.apps_rounded;
+  }
+
+  String _resolveDockLabel(String pkg, int index) {
+    if (pkg.contains('dialer') || pkg.contains('phone')) return 'Telepon';
+    if (pkg.contains('mms') || pkg.contains('message')) return 'Pesan';
+    if (pkg.contains('browser') || pkg.contains('chrome')) return 'Browser';
+    if (pkg.contains('camera')) return 'Kamera';
+    final parts = pkg.split('.');
+    return parts.isNotEmpty ? parts.last : 'Slot ${index + 1}';
+  }
+
+  Future<void> _launchDockApp(String packageName) async {
+    HapticFeedback.lightImpact();
+    if (!kIsWeb && Theme.of(context).platform == TargetPlatform.android) {
+      await ref.read(appLauncherServiceProvider).launchApp(packageName);
+      return;
+    }
+
+    // Cross-platform fallbacks for Web/Desktop:
+    try {
+      if (packageName.contains('dialer') || packageName.contains('phone')) {
+        await launchUrl(Uri.parse('tel:'));
+      } else if (packageName.contains('mms') || packageName.contains('message')) {
+        await launchUrl(Uri.parse('mailto:'));
+      } else if (packageName.contains('browser') || packageName.contains('chrome')) {
+        await launchUrl(Uri.parse('https://www.google.com'), mode: LaunchMode.externalApplication);
+      } else {
+        await ref.read(appLauncherServiceProvider).launchApp(packageName);
+      }
+    } catch (_) {}
   }
 }

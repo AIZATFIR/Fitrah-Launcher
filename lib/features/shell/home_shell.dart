@@ -7,7 +7,6 @@ import '../../providers/providers.dart';
 import '../../widgets/command_palette.dart';
 import '../../widgets/floating_quick_ai_bar.dart';
 import '../../widgets/hotkeys_modal.dart';
-import 'launching_page.dart';
 import 'simple_mode_view.dart';
 import '../agenda/agenda_tab.dart';
 import '../ai_chat/ai_chat_sheet.dart';
@@ -97,8 +96,12 @@ class _HomeShellState extends ConsumerState<HomeShell>
     });
 
     final appMode = ref.watch(selectedAppModeProvider);
-    if (appMode == 'launching') {
-      return const LaunchingPage();
+    if (appMode == 'fitrah') {
+      return const FitrahLauncherShell();
+    }
+
+    if (appMode == 'sadar') {
+      return const SadarHomeScreen();
     }
 
     if (appMode == 'simple') {
@@ -107,7 +110,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) {
             SystemSound.play(SystemSoundType.click);
-            ref.read(selectedAppModeProvider.notifier).state = 'launching';
+            ref.read(selectedAppModeProvider.notifier).state = 'fitrah';
           }
         },
         child: KeyboardListener(
@@ -115,49 +118,11 @@ class _HomeShellState extends ConsumerState<HomeShell>
           onKeyEvent: (event) {
             if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
               SystemSound.play(SystemSoundType.click);
-              ref.read(selectedAppModeProvider.notifier).state = 'launching';
+              ref.read(selectedAppModeProvider.notifier).state = 'fitrah';
             }
           },
           child: const SimpleModeView(),
         ),
-      );
-    }
-
-    if (appMode == 'sadar') {
-      return PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) {
-            SystemSound.play(SystemSoundType.click);
-            ref.read(selectedAppModeProvider.notifier).state = 'launching';
-          }
-        },
-        child: KeyboardListener(
-          focusNode: FocusNode()..requestFocus(),
-          onKeyEvent: (event) {
-            if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
-              SystemSound.play(SystemSoundType.click);
-              ref.read(selectedAppModeProvider.notifier).state = 'launching';
-            }
-          },
-          child: SadarHomeScreen(
-            onBack: () {
-              SystemSound.play(SystemSoundType.click);
-              HapticFeedback.selectionClick();
-              ref.read(selectedAppModeProvider.notifier).state = 'launching';
-            },
-          ),
-        ),
-      );
-    }
-
-    if (appMode == 'fitrah') {
-      return FitrahLauncherShell(
-        onExitLauncher: () {
-          SystemSound.play(SystemSoundType.click);
-          HapticFeedback.selectionClick();
-          ref.read(selectedAppModeProvider.notifier).state = 'launching';
-        },
       );
     }
 

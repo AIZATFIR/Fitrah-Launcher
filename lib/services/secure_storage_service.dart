@@ -81,6 +81,19 @@ class SecureStorageService {
     await _storage.write(key: _keySadarOnboarding, value: done.toString());
   }
 
+  // ── Generic Custom Key-Value Storage ──────────────────────────────────────
+  Future<String?> readCustomKey(String key) async {
+    return await _storage.read(key: key);
+  }
+
+  Future<void> writeCustomKey(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
+
+  Future<void> deleteCustomKey(String key) async {
+    await _storage.delete(key: key);
+  }
+
   /// Clear all stored secure credentials
   Future<void> clearAll() async {
     await _storage.deleteAll();
