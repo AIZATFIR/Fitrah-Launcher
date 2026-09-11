@@ -61,3 +61,5 @@ secrets/
 
 *.pdf
 .vercel
+release_dist/
+
