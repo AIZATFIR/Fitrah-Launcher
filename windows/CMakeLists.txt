@@ -1,3 +1,6 @@
+# Compatibility with CMake 3.31+ / 4.0 for legacy plugins (e.g. firebase_cpp_sdk)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum policy version" FORCE)
+
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
 project(focus_clock LANGUAGES CXX)
