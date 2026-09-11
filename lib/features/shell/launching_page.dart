@@ -347,7 +347,87 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 14),
+
+                  // HERO CARD 4: FITRAH LAUNCHER (Minimalist Home Launcher)
+                  InkWell(
+                    onTap: () => _selectMode('fitrah'),
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                      decoration: BoxDecoration(
+                        color: AppPalette.card,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: AppPalette.accent.withValues(alpha: 0.8), width: 1.8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppPalette.accent.withValues(alpha: 0.18),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppPalette.accent.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4)),
+                            ),
+                            child: const Icon(Icons.home_outlined, size: 26, color: AppPalette.accent),
+                          ),
+                          const SizedBox(width: 18),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'FITRAH LAUNCHER',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppPalette.accent,
+                                        letterSpacing: 2.0,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppPalette.accent.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'HOME',
+                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: AppPalette.accent, letterSpacing: 0.8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Minimalist phone launcher & intentional time companion.',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppPalette.text),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  '3 panel geser: Jam analog Focus Clock (kiri) | Event hari ini (tengah) | Niagara App Drawer (kanan).',
+                                  style: TextStyle(fontSize: 11, color: AppPalette.textDim),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Icon(Icons.arrow_forward_rounded, color: AppPalette.accent, size: 22),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
 
                   // Rolling Subconscious Kind Affirmation Banner (Placed at bottom, BORDERLESS without outline)
                   AnimatedSwitcher(

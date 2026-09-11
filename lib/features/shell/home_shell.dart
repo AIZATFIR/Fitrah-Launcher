@@ -12,6 +12,7 @@ import 'simple_mode_view.dart';
 import '../agenda/agenda_tab.dart';
 import '../ai_chat/ai_chat_sheet.dart';
 import '../focusclock/focusclock_tab.dart';
+import '../launcher/fitrah_launcher_shell.dart';
 import '../presets/presets_tab.dart';
 import '../sadar/sadar_home_screen.dart';
 import '../settings/settings_screen.dart';
@@ -147,6 +148,16 @@ class _HomeShellState extends ConsumerState<HomeShell>
             },
           ),
         ),
+      );
+    }
+
+    if (appMode == 'fitrah') {
+      return FitrahLauncherShell(
+        onExitLauncher: () {
+          SystemSound.play(SystemSoundType.click);
+          HapticFeedback.selectionClick();
+          ref.read(selectedAppModeProvider.notifier).state = 'launching';
+        },
       );
     }
 
