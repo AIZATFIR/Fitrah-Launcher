@@ -1,4 +1,4 @@
-name: Release Focus Clock
+name: Sadar Multiplatform Release
 
 on:
   push:
@@ -11,134 +11,73 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: subosito/flutter-action@v2
         with:
-          distribution: 'zulu'
-          java-version: '17'
-          
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
+          flutter-version: '3.x'
           channel: 'stable'
-          
-      - name: Install dependencies
-        run: flutter pub get
-        
-      - name: Run build_runner
-        run: flutter pub run build_runner build --delete-conflicting-outputs || true
-        
-      - name: Build APK
+      - name: Build Android APK
         run: flutter build apk --release
-        
-      - name: Upload APK
+      - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: focus-clock-android-apk
+          name: Sadar-Android-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
   build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install Linux build dependencies
+      - name: Install Linux Dependencies
         run: |
-          sudo dpkg --configure -a
-          sudo apt-get clean
           sudo apt-get update
-          sudo apt-get install -y -f
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libblkid-dev libayatana-appindicator3-dev
-          
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+      - uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.x'
           channel: 'stable'
-          
-      - name: Install dependencies
-        run: flutter pub get
-        
-      - name: Run build_runner
-        run: flutter pub run build_runner build --delete-conflicting-outputs || true
-        
-      - name: Build Linux Desktop
-        run: flutter build linux --release
-        
-      - name: Archive Linux Bundle
-        run: tar -czf focus-clock-linux.tar.gz -C build/linux/x64/release/bundle .
-          
-      - name: Upload Linux Archive
+      - name: Build Linux
+        run: |
+          flutter build linux --release
+          cd build/linux/x64/release/bundle
+          tar -czvf ../../../../../Sadar-Linux-x64.tar.gz .
+      - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: focus-clock-linux-desktop
-          path: focus-clock-linux.tar.gz
+          name: Sadar-Linux-x64
+          path: Sadar-Linux-x64.tar.gz
 
   build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.x'
           channel: 'stable'
-          
-      - name: Install dependencies
-        run: flutter pub get
-        
-      - name: Run build_runner
-        run: flutter pub run build_runner build --delete-conflicting-outputs || true
-        
-      - name: Build Windows Desktop
-        run: flutter build windows --release
-        
-      - name: Archive Windows Bundle
-        shell: bash
+      - name: Build Windows
         run: |
-          cd build/windows/x64/runner/Release
-          7z a ../../../../../focus-clock-windows.zip .
-          
-      - name: Upload Windows Archive
+          flutter build windows --release
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath Sadar-Windows-x64.zip
+      - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: focus-clock-windows-desktop
-          path: focus-clock-windows.zip
+          name: Sadar-Windows-x64
+          path: Sadar-Windows-x64.zip
 
-  publish-release:
-    needs: [build-android, build-linux, build-windows]
+  build-web:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Download Android APK
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
-          name: focus-clock-android-apk
-          path: ./artifacts
-          
-      - name: Download Linux Desktop
-        uses: actions/download-artifact@v4
-        with:
-          name: focus-clock-linux-desktop
-          path: ./artifacts
-          
-      - name: Download Windows Desktop
-        uses: actions/download-artifact@v4
-        with:
-          name: focus-clock-windows-desktop
-          path: ./artifacts
-          
-      - name: Rename artifacts for release
+          flutter-version: '3.x'
+          channel: 'stable'
+      - name: Build Web
         run: |
-          mv ./artifacts/app-release.apk ./artifacts/focus-clock-android.apk
-          
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+          flutter build web --release
+          cd build/web && zip -r ../../Sadar-Web.zip .
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: |
-            ./artifacts/focus-clock-android.apk
-            ./artifacts/focus-clock-linux.tar.gz
-            ./artifacts/focus-clock-windows.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: Sadar-Web
+          path: Sadar-Web.zip

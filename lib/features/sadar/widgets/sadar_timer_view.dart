@@ -8,7 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme.dart';
 import '../../../models/habit.dart';
 import '../../../models/habit_entry.dart';
+import '../../../providers/providers.dart';
 import '../../../providers/sadar_providers.dart';
+import '../../../services/chime_service.dart';
 import '../../../services/sadar_timer_engine.dart';
 
 class SadarTimerView extends ConsumerStatefulWidget {
@@ -30,16 +32,22 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
   late AnimationController _pulseCtrl;
   bool _isPaused = false;
   bool _isCompleted = false;
+  bool _isOverdue = false;
+  bool _hasChimed = false;
 
   Timer? _ticker;
   late int _totalSeconds;
   late int _remainingSeconds;
+  int _overdueSeconds = 0;
   DateTime? _pausedAt;
   late DateTime _targetEndTime;
 
   @override
   void initState() {
     super.initState();
+    // Enable immersive fullscreen on mobile for total focus
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
@@ -62,10 +70,20 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
         setState(() {
           if (diff <= 0) {
             _remainingSeconds = 0;
-            _isCompleted = true;
-            _ticker?.cancel();
-            HapticFeedback.heavyImpact();
-            _autoRecordCompletion();
+            _isOverdue = true;
+            _overdueSeconds = diff.abs();
+
+            if (!_hasChimed) {
+              _hasChimed = true;
+              ChimeService().playTwingChime();
+              try {
+                ref.read(notificationServiceProvider).showNotification(
+                  id: widget.habit.id,
+                  title: 'Waktu Selesai! 🎉',
+                  body: 'Target "${widget.habit.name}" tercapai. Anda dalam mode fokus ekstra!',
+                );
+              } catch (_) {}
+            }
           } else {
             _remainingSeconds = diff.clamp(0, _totalSeconds);
           }
@@ -92,10 +110,9 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
     });
   }
 
-  void _finishEarly() {
+  void _finish() {
     HapticFeedback.mediumImpact();
     setState(() {
-      _remainingSeconds = 0;
       _isCompleted = true;
     });
     _ticker?.cancel();
@@ -105,7 +122,8 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
   Future<void> _autoRecordCompletion() async {
     final now = DateTime.now();
     final dateStr = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final elapsedMinutes = ((_totalSeconds - _remainingSeconds) / 60).ceil().clamp(1, widget.habit.target);
+    final totalElapsedSecs = _totalSeconds - _remainingSeconds + _overdueSeconds;
+    final elapsedMinutes = (totalElapsedSecs / 60).ceil().clamp(1, 999);
 
     await ref.read(sadarRepoProvider).recordEntryStatus(
       habitId: widget.habit.id,
@@ -126,6 +144,7 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
   void dispose() {
     _ticker?.cancel();
     _pulseCtrl.dispose();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
@@ -189,7 +208,9 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
   }
 
   Widget _buildActiveTimer(Color color) {
-    final progress = _totalSeconds > 0 ? (1.0 - (_remainingSeconds / _totalSeconds)).clamp(0.0, 1.0) : 0.0;
+    final progress = _isOverdue
+        ? 1.0
+        : (_totalSeconds > 0 ? (1.0 - (_remainingSeconds / _totalSeconds)).clamp(0.0, 1.0) : 0.0);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -224,9 +245,16 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
         ),
 
         const SizedBox(height: 16),
-        const Text(
-          'Stay with it. Fulfill your day.',
-          style: TextStyle(fontSize: 13, color: AppPalette.textDim, letterSpacing: 0.4),
+        Text(
+          _isOverdue
+              ? 'Target selesai! Terus melangkah selama fokus.'
+              : 'Stay with it. Fulfill your day.',
+          style: TextStyle(
+            fontSize: 13,
+            color: _isOverdue ? AppPalette.accent : AppPalette.textDim,
+            fontWeight: _isOverdue ? FontWeight.w600 : FontWeight.normal,
+            letterSpacing: 0.4,
+          ),
         ),
 
         const SizedBox(height: 36),
@@ -235,7 +263,7 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
         AnimatedBuilder(
           animation: _pulseCtrl,
           builder: (context, child) {
-            final scale = 1.0 + (_pulseCtrl.value * 0.02);
+            final scale = 1.0 + (_pulseCtrl.value * (_isOverdue ? 0.035 : 0.02));
             return Transform.scale(
               scale: scale,
               child: SizedBox(
@@ -249,7 +277,11 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                       child: CircularProgressIndicator(
                         value: 1.0,
                         strokeWidth: 4,
-                        valueColor: AlwaysStoppedAnimation(AppPalette.stroke.withValues(alpha: 0.3)),
+                        valueColor: AlwaysStoppedAnimation(
+                          _isOverdue
+                              ? AppPalette.accent.withValues(alpha: 0.2)
+                              : AppPalette.stroke.withValues(alpha: 0.3),
+                        ),
                       ),
                     ),
                     // Progress arc
@@ -258,7 +290,7 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                         value: progress,
                         strokeWidth: 6,
                         strokeCap: StrokeCap.round,
-                        valueColor: AlwaysStoppedAnimation(color),
+                        valueColor: AlwaysStoppedAnimation(_isOverdue ? AppPalette.accent : color),
                       ),
                     ),
                     // Digits
@@ -266,22 +298,26 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _formatTime(_remainingSeconds),
-                          style: const TextStyle(
-                            fontSize: 54,
+                          _isOverdue ? '+${_formatTime(_overdueSeconds)}' : _formatTime(_remainingSeconds),
+                          style: TextStyle(
+                            fontSize: _isOverdue ? 48 : 54,
                             fontWeight: FontWeight.w300,
                             letterSpacing: -1.0,
-                            color: Colors.white,
+                            color: _isOverdue ? AppPalette.accent : Colors.white,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _isPaused ? 'JEDA' : 'SADAR',
+                          _isPaused
+                              ? 'JEDA'
+                              : (_isOverdue ? 'LEBIH (OVERDUE)' : 'SADAR'),
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 3.5,
-                            color: _isPaused ? AppPalette.textDim : color,
+                            letterSpacing: 3.0,
+                            color: _isPaused
+                                ? AppPalette.textDim
+                                : (_isOverdue ? AppPalette.accent : color),
                           ),
                         ),
                       ],
@@ -321,8 +357,8 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                 ),
               ),
               icon: const Icon(Icons.check_rounded, size: 20),
-              label: const Text('Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
-              onPressed: _finishEarly,
+              label: Text(_isOverdue ? 'Selesai (+${_overdueSeconds ~/ 60}m)' : 'Selesai', style: const TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: _finish,
             ),
           ],
         ),
