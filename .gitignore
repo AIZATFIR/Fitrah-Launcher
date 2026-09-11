@@ -49,7 +49,6 @@ app.*.map.json
 # Firebase secrets (JANGAN commit ini)
 google-services.json
 GoogleService-Info.plist
-lib/firebase_options.dart
 
 # API keys & env
 .env
