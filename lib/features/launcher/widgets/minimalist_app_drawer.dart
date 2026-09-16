@@ -66,132 +66,193 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppPalette.card,
+      backgroundColor: const Color(0xFF161618),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        side: BorderSide(color: AppPalette.stroke),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        side: BorderSide(color: Color(0xFF26262B)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppPalette.bg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppPalette.stroke),
-                    ),
-                    child: Center(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Expanded(
                       child: Text(
-                        app.appName.isNotEmpty ? app.appName[0].toUpperCase() : '?',
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppPalette.accent),
+                        app.appName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          app.appName,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppPalette.text),
-                        ),
-                        Text(
-                          app.packageName,
-                          style: const TextStyle(fontSize: 11, color: AppPalette.textDim),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                    IconButton(
+                      icon: const Icon(Icons.create_new_folder_outlined, color: Colors.white70, size: 22),
+                      onPressed: () => Navigator.pop(ctx),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              const Divider(color: AppPalette.stroke, height: 1),
-              const SizedBox(height: 8),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  isFav ? Icons.star_rounded : Icons.star_outline_rounded,
-                  color: isFav ? AppPalette.accent : AppPalette.textDim,
+                  ],
                 ),
-                title: Text(isFav ? 'Hapus dari Favorit' : 'Sematkan ke Favorit'),
-                onTap: () {
-                  final newSet = Set<String>.from(favorites);
-                  if (isFav) {
-                    newSet.remove(app.packageName);
-                  } else {
-                    newSet.add(app.packageName);
-                  }
-                  ref.read(favoritePackagesProvider.notifier).state = newSet;
-                  Navigator.of(ctx).pop();
-                },
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.info_outline_rounded, color: AppPalette.textDim),
-                title: const Text('Detail Aplikasi'),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  ref.read(appLauncherServiceProvider).openAppDetails(app.packageName);
-                },
-              ),
-            ],
+                const SizedBox(height: 12),
+                const Divider(color: Color(0xFF26262B), height: 1),
+                const SizedBox(height: 6),
+
+                // 1. Add to Favorites
+                _buildSheetTile(
+                  icon: isFav ? Icons.star_rounded : Icons.star_outline_rounded,
+                  iconColor: isFav ? const Color(0xFFFBBF24) : Colors.white70,
+                  title: isFav ? 'Remove from Favorites' : 'Add to Favorites',
+                  onTap: () {
+                    final newSet = Set<String>.from(favorites);
+                    if (isFav) {
+                      newSet.remove(app.packageName);
+                    } else {
+                      newSet.add(app.packageName);
+                    }
+                    ref.read(favoritePackagesProvider.notifier).state = newSet;
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+
+                // 2. App Interrupts
+                _buildSheetTile(
+                  icon: Icons.front_hand_outlined,
+                  iconColor: const Color(0xFFF59E0B),
+                  title: 'App Interrupts',
+                  subtitle: 'Quran verse, timer, Password Interrupts',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('App Interrupts diatur untuk ${app.appName}')),
+                    );
+                  },
+                ),
+
+                // 3. App Block
+                _buildSheetTile(
+                  icon: Icons.block_outlined,
+                  iconColor: const Color(0xFFEF4444),
+                  title: 'App Block',
+                  subtitle: 'Block for a set duration',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('App Block diatur untuk ${app.appName}')),
+                    );
+                  },
+                ),
+
+                // 4. Change app name
+                _buildSheetTile(
+                  icon: Icons.edit_outlined,
+                  title: 'Change app name',
+                  onTap: () => Navigator.pop(ctx),
+                ),
+
+                // 5. Add to folder
+                _buildSheetTile(
+                  icon: Icons.folder_open_outlined,
+                  title: 'Add to folder',
+                  onTap: () => Navigator.pop(ctx),
+                ),
+
+                // 6. Set category
+                _buildSheetTile(
+                  icon: Icons.category_outlined,
+                  title: 'Set category',
+                  onTap: () => Navigator.pop(ctx),
+                ),
+
+                // 7. Hide this app
+                _buildSheetTile(
+                  icon: Icons.visibility_off_outlined,
+                  title: 'Hide this app',
+                  onTap: () => Navigator.pop(ctx),
+                ),
+
+                // 8. App info
+                _buildSheetTile(
+                  icon: Icons.info_outline_rounded,
+                  title: 'App info',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    ref.read(appLauncherServiceProvider).openAppDetails(app.packageName);
+                  },
+                ),
+
+                // 9. Uninstall app
+                _buildSheetTile(
+                  icon: Icons.delete_outline_rounded,
+                  iconColor: const Color(0xFFEF4444),
+                  textColor: const Color(0xFFEF4444),
+                  title: 'Uninstall app',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    ref.read(appLauncherServiceProvider).uninstallApp(app.packageName);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  IconData _resolveAppIcon(String appName) {
-    final lower = appName.toLowerCase();
-    if (lower.contains('browser') || lower.contains('chrome') || lower.contains('firefox')) {
-      return Icons.language_rounded;
-    }
-    if (lower.contains('phone') || lower.contains('call') || lower.contains('dialer')) {
-      return Icons.phone_outlined;
-    }
-    if (lower.contains('message') || lower.contains('sms') || lower.contains('chat')) {
-      return Icons.chat_bubble_outline_rounded;
-    }
-    if (lower.contains('camera')) {
-      return Icons.camera_alt_outlined;
-    }
-    if (lower.contains('calendar')) {
-      return Icons.calendar_today_outlined;
-    }
-    if (lower.contains('clock') || lower.contains('timer') || lower.contains('alarm')) {
-      return Icons.schedule_rounded;
-    }
-    if (lower.contains('setting')) {
-      return Icons.tune_rounded;
-    }
-    if (lower.contains('calculator')) {
-      return Icons.calculate_outlined;
-    }
-    if (lower.contains('mail')) {
-      return Icons.mail_outline_rounded;
-    }
-    if (lower.contains('file') || lower.contains('manager') || lower.contains('folder')) {
-      return Icons.folder_open_rounded;
-    }
-    if (lower.contains('note') || lower.contains('memo') || lower.contains('keep')) {
-      return Icons.edit_note_rounded;
-    }
-    if (lower.contains('term') || lower.contains('shell')) {
-      return Icons.terminal_rounded;
-    }
-    return Icons.widgets_outlined;
+  Widget _buildSheetTile({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    Color iconColor = Colors.white70,
+    Color textColor = Colors.white,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 6),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor, size: 20),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.white54,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +393,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
               right: 2,
               top: 70,
               bottom: 24,
-              width: 26,
+              width: 32,
               child: GestureDetector(
                 onVerticalDragUpdate: (details) {
                   final renderBox = context.findRenderObject() as RenderBox?;
@@ -344,20 +405,23 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                   final letter = _alphabet[index];
                   _scrollToLetter(letter);
                 },
+                onVerticalDragEnd: (_) {
+                  setState(() => _selectedScrubLetter = '');
+                },
                 child: Container(
                   color: Colors.transparent,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: _alphabet.map((letter) {
                       final isSelected = _selectedScrubLetter == letter;
-                      return GestureDetector(
-                        onTap: () => _scrollToLetter(letter),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 0.5),
                         child: Text(
                           letter,
                           style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                            color: isSelected ? AppPalette.accent : AppPalette.textDim.withValues(alpha: 0.6),
+                            fontSize: 10,
+                            fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
+                            color: isSelected ? Colors.white : Colors.white38,
                           ),
                         ),
                       );
@@ -366,6 +430,38 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                 ),
               ),
             ),
+
+            // Letter Indicator Bubble while scrubbing
+            if (_selectedScrubLetter.isNotEmpty)
+              Positioned(
+                right: 48,
+                top: 200,
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2A2A2E),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      _selectedScrubLetter,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -373,35 +469,22 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
   }
 
   Widget _buildAppRow(InstalledApp app) {
-    final iconData = _resolveAppIcon(app.appName);
-
     return InkWell(
       onTap: () => _launchApp(app),
       onLongPress: () => _showAppOptions(app),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: AppPalette.card,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppPalette.stroke),
-              ),
-              child: Icon(iconData, size: 18, color: AppPalette.accent),
-            ),
-            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 app.appName,
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppPalette.text,
-                  letterSpacing: -0.2,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.white,
+                  letterSpacing: 0.2,
                 ),
               ),
             ),

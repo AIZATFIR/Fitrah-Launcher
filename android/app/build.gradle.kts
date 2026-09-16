@@ -27,6 +27,26 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        manifestPlaceholders["appName"] = "Focus Clock"
+    }
+
+    flavorDimensions += "app"
+    productFlavors {
+        create("fitrah") {
+            dimension = "app"
+            applicationId = "com.aizatfir.fitrah_launcher"
+            manifestPlaceholders["appName"] = "Fitrah Launcher"
+        }
+        create("sadar") {
+            dimension = "app"
+            applicationId = "com.aizatfir.sadar"
+            manifestPlaceholders["appName"] = "Sadar"
+        }
+        create("focus") {
+            dimension = "app"
+            applicationId = "com.aizatfir.focus_clock"
+            manifestPlaceholders["appName"] = "Focus Clock"
+        }
     }
 
     buildTypes {

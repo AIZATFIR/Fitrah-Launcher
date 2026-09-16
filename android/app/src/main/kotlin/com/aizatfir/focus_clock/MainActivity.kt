@@ -120,6 +120,52 @@ class MainActivity : FlutterActivity() {
                             result.error("ERROR_OPENING_HOME_SETTINGS", e2.message, null)
                         }
                     }
+                "launchDialer" -> {
+                    try {
+                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR_LAUNCHING_DIALER", e.message, null)
+                    }
+                }
+                "launchCamera" -> {
+                    try {
+                        val intent = Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        try {
+                            val fallbackIntent = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(fallbackIntent)
+                            result.success(true)
+                        } catch (e2: Exception) {
+                            result.error("ERROR_LAUNCHING_CAMERA", e2.message, null)
+                        }
+                    }
+                }
+                "uninstallApp" -> {
+                    val pkg = call.argument<String>("packageName")
+                    if (pkg != null) {
+                        try {
+                            val intent = Intent(Intent.ACTION_DELETE).apply {
+                                data = Uri.fromParts("package", pkg, null)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("ERROR_UNINSTALLING_APP", e.message, null)
+                        }
+                    } else {
+                        result.error("INVALID_PACKAGE", "Package name is null", null)
+                    }
                 }
                 else -> result.notImplemented()
             }

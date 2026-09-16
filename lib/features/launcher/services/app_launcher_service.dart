@@ -108,6 +108,33 @@ class AppLauncherService {
     }
   }
 
+  Future<void> launchDialer() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod('launchDialer');
+    } catch (e) {
+      debugPrint('AppLauncherService launchDialer error: $e');
+    }
+  }
+
+  Future<void> launchCamera() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod('launchCamera');
+    } catch (e) {
+      debugPrint('AppLauncherService launchCamera error: $e');
+    }
+  }
+
+  Future<void> uninstallApp(String packageName) async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod('uninstallApp', {'packageName': packageName});
+    } catch (e) {
+      debugPrint('AppLauncherService uninstallApp error: $e');
+    }
+  }
+
   List<InstalledApp> _getDesktopOrWebApps() {
     return const [
       InstalledApp(appName: 'Browser', packageName: 'com.android.browser', isFavorite: true),
