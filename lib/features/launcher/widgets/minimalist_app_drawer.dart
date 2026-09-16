@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme.dart';
 import '../services/app_launcher_service.dart';
+import 'fitrah_settings_screen.dart';
 
 class MinimalistAppDrawer extends ConsumerStatefulWidget {
   const MinimalistAppDrawer({super.key});
@@ -20,8 +20,8 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
   String _searchQuery = '';
 
   static const List<String> _alphabet = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '#'
+    '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
   ];
 
   @override
@@ -79,23 +79,20 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
+                // Header: App name + folder icon
                 Row(
                   children: [
                     Expanded(
                       child: Text(
                         app.appName,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           fontSize: 18,
                           color: Colors.white,
                         ),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.create_new_folder_outlined, color: Colors.white70, size: 22),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
+                    const Icon(Icons.folder_open_outlined, color: Colors.white70, size: 22),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -122,28 +119,22 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                 // 2. App Interrupts
                 _buildSheetTile(
                   icon: Icons.front_hand_outlined,
-                  iconColor: const Color(0xFFF59E0B),
+                  iconColor: const Color(0xFFE5A93C),
                   title: 'App Interrupts',
                   subtitle: 'Quran verse, timer, Password Interrupts',
                   onTap: () {
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('App Interrupts diatur untuk ${app.appName}')),
-                    );
                   },
                 ),
 
                 // 3. App Block
                 _buildSheetTile(
-                  icon: Icons.block_outlined,
-                  iconColor: const Color(0xFFEF4444),
+                  icon: Icons.block_flipped,
+                  iconColor: const Color(0xFFE05252),
                   title: 'App Block',
                   subtitle: 'Block for a set duration',
                   onTap: () {
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('App Block diatur untuk ${app.appName}')),
-                    );
                   },
                 ),
 
@@ -156,7 +147,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
 
                 // 5. Add to folder
                 _buildSheetTile(
-                  icon: Icons.folder_open_outlined,
+                  icon: Icons.folder_outlined,
                   title: 'Add to folder',
                   onTap: () => Navigator.pop(ctx),
                 ),
@@ -188,8 +179,8 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                 // 9. Uninstall app
                 _buildSheetTile(
                   icon: Icons.delete_outline_rounded,
-                  iconColor: const Color(0xFFEF4444),
-                  textColor: const Color(0xFFEF4444),
+                  iconColor: const Color(0xFFE05252),
+                  textColor: const Color(0xFFE05252),
                   title: 'Uninstall app',
                   onTap: () {
                     Navigator.of(ctx).pop();
@@ -219,7 +210,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
         padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 6),
         child: Row(
           children: [
-            Icon(icon, color: iconColor, size: 20),
+            Icon(icon, color: iconColor, size: 21),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -228,8 +219,8 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
                       color: textColor,
                     ),
                   ),
@@ -252,15 +243,14 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     );
   }
 
-
+  double _scrubberY = 200;
 
   @override
   Widget build(BuildContext context) {
     final appsAsync = ref.watch(installedAppsFutureProvider);
-    final favoritePackages = ref.watch(favoritePackagesProvider);
 
     return Scaffold(
-      backgroundColor: AppPalette.bg,
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
@@ -269,36 +259,78 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                 constraints: const BoxConstraints(maxWidth: 580),
                 child: Column(
                   children: [
-                    // Search Bar
+                    // Top App Bar: Crown + Apps + Settings Cog
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 36, 12),
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppPalette.card,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppPalette.stroke),
-                        ),
-                        child: TextField(
-                          controller: _searchCtrl,
-                          onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                          style: const TextStyle(fontSize: 14, color: AppPalette.text),
-                          decoration: InputDecoration(
-                            hintText: 'Cari aplikasi...',
-                            hintStyle: const TextStyle(fontSize: 13, color: AppPalette.textDim),
-                            prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppPalette.textDim),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear_rounded, size: 16, color: AppPalette.textDim),
-                                    onPressed: () {
-                                      _searchCtrl.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.workspace_premium_outlined, color: Color(0xFFE5A93C), size: 26),
+                            onPressed: () {},
                           ),
+                          const Expanded(
+                            child: Center(
+                              child: Text(
+                                'Apps',
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 24),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const FitrahSettingsScreen()),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Rounded Pill Search Bar
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                      child: Container(
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white30, width: 1.0),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search_rounded, size: 20, color: Colors.white70),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchCtrl,
+                                onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                                style: const TextStyle(fontSize: 15, color: Colors.white),
+                                decoration: const InputDecoration(
+                                  hintText: 'Search Apps',
+                                  hintStyle: TextStyle(fontSize: 14, color: Colors.white38),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                              ),
+                            ),
+                            if (_searchQuery.isNotEmpty)
+                              GestureDetector(
+                                onTap: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                                child: const Icon(Icons.clear_rounded, size: 18, color: Colors.white60),
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -311,72 +343,41 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                               ? allApps
                               : allApps.where((a) => a.appName.toLowerCase().contains(_searchQuery)).toList();
 
-                          final favApps = allApps.where((a) => favoritePackages.contains(a.packageName)).toList();
-
                           if (filtered.isEmpty) {
                             return const Center(
                               child: Text(
-                                'Tidak ada aplikasi yang cocok.',
-                                style: TextStyle(color: AppPalette.textDim, fontSize: 13),
+                                'No apps found.',
+                                style: TextStyle(color: Colors.white38, fontSize: 13),
                               ),
                             );
                           }
 
-                          // Group by first letter
+                          // Group by first letter for scroll indexing
                           final Map<String, List<InstalledApp>> grouped = {};
                           for (final app in filtered) {
                             final letter = app.firstLetter;
                             grouped.putIfAbsent(letter, () => []).add(app);
                           }
 
-                          return ListView(
+                          return ListView.builder(
                             controller: _scrollCtrl,
-                            padding: const EdgeInsets.fromLTRB(20, 4, 38, 40),
-                            children: [
-                              // Favorites Section (Only when not searching)
-                              if (_searchQuery.isEmpty && favApps.isNotEmpty) ...[
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 4, bottom: 8, top: 4),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.star_rounded, size: 13, color: AppPalette.accent),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'FAVORIT',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 1.5,
-                                          color: AppPalette.accent,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                ...favApps.map((app) => _buildAppRow(app)),
-                                const SizedBox(height: 16),
-                                const Divider(color: AppPalette.stroke, height: 1),
-                                const SizedBox(height: 12),
-                              ],
+                            padding: const EdgeInsets.fromLTRB(20, 4, 38, 80),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final app = filtered[index];
+                              final isFirstOfLetter = index == 0 ||
+                                  filtered[index - 1].firstLetter != app.firstLetter;
 
-                              // Alphabetical Groups
-                              for (final entry in grouped.entries) ...[
-                                Container(
-                                  key: _letterKeys[entry.key],
-                                  padding: const EdgeInsets.only(left: 6, top: 12, bottom: 6),
-                                  child: Text(
-                                    entry.key,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w900,
-                                      color: AppPalette.textDim,
-                                      letterSpacing: 1.0,
-                                    ),
-                                  ),
-                                ),
-                                ...entry.value.map((app) => _buildAppRow(app)),
-                              ],
-                            ],
+                              final rowWidget = _buildAppRow(app);
+
+                              if (isFirstOfLetter) {
+                                return Container(
+                                  key: _letterKeys[app.firstLetter],
+                                  child: rowWidget,
+                                );
+                              }
+                              return rowWidget;
+                            },
                           );
                         },
                         loading: () => const Center(child: CircularProgressIndicator()),
@@ -391,61 +392,52 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
             // Niagara-Style Alphabet Scrubber Bar on the Right Margin
             Positioned(
               right: 2,
-              top: 70,
-              bottom: 24,
-              width: 32,
+              top: 80,
+              bottom: 40,
+              width: 28,
               child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragDown: (details) {
+                  _updateScrub(details.localPosition.dy);
+                },
                 onVerticalDragUpdate: (details) {
-                  final renderBox = context.findRenderObject() as RenderBox?;
-                  if (renderBox == null) return;
-                  final localY = details.localPosition.dy;
-                  final totalHeight = renderBox.size.height - 94;
-                  final itemHeight = totalHeight / _alphabet.length;
-                  final index = (localY / itemHeight).clamp(0, _alphabet.length - 1).floor();
-                  final letter = _alphabet[index];
-                  _scrollToLetter(letter);
+                  _updateScrub(details.localPosition.dy);
                 },
                 onVerticalDragEnd: (_) {
                   setState(() => _selectedScrubLetter = '');
                 },
-                child: Container(
-                  color: Colors.transparent,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: _alphabet.map((letter) {
-                      final isSelected = _selectedScrubLetter == letter;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 0.5),
-                        child: Text(
-                          letter,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
-                            color: isSelected ? Colors.white : Colors.white38,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: _alphabet.map((letter) {
+                    final isSelected = _selectedScrubLetter == letter;
+                    return Text(
+                      letter,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w400,
+                        color: isSelected ? Colors.white : Colors.white38,
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
 
-            // Letter Indicator Bubble while scrubbing
+            // Niagara-Style Letter Indicator Bubble while scrubbing
             if (_selectedScrubLetter.isNotEmpty)
               Positioned(
-                right: 48,
-                top: 200,
+                right: 36,
+                top: _scrubberY - 18,
                 child: Container(
-                  width: 50,
-                  height: 50,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2A2A2E),
+                    color: const Color(0xFF3F3F46),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.4),
-                        blurRadius: 8,
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 6,
                         offset: const Offset(0, 2),
                       )
                     ],
@@ -454,18 +446,61 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                     child: Text(
                       _selectedScrubLetter,
                       style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                     ),
                   ),
                 ),
               ),
+
+            // Circled Arrow Up button at Bottom Right (scroll to top)
+            Positioned(
+              right: 18,
+              bottom: 24,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  if (_scrollCtrl.hasClients) {
+                    _scrollCtrl.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                },
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.transparent,
+                    border: Border.all(color: Colors.white, width: 2.0),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_upward_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  void _updateScrub(double localY) {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final totalHeight = renderBox.size.height - 120;
+    final itemHeight = totalHeight / _alphabet.length;
+    final index = (localY / itemHeight).clamp(0, _alphabet.length - 1).floor();
+    final letter = _alphabet[index];
+    _scrubberY = (localY + 80).clamp(80.0, renderBox.size.height - 50);
+    _scrollToLetter(letter);
   }
 
   Widget _buildAppRow(InstalledApp app) {

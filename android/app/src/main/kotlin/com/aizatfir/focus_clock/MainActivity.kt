@@ -120,6 +120,7 @@ class MainActivity : FlutterActivity() {
                             result.error("ERROR_OPENING_HOME_SETTINGS", e2.message, null)
                         }
                     }
+                }
                 "launchDialer" -> {
                     try {
                         val intent = Intent(Intent.ACTION_DIAL).apply {

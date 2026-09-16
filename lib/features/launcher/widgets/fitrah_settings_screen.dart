@@ -13,6 +13,9 @@ class FitrahSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
+  bool _showAppIcons = false;
+  bool _useDeviceWallpaper = false;
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(launcherSettingsProvider);
@@ -27,383 +30,252 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'SETTINGS',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2.0,
-            color: Colors.white,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 22),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           children: [
-            // 1. 100% Free Forever Card
-            _buildTopActionCard(
-              icon: Icons.favorite_rounded,
-              iconColor: const Color(0xFFE11D48),
-              iconBgColor: const Color(0xFF27151A),
-              title: '100% FREE FOREVER',
-              subtitle: 'Support through Sadaqah\n(voluntary giving)',
-              onTap: () async {
-                HapticFeedback.lightImpact();
-                final uri = Uri.parse('https://github.com/sponsors/AIZATFIR');
-                if (await canLaunchUrl(uri)) launchUrl(uri);
+            // Top Description
+            const Padding(
+              padding: EdgeInsets.only(bottom: 28),
+              child: Text(
+                'Remove distractions from notifications by filtering out unnecessary notifications from the apps you choose',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.45,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+            ),
+
+            // 1. Show App Icons switch
+            _buildSwitchTile(
+              title: 'Show App Icons',
+              value: _showAppIcons,
+              onChanged: (val) {
+                setState(() => _showAppIcons = val);
               },
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // 2. Rate Us Card
-            _buildTopActionCard(
-              icon: Icons.star_rounded,
-              iconColor: const Color(0xFFFBBF24),
-              iconBgColor: const Color(0xFF292212),
-              title: 'RATE US',
-              subtitle: 'Help others discover this free Islamic app',
-              borderColor: const Color(0xFF534117),
+            // 2. Use device wallpaper ★ switch
+            _buildSwitchTile(
+              title: 'Use device wallpaper ★',
+              value: _useDeviceWallpaper,
+              onChanged: (val) {
+                setState(() => _useDeviceWallpaper = val);
+                if (val) {
+                  notifier.setWallpaperType('custom');
+                } else {
+                  notifier.setWallpaperType('campfire');
+                }
+              },
+            ),
+
+            const SizedBox(height: 24),
+
+            // Section dropdown items
+            _buildDropdownTile(
+              title: 'Customization',
+              onTap: () => _showWallpaperPicker(context, settings, notifier),
+            ),
+            _buildDropdownTile(
+              title: 'Home Screen',
+              onTap: () => _showHomeCustomizationDialog(context, settings, notifier),
+            ),
+            _buildDropdownTile(
+              title: 'App Drawer',
+              onTap: () {},
+            ),
+            _buildDropdownTile(
+              title: 'Interrupts',
+              onTap: () => _showComingSoon(context, 'Interrupts'),
+            ),
+            _buildDropdownTile(
+              title: 'Focus Mode',
+              onTap: () => _showComingSoon(context, 'Focus Mode'),
+            ),
+            _buildDropdownTile(
+              title: 'Font',
+              onTap: () => _showFontPicker(context),
+            ),
+            _buildDropdownTile(
+              title: 'Gestures',
+              onTap: () => _showComingSoon(context, 'Gestures'),
+            ),
+            _buildDropdownTile(
+              title: 'More',
+              onTap: () => _showMoreSheet(context),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Plain Action Items
+            _buildPlainTile(
+              title: 'Rate us on Play Store',
               onTap: () {
-                HapticFeedback.lightImpact();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Terima kasih atas dukungannya! ⭐')),
                 );
               },
             ),
+            _buildPlainTile(
+              title: 'Device Settings',
+              onTap: () {
+                ref.read(appLauncherServiceProvider).openHomeSettings();
+              },
+            ),
+            _buildPlainTile(
+              title: 'Change Default Launcher',
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                ref.read(appLauncherServiceProvider).openHomeSettings();
+              },
+            ),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 40),
 
-            // APPEARANCE SECTION
-            _buildSectionHeader('APPEARANCE'),
-            const SizedBox(height: 8),
-            _buildCardGroup([
-              _buildSettingTile(
-                icon: Icons.home_outlined,
-                title: 'Home Customization',
-                subtitle: 'Customize as you prefer',
-                onTap: () => _showHomeCustomizationDialog(context, settings, notifier),
+            // Bottom Right Version
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 24, right: 4),
+                child: Text(
+                  'Version 5.17',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white38,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
               ),
-              _buildSettingTile(
-                icon: Icons.font_download_outlined,
-                title: 'Font Style',
-                subtitle: 'Montserrat / Outfit',
-                onTap: () => _showFontPicker(context),
-              ),
-              _buildSettingTile(
-                icon: Icons.text_fields_rounded,
-                title: 'Font Size',
-                subtitle: 'Normal',
-                onTap: () {},
-              ),
-              _buildSettingTile(
-                icon: Icons.wallpaper_rounded,
-                title: 'Wallpaper',
-                subtitle: settings.wallpaperType == 'campfire'
-                    ? 'Campfire (Default)'
-                    : (settings.wallpaperType == 'amoled_black' ? 'AMOLED Black' : 'Custom'),
-                onTap: () => _showWallpaperPicker(context, settings, notifier),
-              ),
-              _buildSettingTile(
-                icon: Icons.palette_outlined,
-                title: 'Theme Color',
-                subtitle: 'White',
-                onTap: () {},
-              ),
-              _buildSettingTile(
-                icon: Icons.access_time_rounded,
-                title: 'Time Format',
-                subtitle: settings.is24h ? '24-Hour' : '12-Hour',
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  notifier.setClockFormat(is24h: !settings.is24h);
-                },
-              ),
-              _buildSettingTile(
-                icon: Icons.touch_app_outlined,
-                title: 'Icon Style',
-                subtitle: 'Minimal Text Only',
-                onTap: () {},
-              ),
-            ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 28),
+  Widget _buildSwitchTile({
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w400,
+              color: Colors.white,
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: Colors.white,
+            activeTrackColor: Colors.white38,
+            inactiveThumbColor: Colors.white70,
+            inactiveTrackColor: Colors.white12,
+          ),
+        ],
+      ),
+    );
+  }
 
-            // QURAN SECTION
-            _buildSectionHeader('QURAN'),
-            const SizedBox(height: 8),
-            _buildCardGroup([
-              _buildSettingTile(
-                icon: Icons.translate_rounded,
-                title: 'Arabic Font',
-                subtitle: 'System Default',
-                onTap: () {},
+  Widget _buildDropdownTile({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w400,
+                color: Colors.white,
               ),
-              _buildSettingTile(
-                icon: Icons.menu_book_rounded,
-                title: 'Quran Settings',
-                subtitle: 'Reciter, translation, tafseer & downloads',
-                onTap: () {},
-              ),
-            ]),
+            ),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Colors.white70,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 28),
+  Widget _buildPlainTile({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w400,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
 
-            // DIGITAL WELLBEING SECTION
-            _buildSectionHeader('DIGITAL WELLBEING'),
-            const SizedBox(height: 8),
-            _buildCardGroup([
-              _buildSettingTile(
-                icon: Icons.phonelink_erase_rounded,
-                title: 'App Interrupts',
-                subtitle: 'Reduce distractions from apps',
-                onTap: () => _showComingSoon(context, 'App Interrupts'),
-              ),
-              _buildSettingTile(
-                icon: Icons.lock_clock_rounded,
-                title: 'Focus Mode',
-                subtitle: 'Block distracting apps during focus',
-                onTap: () => _showComingSoon(context, 'Focus Mode'),
-              ),
-              _buildSettingTile(
-                icon: Icons.shield_outlined,
-                title: 'Khandaq Mode',
-                subtitle: 'Timed digital fortress mode',
-                onTap: () => _showComingSoon(context, 'Khandaq Mode'),
-              ),
-              _buildSettingTile(
-                icon: Icons.block_rounded,
-                title: 'App Blocker',
-                subtitle: 'Block apps for specific durations',
-                onTap: () => _showComingSoon(context, 'App Blocker'),
-              ),
-            ]),
-
-            const SizedBox(height: 28),
-
-            // SYSTEM SECTION
-            _buildSectionHeader('SYSTEM'),
-            const SizedBox(height: 8),
-            _buildCardGroup([
-              _buildSettingTile(
-                icon: Icons.home_filled,
-                title: 'Change Default Launcher',
-                subtitle: 'Set as default home app',
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  ref.read(appLauncherServiceProvider).openHomeSettings();
-                },
-              ),
-            ]),
-
-            const SizedBox(height: 28),
-
-            // SUPPORT SECTION
-            _buildSectionHeader('SUPPORT'),
-            const SizedBox(height: 8),
-            _buildCardGroup([
-              _buildSettingTile(
-                icon: Icons.mail_outline_rounded,
+  void _showMoreSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161618),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildPlainTile(
                 title: 'Support via Email',
-                subtitle: 'Get help or report an issue',
                 onTap: () async {
+                  Navigator.pop(ctx);
                   final uri = Uri.parse('mailto:aizatfir@gmail.com?subject=Fitrah%20Launcher%20Support');
                   if (await canLaunchUrl(uri)) launchUrl(uri);
                 },
               ),
-              _buildSettingTile(
-                icon: Icons.forum_outlined,
-                title: 'Join Community',
-                subtitle: 'Connect with the community',
+              _buildPlainTile(
+                title: 'GitHub Repository',
                 onTap: () async {
+                  Navigator.pop(ctx);
                   final uri = Uri.parse('https://github.com/AIZATFIR/Fitrah-Launcher');
                   if (await canLaunchUrl(uri)) launchUrl(uri);
                 },
               ),
-              _buildSettingTile(
-                icon: Icons.share_outlined,
-                title: 'Recommend to a Friend',
-                subtitle: 'Share the app with others',
-                onTap: () {},
+              _buildPlainTile(
+                title: 'Credits & Open Source Licenses',
+                onTap: () => Navigator.pop(ctx),
               ),
-              _buildSettingTile(
-                icon: Icons.person_outline_rounded,
-                title: 'Connect with Developer',
-                subtitle: 'Follow on GitHub / LinkedIn',
-                onTap: () async {
-                  final uri = Uri.parse('https://github.com/AIZATFIR');
-                  if (await canLaunchUrl(uri)) launchUrl(uri);
-                },
-              ),
-            ]),
-
-            const SizedBox(height: 28),
-
-            // ABOUT SECTION
-            _buildSectionHeader('ABOUT'),
-            const SizedBox(height: 8),
-            _buildCardGroup([
-              _buildSettingTile(
-                icon: Icons.info_outline_rounded,
-                title: 'Version',
-                subtitle: 'v0.3.0',
-                onTap: () {},
-              ),
-              _buildSettingTile(
-                icon: Icons.description_outlined,
-                title: 'Credits & Licenses',
-                subtitle: 'Islamic & minimal open source community',
-                onTap: () {},
-              ),
-            ]),
-
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.5,
-          color: Colors.white54,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopActionCard({
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBgColor,
-    required String title,
-    required String subtitle,
-    Color? borderColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF161618),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor ?? const Color(0xFF26262B), width: 1.2),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: iconBgColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Icon(icon, color: iconColor, size: 24),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.white60,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white38, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCardGroup(List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF141416),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF232327), width: 1.0),
-      ),
-      child: Column(
-        children: children,
-      ),
-    );
-  }
-
-  Widget _buildSettingTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white70, size: 20),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.white54,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white30, size: 18),
-          ],
+            ],
+          ),
         ),
       ),
     );
