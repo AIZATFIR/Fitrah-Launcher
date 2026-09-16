@@ -214,5 +214,75 @@ void main() {
       expect(entries.first.habitId, habitId);
       expect(entries.first.status, HabitStatus.yes);
     });
+
+    test('Bodybuilding progression advances only when completed and wraps around', () async {
+      final habit = Habit()
+        ..name = 'Workout Routine'
+        ..habitType = 'progression'
+        ..currentProgressionIndex = 0
+        ..createdAt = DateTime.now();
+
+      final habitId = await repo.upsertHabit(habit);
+
+      // Step 0: Senin (Push Up 20 reps)
+      var h = await repo.getHabitById(habitId);
+      expect(h!.currentStep.dayName, 'Senin');
+      expect(h.currentStep.title, 'Push Up');
+      expect(h.currentStep.target, 20);
+
+      // Advance progression upon completion
+      await repo.advanceProgression(habitId);
+      h = await repo.getHabitById(habitId);
+      expect(h!.currentProgressionIndex, 1);
+      expect(h.currentStep.dayName, 'Selasa');
+      expect(h.currentStep.title, 'Pull Up');
+
+      // Advance again to Rabu (Rest Day)
+      await repo.advanceProgression(habitId);
+      h = await repo.getHabitById(habitId);
+      expect(h!.currentProgressionIndex, 2);
+      expect(h.currentStep.isRest, true);
+    });
+
+    test('Bodybuilding routine does not change if not accomplished', () async {
+      final habit = Habit()
+        ..name = 'Workout Routine'
+        ..habitType = 'progression'
+        ..currentProgressionIndex = 0
+        ..createdAt = DateTime.now();
+
+      final habitId = await repo.upsertHabit(habit);
+
+      // User did not accomplish today: advanceProgression is NOT called
+      var h = await repo.getHabitById(habitId);
+      expect(h!.currentProgressionIndex, 0);
+      expect(h.currentStep.title, 'Push Up');
+
+      // Next day comes, index remains unchanged
+      h = await repo.getHabitById(habitId);
+      expect(h!.currentProgressionIndex, 0);
+      expect(h.currentStep.title, 'Push Up');
+    });
+
+    test('incrementHabitCount updates count and marks status yes when target met', () async {
+      final habit = Habit()
+        ..name = 'Water Intake'
+        ..habitType = 'count'
+        ..target = 3
+        ..createdAt = DateTime.now();
+
+      final habitId = await repo.upsertHabit(habit);
+      const testDate = '2026-09-16';
+
+      // Increment 1
+      var entry = await repo.incrementHabitCount(habitId: habitId, dateString: testDate, delta: 1);
+      expect(entry.valueCompleted, 1);
+      expect(entry.status, HabitStatus.unmarked);
+
+      // Increment 2 more (total 3 >= target)
+      entry = await repo.incrementHabitCount(habitId: habitId, dateString: testDate, delta: 2);
+      expect(entry.valueCompleted, 3);
+      expect(entry.status, HabitStatus.yes);
+    });
   });
 }

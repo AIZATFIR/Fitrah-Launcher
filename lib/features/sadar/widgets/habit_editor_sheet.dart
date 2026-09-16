@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme.dart';
 import '../../../models/habit.dart';
 import '../../../providers/sadar_providers.dart';
+import 'allowed_apps_selector_dialog.dart';
+import 'progression_editor_dialog.dart';
 
 class HabitEditorSheet extends ConsumerStatefulWidget {
   const HabitEditorSheet({
@@ -23,13 +26,17 @@ class HabitEditorSheet extends ConsumerStatefulWidget {
 class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   late TextEditingController _nameCtrl;
   late TextEditingController _targetCtrl;
+  late TextEditingController _hybridSetsCtrl;
+  late TextEditingController _hybridSecsCtrl;
   late String _selectedIcon;
   late HabitUnit _selectedUnit;
-  late bool _timerEnabled;
+  late String _habitType; // 'timed' | 'count' | 'progression' | 'hybrid'
+  late List<String> _allowedPackages;
+  late List<ProgressionStep> _progressionSteps;
   late int _selectedColor;
 
   static const List<String> _popularIcons = [
-    '📖', '🇫🇷', '💻', '🏃', '🧘', '📚', '✍️', '🎨', '🎸', '💧', '🥗', '😴'
+    '📖', '💻', '🏋️', '🏃', '🇫🇷', '🧘', '📚', '✍️', '💧', '🥗', '🎯', '⚡'
   ];
 
   static const List<int> _colorOptions = [
@@ -48,9 +55,13 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     final h = widget.habit;
     _nameCtrl = TextEditingController(text: h?.name ?? '');
     _targetCtrl = TextEditingController(text: (h?.target ?? 20).toString());
-    _selectedIcon = h?.iconKey.isNotEmpty == true ? h!.iconKey : '📖';
+    _hybridSetsCtrl = TextEditingController(text: (h?.hybridSets ?? 3).toString());
+    _hybridSecsCtrl = TextEditingController(text: (h?.hybridDurationSeconds ?? 60).toString());
+    _selectedIcon = h?.iconKey.isNotEmpty == true ? h!.iconKey : '🎯';
     _selectedUnit = h?.unit ?? HabitUnit.min;
-    _timerEnabled = h?.timerEnabled ?? true;
+    _habitType = h?.habitType ?? 'timed';
+    _allowedPackages = List.from(h?.allowedPackages ?? []);
+    _progressionSteps = List.from(h?.progressionSteps ?? defaultBodybuildingSteps);
     _selectedColor = h?.colorValue ?? _colorOptions[0];
   }
 
@@ -58,6 +69,8 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   void dispose() {
     _nameCtrl.dispose();
     _targetCtrl.dispose();
+    _hybridSetsCtrl.dispose();
+    _hybridSecsCtrl.dispose();
     super.dispose();
   }
 
@@ -66,13 +79,20 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     if (name.isEmpty) return;
 
     final target = int.tryParse(_targetCtrl.text.trim()) ?? 20;
+    final hybridSets = int.tryParse(_hybridSetsCtrl.text.trim()) ?? 3;
+    final hybridSecs = int.tryParse(_hybridSecsCtrl.text.trim()) ?? 60;
 
     final habit = widget.habit ?? Habit();
     habit.name = name;
     habit.iconKey = _selectedIcon;
-    habit.target = target.clamp(1, 999);
+    habit.target = target.clamp(1, 9999);
     habit.unit = _selectedUnit;
-    habit.timerEnabled = _timerEnabled;
+    habit.habitType = _habitType;
+    habit.timerEnabled = _habitType == 'timed' || _habitType == 'hybrid';
+    habit.allowedPackages = _allowedPackages;
+    habit.progressionPlanJson = jsonEncode(_progressionSteps.map((s) => s.toJson()).toList());
+    habit.hybridSets = hybridSets.clamp(1, 100);
+    habit.hybridDurationSeconds = hybridSecs.clamp(5, 3600);
     habit.colorValue = _selectedColor;
     if (widget.habit == null) {
       habit.createdAt = DateTime.now();
@@ -197,61 +217,212 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
             ),
             const SizedBox(height: 18),
 
-            // Target & Unit Row
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: _targetCtrl,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 14, color: AppPalette.text),
-                    decoration: InputDecoration(
-                      labelText: 'Target Jumlah',
-                      labelStyle: const TextStyle(color: AppPalette.textDim),
-                      filled: true,
-                      fillColor: AppPalette.bg,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: AppPalette.stroke),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppPalette.bg,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppPalette.stroke),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<HabitUnit>(
-                        value: _selectedUnit,
-                        isExpanded: true,
-                        dropdownColor: AppPalette.card,
-                        items: const [
-                          DropdownMenuItem(value: HabitUnit.min, child: Text('Menit (Timer)', style: TextStyle(color: AppPalette.text, fontSize: 13))),
-                          DropdownMenuItem(value: HabitUnit.count, child: Text('Kali / Halaman', style: TextStyle(color: AppPalette.text, fontSize: 13))),
-                          DropdownMenuItem(value: HabitUnit.binary, child: Text('Selesai / Belum', style: TextStyle(color: AppPalette.text, fontSize: 13))),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _selectedUnit = val;
-                              _timerEnabled = val == HabitUnit.min;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 18),
+
+            // Tipe Kebiasaan Selector
+            const Text(
+              'Tipe Kebiasaan',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppPalette.textDim),
             ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildTypeChip('timed', '⏱️ Timed (YPT)'),
+                  const SizedBox(width: 8),
+                  _buildTypeChip('count', '🔢 Count'),
+                  const SizedBox(width: 8),
+                  _buildTypeChip('progression', '🏋️ Bodybuilding'),
+                  const SizedBox(width: 8),
+                  _buildTypeChip('hybrid', '⚡ Hybrid'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // DYNAMIC SECTION BASED ON TYPE
+            if (_habitType == 'timed') ...[
+              // Timed (YPT Focus)
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _targetCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(fontSize: 14, color: AppPalette.text),
+                      decoration: InputDecoration(
+                        labelText: 'Durasi Fokus (Menit)',
+                        labelStyle: const TextStyle(color: AppPalette.textDim),
+                        filled: true,
+                        fillColor: AppPalette.bg,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppPalette.stroke),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Whitelist button
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AllowedAppsSelectorDialog(
+                      initialAllowed: _allowedPackages,
+                      onSaved: (packages) {
+                        setState(() => _allowedPackages = packages);
+                      },
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppPalette.bg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppPalette.stroke),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.shield_outlined, size: 18, color: AppPalette.accent),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _allowedPackages.isEmpty
+                              ? 'Pilih Aplikasi Diizinkan (Whitelist: Belum Ada)'
+                              : '${_allowedPackages.length} Aplikasi Diizinkan selama Fokus',
+                          style: const TextStyle(fontSize: 13, color: Colors.white),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.white54),
+                    ],
+                  ),
+                ),
+              ),
+            ] else if (_habitType == 'count') ...[
+              // Count Mode
+              TextField(
+                controller: _targetCtrl,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(fontSize: 14, color: AppPalette.text),
+                decoration: InputDecoration(
+                  labelText: 'Target Jumlah / Repetisi',
+                  hintText: 'misal: 1 untuk course/kegiatan harian, 20 untuk push up',
+                  labelStyle: const TextStyle(color: AppPalette.textDim),
+                  filled: true,
+                  fillColor: AppPalette.bg,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppPalette.stroke),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Cocok untuk target repetisi, 1 course Kalaam, atau checklist kegiatan harian.',
+                style: TextStyle(fontSize: 11, color: Colors.white38),
+              ),
+            ] else if (_habitType == 'progression') ...[
+              // Progression / Bodybuilding Mode
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => ProgressionEditorDialog(
+                      initialSteps: _progressionSteps,
+                      onSaved: (steps) {
+                        setState(() => _progressionSteps = steps);
+                      },
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppPalette.bg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.fitness_center_rounded, size: 20, color: AppPalette.accent),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Konfigurasi Jadwal Mingguan (${_progressionSteps.length} Hari)',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Target tidak berubah jika hari ini belum di-accomplish.',
+                              style: TextStyle(fontSize: 11, color: Colors.white54),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.edit_note_rounded, size: 20, color: AppPalette.accent),
+                    ],
+                  ),
+                ),
+              ),
+            ] else if (_habitType == 'hybrid') ...[
+              // Hybrid Mode (Set x Duration)
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _hybridSetsCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(fontSize: 14, color: AppPalette.text),
+                      decoration: InputDecoration(
+                        labelText: 'Jumlah Set',
+                        hintText: '3',
+                        labelStyle: const TextStyle(color: AppPalette.textDim),
+                        filled: true,
+                        fillColor: AppPalette.bg,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppPalette.stroke),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _hybridSecsCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(fontSize: 14, color: AppPalette.text),
+                      decoration: InputDecoration(
+                        labelText: 'Detik per Set',
+                        hintText: '60',
+                        labelStyle: const TextStyle(color: AppPalette.textDim),
+                        filled: true,
+                        fillColor: AppPalette.bg,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppPalette.stroke),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Kombinasi Repetisi Set x Timer. Contoh: Plank 3 set @ 60 detik.',
+                style: TextStyle(fontSize: 11, color: Colors.white38),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Color Accent Selection
@@ -290,7 +461,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
             ),
             const SizedBox(height: 24),
 
-            // Submit Button
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppPalette.accent,
@@ -307,6 +477,26 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTypeChip(String type, String label) {
+    final isSelected = _habitType == type;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected ? Colors.black : Colors.white70,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: AppPalette.accent,
+      backgroundColor: const Color(0xFF1E1E22),
+      onSelected: (val) {
+        if (val) setState(() => _habitType = type);
+      },
     );
   }
 }

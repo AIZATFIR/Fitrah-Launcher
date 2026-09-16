@@ -11,7 +11,7 @@ import '../../../models/habit_entry.dart';
 import '../../../providers/sadar_providers.dart';
 import 'habit_editor_sheet.dart';
 import 'reflection_sheet.dart';
-import 'sadar_timer_view.dart';
+import 'sadar_ypt_focus_view.dart';
 
 class TodayView extends ConsumerStatefulWidget {
   const TodayView({super.key});
@@ -82,12 +82,12 @@ class _TodayViewState extends ConsumerState<TodayView> {
     );
   }
 
-  void _startTimer(Habit habit) {
+  void _startYptFocus(Habit habit) {
     HapticFeedback.mediumImpact();
     Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (ctx) => SadarTimerView(
+        builder: (ctx) => SadarYptFocusView(
           habit: habit,
           onClose: () => Navigator.of(ctx).pop(),
         ),
@@ -95,10 +95,56 @@ class _TodayViewState extends ConsumerState<TodayView> {
     );
   }
 
+  Future<void> _incrementCount(Habit habit, int delta) async {
+    HapticFeedback.selectionClick();
+    await ref.read(sadarRepoProvider).incrementHabitCount(
+      habitId: habit.id,
+      dateString: _todayStr,
+      delta: delta,
+    );
+  }
+
   Future<void> _toggleComplete(Habit habit, HabitStatus currentStatus) async {
     HapticFeedback.mediumImpact();
+    final repo = ref.read(sadarRepoProvider);
+
+    if (habit.habitType == 'progression') {
+      if (currentStatus != HabitStatus.yes) {
+        final step = habit.currentStep;
+        final target = step.target;
+        await repo.recordEntryStatus(
+          habitId: habit.id,
+          dateString: _todayStr,
+          status: HabitStatus.yes,
+          valueCompleted: target,
+        );
+        await repo.advanceProgression(habit.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                step.isRest
+                    ? '💤 Rest Day tercatat! Lanjut ke jadwal berikutnya.'
+                    : '🔥 ${step.title} selesai! Lanjut ke jadwal berikutnya.',
+              ),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        await repo.recordEntryStatus(
+          habitId: habit.id,
+          dateString: _todayStr,
+          status: HabitStatus.unmarked,
+          valueCompleted: 0,
+        );
+      }
+      return;
+    }
+
     final newStatus = currentStatus == HabitStatus.yes ? HabitStatus.unmarked : HabitStatus.yes;
-    await ref.read(sadarRepoProvider).recordEntryStatus(
+    await repo.recordEntryStatus(
       habitId: habit.id,
       dateString: _todayStr,
       status: newStatus,
@@ -213,84 +259,20 @@ class _TodayViewState extends ConsumerState<TodayView> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: habits.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 4),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final habit = habits[index];
                         final entry = entriesMap[habit.id];
                         final isDone = entry?.status == HabitStatus.yes;
                         final habitColor = Color(habit.colorValue);
+                        final habitType = habit.habitType;
 
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isDone
-                                ? const Color(0xFF22C55E).withValues(alpha: 0.08)
-                                : AppPalette.card,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: isDone
-                                  ? const Color(0xFF22C55E).withValues(alpha: 0.3)
-                                  : AppPalette.stroke,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              // Checkbox Button
-                              InkWell(
-                                onTap: () => _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  width: 26,
-                                  height: 26,
-                                  decoration: BoxDecoration(
-                                    color: isDone ? const Color(0xFF22C55E) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: isDone ? const Color(0xFF22C55E) : AppPalette.stroke,
-                                      width: 1.8,
-                                    ),
-                                  ),
-                                  child: isDone
-                                      ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-
-                              // Emoji
-                              Text(habit.iconKey, style: const TextStyle(fontSize: 18)),
-                              const SizedBox(width: 10),
-
-                              // Name & Target
-                              Expanded(
-                                child: Text(
-                                  '${habit.name}${habit.unit == HabitUnit.min ? ' — ${habit.target} min' : (habit.target > 1 ? ' — ${habit.target} kali' : '')}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: isDone ? FontWeight.w500 : FontWeight.w600,
-                                    color: isDone ? AppPalette.textDim : AppPalette.text,
-                                    decoration: isDone ? TextDecoration.lineThrough : null,
-                                    decorationColor: AppPalette.textDim,
-                                  ),
-                                ),
-                              ),
-
-                              // Timer Action Button (if timed and not yet done)
-                              if (habit.timerEnabled && !isDone) ...[
-                                FilledButton.tonalIcon(
-                                  style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    backgroundColor: habitColor.withValues(alpha: 0.15),
-                                    foregroundColor: habitColor,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                  icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                                  label: const Text('Start', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                  onPressed: () => _startTimer(habit),
-                                ),
-                              ],
-                            ],
-                          ),
+                        return _buildHabitCard(
+                          habit: habit,
+                          entry: entry,
+                          isDone: isDone,
+                          habitColor: habitColor,
+                          habitType: habitType,
                         );
                       },
                     ),
@@ -435,5 +417,257 @@ class _TodayViewState extends ConsumerState<TodayView> {
       case ReflectionFeeling.notSatisfied:
         return 'Reflecting 🌧️';
     }
+  }
+
+  Widget _buildHabitCard({
+    required Habit habit,
+    required HabitEntry? entry,
+    required bool isDone,
+    required Color habitColor,
+    required String habitType,
+  }) {
+    String title = habit.name;
+    String subtitle = '';
+    Widget? trailingAction;
+
+    if (habitType == 'timed') {
+      final whitelistStr = habit.allowedPackages.isNotEmpty
+          ? ' • ${habit.allowedPackages.length} apps whitelist'
+          : '';
+      subtitle = '${habit.target} min$whitelistStr';
+      if (!isDone) {
+        trailingAction = FilledButton.tonalIcon(
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            backgroundColor: AppPalette.accent.withValues(alpha: 0.18),
+            foregroundColor: AppPalette.accent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          icon: const Icon(Icons.play_arrow_rounded, size: 16),
+          label: const Text(
+            'Fokus YPT',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          onPressed: () => _startYptFocus(habit),
+        );
+      }
+    } else if (habitType == 'progression') {
+      final step = habit.currentStep;
+      if (step.isRest) {
+        title = '${habit.name}: 💤 ${step.dayName} (Rest Day)';
+        subtitle = 'Hari pemulihan & istirahat otot';
+        if (!isDone) {
+          trailingAction = FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.2),
+              foregroundColor: const Color(0xFF818CF8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.bedtime_rounded, size: 16),
+            label: const Text(
+              'Ambil Rest',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+            onPressed: () => _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
+          );
+        }
+      } else {
+        title = '${habit.name}: ${step.dayName} — ${step.title}';
+        subtitle = '${step.target}x repetisi (Terkunci)';
+        if (!isDone) {
+          trailingAction = FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              backgroundColor: const Color(0xFFEAB308).withValues(alpha: 0.2),
+              foregroundColor: const Color(0xFFFDE047),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.check_rounded, size: 16),
+            label: Text(
+              '${step.target}x Selesai',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+            onPressed: () => _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
+          );
+        }
+      }
+    } else if (habitType == 'hybrid') {
+      subtitle = '${habit.hybridSets} Set @ ${habit.hybridDurationSeconds}s';
+      if (!isDone) {
+        trailingAction = FilledButton.tonalIcon(
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            backgroundColor: const Color(0xFFEC4899).withValues(alpha: 0.2),
+            foregroundColor: const Color(0xFFF472B6),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          icon: const Icon(Icons.timer_outlined, size: 16),
+          label: const Text(
+            'Mulai',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          onPressed: () => _startYptFocus(habit),
+        );
+      }
+    } else {
+      // count mode
+      if (habit.target > 1) {
+        final currentVal = entry?.valueCompleted ?? 0;
+        subtitle = '$currentVal / ${habit.target} kali';
+        trailingAction = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.remove_circle_outline_rounded, size: 20, color: Colors.white54),
+              visualDensity: VisualDensity.compact,
+              onPressed: currentVal > 0 ? () => _incrementCount(habit, -1) : null,
+            ),
+            Text(
+              '$currentVal',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isDone ? const Color(0xFF22C55E) : Colors.white,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 20, color: AppPalette.accent),
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _incrementCount(habit, 1),
+            ),
+          ],
+        );
+      } else {
+        subtitle = 'Target harian';
+      }
+    }
+
+    String badgeLabel = '🔢 Count';
+    Color badgeColor = const Color(0xFF3B82F6);
+    if (habitType == 'timed') {
+      badgeLabel = '⏱️ YPT';
+      badgeColor = AppPalette.accent;
+    } else if (habitType == 'progression') {
+      badgeLabel = '🏋️ Bodybuilding';
+      badgeColor = const Color(0xFFEAB308);
+    } else if (habitType == 'hybrid') {
+      badgeLabel = '⚡ Hybrid';
+      badgeColor = const Color(0xFFEC4899);
+    }
+
+    return InkWell(
+      onLongPress: () => _openHabitEditor(habit),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDone
+              ? const Color(0xFF22C55E).withValues(alpha: 0.08)
+              : AppPalette.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDone
+                ? const Color(0xFF22C55E).withValues(alpha: 0.35)
+                : AppPalette.stroke,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Checkbox Button
+            InkWell(
+              onTap: () => _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: isDone ? const Color(0xFF22C55E) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isDone ? const Color(0xFF22C55E) : AppPalette.stroke,
+                    width: 1.8,
+                  ),
+                ),
+                child: isDone
+                    ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Emoji
+            Text(habit.iconKey, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 10),
+
+            // Main Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: isDone ? FontWeight.w500 : FontWeight.w700,
+                            color: isDone ? AppPalette.textDim : AppPalette.text,
+                            decoration: isDone ? TextDecoration.lineThrough : null,
+                            decorationColor: AppPalette.textDim,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          badgeLabel,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: badgeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppPalette.textDim,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            if (trailingAction != null) ...[
+              const SizedBox(width: 8),
+              trailingAction,
+            ],
+
+            // Edit options button
+            IconButton(
+              icon: const Icon(Icons.more_vert_rounded, size: 18, color: Colors.white38),
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Ubah Kebiasaan',
+              onPressed: () => _openHabitEditor(habit),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

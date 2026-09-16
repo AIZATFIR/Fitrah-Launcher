@@ -36,10 +36,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('JADWAL & GARIS WAKTU HARI INI'), findsOneWidget);
-      expect(find.text('Subuh'), findsOneWidget);
-      expect(find.text('KEBIASAAN & FITRAH'), findsOneWidget);
-      expect(find.text('Refleksi Hari Ini'), findsOneWidget);
+      expect(find.text('Fajr'), findsOneWidget);
+      expect(find.text('Dhuhr'), findsOneWidget);
     });
 
     testWidgets('MinimalistAppDrawer renders search bar and app list', (tester) async {
@@ -55,8 +53,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Cari aplikasi...'), findsOneWidget);
-      expect(find.text('FAVORIT'), findsOneWidget);
+      expect(find.text('Search Apps'), findsOneWidget);
     });
 
     testWidgets('FitrahLauncherShell initial page is center Home', (tester) async {

@@ -168,6 +168,86 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_PACKAGE", "Package name is null", null)
                     }
                 }
+                "checkUsageStatsPermission" -> {
+                    try {
+                        val appOps = getSystemService(android.content.Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+                        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            appOps.unsafeCheckOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
+                        } else {
+                            appOps.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
+                        }
+                        result.success(mode == android.app.AppOpsManager.MODE_ALLOWED)
+                    } catch (e: Exception) {
+                        result.success(false)
+                    }
+                }
+                "openUsageStatsSettings" -> {
+                    try {
+                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR_OPENING_USAGE_SETTINGS", e.message, null)
+                    }
+                }
+                "checkOverlayPermission" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        result.success(Settings.canDrawOverlays(this))
+                    } else {
+                        result.success(true)
+                    }
+                }
+                "openOverlaySettings" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        try {
+                            val intent = Intent(
+                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:$packageName")
+                            ).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("ERROR_OPENING_OVERLAY_SETTINGS", e.message, null)
+                        }
+                    } else {
+                        result.success(true)
+                    }
+                }
+                "getForegroundApp" -> {
+                    try {
+                        val usm = getSystemService(android.content.Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+                        val time = System.currentTimeMillis()
+                        val appList = usm.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, time - 1000 * 10, time)
+                        var foreground = ""
+                        if (appList != null && appList.isNotEmpty()) {
+                            val sortedMap = java.util.TreeMap<Long, android.app.usage.UsageStats>()
+                            for (usageStats in appList) {
+                                sortedMap[usageStats.lastTimeUsed] = usageStats
+                            }
+                            if (sortedMap.isNotEmpty()) {
+                                foreground = sortedMap[sortedMap.lastKey()]?.packageName ?: ""
+                            }
+                        }
+                        result.success(foreground)
+                    } catch (e: Exception) {
+                        result.success("")
+                    }
+                }
+                "bringAppToFront" -> {
+                    try {
+                        val intent = Intent(this, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR_BRINGING_TO_FRONT", e.message, null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }

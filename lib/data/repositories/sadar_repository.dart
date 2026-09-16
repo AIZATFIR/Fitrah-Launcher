@@ -261,6 +261,36 @@ class SadarRepository {
     });
   }
 
+  Future<void> advanceProgression(int habitId) async {
+    final habit = await getHabitById(habitId);
+    if (habit == null) return;
+    final totalSteps = habit.progressionSteps.length;
+    if (totalSteps <= 0) return;
+    habit.currentProgressionIndex = (habit.currentProgressionIndex + 1) % totalSteps;
+    await upsertHabit(habit);
+  }
+
+  Future<HabitEntry> incrementHabitCount({
+    required int habitId,
+    required String dateString,
+    required int delta,
+  }) async {
+    final habit = await getHabitById(habitId);
+    final target = habit?.target ?? 1;
+    final currentEntries = await getEntriesForDateRange(dateString, dateString);
+    final existing = currentEntries.where((e) => e.habitId == habitId).firstOrNull;
+    final currentVal = existing?.valueCompleted ?? 0;
+    final newVal = (currentVal + delta).clamp(0, 9999);
+    final newStatus = newVal >= target ? HabitStatus.yes : (newVal > 0 ? HabitStatus.unmarked : HabitStatus.unmarked);
+
+    return recordEntryStatus(
+      habitId: habitId,
+      dateString: dateString,
+      status: newStatus,
+      valueCompleted: newVal,
+    );
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // Daily Fulfillment & Awareness Stats
   // ──────────────────────────────────────────────────────────────────────────
