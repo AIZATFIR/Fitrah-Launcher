@@ -11,7 +11,9 @@ import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
 import '../services/app_launcher_service.dart';
 import '../utils/hijri_date.dart';
+import 'app_icon_widget.dart';
 import 'fitrah_settings_screen.dart';
+import 'launcher_customization_sheet.dart';
 
 class FitrahHomeView extends ConsumerStatefulWidget {
   const FitrahHomeView({
@@ -107,6 +109,44 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
       context,
       MaterialPageRoute(builder: (_) => const FitrahSettingsScreen()),
     );
+  }
+
+  void _openCustomization() {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const LauncherCustomizationSheet(),
+    );
+  }
+
+  void _launchDockPackage(String pkg) {
+    HapticFeedback.lightImpact();
+    if (pkg.contains('dialer') || pkg.contains('phone')) {
+      ref.read(appLauncherServiceProvider).launchDialer();
+    } else if (pkg.contains('camera')) {
+      ref.read(appLauncherServiceProvider).launchCamera();
+    } else {
+      ref.read(appLauncherServiceProvider).launchApp(pkg);
+    }
+  }
+
+  String _getShortSlotLabel(String pkg, int index) {
+    if (pkg.contains('dialer') || pkg.contains('phone')) return 'Phone';
+    if (pkg.contains('mms') || pkg.contains('message')) return 'Messages';
+    if (pkg.contains('browser') || pkg.contains('chrome')) return 'Browser';
+    if (pkg.contains('camera')) return 'Camera';
+    final parts = pkg.split('.');
+    return parts.isNotEmpty ? parts.last : 'App ${index + 1}';
+  }
+
+  IconData _getSlotIcon(String pkg, int index) {
+    if (pkg.contains('dialer') || pkg.contains('phone')) return Icons.phone_rounded;
+    if (pkg.contains('mms') || pkg.contains('message')) return Icons.chat_bubble_rounded;
+    if (pkg.contains('browser') || pkg.contains('chrome')) return Icons.language_rounded;
+    if (pkg.contains('camera')) return Icons.camera_alt_rounded;
+    return Icons.apps_rounded;
   }
 
   void _showEditPrayersSheet(LauncherSettings settings, LauncherSettingsNotifier notifier) {
@@ -213,9 +253,24 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onLongPress: _openCustomization,
+        onVerticalDragEnd: (details) {
+          final vel = details.primaryVelocity ?? 0;
+          if (vel > 280) {
+            // Swipe down: expand notification panel
+            HapticFeedback.selectionClick();
+            ref.read(appLauncherServiceProvider).expandNotificationsPanel();
+          } else if (vel < -280) {
+            // Swipe up: open app drawer
+            HapticFeedback.selectionClick();
+            widget.onOpenAppDrawer();
+          }
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
           // 1. Wallpaper (Campfire default)
           if (!isAmoled)
             Positioned.fill(
@@ -376,33 +431,14 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                     ),
                   ),
 
-                  // Bottom Dock Bar (Phone on Left, Camera on Right)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.phone_rounded, color: Colors.white, size: 24),
-                        tooltip: 'Telepon',
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(appLauncherServiceProvider).launchDialer();
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 24),
-                        tooltip: 'Kamera',
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                          ref.read(appLauncherServiceProvider).launchCamera();
-                        },
-                      ),
-                    ],
-                  ),
+                  // Bottom Dock Bar (4 Quick-Access slots with real icons)
+                  _buildDockBar(settings, appsAsync.valueOrNull ?? []),
                 ],
               ),
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -838,22 +874,99 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
     );
   }
 
+  Widget _buildDockBar(LauncherSettings settings, List<InstalledApp> allApps) {
+    final packages = settings.dockPackages.isNotEmpty
+        ? settings.dockPackages
+        : const ['com.android.dialer', 'com.android.mms', 'com.android.browser', 'com.android.camera'];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4, top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.42),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.14), width: 1.1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: packages.asMap().entries.map((entry) {
+          final index = entry.key;
+          final pkg = entry.value;
+          final app = allApps.where((a) => a.packageName == pkg).firstOrNull;
+          final label = app?.appName ?? _getShortSlotLabel(pkg, index);
+
+          return Tooltip(
+            message: label,
+            child: InkWell(
+              onTap: () => _launchDockPackage(pkg),
+              onLongPress: () {
+                HapticFeedback.mediumImpact();
+                _openCustomization();
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.white.withOpacity(0.18)),
+                ),
+                child: Center(
+                  child: AppIconWidget(
+                    packageName: pkg,
+                    appName: label,
+                    size: 28,
+                    fallbackIcon: _getSlotIcon(pkg, index),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildPinnedAppRow(InstalledApp app) {
-    return GestureDetector(
+    return InkWell(
       onTap: () {
         HapticFeedback.lightImpact();
         ref.read(appLauncherServiceProvider).launchApp(app.packageName);
       },
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        _openCustomization();
+      },
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Text(
-          app.appName,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w400,
-            color: Colors.white,
-            letterSpacing: 0.3,
-          ),
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppIconWidget(
+              packageName: app.packageName,
+              appName: app.appName,
+              size: 26,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              app.appName,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
         ),
       ),
     );

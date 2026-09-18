@@ -30,6 +30,7 @@ class NowNextCard extends ConsumerStatefulWidget {
 class _NowNextCardState extends ConsumerState<NowNextCard> {
   final TextEditingController _intentCtrl = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  bool _isExpanded = false;
 
   @override
   void dispose() {
@@ -184,84 +185,98 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
                     );
                   },
                 ),
-            ],
-          ),
-
-          // Row 2: What's Next (Subtle indicator)
-          if (nextActivity != null && currentActivity != null) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(Icons.arrow_forward_rounded, size: 12, color: AppPalette.textDim),
-                const SizedBox(width: 6),
-                Text(
-                  'Berikutnya: ${nextActivity.iconKey ?? ''} ${nextActivity.title} (${formatMinuteOfHalf(nextActivity.startMinute, nextActivity.ampmHalf, is24h: is24h)})',
-                  style: const TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.w500),
+              IconButton(
+                icon: Icon(
+                  _isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
+                  color: AppPalette.accent,
+                  size: 22,
                 ),
-              ],
-            ),
-          ],
-
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: AppPalette.stroke),
-          const SizedBox(height: 12),
-
-          // Row 3: Frictionless Natural Intent Bar
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _intentCtrl,
-                  focusNode: _focusNode,
-                  style: const TextStyle(fontSize: 13, color: AppPalette.text),
-                  onSubmitted: _submitIntent,
-                  decoration: InputDecoration(
-                    hintText: 'Tulis niat (misal: "Belajar coding 1 jam jam 8 malam")',
-                    hintStyle: const TextStyle(fontSize: 12, color: AppPalette.textDim),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    filled: true,
-                    fillColor: AppPalette.bg,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppPalette.stroke),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppPalette.stroke),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppPalette.accent),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: AppPalette.accent),
-                      onPressed: () => _submitIntent(_intentCtrl.text),
-                    ),
-                  ),
-                ),
+                tooltip: _isExpanded ? 'Sembunyikan Niat' : 'Buka Input Niat',
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _isExpanded = !_isExpanded);
+                },
               ),
             ],
           ),
 
-          // Row 4: Quick Intent Chips (Intelligent Suggestions)
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+          if (_isExpanded) ...[
+            // Row 2: What's Next (Subtle indicator)
+            if (nextActivity != null && currentActivity != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.arrow_forward_rounded, size: 12, color: AppPalette.textDim),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Berikutnya: ${nextActivity.iconKey ?? ''} ${nextActivity.title} (${formatMinuteOfHalf(nextActivity.startMinute, nextActivity.ampmHalf, is24h: is24h)})',
+                    style: const TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: AppPalette.stroke),
+            const SizedBox(height: 12),
+
+            // Row 3: Frictionless Natural Intent Bar
+            Row(
               children: [
-                _suggestionChip('💻 Deep Work 45m', 'Deep Work 45m'),
-                const SizedBox(width: 6),
-                _suggestionChip('📖 Belajar 30m', 'Belajar 30m'),
-                const SizedBox(width: 6),
-                _suggestionChip('🧘 Istirahat 15m', 'Istirahat 15m'),
-                const SizedBox(width: 6),
-                _suggestionChip('🏃 Olahraga 30m', 'Olahraga 30m'),
-                const SizedBox(width: 6),
-                _suggestionChip('✍️ Menulis 30m', 'Menulis 30m'),
+                Expanded(
+                  child: TextField(
+                    controller: _intentCtrl,
+                    focusNode: _focusNode,
+                    style: const TextStyle(fontSize: 13, color: AppPalette.text),
+                    onSubmitted: _submitIntent,
+                    decoration: InputDecoration(
+                      hintText: 'Tulis niat (misal: "Belajar coding 1 jam jam 8 malam")',
+                      hintStyle: const TextStyle(fontSize: 12, color: AppPalette.textDim),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      filled: true,
+                      fillColor: AppPalette.bg,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppPalette.stroke),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppPalette.stroke),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppPalette.accent),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: AppPalette.accent),
+                        onPressed: () => _submitIntent(_intentCtrl.text),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
+
+            // Row 4: Quick Intent Chips (Intelligent Suggestions)
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _suggestionChip('💻 Deep Work 45m', 'Deep Work 45m'),
+                  const SizedBox(width: 6),
+                  _suggestionChip('📖 Belajar 30m', 'Belajar 30m'),
+                  const SizedBox(width: 6),
+                  _suggestionChip('🧘 Istirahat 15m', 'Istirahat 15m'),
+                  const SizedBox(width: 6),
+                  _suggestionChip('🏃 Olahraga 30m', 'Olahraga 30m'),
+                  const SizedBox(width: 6),
+                  _suggestionChip('✍️ Menulis 30m', 'Menulis 30m'),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

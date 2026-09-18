@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/app_launcher_service.dart';
+import 'app_icon_widget.dart';
 import 'fitrah_settings_screen.dart';
 
 class MinimalistAppDrawer extends ConsumerStatefulWidget {
@@ -79,20 +80,48 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header: App name + folder icon
+                // Header: App icon + App name + package name
                 Row(
                   children: [
+                    AppIconWidget(
+                      packageName: app.packageName,
+                      appName: app.appName,
+                      size: 46,
+                    ),
+                    const SizedBox(width: 14),
                     Expanded(
-                      child: Text(
-                        app.appName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
-                          color: Colors.white,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            app.appName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            app.packageName,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
-                    const Icon(Icons.folder_open_outlined, color: Colors.white70, size: 22),
+                    IconButton(
+                      icon: const Icon(Icons.open_in_new_rounded, color: Colors.white70, size: 20),
+                      tooltip: 'Buka Aplikasi',
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _launchApp(app);
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -507,11 +536,17 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     return InkWell(
       onTap: () => _launchApp(app),
       onLongPress: () => _showAppOptions(app),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Row(
           children: [
+            AppIconWidget(
+              packageName: app.packageName,
+              appName: app.appName,
+              size: 38,
+            ),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 app.appName,

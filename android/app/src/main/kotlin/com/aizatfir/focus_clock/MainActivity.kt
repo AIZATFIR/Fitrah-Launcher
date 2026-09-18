@@ -3,6 +3,9 @@ package com.aizatfir.focus_clock
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +14,7 @@ import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "fitrah_launcher/apps"
@@ -77,6 +81,45 @@ class MainActivity : FlutterActivity() {
                         result.success(appsList)
                     } catch (e: Exception) {
                         result.error("ERROR_GETTING_APPS", e.message, null)
+                    }
+                }
+                "getAppIcon" -> {
+                    val pkg = call.argument<String>("packageName")
+                    if (pkg != null) {
+                        try {
+                            val drawable = packageManager.getApplicationIcon(pkg)
+                            val bitmap = when (drawable) {
+                                is BitmapDrawable -> drawable.bitmap
+                                else -> {
+                                    val w = drawable.intrinsicWidth.coerceAtLeast(72)
+                                    val h = drawable.intrinsicHeight.coerceAtLeast(72)
+                                    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                                    val canvas = Canvas(bmp)
+                                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                    drawable.draw(canvas)
+                                    bmp
+                                }
+                            }
+                            val scaled = Bitmap.createScaledBitmap(bitmap, 96, 96, true)
+                            val stream = ByteArrayOutputStream()
+                            scaled.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                            result.success(stream.toByteArray())
+                        } catch (e: Exception) {
+                            result.success(null)
+                        }
+                    } else {
+                        result.error("INVALID_PACKAGE", "Package name is null", null)
+                    }
+                }
+                "expandNotificationsPanel" -> {
+                    try {
+                        val statusBarService = getSystemService("statusbar")
+                        val statusBarManager = Class.forName("android.app.StatusBarManager")
+                        val expandMethod = statusBarManager.getMethod("expandNotificationsPanel")
+                        expandMethod.invoke(statusBarService)
+                        result.success(true)
+                    } catch (_: Exception) {
+                        result.success(false)
                     }
                 }
                 "launchApp" -> {

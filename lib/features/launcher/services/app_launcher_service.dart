@@ -144,6 +144,40 @@ class AppLauncherService {
     }
   }
 
+  final Map<String, Uint8List?> _iconCache = {};
+
+  Future<Uint8List?> getAppIcon(String packageName) async {
+    if (_iconCache.containsKey(packageName)) {
+      return _iconCache[packageName];
+    }
+    if (kIsWeb || !Platform.isAndroid) return null;
+    try {
+      final dynamic raw = await _channel.invokeMethod('getAppIcon', {
+        'packageName': packageName,
+      });
+      if (raw != null) {
+        final bytes = raw as Uint8List;
+        _iconCache[packageName] = bytes;
+        return bytes;
+      }
+      _iconCache[packageName] = null;
+      return null;
+    } catch (e) {
+      debugPrint('AppLauncherService getAppIcon error: $e');
+      _iconCache[packageName] = null;
+      return null;
+    }
+  }
+
+  Future<void> expandNotificationsPanel() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod('expandNotificationsPanel');
+    } catch (e) {
+      debugPrint('AppLauncherService expandNotificationsPanel error: $e');
+    }
+  }
+
   List<InstalledApp> _getDesktopOrWebApps() {
     return const [
       InstalledApp(appName: 'Browser', packageName: 'com.android.browser', isFavorite: true),
@@ -179,4 +213,9 @@ final favoritePackagesProvider = StateProvider<Set<String>>((ref) {
     'com.android.browser',
     'com.android.camera',
   };
+});
+
+final appIconProvider = FutureProvider.family<Uint8List?, String>((ref, packageName) async {
+  final service = ref.watch(appLauncherServiceProvider);
+  return service.getAppIcon(packageName);
 });

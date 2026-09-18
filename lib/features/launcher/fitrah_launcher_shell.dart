@@ -63,35 +63,55 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
         backgroundColor: AppPalette.bg,
         body: PageView(
           controller: _pageCtrl,
-          physics: const BouncingScrollPhysics(),
+          physics: _currentPage == 0
+              ? const NeverScrollableScrollPhysics()
+              : const BouncingScrollPhysics(),
           onPageChanged: (page) => setState(() => _currentPage = page),
           children: [
-            // Page 0 (Slide Left): Full Focus Clock Face
-            Scaffold(
-              backgroundColor: AppPalette.bg,
-              appBar: PreferredSize(
-                preferredSize: const Size.fromHeight(48),
-                child: AppBar(
-                  backgroundColor: AppPalette.bg,
-                  elevation: 0,
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_forward_rounded, color: AppPalette.accent, size: 20),
-                    tooltip: 'Kembali ke Home',
-                    onPressed: () => _goToPage(1),
-                  ),
-                  title: const Text(
-                    'FOCUS CLOCK',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 2.5,
-                      color: AppPalette.text,
+            // Page 0 (Slide Left): Full Focus Clock Face with Back to Home button
+            Stack(
+              children: [
+                const FocusClockTab(),
+                // Floating Home pill at top right
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 10,
+                  right: 18,
+                  child: GestureDetector(
+                    onTap: () => _goToPage(1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.75),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'HOME',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_rounded, color: AppPalette.accent, size: 14),
+                        ],
+                      ),
                     ),
                   ),
-                  centerTitle: true,
                 ),
-              ),
-              body: const FocusClockTab(),
+              ],
             ),
 
             // Page 1 (Center): Fitrah Home Dashboard
