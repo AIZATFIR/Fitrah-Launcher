@@ -15,27 +15,40 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "fitrah_launcher/apps"
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        // Enable Show when locked and Turn screen on for lockscreen focus mode
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        }
-        
-        window.addFlags(
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-        )
-    }
-
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
+                "setLockscreenFocus" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    try {
+                        if (enabled) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                                setShowWhenLocked(true)
+                                setTurnScreenOn(true)
+                            }
+                            window.addFlags(
+                                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                            )
+                        } else {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                                setShowWhenLocked(false)
+                                setTurnScreenOn(false)
+                            }
+                            window.clearFlags(
+                                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                            )
+                        }
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR_SETTING_LOCKSCREEN_FOCUS", e.message, null)
+                    }
+                }
                 "getInstalledApps" -> {
                     try {
                         val pm = packageManager
@@ -118,6 +131,25 @@ class MainActivity : FlutterActivity() {
                             result.success(true)
                         } catch (e2: Exception) {
                             result.error("ERROR_OPENING_HOME_SETTINGS", e2.message, null)
+                        }
+                    }
+                }
+                "openNotificationListenerSettings" -> {
+                    try {
+                        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (_: Exception) {
+                        try {
+                            val fallbackIntent = Intent(Settings.ACTION_SETTINGS).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(fallbackIntent)
+                            result.success(true)
+                        } catch (e2: Exception) {
+                            result.error("ERROR_OPENING_NOTIF_SETTINGS", e2.message, null)
                         }
                     }
                 }

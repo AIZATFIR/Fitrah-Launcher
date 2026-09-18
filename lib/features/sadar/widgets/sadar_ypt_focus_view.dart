@@ -50,8 +50,9 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
   @override
   void initState() {
     super.initState();
-    // Enable sticky immersive fullscreen
+    // Enable sticky immersive fullscreen and lockscreen display
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _channel.invokeMethod('setLockscreenFocus', {'enabled': true}).catchError((_) => null);
 
     _pulseCtrl = AnimationController(
       vsync: this,
@@ -70,6 +71,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
   @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _channel.invokeMethod('setLockscreenFocus', {'enabled': false}).catchError((_) => null);
     _ticker?.cancel();
     _appGuardTimer?.cancel();
     _holdTimer?.cancel();

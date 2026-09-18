@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/time_math.dart';
+import '../../../models/activity.dart';
+import '../../../providers/providers.dart';
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
 import '../services/app_launcher_service.dart';
@@ -194,6 +197,8 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
 
     final appsAsync = ref.watch(installedAppsFutureProvider);
     final favoritePackages = ref.watch(favoritePackagesProvider);
+    final activitiesAsync = ref.watch(activitiesByDateProvider);
+    final activities = activitiesAsync.valueOrNull ?? <Activity>[];
 
     // Identify 2-4 pinned favorite apps to show at bottom-left
     List<InstalledApp> pinnedApps = [];
@@ -232,25 +237,25 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
           // 2. Main Content
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Top Date & Hijri Card with Hamburger Menu
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.white.withOpacity(0.32), width: 1.2),
                       color: Colors.black.withOpacity(0.4),
                     ),
                     child: Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
+                          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 22),
                           onPressed: _openSettings,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +263,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                               Text(
                                 DateFormat('EEEE, d MMMM yyyy').format(_currentTime),
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white,
                                   letterSpacing: 0.2,
@@ -268,7 +273,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                               Text(
                                 HijriCalendarHelper.formatHijri(_currentTime),
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   color: Colors.white.withOpacity(0.7),
                                   letterSpacing: 0.2,
                                 ),
@@ -285,87 +290,31 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                     ),
                   ),
 
+                  const SizedBox(height: 8),
+
+                  // Mode Switcher Header (Waktu Sholat vs Focus Clock Events)
+                  _buildModeSwitcher(settings, notifier),
+
+                  const SizedBox(height: 6),
+
+                  // Content Widget based on mode
+                  if (settings.widgetDisplayMode == 'focus_clock')
+                    _buildFocusClockEventsGrid(activities)
+                  else
+                    _buildPrayerTimesGrid(settings, notifier, activePrayer, nextPrayerInfo),
+
                   const SizedBox(height: 12),
-
-                  // Prayer Times Grid (Row 1: 4 pills, Row 2: 3 pills)
-                  GestureDetector(
-                    onTap: () => _showEditPrayersSheet(settings, notifier),
-                    child: Column(
-                      children: [
-                        // Row 1: Fajr, Sunrise, Dhuhr, Asr
-                        Row(
-                          children: [
-                            _buildPrayerPill('Fajr', settings.prayerSubuh, isCurrent: activePrayer == 'Fajr'),
-                            const SizedBox(width: 8),
-                            _buildPrayerPill('Sunrise', settings.prayerSyuruq, isCurrent: activePrayer == 'Sunrise'),
-                            const SizedBox(width: 8),
-                            _buildPrayerPill('Dhuhr', settings.prayerDzuhur, isCurrent: activePrayer == 'Dhuhr'),
-                            const SizedBox(width: 8),
-                            _buildPrayerPill('Asr', settings.prayerAshar, isCurrent: activePrayer == 'Asr'),
-                          ],
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        // Row 2: Maghrib, Isha, Next Prayer Countdown
-                        Row(
-                          children: [
-                            _buildPrayerPill('Maghrib', settings.prayerMaghrib, isCurrent: activePrayer == 'Maghrib'),
-                            const SizedBox(width: 8),
-                            _buildPrayerPill('Isha', settings.prayerIsya, isCurrent: activePrayer == 'Isha'),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              flex: 2,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.2),
-                                  color: Colors.black.withOpacity(0.4),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '${nextPrayerInfo['nextName']} in',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.white.withOpacity(0.75),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      nextPrayerInfo['countdown'] as String,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
 
                   // Search Pill (Tapping opens App Drawer)
                   Center(
                     child: GestureDetector(
                       onTap: widget.onOpenAppDrawer,
                       child: Container(
-                        height: 38,
-                        width: 130,
+                        height: 34,
+                        width: 120,
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.92),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(18),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.35),
@@ -375,7 +324,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                           ],
                         ),
                         child: const Center(
-                          child: Icon(Icons.search_rounded, color: Colors.black87, size: 20),
+                          child: Icon(Icons.search_rounded, color: Colors.black87, size: 18),
                         ),
                       ),
                     ),
@@ -391,17 +340,17 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                         Text(
                           'Alhamdulillah',
                           style: GoogleFonts.satisfy(
-                            fontSize: 48,
+                            fontSize: 38,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                             letterSpacing: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           'for everything',
                           style: GoogleFonts.montserrat(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w300,
                             color: Colors.white.withOpacity(0.7),
                             letterSpacing: 1.5,
@@ -411,11 +360,11 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                     ),
                   ),
 
-                  const Spacer(flex: 2),
+                  const Spacer(flex: 1),
 
                   // Pinned Favorite Apps (Bottom Left Text List)
                   Padding(
-                    padding: const EdgeInsets.only(left: 8, bottom: 12),
+                    padding: const EdgeInsets.only(left: 8, bottom: 6),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: pinnedApps.isNotEmpty
@@ -432,7 +381,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.phone_rounded, color: Colors.white, size: 26),
+                        icon: const Icon(Icons.phone_rounded, color: Colors.white, size: 24),
                         tooltip: 'Telepon',
                         onPressed: () {
                           HapticFeedback.lightImpact();
@@ -440,7 +389,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 26),
+                        icon: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 24),
                         tooltip: 'Kamera',
                         onPressed: () {
                           HapticFeedback.lightImpact();
@@ -454,6 +403,399 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildModeSwitcher(LauncherSettings settings, LauncherSettingsNotifier notifier) {
+    final isFocusClock = settings.widgetDisplayMode == 'focus_clock';
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.45),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildSegmentTab(
+                title: '🕌 Sholat',
+                isSelected: !isFocusClock,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  notifier.setWidgetDisplayMode('prayer');
+                },
+              ),
+              const SizedBox(width: 4),
+              _buildSegmentTab(
+                title: '⏱️ Focus Clock',
+                isSelected: isFocusClock,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  notifier.setWidgetDisplayMode('focus_clock');
+                },
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        if (isFocusClock)
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              widget.onOpenFocusClock();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.22)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.open_in_new_rounded, size: 13, color: Colors.white70),
+                  SizedBox(width: 4),
+                  Text(
+                    'Buka Clock',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          IconButton(
+            icon: const Icon(Icons.tune_rounded, color: Colors.white70, size: 18),
+            tooltip: 'Ubah Waktu Sholat',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            onPressed: () => _showEditPrayersSheet(settings, notifier),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSegmentTab({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white.withOpacity(0.25) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected ? Border.all(color: Colors.white.withOpacity(0.4), width: 1) : null,
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.65),
+            letterSpacing: 0.2,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrayerTimesGrid(
+    LauncherSettings settings,
+    LauncherSettingsNotifier notifier,
+    String activePrayer,
+    Map<String, dynamic> nextPrayerInfo,
+  ) {
+    return GestureDetector(
+      onTap: () => _showEditPrayersSheet(settings, notifier),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _buildPrayerPill('Fajr', settings.prayerSubuh, isCurrent: activePrayer == 'Fajr'),
+              const SizedBox(width: 8),
+              _buildPrayerPill('Sunrise', settings.prayerSyuruq, isCurrent: activePrayer == 'Sunrise'),
+              const SizedBox(width: 8),
+              _buildPrayerPill('Dhuhr', settings.prayerDzuhur, isCurrent: activePrayer == 'Dhuhr'),
+              const SizedBox(width: 8),
+              _buildPrayerPill('Asr', settings.prayerAshar, isCurrent: activePrayer == 'Asr'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildPrayerPill('Maghrib', settings.prayerMaghrib, isCurrent: activePrayer == 'Maghrib'),
+              const SizedBox(width: 8),
+              _buildPrayerPill('Isha', settings.prayerIsya, isCurrent: activePrayer == 'Isha'),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.2),
+                    color: Colors.black.withOpacity(0.4),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${nextPrayerInfo['nextName']} in',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withOpacity(0.75),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        nextPrayerInfo['countdown'] as String,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFocusClockEventsGrid(List<Activity> activities) {
+    if (activities.isEmpty) {
+      return GestureDetector(
+        onTap: widget.onOpenFocusClock,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.28), width: 1.1),
+            color: Colors.black.withOpacity(0.4),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.add_task_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Belum Ada Event Focus Clock',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Ketuk untuk membuat jadwal blok fokus hari ini',
+                      style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7)),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 14),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final currentMinute = _currentTime.hour * 60 + _currentTime.minute;
+    final sorted = List<Activity>.from(activities)
+      ..sort((a, b) => toUiMinute(a.startMinute, a.ampmHalf).compareTo(toUiMinute(b.startMinute, b.ampmHalf)));
+
+    Activity? activeActivity;
+    for (final a in sorted) {
+      final s = toUiMinute(a.startMinute, a.ampmHalf);
+      final e = toUiMinute(a.endMinute, a.ampmHalf);
+      if (s <= currentMinute && currentMinute < e && !a.isCompleted) {
+        activeActivity = a;
+        break;
+      }
+    }
+
+    final upcoming = sorted.where((a) {
+      final s = toUiMinute(a.startMinute, a.ampmHalf);
+      return s > currentMinute && !a.isCompleted;
+    }).toList();
+
+    return Column(
+      children: [
+        // Hero Active or Next Activity status bar
+        GestureDetector(
+          onTap: widget.onOpenFocusClock,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: activeActivity != null
+                    ? const Color(0xFF10B981).withOpacity(0.6)
+                    : Colors.white.withOpacity(0.3),
+                width: activeActivity != null ? 1.4 : 1.1,
+              ),
+              color: activeActivity != null
+                  ? const Color(0xFF10B981).withOpacity(0.18)
+                  : Colors.black.withOpacity(0.45),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: activeActivity != null ? const Color(0xFF10B981) : Colors.amber,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    activeActivity != null
+                        ? 'Aktif: ${activeActivity.title}'
+                        : (upcoming.isNotEmpty
+                            ? 'Berikutnya: ${upcoming.first.title}'
+                            : 'Semua event hari ini telah selesai ✨'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (activeActivity != null) ...[
+                  Builder(builder: (ctx) {
+                    final remaining = toUiMinute(activeActivity!.endMinute, activeActivity.ampmHalf) - currentMinute;
+                    return Text(
+                      '${remaining}m tersisa',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF34D399),
+                      ),
+                    );
+                  }),
+                ] else if (upcoming.isNotEmpty) ...[
+                  Builder(builder: (ctx) {
+                    final diff = toUiMinute(upcoming.first.startMinute, upcoming.first.ampmHalf) - currentMinute;
+                    return Text(
+                      'dlm ${diff}m',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withOpacity(0.75),
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // Grid of 3-4 upcoming or current event pills
+        Row(
+          children: [
+            for (int i = 0; i < (sorted.length > 3 ? 3 : sorted.length); i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: _buildEventPill(sorted[i], currentMinute),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEventPill(Activity a, int currentMinute) {
+    final start = toUiMinute(a.startMinute, a.ampmHalf);
+    final end = toUiMinute(a.endMinute, a.ampmHalf);
+    final isCurrent = start <= currentMinute && currentMinute < end && !a.isCompleted;
+    final timeStr = formatMinuteOfHalf(a.startMinute, a.ampmHalf, is24h: true);
+
+    return GestureDetector(
+      onTap: widget.onOpenFocusClock,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isCurrent
+                ? Colors.white
+                : (a.isCompleted ? Colors.white24 : Colors.white.withOpacity(0.28)),
+            width: isCurrent ? 1.4 : 1.0,
+          ),
+          color: isCurrent
+              ? Colors.white.withOpacity(0.22)
+              : (a.isCompleted ? Colors.black.withOpacity(0.2) : Colors.black.withOpacity(0.4)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (a.iconKey != null && a.iconKey!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 3),
+                    child: Text(a.iconKey!, style: const TextStyle(fontSize: 11)),
+                  ),
+                Flexible(
+                  child: Text(
+                    a.title,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                      color: a.isCompleted ? Colors.white38 : Colors.white.withOpacity(0.9),
+                      decoration: a.isCompleted ? TextDecoration.lineThrough : null,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 3),
+            Text(
+              timeStr,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                color: isCurrent ? Colors.white : Colors.white70,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

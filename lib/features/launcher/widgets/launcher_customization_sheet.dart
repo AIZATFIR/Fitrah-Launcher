@@ -530,6 +530,100 @@ class _LauncherCustomizationSheetState
               ),
               const SizedBox(height: 8),
 
+              // Widget Display Mode (Sholat vs Focus Clock)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppPalette.bg,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppPalette.stroke),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tampilan Widget Utama Beranda:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppPalette.textDim),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => notifier.setWidgetDisplayMode('prayer'),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                color: settings.widgetDisplayMode != 'focus_clock'
+                                    ? AppPalette.accent.withValues(alpha: 0.15)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: settings.widgetDisplayMode != 'focus_clock'
+                                      ? AppPalette.accent
+                                      : AppPalette.stroke,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '🕌 Waktu Sholat',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: settings.widgetDisplayMode != 'focus_clock'
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: settings.widgetDisplayMode != 'focus_clock'
+                                        ? AppPalette.accent
+                                        : AppPalette.textDim,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => notifier.setWidgetDisplayMode('focus_clock'),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                color: settings.widgetDisplayMode == 'focus_clock'
+                                    ? AppPalette.accent.withValues(alpha: 0.15)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: settings.widgetDisplayMode == 'focus_clock'
+                                      ? AppPalette.accent
+                                      : AppPalette.stroke,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '⏱️ Focus Events',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: settings.widgetDisplayMode == 'focus_clock'
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: settings.widgetDisplayMode == 'focus_clock'
+                                        ? AppPalette.accent
+                                        : AppPalette.textDim,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 activeColor: AppPalette.accent,

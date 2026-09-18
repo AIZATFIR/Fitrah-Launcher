@@ -130,4 +130,16 @@ class Habit {
     final idx = currentProgressionIndex.clamp(0, steps.length - 1);
     return steps[idx];
   }
+
+  @ignore
+  String get effectiveHabitType {
+    final t = habitType.trim().toLowerCase();
+    if (t == 'timed' || t == 'count' || t == 'progression' || t == 'hybrid') {
+      return t;
+    }
+    if (timerEnabled || unit == HabitUnit.min) {
+      return 'timed';
+    }
+    return 'count';
+  }
 }

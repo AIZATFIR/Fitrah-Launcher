@@ -108,6 +108,15 @@ class AppLauncherService {
     }
   }
 
+  Future<void> openNotificationListenerSettings() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod('openNotificationListenerSettings');
+    } catch (e) {
+      debugPrint('AppLauncherService openNotificationListenerSettings error: $e');
+    }
+  }
+
   Future<void> launchDialer() async {
     if (kIsWeb || !Platform.isAndroid) return;
     try {

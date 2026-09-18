@@ -107,6 +107,11 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
     state = state.copyWith(dockPackages: updated);
     await _saveSettings();
   }
+
+  Future<void> setWidgetDisplayMode(String mode) async {
+    state = state.copyWith(widgetDisplayMode: mode);
+    await _saveSettings();
+  }
 }
 
 final launcherSettingsProvider =

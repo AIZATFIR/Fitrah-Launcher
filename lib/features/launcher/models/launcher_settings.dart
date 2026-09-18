@@ -22,6 +22,9 @@ class LauncherSettings {
   final String prayerMaghrib;
   final String prayerIsya;
 
+  /// Top widget display mode: 'prayer' or 'focus_clock'
+  final String widgetDisplayMode;
+
   const LauncherSettings({
     this.wallpaperType = 'amoled_black',
     this.customImageUrl = '',
@@ -46,6 +49,7 @@ class LauncherSettings {
     this.prayerAshar = '15:10',
     this.prayerMaghrib = '17:54',
     this.prayerIsya = '19:03',
+    this.widgetDisplayMode = 'prayer',
   });
 
   LauncherSettings copyWith({
@@ -67,6 +71,7 @@ class LauncherSettings {
     String? prayerAshar,
     String? prayerMaghrib,
     String? prayerIsya,
+    String? widgetDisplayMode,
   }) {
     return LauncherSettings(
       wallpaperType: wallpaperType ?? this.wallpaperType,
@@ -87,6 +92,7 @@ class LauncherSettings {
       prayerAshar: prayerAshar ?? this.prayerAshar,
       prayerMaghrib: prayerMaghrib ?? this.prayerMaghrib,
       prayerIsya: prayerIsya ?? this.prayerIsya,
+      widgetDisplayMode: widgetDisplayMode ?? this.widgetDisplayMode,
     );
   }
 
@@ -110,6 +116,7 @@ class LauncherSettings {
       'prayerAshar': prayerAshar,
       'prayerMaghrib': prayerMaghrib,
       'prayerIsya': prayerIsya,
+      'widgetDisplayMode': widgetDisplayMode,
     };
   }
 
@@ -139,6 +146,7 @@ class LauncherSettings {
       prayerAshar: map['prayerAshar'] as String? ?? '15:10',
       prayerMaghrib: map['prayerMaghrib'] as String? ?? '17:54',
       prayerIsya: map['prayerIsya'] as String? ?? '19:03',
+      widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'prayer',
     );
   }
 

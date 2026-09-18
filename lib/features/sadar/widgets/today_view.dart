@@ -108,7 +108,7 @@ class _TodayViewState extends ConsumerState<TodayView> {
     HapticFeedback.mediumImpact();
     final repo = ref.read(sadarRepoProvider);
 
-    if (habit.habitType == 'progression') {
+    if (habit.effectiveHabitType == 'progression') {
       if (currentStatus != HabitStatus.yes) {
         final step = habit.currentStep;
         final target = step.target;
@@ -265,7 +265,7 @@ class _TodayViewState extends ConsumerState<TodayView> {
                         final entry = entriesMap[habit.id];
                         final isDone = entry?.status == HabitStatus.yes;
                         final habitColor = Color(habit.colorValue);
-                        final habitType = habit.habitType;
+                        final habitType = habit.effectiveHabitType;
 
                         return _buildHabitCard(
                           habit: habit,
@@ -557,6 +557,7 @@ class _TodayViewState extends ConsumerState<TodayView> {
     }
 
     return InkWell(
+      onTap: () => _openHabitEditor(habit),
       onLongPress: () => _openHabitEditor(habit),
       borderRadius: BorderRadius.circular(16),
       child: Container(

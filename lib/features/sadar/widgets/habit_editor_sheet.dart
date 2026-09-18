@@ -59,7 +59,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     _hybridSecsCtrl = TextEditingController(text: (h?.hybridDurationSeconds ?? 60).toString());
     _selectedIcon = h?.iconKey.isNotEmpty == true ? h!.iconKey : '🎯';
     _selectedUnit = h?.unit ?? HabitUnit.min;
-    _habitType = h?.habitType ?? 'timed';
+    _habitType = h?.effectiveHabitType ?? 'timed';
     _allowedPackages = List.from(h?.allowedPackages ?? []);
     _progressionSteps = List.from(h?.progressionSteps ?? defaultBodybuildingSteps);
     _selectedColor = h?.colorValue ?? _colorOptions[0];
