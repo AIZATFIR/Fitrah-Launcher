@@ -78,20 +78,24 @@ void main() {
       expect(settings.is24h, true);
       expect(settings.showSeconds, false);
       expect(settings.dockPackages.length, 4);
+      expect(settings.autoFocusSearch, true);
 
       final modified = settings.copyWith(
         wallpaperType: 'midnight_slate',
         showSeconds: true,
         dockPackages: ['app1', 'app2', 'app3', 'app4'],
+        autoFocusSearch: false,
       );
       expect(modified.wallpaperType, 'midnight_slate');
       expect(modified.showSeconds, true);
+      expect(modified.autoFocusSearch, false);
 
       final jsonStr = modified.toJson();
       final decoded = LauncherSettings.fromJson(jsonStr);
       expect(decoded.wallpaperType, 'midnight_slate');
       expect(decoded.showSeconds, true);
       expect(decoded.dockPackages, ['app1', 'app2', 'app3', 'app4']);
+      expect(decoded.autoFocusSearch, false);
     });
   });
 }

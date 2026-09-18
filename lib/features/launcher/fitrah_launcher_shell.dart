@@ -121,7 +121,9 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
             ),
 
             // Page 2 (Slide Right): Niagara-Style Minimalist App Drawer
-            const MinimalistAppDrawer(),
+            MinimalistAppDrawer(
+              isActive: _currentPage == 2,
+            ),
           ],
         ),
       ),

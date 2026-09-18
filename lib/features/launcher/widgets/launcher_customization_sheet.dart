@@ -659,6 +659,14 @@ class _LauncherCustomizationSheetState
                 value: settings.showHabitsWidget,
                 onChanged: (val) => notifier.toggleWidget(showHabits: val),
               ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                activeColor: AppPalette.accent,
+                title: const Text('Otomatis Buka Keyboard di Tab Apps', style: TextStyle(fontSize: 13, color: AppPalette.text)),
+                subtitle: const Text('Fokus pencarian dan tampilkan keyboard otomatis saat geser ke tab kanan', style: TextStyle(fontSize: 11, color: AppPalette.textDim)),
+                value: settings.autoFocusSearch,
+                onChanged: (val) => notifier.setAutoFocusSearch(val),
+              ),
 
               const SizedBox(height: 20),
 

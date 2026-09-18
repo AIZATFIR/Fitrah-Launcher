@@ -25,6 +25,9 @@ class LauncherSettings {
   /// Top widget display mode: 'prayer' or 'focus_clock'
   final String widgetDisplayMode;
 
+  /// Automatically focus search and open keyboard on app drawer tab
+  final bool autoFocusSearch;
+
   const LauncherSettings({
     this.wallpaperType = 'amoled_black',
     this.customImageUrl = '',
@@ -50,6 +53,7 @@ class LauncherSettings {
     this.prayerMaghrib = '17:54',
     this.prayerIsya = '19:03',
     this.widgetDisplayMode = 'prayer',
+    this.autoFocusSearch = true,
   });
 
   LauncherSettings copyWith({
@@ -72,6 +76,7 @@ class LauncherSettings {
     String? prayerMaghrib,
     String? prayerIsya,
     String? widgetDisplayMode,
+    bool? autoFocusSearch,
   }) {
     return LauncherSettings(
       wallpaperType: wallpaperType ?? this.wallpaperType,
@@ -93,6 +98,7 @@ class LauncherSettings {
       prayerMaghrib: prayerMaghrib ?? this.prayerMaghrib,
       prayerIsya: prayerIsya ?? this.prayerIsya,
       widgetDisplayMode: widgetDisplayMode ?? this.widgetDisplayMode,
+      autoFocusSearch: autoFocusSearch ?? this.autoFocusSearch,
     );
   }
 
@@ -117,6 +123,7 @@ class LauncherSettings {
       'prayerMaghrib': prayerMaghrib,
       'prayerIsya': prayerIsya,
       'widgetDisplayMode': widgetDisplayMode,
+      'autoFocusSearch': autoFocusSearch,
     };
   }
 
@@ -147,6 +154,7 @@ class LauncherSettings {
       prayerMaghrib: map['prayerMaghrib'] as String? ?? '17:54',
       prayerIsya: map['prayerIsya'] as String? ?? '19:03',
       widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'prayer',
+      autoFocusSearch: map['autoFocusSearch'] as bool? ?? true,
     );
   }
 

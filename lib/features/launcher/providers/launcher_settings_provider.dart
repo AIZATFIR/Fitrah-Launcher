@@ -112,6 +112,11 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
     state = state.copyWith(widgetDisplayMode: mode);
     await _saveSettings();
   }
+
+  Future<void> setAutoFocusSearch(bool enabled) async {
+    state = state.copyWith(autoFocusSearch: enabled);
+    await _saveSettings();
+  }
 }
 
 final launcherSettingsProvider =

@@ -78,6 +78,17 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               },
             ),
 
+            const SizedBox(height: 16),
+
+            // 3. Auto open keyboard on Apps switch
+            _buildSwitchTile(
+              title: 'Auto Open Keyboard on Apps',
+              value: settings.autoFocusSearch,
+              onChanged: (val) {
+                notifier.setAutoFocusSearch(val);
+              },
+            ),
+
             const SizedBox(height: 24),
 
             // Section dropdown items

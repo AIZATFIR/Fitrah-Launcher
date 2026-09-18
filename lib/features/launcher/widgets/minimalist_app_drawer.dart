@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/launcher_settings_provider.dart';
 import '../services/app_launcher_service.dart';
 import 'app_icon_widget.dart';
 import 'fitrah_settings_screen.dart';
 
 class MinimalistAppDrawer extends ConsumerStatefulWidget {
-  const MinimalistAppDrawer({super.key});
+  const MinimalistAppDrawer({
+    super.key,
+    this.isActive = false,
+  });
+
+  final bool isActive;
 
   @override
   ConsumerState<MinimalistAppDrawer> createState() => _MinimalistAppDrawerState();
@@ -15,6 +21,7 @@ class MinimalistAppDrawer extends ConsumerStatefulWidget {
 
 class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
   final TextEditingController _searchCtrl = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   final ScrollController _scrollCtrl = ScrollController();
   final Map<String, GlobalKey> _letterKeys = {};
   String _selectedScrubLetter = '';
@@ -31,11 +38,36 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     for (final l in _alphabet) {
       _letterKeys[l] = GlobalKey();
     }
+    if (widget.isActive) {
+      _checkAutoFocus();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MinimalistAppDrawer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isActive && widget.isActive) {
+      _checkAutoFocus();
+    } else if (oldWidget.isActive && !widget.isActive) {
+      _searchFocusNode.unfocus();
+    }
+  }
+
+  void _checkAutoFocus() {
+    final settings = ref.read(launcherSettingsProvider);
+    if (settings.autoFocusSearch) {
+      Future.delayed(const Duration(milliseconds: 180), () {
+        if (mounted && widget.isActive) {
+          _searchFocusNode.requestFocus();
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchFocusNode.dispose();
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -276,6 +308,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(launcherSettingsProvider);
     final appsAsync = ref.watch(installedAppsFutureProvider);
 
     return Scaffold(
@@ -341,6 +374,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                             Expanded(
                               child: TextField(
                                 controller: _searchCtrl,
+                                focusNode: _searchFocusNode,
                                 onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
                                 style: const TextStyle(fontSize: 15, color: Colors.white),
                                 decoration: const InputDecoration(
@@ -359,6 +393,35 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                 },
                                 child: const Icon(Icons.clear_rounded, size: 18, color: Colors.white60),
                               ),
+                            const SizedBox(width: 6),
+                            Tooltip(
+                              message: settings.autoFocusSearch
+                                  ? 'Auto-keyboard: Aktif (ketuk untuk matikan)'
+                                  : 'Auto-keyboard: Mati (ketuk untuk aktifkan)',
+                              child: InkWell(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  final next = !settings.autoFocusSearch;
+                                  ref.read(launcherSettingsProvider.notifier).setAutoFocusSearch(next);
+                                  if (next) {
+                                    _searchFocusNode.requestFocus();
+                                  } else {
+                                    _searchFocusNode.unfocus();
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                  child: Icon(
+                                    Icons.keyboard_rounded,
+                                    size: 19,
+                                    color: settings.autoFocusSearch
+                                        ? const Color(0xFFE5A93C)
+                                        : Colors.white30,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
