@@ -7,8 +7,6 @@ import '../../../core/time_math.dart';
 import '../../../models/activity.dart';
 import '../../../providers/providers.dart';
 import '../../../services/natural_intent_parser.dart';
-import '../../../services/firebase_sync_service.dart';
-import '../../ai_chat/voice_assistant_sheet.dart';
 import 'focus_session_view.dart';
 
 class NowNextCard extends ConsumerStatefulWidget {
@@ -48,10 +46,6 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
 
     final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
     await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
-
-    try {
-      ref.read(firebaseSyncServiceProvider).syncActivity(activity);
-    } catch (_) {}
 
     _intentCtrl.clear();
     _focusNode.unfocus();
@@ -173,18 +167,7 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
                   },
                 )
               else
-                IconButton(
-                  icon: const Icon(Icons.mic_rounded, color: AppPalette.accent, size: 22),
-                  tooltip: 'Ucapkan Niat',
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    showModalBottomSheet(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => const VoiceAssistantSheet(),
-                    );
-                  },
-                ),
+
               IconButton(
                 icon: Icon(
                   _isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,

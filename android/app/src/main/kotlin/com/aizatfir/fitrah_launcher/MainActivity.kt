@@ -1,4 +1,4 @@
-package com.aizatfir.focus_clock
+package com.aizatfir.fitrah_launcher
 
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -193,6 +193,48 @@ class MainActivity : FlutterActivity() {
                             result.success(true)
                         } catch (e2: Exception) {
                             result.error("ERROR_OPENING_NOTIF_SETTINGS", e2.message, null)
+                        }
+                    }
+                }
+                "launchClock" -> {
+                    try {
+                        val intent = Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (_: Exception) {
+                        try {
+                            val fallback = Intent(android.provider.AlarmClock.ACTION_SET_TIMER).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(fallback)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("ERROR_LAUNCHING_CLOCK", e.message, null)
+                        }
+                    }
+                }
+                "launchCalendar" -> {
+                    try {
+                        val intent = Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_APP_CALENDAR)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (_: Exception) {
+                        try {
+                            val builder = android.net.Uri.parse("content://com.android.calendar/time/").buildUpon()
+                            android.content.ContentUris.appendId(builder, System.currentTimeMillis())
+                            val fallback = Intent(Intent.ACTION_VIEW).apply {
+                                data = builder.build()
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(fallback)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("ERROR_LAUNCHING_CALENDAR", e.message, null)
                         }
                     }
                 }

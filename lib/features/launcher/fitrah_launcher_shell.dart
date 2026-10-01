@@ -4,8 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme.dart';
 import '../focusclock/focusclock_tab.dart';
-import 'widgets/fitrah_home_view.dart';
-import 'widgets/minimalist_app_drawer.dart';
+import 'widgets/niagara_unified_stream_view.dart';
 
 class FitrahLauncherShell extends ConsumerStatefulWidget {
   const FitrahLauncherShell({
@@ -114,15 +113,9 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
               ],
             ),
 
-            // Page 1 (Center): Fitrah Home Dashboard
-            FitrahHomeView(
+            // Page 1 (Center): Niagara Unified Stream (Favorites + Apps + Wave Scrubber)
+            NiagaraUnifiedStreamView(
               onOpenFocusClock: () => _goToPage(0),
-              onOpenAppDrawer: () => _goToPage(2),
-            ),
-
-            // Page 2 (Slide Right): Niagara-Style Minimalist App Drawer
-            MinimalistAppDrawer(
-              isActive: _currentPage == 2,
             ),
           ],
         ),

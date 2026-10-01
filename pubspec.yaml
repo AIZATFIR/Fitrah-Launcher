@@ -1,7 +1,7 @@
-name: focus_clock
-description: "Time-blocking app with analog clock workspace."
+name: fitrah_launcher
+description: "Fitrah Launcher - Minimalist Niagara-style launcher with Focus Clock integration."
 publish_to: 'none'
-version: 0.3.0+3
+version: 0.4.3+4
 
 environment:
   sdk: ^3.11.4

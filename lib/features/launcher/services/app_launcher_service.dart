@@ -117,6 +117,24 @@ class AppLauncherService {
     }
   }
 
+  Future<void> launchClock() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod('launchClock');
+    } catch (e) {
+      debugPrint('AppLauncherService launchClock error: $e');
+    }
+  }
+
+  Future<void> launchCalendar() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod('launchCalendar');
+    } catch (e) {
+      debugPrint('AppLauncherService launchCalendar error: $e');
+    }
+  }
+
   Future<void> launchDialer() async {
     if (kIsWeb || !Platform.isAndroid) return;
     try {
@@ -213,6 +231,10 @@ final favoritePackagesProvider = StateProvider<Set<String>>((ref) {
     'com.android.browser',
     'com.android.camera',
   };
+});
+
+final hiddenPackagesProvider = StateProvider<Set<String>>((ref) {
+  return <String>{};
 });
 
 final appIconProvider = FutureProvider.family<Uint8List?, String>((ref, packageName) async {

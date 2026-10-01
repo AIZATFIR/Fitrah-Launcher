@@ -10,11 +10,9 @@ import '../../models/activity.dart';
 import '../../models/preset.dart';
 import '../../providers/providers.dart';
 import '../activity_detail/activity_detail_sheet.dart';
-import '../ai_chat/storytelling_sheet.dart';
 import '../presets/presets_tab.dart';
 import '../../widgets/command_palette.dart';
 import '../../widgets/hotkeys_modal.dart';
-import '../../services/firebase_sync_service.dart';
 import 'analog_clock_face.dart';
 import 'widgets/now_next_card.dart';
 
@@ -626,13 +624,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       HapticFeedback.mediumImpact();
                       if (val == 'routines') {
                         ref.read(tabIndexProvider.notifier).state = 0;
-                      } else if (val == 'reflect') {
-                        showModalBottomSheet(
-                          context: context,
-                          backgroundColor: Colors.transparent,
-                          isScrollControlled: true,
-                          builder: (_) => const StorytellingSheet(),
-                        );
                       } else if (val == 'copy_day') {
                         _showCopyScheduleDialog(context, ref.read(currentDateProvider));
                       } else if (val == 'command') {
@@ -668,16 +659,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
-                        value: 'reflect',
-                        child: Row(
-                          children: [
-                            Icon(Icons.spa_rounded, size: 16, color: AppPalette.accent),
-                            SizedBox(width: 10),
-                            Text('Refleksi & Story', style: TextStyle(fontSize: 13)),
-                          ],
-                        ),
-                      ),
+
                       const PopupMenuItem(
                         value: 'command',
                         child: Row(
@@ -870,9 +852,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
     final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
     await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
-    try {
-      ref.read(firebaseSyncServiceProvider).syncActivity(activity);
-    } catch (_) {}
 
     HapticFeedback.mediumImpact();
   }
@@ -1197,9 +1176,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       );
       final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
       await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
-      try {
-        ref.read(firebaseSyncServiceProvider).syncActivity(activity);
-      } catch (_) {}
     } else if (result == 'custom') {
       final duration = end24 - start24;
       final activity = Activity()
@@ -1223,9 +1199,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
           ..colorValue = presetColors.first;
         final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
         await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
-        try {
-          ref.read(firebaseSyncServiceProvider).syncActivity(activity);
-        } catch (_) {}
       }
     }
   }
@@ -1311,9 +1284,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     a.endMinute = dbEnd;
     a.ampmHalf = dbHalf;
     await ref.read(activityRepoProvider).upsert(a, notifLeadMinutes: leadMinutes);
-    try {
-      ref.read(firebaseSyncServiceProvider).syncActivity(a);
-    } catch (_) {}
     
     _draggingActivity = null;
     _dragStartNotifier.value = null;
