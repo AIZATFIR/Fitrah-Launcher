@@ -463,6 +463,38 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   ),
                   const SizedBox(width: 8),
 
+                  // Sadar standalone connector pill
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      ref.read(appLauncherServiceProvider).launchSadar();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white.withOpacity(0.12)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.wb_sunny_outlined, size: 13, color: Color(0xFF10B981)),
+                          SizedBox(width: 4),
+                          Text(
+                            'SADAR',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
                   // Settings gear
                   GestureDetector(
                     onTap: () {

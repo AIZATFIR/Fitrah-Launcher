@@ -90,6 +90,16 @@ class AppLauncherService {
     }
   }
 
+  /// Connect & Launch Standalone Sadar App (com.aizatfir.sadar)
+  Future<bool> launchSadar() async {
+    return launchApp('com.aizatfir.sadar');
+  }
+
+  /// Connect & Launch Standalone Focus Clock App (com.aizatfir.focusclock)
+  Future<bool> launchFocusClock() async {
+    return launchApp('com.aizatfir.focusclock');
+  }
+
   Future<void> openAppDetails(String packageName) async {
     if (kIsWeb || !Platform.isAndroid) return;
     try {
