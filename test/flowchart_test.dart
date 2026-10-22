@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focus_clock/features/flowchart/flowchart_canvas_view.dart';
+import 'package:fitrah_launcher/features/flowchart/flowchart_canvas_view.dart';
 
 void main() {
   group('Flowchart Model & Logic Tests', () {

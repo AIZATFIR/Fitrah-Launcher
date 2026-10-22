@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focus_clock/features/launcher/fitrah_launcher_shell.dart';
-import 'package:focus_clock/features/launcher/models/launcher_settings.dart';
-import 'package:focus_clock/features/launcher/services/app_launcher_service.dart';
-import 'package:focus_clock/features/launcher/widgets/fitrah_home_view.dart';
-import 'package:focus_clock/features/launcher/widgets/minimalist_app_drawer.dart';
+import 'package:fitrah_launcher/features/launcher/fitrah_launcher_shell.dart';
+import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
+import 'package:fitrah_launcher/features/launcher/services/app_launcher_service.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/fitrah_home_view.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/minimalist_app_drawer.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/niagara_unified_stream_view.dart';
 
 void main() {
   group('Fitrah Launcher Tests', () {
@@ -68,7 +69,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byType(FitrahHomeView), findsOneWidget);
+      expect(find.byType(NiagaraUnifiedStreamView), findsOneWidget);
       expect(find.byType(PageView), findsOneWidget);
     });
 

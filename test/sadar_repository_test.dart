@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focus_clock/data/repositories/sadar_repository.dart';
-import 'package:focus_clock/models/habit.dart';
-import 'package:focus_clock/models/habit_entry.dart';
-import 'package:focus_clock/models/daily_reflection.dart';
-import 'package:focus_clock/models/timer_session.dart';
+import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
+import 'package:fitrah_launcher/models/habit.dart';
+import 'package:fitrah_launcher/models/habit_entry.dart';
+import 'package:fitrah_launcher/models/daily_reflection.dart';
+import 'package:fitrah_launcher/models/timer_session.dart';
 
 void main() {
   group('SadarRepository Tests', () {
@@ -113,7 +113,7 @@ void main() {
       // Record 1 no for h2
       await repo.recordEntryStatus(habitId: h2.id, dateString: '2026-09-01', status: HabitStatus.no);
 
-      final stats = await repo.getAwarenessStats();
+      final stats = await repo.getAwarenessStats(daysBack: 60);
       expect(stats.habitCompletedCounts[h1.id], 3);
       expect(stats.habitCompletedCounts[h2.id] ?? 0, 0);
     });

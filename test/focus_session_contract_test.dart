@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focus_clock/services/focus_session_contract.dart';
+import 'package:fitrah_launcher/services/focus_session_contract.dart';
 
 void main() {
   group('FocusSessionContract Tests (PRD 3 §2, §35, §84)', () {

@@ -117,9 +117,12 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
                         top: widget.topPadding,
                         bottom: widget.bottomPadding,
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(count, (i) {
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(count, (i) {
                           final letter = widget.alphabet[i];
                           final itemCenterY = widget.topPadding + (i + 0.5) * itemHeight;
 
@@ -168,6 +171,7 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
                       ),
                     ),
                   ),
+                ),
 
                   // Floating Magnifying Indicator Bubble
                   if (_isDragging && _touchY != null)

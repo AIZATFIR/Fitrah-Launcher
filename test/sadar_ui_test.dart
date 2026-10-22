@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focus_clock/features/sadar/sadar_home_screen.dart';
-import 'package:focus_clock/features/sadar/widgets/daily_fulfillment_banner.dart';
-import 'package:focus_clock/features/sadar/widgets/horizontal_timeline_grid.dart';
-import 'package:focus_clock/models/habit.dart';
-import 'package:focus_clock/services/secure_storage_service.dart';
+import 'package:fitrah_launcher/features/sadar/sadar_home_screen.dart';
+import 'package:fitrah_launcher/features/sadar/widgets/daily_fulfillment_banner.dart';
+import 'package:fitrah_launcher/features/sadar/widgets/horizontal_timeline_grid.dart';
+import 'package:fitrah_launcher/models/habit.dart';
+import 'package:fitrah_launcher/services/secure_storage_service.dart';
 
 class FakeSecureStorageService extends SecureStorageService {
   @override

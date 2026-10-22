@@ -12,6 +12,8 @@ import 'app_icon_widget.dart';
 import 'fitrah_settings_screen.dart';
 import 'launcher_customization_sheet.dart';
 import 'niagara_wave_scrubber.dart';
+import '../../../models/habit_entry.dart';
+import '../../../providers/sadar_providers.dart';
 
 /// Unified Niagara-style home stream combining header widget,
 /// favorite apps, and the full alphabetical app list with the signature wave scrubber.
@@ -338,7 +340,11 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   children: [
                     // Top header: Minimalist Clock & Date
                     _buildHeader(timeStr, periodStr, dateStr, hijriStr, nextPrayer),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
+
+                    // Strategic Visual Cue Card (Sadar Integration)
+                    _buildSadarStrategicCueCard(),
+                    const SizedBox(height: 16),
 
                     // Search input
                     _buildSearchBar(settings, filtered),
@@ -779,6 +785,311 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSadarStrategicCueCard() {
+    final todayStr = DateFormat('yyyy-MM-dd').format(_currentTime);
+    final habitsAsync = ref.watch(habitsStreamProvider);
+    final entriesRange = DateRangeQuery(start: todayStr, end: todayStr);
+    final entriesAsync = ref.watch(habitEntriesStreamProvider(entriesRange));
+
+    return habitsAsync.when(
+      data: (habits) {
+        if (habits.isEmpty) return const SizedBox.shrink();
+
+        final entriesList = entriesAsync.value ?? [];
+        final entriesMap = {for (final e in entriesList) e.habitId: e};
+
+        final completedHabits = habits.where((h) => entriesMap[h.id]?.status == HabitStatus.yes).toList();
+        final pendingHabits = habits.where((h) => entriesMap[h.id]?.status != HabitStatus.yes).toList();
+        final nextHabit = pendingHabits.isNotEmpty ? pendingHabits.first : null;
+
+        final total = habits.length;
+        final done = completedHabits.length;
+        final ratio = total > 0 ? (done / total).clamp(0.0, 1.0) : 0.0;
+        final isAllDone = total > 0 && done == total;
+
+        return Container(
+          margin: const EdgeInsets.only(top: 8, bottom: 4),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF18171E),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isAllDone
+                  ? const Color(0xFF10B981).withOpacity(0.35)
+                  : const Color(0xFFF0C987).withOpacity(0.28),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top row: status pill + count
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isAllDone
+                          ? const Color(0xFF10B981).withOpacity(0.15)
+                          : const Color(0xFFF0C987).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isAllDone
+                            ? const Color(0xFF10B981).withOpacity(0.3)
+                            : const Color(0xFFF0C987).withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isAllDone ? Icons.check_circle_rounded : Icons.bolt_rounded,
+                          size: 12,
+                          color: isAllDone ? const Color(0xFF10B981) : const Color(0xFFF0C987),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isAllDone ? 'HARI INI TERPENUHI' : 'FOKUS & ARAH HARI INI',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                            color: isAllDone ? const Color(0xFF10B981) : const Color(0xFFF0C987),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      ref.read(appLauncherServiceProvider).launchSadar();
+                    },
+                    child: Text(
+                      '$done/$total selesai (${(ratio * 100).toInt()}%)',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF9E9DA6),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(
+                  value: ratio,
+                  minHeight: 5,
+                  backgroundColor: Colors.white.withOpacity(0.08),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isAllDone ? const Color(0xFF10B981) : const Color(0xFFF0C987),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              if (!isAllDone && nextHabit != null) ...[
+                const Text(
+                  'LANGKAH STRATEGIS SEKARANG:',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    color: Color(0xFF8A8993),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(nextHabit.iconKey, style: const TextStyle(fontSize: 24)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nextHabit.name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Wrap(
+                            spacing: 6,
+                            children: [
+                              Text(
+                                nextHabit.habitType == 'timed'
+                                    ? '⏱️ Target ${nextHabit.target} Menit'
+                                    : '🎯 Target ${nextHabit.target} kali',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFF0C987),
+                                ),
+                              ),
+                              const Text(
+                                '• 📍 Buka Laptop & Mulai',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF8A8993),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Action buttons: 1-Tap Play Timer + Open Sadar
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFF0C987),
+                          foregroundColor: const Color(0xFF12100E),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          widget.onOpenFocusClock();
+                        },
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.play_arrow_rounded, size: 18),
+                            SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'Buka Laptop & Play Timer',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacity(0.08),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                        ),
+                      ),
+                      icon: const Icon(Icons.open_in_new_rounded, size: 17),
+                      tooltip: 'Buka Sadar',
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        ref.read(appLauncherServiceProvider).launchSadar();
+                      },
+                    ),
+                  ],
+                ),
+
+                if (pendingHabits.length > 1) ...[
+                  const SizedBox(height: 12),
+                  const Divider(color: Color(0xFF26252E), height: 1),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.hourglass_empty_rounded, size: 11, color: Color(0xFF8A8993)),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Kurang:',
+                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF8A8993)),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: pendingHabits.skip(1).map((h) {
+                              return GestureDetector(
+                                onTap: () => ref.read(appLauncherServiceProvider).launchSadar(),
+                                child: Container(
+                                  margin: const EdgeInsets.only(right: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                  ),
+                                  child: Text(
+                                    '${h.iconKey} ${h.name}',
+                                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF9E9DA6)),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ] else ...[
+                const Text(
+                  'Semua janji hari ini terpenuhi. 🌿',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Energi telah dialokasikan dengan sadar dan tenang.',
+                  style: TextStyle(fontSize: 11.5, color: Color(0xFF8A8993)),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }

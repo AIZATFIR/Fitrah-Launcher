@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:focus_clock/core/time_math.dart';
+import 'package:fitrah_launcher/core/time_math.dart';
 
 void main() {
   group('splitSpan', () {
