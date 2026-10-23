@@ -117,6 +117,11 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
     state = state.copyWith(autoFocusSearch: enabled);
     await _saveSettings();
   }
+
+  Future<void> setThemePalette(String palette) async {
+    state = state.copyWith(themePalette: palette);
+    await _saveSettings();
+  }
 }
 
 final launcherSettingsProvider =

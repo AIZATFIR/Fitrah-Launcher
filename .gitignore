@@ -58,6 +58,9 @@ secrets/
 # Claude Code local
 .claude/settings.local.json
 
+# APK binaries (uploaded via GitHub Releases)
+*.apk
+
 *.pdf
 .vercel
 release_dist/

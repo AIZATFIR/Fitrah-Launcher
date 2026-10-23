@@ -6,14 +6,17 @@ import '../providers/launcher_settings_provider.dart';
 import '../services/app_launcher_service.dart';
 import 'app_icon_widget.dart';
 import 'fitrah_settings_screen.dart';
+import 'niagara_wave_scrubber.dart';
 
 class MinimalistAppDrawer extends ConsumerStatefulWidget {
   const MinimalistAppDrawer({
     super.key,
     this.isActive = false,
+    this.onBackToHome,
   });
 
   final bool isActive;
+  final VoidCallback? onBackToHome;
 
   @override
   ConsumerState<MinimalistAppDrawer> createState() => _MinimalistAppDrawerState();
@@ -26,6 +29,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
   final Map<String, GlobalKey> _letterKeys = {};
   String _selectedScrubLetter = '';
   String _searchQuery = '';
+  bool _isScrubbing = false;
 
   static const List<String> _alphabet = [
     '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -304,8 +308,6 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     );
   }
 
-  double _scrubberY = 200;
-
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(launcherSettingsProvider);
@@ -327,8 +329,9 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                       child: Row(
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.workspace_premium_outlined, color: Color(0xFFE5A93C), size: 26),
-                            onPressed: () {},
+                            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+                            tooltip: 'Kembali ke Home',
+                            onPressed: widget.onBackToHome,
                           ),
                           const Expanded(
                             child: Center(
@@ -481,71 +484,20 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
               ),
             ),
 
-            // Niagara-Style Alphabet Scrubber Bar on the Right Margin
+            // Niagara-Style Alphabet Scrubber Bar with 2D Pan Tracking
             Positioned(
-              right: 2,
+              right: 0,
               top: 80,
               bottom: 40,
-              width: 28,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onVerticalDragDown: (details) {
-                  _updateScrub(details.localPosition.dy);
-                },
-                onVerticalDragUpdate: (details) {
-                  _updateScrub(details.localPosition.dy);
-                },
-                onVerticalDragEnd: (_) {
-                  setState(() => _selectedScrubLetter = '');
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: _alphabet.map((letter) {
-                    final isSelected = _selectedScrubLetter == letter;
-                    return Text(
-                      letter,
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w400,
-                        color: isSelected ? Colors.white : Colors.white38,
-                      ),
-                    );
-                  }).toList(),
-                ),
+              width: _isScrubbing ? MediaQuery.of(context).size.width * 0.75 : 44,
+              child: NiagaraWaveScrubber(
+                alphabet: _alphabet,
+                selectedLetter: _selectedScrubLetter,
+                onLetterSelected: _scrollToLetter,
+                onScrubStart: () => setState(() => _isScrubbing = true),
+                onScrubEnd: () => setState(() => _isScrubbing = false),
               ),
             ),
-
-            // Niagara-Style Letter Indicator Bubble while scrubbing
-            if (_selectedScrubLetter.isNotEmpty)
-              Positioned(
-                right: 36,
-                top: _scrubberY - 18,
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3F3F46),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      )
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      _selectedScrubLetter,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
 
             // Circled Arrow Up button at Bottom Right (scroll to top)
             Positioned(
@@ -582,17 +534,6 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
         ),
       ),
     );
-  }
-
-  void _updateScrub(double localY) {
-    final renderBox = context.findRenderObject() as RenderBox?;
-    if (renderBox == null) return;
-    final totalHeight = renderBox.size.height - 120;
-    final itemHeight = totalHeight / _alphabet.length;
-    final index = (localY / itemHeight).clamp(0, _alphabet.length - 1).floor();
-    final letter = _alphabet[index];
-    _scrubberY = (localY + 80).clamp(80.0, renderBox.size.height - 50);
-    _scrollToLetter(letter);
   }
 
   Widget _buildAppRow(InstalledApp app) {

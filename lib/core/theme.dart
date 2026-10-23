@@ -56,11 +56,21 @@ ThemeData buildDarkTheme([String palette = 'executive']) {
   Color accent = AppPalette.accent;
   Color stroke = AppPalette.stroke;
 
-  if (palette == 'sage') {
-    bg = const Color(0xFF131A17);
-    card = const Color(0xFF1C2723);
-    accent = const Color(0xFF4EAA86);
-    stroke = const Color(0xFF273831);
+  if (palette == 'fino_green' || palette == 'green' || palette == 'sage') {
+    bg = const Color(0xFF0E140F);
+    card = const Color(0xFF151E17);
+    accent = const Color(0xFF70C050); // Catchy Fino Matcha Green
+    stroke = const Color(0xFF233226);
+  } else if (palette == 'sky_blue' || palette == 'sky') {
+    bg = const Color(0xFF0A131A);
+    card = const Color(0xFF101D28);
+    accent = const Color(0xFF38BDF8); // Catchy Sky Blue
+    stroke = const Color(0xFF1A2F40);
+  } else if (palette == 'ocean_blue' || palette == 'ocean') {
+    bg = const Color(0xFF07101B);
+    card = const Color(0xFF0E1B2C);
+    accent = const Color(0xFF0284C7); // Catchy Deep Ocean Blue
+    stroke = const Color(0xFF162C46);
   } else if (palette == 'full_book' || palette == 'bookpaper' || palette == 'sepia') {
     bg = const Color(0xFF1B1916);
     card = const Color(0xFF26231E);
@@ -79,6 +89,15 @@ ThemeData buildDarkTheme([String palette = 'executive']) {
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
     scaffoldBackgroundColor: bg,
+    cardTheme: CardThemeData(
+      color: card,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(2), // Square card optimization
+        side: BorderSide(color: stroke, width: 1),
+      ),
+    ),
     colorScheme: base.colorScheme.copyWith(
       surface: bg,
       primary: accent,
@@ -99,19 +118,19 @@ ThemeData buildDarkTheme([String palette = 'executive']) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppPalette.bookpaperFieldBg,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      fillColor: card,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppPalette.bookpaperBorder),
+        borderRadius: BorderRadius.circular(2),
+        borderSide: BorderSide(color: stroke),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppPalette.bookpaperBorder),
+        borderRadius: BorderRadius.circular(2),
+        borderSide: BorderSide(color: stroke),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppPalette.accent, width: 1.5),
+        borderRadius: BorderRadius.circular(2),
+        borderSide: BorderSide(color: accent, width: 1.5),
       ),
       hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 14),
       labelStyle: const TextStyle(color: AppPalette.textDim, fontSize: 13),

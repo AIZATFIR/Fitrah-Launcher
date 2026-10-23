@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.WindowManager
+import android.util.LruCache
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -18,6 +19,13 @@ import java.io.ByteArrayOutputStream
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "fitrah_launcher/apps"
+
+    // In-memory icon cache to prevent frame drops during list scrolling (1/8 max heap)
+    private val iconCache = object : LruCache<String, ByteArray>((Runtime.getRuntime().maxMemory() / 1024 / 8).toInt()) {
+        override fun sizeOf(key: String, value: ByteArray): Int {
+            return value.size / 1024
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -86,6 +94,11 @@ class MainActivity : FlutterActivity() {
                 "getAppIcon" -> {
                     val pkg = call.argument<String>("packageName")
                     if (pkg != null) {
+                        val cached = iconCache.get(pkg)
+                        if (cached != null) {
+                            result.success(cached)
+                            return@setMethodCallHandler
+                        }
                         try {
                             val drawable = packageManager.getApplicationIcon(pkg)
                             val bitmap = when (drawable) {
@@ -103,7 +116,9 @@ class MainActivity : FlutterActivity() {
                             val scaled = Bitmap.createScaledBitmap(bitmap, 96, 96, true)
                             val stream = ByteArrayOutputStream()
                             scaled.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                            result.success(stream.toByteArray())
+                            val bytes = stream.toByteArray()
+                            iconCache.put(pkg, bytes)
+                            result.success(bytes)
                         } catch (e: Exception) {
                             result.success(null)
                         }

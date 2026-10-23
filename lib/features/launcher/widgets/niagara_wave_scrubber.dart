@@ -32,6 +32,7 @@ class NiagaraWaveScrubber extends StatefulWidget {
 
 class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
     with SingleTickerProviderStateMixin {
+  double? _touchX;
   double? _touchY;
   bool _isDragging = false;
   String _activeLetter = '';
@@ -58,11 +59,11 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
     super.dispose();
   }
 
-  void _handleTouch(double localY, double totalHeight) {
+  void _handleTouch(Offset localPos, double totalHeight, double totalWidth) {
     final availableHeight = totalHeight - widget.topPadding - widget.bottomPadding;
     if (availableHeight <= 0) return;
 
-    final clampedY = (localY - widget.topPadding).clamp(0.0, availableHeight);
+    final clampedY = (localPos.dy - widget.topPadding).clamp(0.0, availableHeight);
     final ratio = clampedY / availableHeight;
     final index = (ratio * (widget.alphabet.length - 1)).round().clamp(0, widget.alphabet.length - 1);
     final letter = widget.alphabet[index];
@@ -74,7 +75,8 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
     }
 
     setState(() {
-      _touchY = localY;
+      _touchY = localPos.dy;
+      _touchX = localPos.dx;
     });
   }
 
@@ -83,25 +85,26 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
     return LayoutBuilder(
       builder: (context, constraints) {
         final totalHeight = constraints.maxHeight;
+        final totalWidth = constraints.maxWidth;
         final availableHeight = totalHeight - widget.topPadding - widget.bottomPadding;
         final count = widget.alphabet.length;
         final itemHeight = count > 0 ? availableHeight / count : 12.0;
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onVerticalDragDown: (details) {
+          onPanDown: (details) {
             _isDragging = true;
             widget.onScrubStart?.call();
             _animCtrl.forward();
-            _handleTouch(details.localPosition.dy, totalHeight);
+            _handleTouch(details.localPosition, totalHeight, totalWidth);
           },
-          onVerticalDragUpdate: (details) {
-            _handleTouch(details.localPosition.dy, totalHeight);
+          onPanUpdate: (details) {
+            _handleTouch(details.localPosition, totalHeight, totalWidth);
           },
-          onVerticalDragEnd: (_) {
+          onPanEnd: (_) {
             _finishScrub();
           },
-          onVerticalDragCancel: () {
+          onPanCancel: () {
             _finishScrub();
           },
           child: AnimatedBuilder(
@@ -173,10 +176,12 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
                   ),
                 ),
 
-                  // Floating Magnifying Indicator Bubble
+                  // Floating Magnifying Indicator Bubble follows thumb horizontally
                   if (_isDragging && _touchY != null)
                     Positioned(
-                      right: widget.waveBulgeWidth + 24,
+                      right: _touchX != null
+                          ? ((totalWidth - _touchX!) + 28).clamp(widget.waveBulgeWidth + 24, totalWidth - 60)
+                          : widget.waveBulgeWidth + 24,
                       top: (_touchY! - 24).clamp(widget.topPadding, totalHeight - widget.bottomPadding - 48),
                       child: Container(
                         width: 48,

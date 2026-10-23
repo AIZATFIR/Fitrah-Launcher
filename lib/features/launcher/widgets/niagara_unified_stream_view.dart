@@ -12,6 +12,8 @@ import 'app_icon_widget.dart';
 import 'fitrah_settings_screen.dart';
 import 'launcher_customization_sheet.dart';
 import 'niagara_wave_scrubber.dart';
+import 'loop_habit_grid_widget.dart';
+import 'task_dump_inbox_widget.dart';
 import '../../../models/habit_entry.dart';
 import '../../../providers/sadar_providers.dart';
 
@@ -39,6 +41,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
 
   String _selectedLetter = '★';
   String _searchQuery = '';
+  bool _isScrubbing = false;
 
   static const List<String> _alphabet = [
     '★', '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -340,15 +343,25 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   children: [
                     // Top header: Minimalist Clock & Date
                     _buildHeader(timeStr, periodStr, dateStr, hijriStr, nextPrayer),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
 
-                    // Strategic Visual Cue Card (Sadar Integration)
+                    // Strategic Visual Cue Card (Goal Cue)
                     _buildSadarStrategicCueCard(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 6),
+
+                    // ── 1. Daily Habits Grid (Loop Style) ──
+                    const LoopHabitGridWidget(),
+                    const SizedBox(height: 6),
+
+                    // ── 2. Task Dump Inbox (Google Tasks Style) ──
+                    TaskDumpInboxWidget(
+                      onTaskScheduled: widget.onOpenFocusClock,
+                    ),
+                    const SizedBox(height: 14),
 
                     // Search input
                     _buildSearchBar(settings, filtered),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
                     // FAVORITES SECTION (Only if not searching)
                     if (_searchQuery.isEmpty && favoriteApps.isNotEmpty) ...[
@@ -417,16 +430,18 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
               ),
             ),
 
-            // Niagara Signature Curved Wave Alphabet Scrubber
+            // Niagara Signature Curved Wave Alphabet Scrubber (persists when pulled to screen center)
             Positioned(
-              right: 2,
+              right: 0,
               top: 70,
               bottom: 40,
-              width: 38,
+              width: _isScrubbing ? MediaQuery.of(context).size.width * 0.75 : 44.0,
               child: NiagaraWaveScrubber(
                 alphabet: _alphabet,
                 selectedLetter: _selectedLetter,
                 onLetterSelected: _scrollToSection,
+                onScrubStart: () => setState(() => _isScrubbing = true),
+                onScrubEnd: () => setState(() => _isScrubbing = false),
               ),
             ),
 

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'core/theme.dart';
 import 'data/isar_service.dart';
 import 'features/launcher/fitrah_launcher_shell.dart';
+import 'features/launcher/providers/launcher_settings_provider.dart';
 import 'providers/providers.dart';
 import 'services/notification_service.dart';
 
@@ -37,24 +37,17 @@ Future<void> main() async {
   );
 }
 
-class FitrahLauncherApp extends StatelessWidget {
+class FitrahLauncherApp extends ConsumerWidget {
   const FitrahLauncherApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(launcherSettingsProvider);
     return MaterialApp(
-      title: 'Fitrah Launcher',
+      title: 'Focus Clock Launcher',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: AppPalette.bg,
-        colorScheme: const ColorScheme.dark(
-          primary: AppPalette.accent,
-          surface: AppPalette.card,
-        ),
-        textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
-      ),
+      theme: buildDarkTheme(settings.themePalette),
       home: const FitrahLauncherShell(),
     );
   }

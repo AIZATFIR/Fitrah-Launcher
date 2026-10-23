@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme.dart';
 import '../focusclock/focusclock_tab.dart';
-import 'widgets/niagara_unified_stream_view.dart';
+import 'widgets/focus_clock_home_view.dart';
+import 'widgets/minimalist_app_drawer.dart';
 
 class FitrahLauncherShell extends ConsumerStatefulWidget {
   const FitrahLauncherShell({
@@ -59,12 +60,10 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppPalette.bg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: PageView(
           controller: _pageCtrl,
-          physics: _currentPage == 0
-              ? const NeverScrollableScrollPhysics()
-              : const BouncingScrollPhysics(),
+          physics: const ClampingScrollPhysics(), // Eliminates all black overscroll flashes
           onPageChanged: (page) => setState(() => _currentPage = page),
           children: [
             // Page 0 (Slide Left): Full Focus Clock Face with Back to Home button
@@ -81,7 +80,7 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.75),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(2), // 2px square bento
                         border: Border.all(color: Colors.white.withOpacity(0.2)),
                         boxShadow: [
                           BoxShadow(
@@ -113,9 +112,16 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
               ],
             ),
 
-            // Page 1 (Center): Niagara Unified Stream (Favorites + Apps + Wave Scrubber)
-            NiagaraUnifiedStreamView(
+            // Page 1 (Center): Focus Clock Home View (Loop Habits + Google Tasks)
+            FocusClockHomeView(
               onOpenFocusClock: () => _goToPage(0),
+              onOpenAppDrawer: () => _goToPage(2),
+            ),
+
+            // Page 2 (Slide Right): Minimalist App Drawer (Niagara wave scrubber + auto-search)
+            MinimalistAppDrawer(
+              isActive: _currentPage == 2,
+              onBackToHome: () => _goToPage(1),
             ),
           ],
         ),

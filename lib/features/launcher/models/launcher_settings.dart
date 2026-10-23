@@ -28,6 +28,9 @@ class LauncherSettings {
   /// Automatically focus search and open keyboard on app drawer tab
   final bool autoFocusSearch;
 
+  /// Dynamic Theme Palette: 'fino_green', 'sky_blue', 'ocean_blue'
+  final String themePalette;
+
   const LauncherSettings({
     this.wallpaperType = 'amoled_black',
     this.customImageUrl = '',
@@ -54,6 +57,7 @@ class LauncherSettings {
     this.prayerIsya = '19:03',
     this.widgetDisplayMode = 'prayer',
     this.autoFocusSearch = true,
+    this.themePalette = 'fino_green',
   });
 
   LauncherSettings copyWith({
@@ -77,6 +81,7 @@ class LauncherSettings {
     String? prayerIsya,
     String? widgetDisplayMode,
     bool? autoFocusSearch,
+    String? themePalette,
   }) {
     return LauncherSettings(
       wallpaperType: wallpaperType ?? this.wallpaperType,
@@ -99,6 +104,7 @@ class LauncherSettings {
       prayerIsya: prayerIsya ?? this.prayerIsya,
       widgetDisplayMode: widgetDisplayMode ?? this.widgetDisplayMode,
       autoFocusSearch: autoFocusSearch ?? this.autoFocusSearch,
+      themePalette: themePalette ?? this.themePalette,
     );
   }
 
@@ -124,6 +130,7 @@ class LauncherSettings {
       'prayerIsya': prayerIsya,
       'widgetDisplayMode': widgetDisplayMode,
       'autoFocusSearch': autoFocusSearch,
+      'themePalette': themePalette,
     };
   }
 
@@ -155,6 +162,7 @@ class LauncherSettings {
       prayerIsya: map['prayerIsya'] as String? ?? '19:03',
       widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'prayer',
       autoFocusSearch: map['autoFocusSearch'] as bool? ?? true,
+      themePalette: map['themePalette'] as String? ?? 'fino_green',
     );
   }
 
