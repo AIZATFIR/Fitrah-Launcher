@@ -48,13 +48,8 @@ class _TaskDumpInboxWidgetState extends ConsumerState<TaskDumpInboxWidget> {
     final theme = Theme.of(context);
     final accentColor = theme.colorScheme.primary;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        border: Border.all(color: theme.dividerColor, width: 1),
-        borderRadius: BorderRadius.circular(2), // 2px Square Bento rule
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -108,7 +103,7 @@ class _TaskDumpInboxWidgetState extends ConsumerState<TaskDumpInboxWidget> {
                     focusNode: _inputFocusNode,
                     style: const TextStyle(fontSize: 13, color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Dump tugas hari ini... (tekan Enter)',
+                      hintText: 'Tulis tugas baru...',
                       hintStyle: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.35)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                       isDense: true,
@@ -417,57 +412,177 @@ class _TaskDumpInboxWidgetState extends ConsumerState<TaskDumpInboxWidget> {
                 const SizedBox(height: 8),
 
                 // Time Range Display
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F1511),
-                    borderRadius: BorderRadius.circular(2),
-                    border: Border.all(color: const Color(0xFF28362B)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('MULAI', style: TextStyle(fontSize: 9, color: Colors.white38)),
-                          Text(
-                            _formatMinute(startMinute),
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: accent),
+                // Sleek Interactive Time Picker Boxes (Tap to pick)
+                Row(
+                  children: [
+                    // Start Time Box (Tap to pick)
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          HapticFeedback.selectionClick();
+                          final picked = await showTimePicker(
+                            context: ctx,
+                            initialTime: TimeOfDay(hour: startMinute ~/ 60, minute: startMinute % 60),
+                            builder: (context, child) => Theme(
+                              data: ThemeData.dark().copyWith(
+                                colorScheme: ColorScheme.dark(
+                                  primary: accent,
+                                  surface: const Color(0xFF16161B),
+                                ),
+                              ),
+                              child: child!,
+                            ),
+                          );
+                          if (picked != null) {
+                            setModalState(() {
+                              startMinute = picked.hour * 60 + picked.minute;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(2),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F1511),
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: accent.withOpacity(0.5), width: 1.2),
                           ),
-                        ],
-                      ),
-                      const Icon(Icons.arrow_forward_rounded, color: Colors.white24, size: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('SELESAI', style: TextStyle(fontSize: 9, color: Colors.white38)),
-                          Text(
-                            _formatMinute(endMinute),
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: accent),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('MULAI', style: TextStyle(fontSize: 9, color: Colors.white54, fontWeight: FontWeight.w700)),
+                                  Icon(Icons.touch_app_outlined, size: 11, color: accent.withOpacity(0.7)),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _formatMinute(startMinute),
+                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: accent),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: accent.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: Text(
-                          '$duration mnt',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: accent),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, color: Colors.white24, size: 16),
+                    const SizedBox(width: 8),
+
+                    // End Time Box (Tap to pick)
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          HapticFeedback.selectionClick();
+                          final picked = await showTimePicker(
+                            context: ctx,
+                            initialTime: TimeOfDay(hour: endMinute ~/ 60, minute: endMinute % 60),
+                            builder: (context, child) => Theme(
+                              data: ThemeData.dark().copyWith(
+                                colorScheme: ColorScheme.dark(
+                                  primary: accent,
+                                  surface: const Color(0xFF16161B),
+                                ),
+                              ),
+                              child: child!,
+                            ),
+                          );
+                          if (picked != null) {
+                            final pickedMin = picked.hour * 60 + picked.minute;
+                            setModalState(() {
+                              if (pickedMin > startMinute) {
+                                duration = pickedMin - startMinute;
+                              } else {
+                                duration = (1440 - startMinute + pickedMin).clamp(15, 480);
+                              }
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(2),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F1511),
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: accent.withOpacity(0.5), width: 1.2),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('SELESAI', style: TextStyle(fontSize: 9, color: Colors.white54, fontWeight: FontWeight.w700)),
+                                  Icon(Icons.touch_app_outlined, size: 11, color: accent.withOpacity(0.7)),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _formatMinute(endMinute),
+                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: accent),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Quick Start Buttons (Sekarang, +15m, +30m, +1j)
+                Row(
+                  children: [
+                    Text('Mulai cepat: ', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.5), fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 4),
+                    _buildTimePresetChip(
+                      label: 'Sekarang',
+                      onTap: () {
+                        final n = DateTime.now();
+                        setModalState(() => startMinute = n.hour * 60 + n.minute);
+                      },
+                      accent: accent,
+                    ),
+                    const SizedBox(width: 4),
+                    _buildTimePresetChip(
+                      label: '+15m',
+                      onTap: () => setModalState(() => startMinute = (startMinute + 15) % 1440),
+                      accent: accent,
+                    ),
+                    const SizedBox(width: 4),
+                    _buildTimePresetChip(
+                      label: '+30m',
+                      onTap: () => setModalState(() => startMinute = (startMinute + 30) % 1440),
+                      accent: accent,
+                    ),
+                    const SizedBox(width: 4),
+                    _buildTimePresetChip(
+                      label: '+1j',
+                      onTap: () => setModalState(() => startMinute = (startMinute + 60) % 1440),
+                      accent: accent,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
 
-                // Duration Preset Chips (15m, 30m, 45m, 60m, 90m, 120m)
+                // Duration Preset Chips (15m, 25m Pomo, 45m Deep, 60m, 90m, 120m)
+                Text('Durasi fokus: ', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.5), fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
-                  children: [15, 30, 45, 60, 90, 120].map((m) {
+                  runSpacing: 6,
+                  children: [
+                    {'m': 15, 'label': '15m'},
+                    {'m': 25, 'label': '25m Pomo'},
+                    {'m': 45, 'label': '45m Deep'},
+                    {'m': 60, 'label': '60m (1j)'},
+                    {'m': 90, 'label': '90m'},
+                    {'m': 120, 'label': '120m (2j)'},
+                  ].map((preset) {
+                    final m = preset['m'] as int;
+                    final label = preset['label'] as String;
                     final isSel = duration == m;
                     return GestureDetector(
                       onTap: () => setModalState(() => duration = m),
@@ -482,7 +597,7 @@ class _TaskDumpInboxWidgetState extends ConsumerState<TaskDumpInboxWidget> {
                           ),
                         ),
                         child: Text(
-                          '$m mnt',
+                          label,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
@@ -493,36 +608,6 @@ class _TaskDumpInboxWidgetState extends ConsumerState<TaskDumpInboxWidget> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 10),
-
-                // Start Minute Slider
-                Row(
-                  children: [
-                    const Text('Jam Mulai: ', style: TextStyle(fontSize: 11, color: Colors.white54)),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderThemeData(
-                          activeTrackColor: accent,
-                          inactiveTrackColor: Colors.white12,
-                          thumbColor: accent,
-                          overlayColor: accent.withOpacity(0.2),
-                          trackHeight: 3,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                        ),
-                        child: Slider(
-                          value: startMinute.toDouble(),
-                          min: 0,
-                          max: 1410,
-                          divisions: 94,
-                          onChanged: (val) {
-                            setModalState(() => startMinute = val.round());
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
 
                 // Action Buttons: Delete & Save to Focus Clock
                 Row(
@@ -601,6 +686,31 @@ class _TaskDumpInboxWidgetState extends ConsumerState<TaskDumpInboxWidget> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildTimePresetChip({
+    required String label,
+    required VoidCallback onTap,
+    required Color accent,
+  }) {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(2),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }

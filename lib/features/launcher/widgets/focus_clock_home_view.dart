@@ -4,15 +4,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:fitrah_launcher/core/time_math.dart';
+import 'package:fitrah_launcher/providers/providers.dart';
+import 'package:fitrah_launcher/features/focusclock/analog_clock_face.dart';
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
 import '../utils/hijri_date.dart';
+import 'fitrah_settings_screen.dart';
 import 'loop_habit_grid_widget.dart';
 import 'task_dump_inbox_widget.dart';
 
 /// Focus Clock Home View (Page 1 - Center)
-/// Sharp 2px square bento aesthetic, 27% chrome / 73% data area ratio,
-/// custom wallpaper with adaptive contrast scrim, and instant theme switcher.
+/// Living circular 24h Analog Clock Face front and center as the soul & branding,
+/// borderless editorial aesthetic without rigid boxing, and direct access to settings & apps.
 class FocusClockHomeView extends ConsumerStatefulWidget {
   const FocusClockHomeView({
     super.key,
@@ -104,6 +108,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final hijriStr = HijriCalendarHelper.formatHijri(_currentTime);
     final nextPrayer = _calculateNextPrayer(settings);
 
+    final currentHalf = halfOfNow();
+    final activities = ref.watch(activitiesByHalfProvider).valueOrNull ?? const [];
+    final tasks = ref.watch(tasksByHalfProvider);
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
@@ -126,33 +134,52 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
             ),
 
-          // ── Main Scrollable Content ──
+          // ── Main Scrollable Content (Borderless & Clean) ──
           SafeArea(
             child: ListView(
               physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 80),
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 90),
               children: [
-                // ── 1. Minimalist Status Header (27% Chrome Ratio) ──
-                _buildMinimalHeader(
-                  context,
-                  settings,
-                  timeStr,
-                  dateStr,
-                  hijriStr,
-                  nextPrayer,
-                  accentColor,
+                // ── Top Navigation Bar: Minimal Branding + Settings & Apps ──
+                _buildTopBar(context, accentColor),
+                const SizedBox(height: 12),
+
+                // ── Hero Section: Focus Clock Living Analog Dial ──
+                _buildClockHero(
+                  context: context,
+                  accentColor: accentColor,
+                  settings: settings,
+                  timeStr: timeStr,
+                  dateStr: dateStr,
+                  hijriStr: hijriStr,
+                  nextPrayer: nextPrayer,
+                  currentHalf: currentHalf,
+                  activities: activities,
+                  tasks: tasks,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 18),
 
-                // ── 2. Quick Navigation Bar (Focus Clock 24h & Apps) ──
-                _buildQuickNavBar(context, accentColor),
-                const SizedBox(height: 8),
+                // Hairline Divider
+                Divider(
+                  height: 1,
+                  thickness: 0.8,
+                  color: Colors.white.withOpacity(0.08),
+                ),
+                const SizedBox(height: 14),
 
-                // ── 3. Loop Habit Tracker Grid (7-Day Bento) ──
+                // ── Section 1: Loop Habit Tracker Grid (Frameless) ──
                 const LoopHabitGridWidget(),
-                const SizedBox(height: 6),
+                const SizedBox(height: 14),
 
-                // ── 4. Task Dump Inbox (Google Tasks Style & Focus Clock) ──
+                // Hairline Divider
+                Divider(
+                  height: 1,
+                  thickness: 0.8,
+                  color: Colors.white.withOpacity(0.08),
+                ),
+                const SizedBox(height: 14),
+
+                // ── Section 2: Task Dump Inbox (Google Tasks Style & Focus Clock) ──
                 TaskDumpInboxWidget(
                   onTaskScheduled: widget.onOpenFocusClock,
                 ),
@@ -164,46 +191,156 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-  Widget _buildMinimalHeader(
-    BuildContext context,
-    LauncherSettings settings,
-    String timeStr,
-    String dateStr,
-    String hijriStr,
-    Map<String, dynamic> nextPrayer,
-    Color accentColor,
-  ) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor.withOpacity(0.92),
-        borderRadius: BorderRadius.circular(2), // 2px square bento
-        border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildTopBar(BuildContext context, Color accentColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Top Row: Clock & Prayer Countdown
+          // Branding with live accent indicator
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor.withOpacity(0.6),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'FOCUS CLOCK',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2.2,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+
+          // Actions: Apps Drawer & Settings
+          Row(
+            children: [
+              // Apps link
+              InkWell(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  widget.onOpenAppDrawer();
+                },
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: Row(
+                    children: [
+                      Text(
+                        'APPS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Icon(Icons.north_east_rounded, size: 12, color: accentColor),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+
+              // Settings Cog
+              IconButton(
+                icon: const Icon(Icons.settings_outlined, size: 18),
+                color: Colors.white.withOpacity(0.75),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                splashRadius: 18,
+                tooltip: 'Pengaturan Launcher',
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const FitrahSettingsScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClockHero({
+    required BuildContext context,
+    required Color accentColor,
+    required LauncherSettings settings,
+    required String timeStr,
+    required String dateStr,
+    required String hijriStr,
+    required Map<String, dynamic> nextPrayer,
+    required AmPmHalf currentHalf,
+    required List<dynamic> activities,
+    required List<dynamic> tasks,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        widget.onOpenFocusClock();
+      },
+      child: Column(
+        children: [
+          // ── Analog Clock Face (Soul of the App) ──
+          Center(
+            child: SizedBox(
+              width: 215,
+              height: 215,
+              child: AnalogClockFace(
+                now: _currentTime,
+                activities: activities.cast(),
+                tasks: tasks.cast(),
+                viewHalf: currentHalf,
+                clockHandsMode: 1,
+                is24hDial: settings.is24h,
+                is24hTime: settings.is24h,
+                showCurrentTime: false,
+                clockFaceTheme: 1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Digital Time & Next Prayer Pill ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
                 timeStr,
                 style: const TextStyle(
-                  fontSize: 34,
+                  fontSize: 36,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -1.0,
+                  letterSpacing: -1.2,
                   color: Colors.white,
                 ),
               ),
+              const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(2),
+                  color: accentColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: accentColor.withOpacity(0.3), width: 0.8),
                 ),
                 child: Row(
@@ -212,11 +349,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     Icon(Icons.access_time_rounded, size: 12, color: accentColor),
                     const SizedBox(width: 4),
                     Text(
-                      '${nextPrayer['nextName']} ${nextPrayer['countdown']}',
+                      '${nextPrayer['nextName']} in ${nextPrayer['countdown']}',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                         color: accentColor,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ],
@@ -226,12 +364,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           ),
           const SizedBox(height: 4),
 
-          // Date & Hijri
+          // ── Date & Hijri Calendar ──
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 dateStr,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.75)),
               ),
               const SizedBox(width: 6),
               Text(
@@ -240,166 +379,24 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
-          // Theme Switcher & Wallpaper Pill
+          // ── Subtle Timeline Cue ──
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Theme selector pills (Matcha Green, Sky Blue, Ocean Blue)
-              Row(
-                children: [
-                  _buildThemePill('Matcha', 'fino_green', const Color(0xFF70C050), settings.themePalette),
-                  const SizedBox(width: 6),
-                  _buildThemePill('Sky', 'sky_blue', const Color(0xFF38BDF8), settings.themePalette),
-                  const SizedBox(width: 6),
-                  _buildThemePill('Ocean', 'ocean_blue', const Color(0xFF0284C7), settings.themePalette),
-                ],
-              ),
-
-              // Wallpaper toggle
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  final nextType = settings.wallpaperType == 'amoled_black' ? 'custom_image' : 'amoled_black';
-                  ref.read(launcherSettingsProvider.notifier).setWallpaperType(nextType);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        settings.wallpaperType != 'amoled_black' ? Icons.wallpaper_rounded : Icons.nights_stay_rounded,
-                        size: 13,
-                        color: Colors.white70,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        settings.wallpaperType != 'amoled_black' ? 'Wallpaper ON' : 'AMOLED',
-                        style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
+              Text(
+                '24H TIMELINE',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: accentColor.withOpacity(0.85),
                 ),
               ),
+              const SizedBox(width: 3),
+              Icon(Icons.arrow_forward_rounded, size: 10, color: accentColor.withOpacity(0.85)),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThemePill(String label, String paletteKey, Color color, String currentPalette) {
-    final isSelected = currentPalette == paletteKey;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        HapticFeedback.selectionClick();
-        ref.read(launcherSettingsProvider.notifier).setThemePalette(paletteKey);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.2) : Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(2),
-          border: Border.all(
-            color: isSelected ? color : Colors.transparent,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 7, height: 7, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                color: isSelected ? color : Colors.white60,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickNavBar(BuildContext context, Color accentColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          // Left: Go to 24h Analog Focus Clock
-          Expanded(
-            child: InkWell(
-              onTap: widget.onOpenFocusClock,
-              borderRadius: BorderRadius.circular(2),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(2),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.watch_later_outlined, size: 14, color: accentColor),
-                    const SizedBox(width: 6),
-                    Text(
-                      '← CLOCK (24H)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                        color: Colors.white.withOpacity(0.85),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Right: Go to App Drawer
-          Expanded(
-            child: InkWell(
-              onTap: widget.onOpenAppDrawer,
-              borderRadius: BorderRadius.circular(2),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(2),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'APPS DRAWER →',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                        color: Colors.white.withOpacity(0.85),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.apps_rounded, size: 14, color: accentColor),
-                  ],
-                ),
-              ),
-            ),
           ),
         ],
       ),

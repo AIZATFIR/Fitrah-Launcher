@@ -7,8 +7,6 @@ import 'package:fitrah_launcher/features/launcher/services/app_launcher_service.
 import 'package:fitrah_launcher/features/launcher/widgets/fitrah_home_view.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/minimalist_app_drawer.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
-import 'package:fitrah_launcher/features/launcher/widgets/loop_habit_grid_widget.dart';
-import 'package:fitrah_launcher/features/launcher/widgets/task_dump_inbox_widget.dart';
 
 void main() {
   group('Fitrah Launcher Tests', () {

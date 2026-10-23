@@ -105,6 +105,10 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               },
             ),
             _buildDropdownTile(
+              title: 'Tema & Warna Aksen',
+              onTap: () => _showThemePaletteSheet(context, settings, notifier),
+            ),
+            _buildDropdownTile(
               title: 'Home Screen',
               onTap: () => _showHomeCustomizationDialog(context, settings, notifier),
             ),
@@ -718,6 +722,120 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
   void _showFontPicker(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Font Montserrat aktif.')),
+    );
+  }
+
+  void _showThemePaletteSheet(
+    BuildContext context,
+    LauncherSettings settings,
+    LauncherSettingsNotifier notifier,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF16161B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pilih Tema & Warna Aksen',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Ubah suasana visual seluruh launcher',
+                style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.5)),
+              ),
+              const SizedBox(height: 18),
+              _buildPaletteOption(
+                ctx,
+                title: 'Matcha Green (Tenang & Segar)',
+                key: 'fino_green',
+                color: const Color(0xFF70C050),
+                current: settings.themePalette,
+                notifier: notifier,
+              ),
+              _buildPaletteOption(
+                ctx,
+                title: 'Sky Blue (Fokus & Jernih)',
+                key: 'sky_blue',
+                color: const Color(0xFF38BDF8),
+                current: settings.themePalette,
+                notifier: notifier,
+              ),
+              _buildPaletteOption(
+                ctx,
+                title: 'Deep Ocean (Aliran Dalam)',
+                key: 'ocean_blue',
+                color: const Color(0xFF0284C7),
+                current: settings.themePalette,
+                notifier: notifier,
+              ),
+              _buildPaletteOption(
+                ctx,
+                title: 'Warm Bookpaper (Amber Obsidian)',
+                key: 'full_book',
+                color: const Color(0xFFE2BE82),
+                current: settings.themePalette,
+                notifier: notifier,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaletteOption(
+    BuildContext context, {
+    required String title,
+    required String key,
+    required Color color,
+    required String current,
+    required LauncherSettingsNotifier notifier,
+  }) {
+    final isSelected = current == key;
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        notifier.setThemePalette(key);
+        Navigator.pop(context);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                  color: isSelected ? Colors.white : Colors.white70,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_rounded, color: color, size: 20),
+          ],
+        ),
+      ),
     );
   }
 }

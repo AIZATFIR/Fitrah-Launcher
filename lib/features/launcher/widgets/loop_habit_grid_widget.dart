@@ -109,13 +109,8 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
     final theme = Theme.of(context);
     final accentColor = theme.colorScheme.primary;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        border: Border.all(color: theme.dividerColor, width: 1),
-        borderRadius: BorderRadius.circular(2), // 2px Square Bento rule
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -337,11 +332,13 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                     onLongPress: () => _showEditHabitDialog(context, habit),
                                     child: Row(
                                       children: [
-                                        Text(
-                                          habit.iconKey.isNotEmpty ? habit.iconKey : '✨',
-                                          style: const TextStyle(fontSize: 14),
-                                        ),
-                                        const SizedBox(width: 6),
+                                        if (habit.iconKey.isNotEmpty) ...[
+                                          Text(
+                                            habit.iconKey,
+                                            style: const TextStyle(fontSize: 14),
+                                          ),
+                                          const SizedBox(width: 6),
+                                        ],
                                         Expanded(
                                           child: Text(
                                             habit.name,
@@ -695,7 +692,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
               maxLines: 4,
               style: const TextStyle(fontSize: 13, color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Tulis refleksi atau alasan skip/selesai...',
+                hintText: 'Catatan',
                 hintStyle: const TextStyle(fontSize: 12, color: Colors.white38),
                 filled: true,
                 fillColor: const Color(0xFF0F1511),
@@ -737,12 +734,10 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   // ── Full Habit CRUD: Add Habit Dialog ──
   void _showAddHabitDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
-    String selectedEmoji = '🌿';
     int target = 30;
     HabitUnit unit = HabitUnit.min;
     int selectedColor = 0xFF70C050;
 
-    final emojiOptions = ['🌿', '💻', '🏃', '📚', '🧘', '🌐', '🕌', '🥗', '💧', '✍️', '🎯', '✨'];
     final colorOptions = [
       0xFF70C050, // Matcha
       0xFF38BDF8, // Sky Blue
@@ -794,32 +789,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                 ),
                 const SizedBox(height: 12),
 
-                // Emoji Chips
-                const Text('Pilih Emoji / Ikon:',
-                    style: TextStyle(fontSize: 11, color: Colors.white54, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  children: emojiOptions.map((em) {
-                    final isSel = selectedEmoji == em;
-                    return GestureDetector(
-                      onTap: () => setModalState(() => selectedEmoji = em),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSel ? const Color(0xFF70C050).withOpacity(0.2) : Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(2),
-                          border: Border.all(
-                            color: isSel ? const Color(0xFF70C050) : Colors.transparent,
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Text(em, style: const TextStyle(fontSize: 16)),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
+
 
                 // Name Input
                 const Text('Nama Habit:',
@@ -829,7 +799,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                   controller: nameCtrl,
                   style: const TextStyle(fontSize: 13, color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'Contoh: 1 ayat Al-Quran, Olahraga...',
+                    hintText: 'Nama kebiasaan',
                     hintStyle: const TextStyle(fontSize: 12, color: Colors.white38),
                     filled: true,
                     fillColor: const Color(0xFF0F1511),
@@ -882,7 +852,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
 
                       final newHabit = Habit()
                         ..name = name
-                        ..iconKey = selectedEmoji
+                        ..iconKey = ''
                         ..target = target
                         ..unit = unit
                         ..colorValue = selectedColor
@@ -907,11 +877,9 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   // ── Full Habit CRUD: Edit & Delete Habit Dialog ──
   void _showEditHabitDialog(BuildContext context, Habit habit) {
     final nameCtrl = TextEditingController(text: habit.name);
-    String selectedEmoji = habit.iconKey.isNotEmpty ? habit.iconKey : '🌿';
     int selectedColor = habit.colorValue != 0 ? habit.colorValue : 0xFF70C050;
     int target = habit.target > 0 ? habit.target : 30;
 
-    final emojiOptions = ['🌿', '💻', '🏃', '📚', '🧘', '🌐', '🕌', '🥗', '💧', '✍️', '🎯', '✨'];
     final colorOptions = [
       0xFF70C050, // Matcha
       0xFF38BDF8, // Sky Blue
@@ -963,32 +931,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                 ),
                 const SizedBox(height: 12),
 
-                // Emoji Chips
-                const Text('Pilih Emoji / Ikon:',
-                    style: TextStyle(fontSize: 11, color: Colors.white54, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  children: emojiOptions.map((em) {
-                    final isSel = selectedEmoji == em;
-                    return GestureDetector(
-                      onTap: () => setModalState(() => selectedEmoji = em),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSel ? const Color(0xFF70C050).withOpacity(0.2) : Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(2),
-                          border: Border.all(
-                            color: isSel ? const Color(0xFF70C050) : Colors.transparent,
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Text(em, style: const TextStyle(fontSize: 16)),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
+
 
                 // Name Input
                 const Text('Nama Habit:',
@@ -1068,7 +1011,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                           if (name.isEmpty) return;
 
                           habit.name = name;
-                          habit.iconKey = selectedEmoji;
+                          habit.iconKey = habit.iconKey;
                           habit.colorValue = selectedColor;
                           habit.target = target;
                           habit.updatedAt = DateTime.now();
