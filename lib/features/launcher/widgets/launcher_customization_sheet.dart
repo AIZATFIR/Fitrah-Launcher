@@ -568,7 +568,7 @@ class _LauncherCustomizationSheetState
                               ),
                               child: Center(
                                 child: Text(
-                                  '🕌 Waktu Sholat',
+                                  'Waktu Sholat',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: settings.widgetDisplayMode != 'focus_clock'
@@ -603,7 +603,7 @@ class _LauncherCustomizationSheetState
                               ),
                               child: Center(
                                 child: Text(
-                                  '⏱️ Focus Events',
+                                  'Focus Events',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: settings.widgetDisplayMode == 'focus_clock'

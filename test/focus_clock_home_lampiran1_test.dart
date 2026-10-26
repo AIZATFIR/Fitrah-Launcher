@@ -11,6 +11,7 @@ void main() {
           home: FocusClockHomeView(
             onOpenFocusClock: () {},
             onOpenAppDrawer: () {},
+            useSampleData: true,
           ),
         ),
       );
@@ -222,6 +223,7 @@ void main() {
             home: FocusClockHomeView(
               onOpenFocusClock: () => focusClockOpened = true,
               onOpenAppDrawer: () => appDrawerOpened = true,
+              useSampleData: true,
             ),
           ),
         ),
@@ -250,8 +252,8 @@ void main() {
       expect(find.text('Selesaikan modul UI Focus Clock'), findsOneWidget);
       expect(find.text('Sekarang'), findsWidgets);
 
-      // 4. Tap "⚡ Pasang" on a dumped task
-      final pasangBtn = find.text('⚡ Pasang').first;
+      // 4. Tap "Pasang" on a dumped task
+      final pasangBtn = find.text('Pasang').first;
       await tester.tap(pasangBtn);
       await tester.pumpAndSettle();
 

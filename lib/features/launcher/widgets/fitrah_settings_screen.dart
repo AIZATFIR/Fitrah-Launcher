@@ -144,7 +144,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               title: 'Rate us on Play Store',
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Terima kasih atas dukungannya! ⭐')),
+                  const SnackBar(content: Text('Terima kasih atas dukungannya!')),
                 );
               },
             ),
@@ -363,7 +363,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                           ),
                           child: const Center(
                             child: Text(
-                              '🕌 Waktu Sholat',
+                              'Waktu Sholat',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                           ),
@@ -393,7 +393,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                           ),
                           child: const Center(
                             child: Text(
-                              '⏱️ Focus Events',
+                              'Focus Events',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                           ),

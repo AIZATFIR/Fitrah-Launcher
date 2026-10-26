@@ -221,10 +221,12 @@ class FocusClockHomeView extends ConsumerStatefulWidget {
     super.key,
     required this.onOpenFocusClock,
     required this.onOpenAppDrawer,
+    this.useSampleData = false,
   });
 
   final VoidCallback onOpenFocusClock;
   final VoidCallback onOpenAppDrawer;
+  final bool useSampleData;
 
   @override
   ConsumerState<FocusClockHomeView> createState() => _FocusClockHomeViewState();
@@ -241,6 +243,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // Header Toggle: false = Focus Clock Agenda Carousel, true = Prayer Schedule Bar
   bool _showPrayerSchedule = false;
+
+  // Selected Filter for Unified Sections (Lampiran 1 & Sadar Prototype)
+  String _selectedPresetIdentity = 'Programmer';
+  String _selectedHabitIdentity = 'Semua';
 
   // Selected Note Filter
   late String _selectedNoteDate;
@@ -280,87 +286,99 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     _currentTime = DateTime.now();
     _selectedNoteDate = _dateKey(0);
 
-    // Initial Identities
-    _identities = [
-      IdentityItem(id: 'programmer', name: 'Programmer', color: const Color(0xFFE8C07D)),
-      IdentityItem(id: 'pembaca', name: 'Pembaca', color: const Color(0xFF8FB8E8)),
-      IdentityItem(id: 'binaragawan', name: 'Binaragawan', color: const Color(0xFFE88F7D)),
-      IdentityItem(id: 'baik_hati', name: 'Baik hati', color: const Color(0xFF5FD0A5)),
-      IdentityItem(id: 'masa_depan', name: 'Masa depan', color: const Color(0xFFC3A6F0)),
-    ];
+    if (widget.useSampleData) {
+      // Seed data for tests
+      _identities = [
+        IdentityItem(id: 'programmer', name: 'Programmer', color: const Color(0xFFE8C07D)),
+        IdentityItem(id: 'pembaca', name: 'Pembaca', color: const Color(0xFF8FB8E8)),
+        IdentityItem(id: 'binaragawan', name: 'Binaragawan', color: const Color(0xFFE88F7D)),
+        IdentityItem(id: 'baik_hati', name: 'Baik hati', color: const Color(0xFF5FD0A5)),
+        IdentityItem(id: 'masa_depan', name: 'Masa depan', color: const Color(0xFFC3A6F0)),
+      ];
 
-    // Seed Blocks (Focus Clock schedule)
-    _blocks = [
-      BlockItem(id: 1, startHour: 22.0, endHour: 24.0, name: 'Tidur', isSleep: true),
-      BlockItem(id: 2, startHour: 0.0, endHour: 4.5, name: 'Tidur', isSleep: true),
-      BlockItem(id: 3, startHour: 19.5, endHour: 21.0, name: 'SE - Orkestrasi AI', identity: 'Programmer'),
-    ];
+      _blocks = [
+        BlockItem(id: 1, startHour: 22.0, endHour: 24.0, name: 'Tidur', isSleep: true),
+        BlockItem(id: 2, startHour: 0.0, endHour: 4.5, name: 'Tidur', isSleep: true),
+        BlockItem(id: 3, startHour: 19.5, endHour: 21.0, name: 'SE - Orkestrasi AI', identity: 'Programmer'),
+      ];
 
-    // Seed Presets by Identity
-    _presets = [
-      PresetItem(id: 1, name: 'SE - Orkestrasi AI', minutes: 90, identity: 'Programmer'),
-      PresetItem(id: 2, name: 'LKS ITSSB', minutes: 45, identity: 'Programmer'),
-      PresetItem(id: 3, name: 'Baca Buku', minutes: 15, identity: 'Pembaca'),
-      PresetItem(id: 4, name: 'Latihan Beban', minutes: 30, identity: 'Binaragawan'),
-      PresetItem(id: 5, name: 'Sedekah & Silaturahmi', minutes: 15, identity: 'Baik hati'),
-      PresetItem(id: 6, name: 'Visualisasi Cita-cita', minutes: 10, identity: 'Masa depan'),
-    ];
+      _presets = [
+        PresetItem(id: 1, name: 'SE - Orkestrasi AI', minutes: 90, identity: 'Programmer'),
+        PresetItem(id: 2, name: 'LKS ITSSB', minutes: 45, identity: 'Programmer'),
+        PresetItem(id: 3, name: 'Baca Buku', minutes: 15, identity: 'Pembaca'),
+        PresetItem(id: 4, name: 'Latihan Beban', minutes: 30, identity: 'Binaragawan'),
+        PresetItem(id: 5, name: 'Sedekah & Silaturahmi', minutes: 15, identity: 'Baik hati'),
+        PresetItem(id: 6, name: 'Visualisasi Cita-cita', minutes: 10, identity: 'Masa depan'),
+      ];
 
-    // Seed Habits by Identity (Continuous Saved Progress)
-    _habits = [
-      HabitModel(
-        id: 1,
-        title: 'Deep Coding & Refactoring 30m',
-        identity: 'Programmer',
-        isDone: false,
-        isDaily: true,
-        minutes: 30,
-        elapsedSeconds: 0,
-      ),
-      HabitModel(id: 2, title: 'Selalu bersikap baik', identity: 'Baik hati', isDone: true, isDaily: true),
-      HabitModel(
-        id: 3,
-        title: 'Visualisasikan future selfmu, pejamkan mata, lakukan apa yang future selfmu lakukan',
-        identity: 'Masa depan',
-        isDone: false,
-        isVision: true,
-        isDaily: true,
-        minutes: 3,
-        elapsedSeconds: 0,
-      ),
-      HabitModel(
-        id: 4,
-        title: 'Baca 15 menit: Lord of Power',
-        identity: 'Pembaca',
-        isDone: false,
-        isDaily: true,
-        minutes: 15,
-        elapsedSeconds: 300, // 5m saved progress!
-      ),
-      HabitModel(id: 5, title: 'Jurnal sampai pikiran lega', identity: 'Pembaca', isDone: true, isDaily: true),
-      HabitModel(
-        id: 6,
-        title: 'Push up 20 reps & Dips',
-        identity: 'Binaragawan',
-        isDone: false,
-        isDaily: true,
-        minutes: 20,
-        elapsedSeconds: 0,
-      ),
-    ];
+      _habits = [
+        HabitModel(
+          id: 1,
+          title: 'Deep Coding & Refactoring 30m',
+          identity: 'Programmer',
+          isDone: false,
+          isDaily: true,
+          minutes: 30,
+          elapsedSeconds: 0,
+        ),
+        HabitModel(id: 2, title: 'Selalu bersikap baik', identity: 'Baik hati', isDone: true, isDaily: true),
+        HabitModel(
+          id: 3,
+          title: 'Visualisasikan future selfmu, pejamkan mata, lakukan apa yang future selfmu lakukan',
+          identity: 'Masa depan',
+          isDone: false,
+          isVision: true,
+          isDaily: true,
+          minutes: 3,
+          elapsedSeconds: 0,
+        ),
+        HabitModel(
+          id: 4,
+          title: 'Baca 15 menit: Lord of Power',
+          identity: 'Pembaca',
+          isDone: false,
+          isDaily: true,
+          minutes: 15,
+          elapsedSeconds: 300, // 5m saved progress!
+        ),
+        HabitModel(id: 5, title: 'Jurnal sampai pikiran lega', identity: 'Pembaca', isDone: true, isDaily: true),
+        HabitModel(
+          id: 6,
+          title: 'Push up 20 reps & Dips',
+          identity: 'Binaragawan',
+          isDone: false,
+          isDaily: true,
+          minutes: 20,
+          elapsedSeconds: 0,
+        ),
+      ];
 
-    // Seed Notes
-    _notes = [
-      NoteItem(id: 1, dateKey: _dateKey(-1), text: 'Tauhid satu-satunya kebenaran. Sedikit itu lebih.', isImportant: true),
-      NoteItem(id: 2, dateKey: _dateKey(0), text: 'Lepaskan perfeksionisme, menuju penguasaan.', isImportant: false),
-    ];
+      _notes = [
+        NoteItem(id: 1, dateKey: _dateKey(-1), text: 'Tauhid satu-satunya kebenaran. Sedikit itu lebih.', isImportant: true),
+        NoteItem(id: 2, dateKey: _dateKey(0), text: 'Lepaskan perfeksionisme, menuju penguasaan.', isImportant: false),
+      ];
 
-    // Seed Dumped Tasks (Google Tasks / Dump Inbox)
-    _dumpedTasks = [
-      'Selesaikan modul UI Focus Clock',
-      'Submit LKS ITSSB draft',
-      'Beli suplemen gym & air galon',
-    ];
+      _dumpedTasks = [
+        'Selesaikan modul UI Focus Clock',
+        'Submit LKS ITSSB draft',
+        'Beli suplemen gym & air galon',
+      ];
+    } else {
+      // Clean slate on fresh install (empty by default)
+      _identities = [
+        IdentityItem(id: 'programmer', name: 'Programmer', color: const Color(0xFFE8C07D)),
+      ];
+
+      _blocks = [
+        BlockItem(id: 1, startHour: 23.0, endHour: 24.0, name: 'Tidur', isSleep: true),
+        BlockItem(id: 2, startHour: 0.0, endHour: 5.0, name: 'Tidur', isSleep: true),
+      ];
+
+      _presets = [];
+      _habits = [];
+      _notes = [];
+      _dumpedTasks = [];
+    }
 
     // 1-Second Timer Tick
     _periodicTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -760,11 +778,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 _buildTaskDumpSection(tc),
                 const SizedBox(height: 14),
 
-                // ── Vertical Stack of Identity Cards (Lampiran 1 & 3) ──
-                ..._identities.map((identity) => _buildIdentityCard(identity, tc)),
-                const SizedBox(height: 12),
+                // ── Unified Preset Section (Lampiran 1 & Sadar Prototype) ──
+                _buildUnifiedPresetSection(tc),
+                const SizedBox(height: 14),
 
-                // ── (+) Tambah Identitas Baru Button ──
+                // ── Unified Habit Section (Lampiran 1 & Sadar Prototype) ──
+                _buildUnifiedHabitSection(tc),
+                const SizedBox(height: 14),
+
+                // ── (+) Tambah Blok Identitas Baru Button ──
                 _buildAddIdentityButton(tc),
               ],
             ),
@@ -1315,38 +1337,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-  // ── Right Tools Rail (Enlarged, With Direct App Launcher & Theme Buttons) ──
+  // ── Right Tools Rail (5 Core Tools: Ganti, Daftar, 24h, Cari, Timer) ────────
   Widget _buildRightToolsRail(_HomeThemeColors tc) {
     return SizedBox(
       width: 68,
       child: Column(
         children: [
-          // Aplikasi (Direct Niagara App Drawer Launcher!)
-          Expanded(
-            child: _buildToolButton(
-              icon: Icons.apps_rounded,
-              label: 'Aplikasi',
-              isActive: false,
-              accentColor: tc.accent,
-              tc: tc,
-              onTap: widget.onOpenAppDrawer,
-            ),
-          ),
-          const SizedBox(height: 4),
-
-          // Tema (1-tap Natural Theme Selector)
-          Expanded(
-            child: _buildToolButton(
-              icon: Icons.palette_outlined,
-              label: 'Tema',
-              isActive: false,
-              accentColor: tc.accent,
-              tc: tc,
-              onTap: _openThemePickerSheet,
-            ),
-          ),
-          const SizedBox(height: 4),
-
           // Ganti (Pie vs Dial)
           Expanded(
             child: _buildToolButton(
@@ -1357,7 +1353,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               onTap: () => setState(() => _isPieMode = !_isPieMode),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
 
           // Daftar (List vs Dial)
           Expanded(
@@ -1369,7 +1365,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               onTap: () => setState(() => _isListView = !_isListView),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
 
           // 24 / 12 jam
           Expanded(
@@ -1381,7 +1377,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               onTap: () => setState(() => _is24hDial = !_is24hDial),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
 
           // Cari
           Expanded(
@@ -1393,7 +1389,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               onTap: _openSearchSheet,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
 
           // Timer (Opens Focus Timer Hub)
           Expanded(
@@ -1513,7 +1509,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
             ),
             title: Text(
-              '${b.name}${b.isDone ? ' ✓' : ''}',
+              b.isDone ? '${b.name} (selesai)' : b.name,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
@@ -1532,16 +1528,21 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION: VERTICAL STACK OF IDENTITY CARDS (Lampiran 1 & 3)
+  // SECTION: UNIFIED PRESET & HABIT SECTIONS (Sadar Prototype & Lampiran 1)
   // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION: VERTICAL STACK OF IDENTITY CARDS (Lampiran 1 & 3)
-  // ═══════════════════════════════════════════════════════════════════════════
-  Widget _buildIdentityCard(IdentityItem identity, _HomeThemeColors tc) {
-    final presets = _presets.where((p) => p.identity.toLowerCase() == identity.name.toLowerCase()).toList();
-    final habits = _habits.where((h) => h.identity.toLowerCase() == identity.name.toLowerCase()).toList();
+  Widget _buildUnifiedPresetSection(_HomeThemeColors tc) {
+    final activeIdentity = _identities.firstWhere(
+      (id) => id.name.toLowerCase() == _selectedPresetIdentity.toLowerCase(),
+      orElse: () => _identities.isNotEmpty
+          ? _identities.first
+          : IdentityItem(id: 'programmer', name: 'Programmer', color: const Color(0xFFE8C07D)),
+    );
+
+    final presets = _presets
+        .where((p) => p.identity.toLowerCase() == activeIdentity.name.toLowerCase())
+        .toList();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: tc.card,
         borderRadius: BorderRadius.circular(18),
@@ -1551,85 +1552,288 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Identity Card Header ──
           Row(
             children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(color: identity.color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Identitas: ${identity.name}',
+                  'Preset Blok Waktu',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: identity.color,
+                    color: tc.textPrimary,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ),
-
-              // (+) Add Item to This Identity Button
+              // Filter pill: Identitas: Programmer ▾
               InkWell(
-                onTap: () => _openAddIdentityItemSheet(identity),
-                borderRadius: BorderRadius.circular(16),
+                onTap: _openPresetIdentityFilterSheet,
+                borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: tc.cardElevated,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: identity.color.withOpacity(0.4)),
+                    border: Border.all(color: activeIdentity.color.withOpacity(0.5)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add, color: identity.color, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Tambah',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: identity.color),
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: activeIdentity.color,
+                          shape: BoxShape.circle,
+                        ),
                       ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Identitas: ${activeIdentity.name}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: activeIdentity.color,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_drop_down, color: activeIdentity.color, size: 16),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              // Round (+) Button for adding preset
+              InkWell(
+                onTap: () => _openNewPresetForIdentitySheet(activeIdentity),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: tc.cardElevated,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: tc.stroke),
+                  ),
+                  child: Icon(Icons.add, color: tc.textPrimary, size: 16),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-
-          // ── 1. Preset Time Blocks of This Identity ──
-          if (presets.isNotEmpty) ...[
-            Text(
-              'Preset Blok Waktu',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tc.textSecondary, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 6),
-            ...presets.map((p) => _buildPresetRow(p, identity.color, tc)),
-            const SizedBox(height: 10),
-          ],
-
-          // ── 2. Habits of This Identity (With Continuous Saved Progress!) ──
-          if (habits.isNotEmpty) ...[
-            Text(
-              'Kebiasaan & Rutinitas',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tc.textSecondary, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 6),
-            ...habits.map((h) => _buildHabitRow(h, identity.color, tc)),
-          ],
-
-          if (presets.isEmpty && habits.isEmpty)
+          const SizedBox(height: 10),
+          if (presets.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Belum ada preset atau kebiasaan untuk ${identity.name}. Tap + Tambah.',
-                style: TextStyle(color: tc.textSecondary, fontSize: 12),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: Text(
+                  'Belum ada preset untuk ${activeIdentity.name}. Ketuk + di atas.',
+                  style: TextStyle(color: tc.textSecondary, fontSize: 12),
+                ),
               ),
-            ),
+            )
+          else
+            ...presets.map((p) => _buildPresetRow(p, activeIdentity.color, tc)),
         ],
       ),
+    );
+  }
+
+  Widget _buildUnifiedHabitSection(_HomeThemeColors tc) {
+    final habits = _habits.where((h) {
+      if (_selectedHabitIdentity == 'Semua') return true;
+      return h.identity.toLowerCase() == _selectedHabitIdentity.toLowerCase();
+    }).toList();
+
+    final doneCount = habits.where((h) => h.isDone).length;
+    final totalCount = habits.length;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: tc.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: tc.stroke, width: 1.5),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Text(
+                      'Kebiasaan & Rutinitas',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: tc.textPrimary,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    if (totalCount > 0) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '$doneCount dari $totalCount',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: tc.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              // Filter pill: Semua ▾
+              InkWell(
+                onTap: _openHabitFilterSheet,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: tc.cardElevated,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: tc.stroke),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _selectedHabitIdentity,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: tc.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_drop_down, color: tc.textSecondary, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Round (+) Button for adding habit
+              InkWell(
+                onTap: () {
+                  final identity = _identities.firstWhere(
+                    (id) => _selectedHabitIdentity != 'Semua' && id.name.toLowerCase() == _selectedHabitIdentity.toLowerCase(),
+                    orElse: () => _identities.isNotEmpty ? _identities.first : IdentityItem(id: 'fokus', name: 'Fokus', color: const Color(0xFFE8C07D)),
+                  );
+                  _openNewHabitForIdentitySheet(identity);
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: tc.cardElevated,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: tc.stroke),
+                  ),
+                  child: Icon(Icons.add, color: tc.textPrimary, size: 16),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (habits.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: Text(
+                  'Belum ada kebiasaan di sini. Ketuk + untuk membuat.',
+                  style: TextStyle(color: tc.textSecondary, fontSize: 12),
+                ),
+              ),
+            )
+          else
+            ...habits.map((h) => _buildHabitRow(h, _colorForIdentity(h.identity), tc)),
+        ],
+      ),
+    );
+  }
+
+  void _openPresetIdentityFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161A22),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Pilih Identitas Preset', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+              const SizedBox(height: 12),
+              ..._identities.map((id) => ListTile(
+                leading: Container(width: 10, height: 10, decoration: BoxDecoration(color: id.color, shape: BoxShape.circle)),
+                title: Text(id.name, style: const TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
+                trailing: _selectedPresetIdentity.toLowerCase() == id.name.toLowerCase()
+                    ? const Icon(Icons.check, color: Color(0xFF5FD0A5), size: 18)
+                    : null,
+                onTap: () {
+                  setState(() => _selectedPresetIdentity = id.name);
+                  Navigator.pop(ctx);
+                },
+              )),
+              const Divider(color: Color(0xFF1E2430)),
+              ListTile(
+                leading: const Icon(Icons.add_circle_outline, color: Color(0xFFE8C07D)),
+                title: const Text('Tambah Identitas Baru', style: TextStyle(color: Color(0xFFE8C07D), fontWeight: FontWeight.w700)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _openCreateNewIdentityDialog();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _openHabitFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161A22),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Filter Kebiasaan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.apps_rounded, color: Color(0xFF8A93A3)),
+                title: const Text('Semua', style: TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
+                trailing: _selectedHabitIdentity == 'Semua' ? const Icon(Icons.check, color: Color(0xFF5FD0A5), size: 18) : null,
+                onTap: () {
+                  setState(() => _selectedHabitIdentity = 'Semua');
+                  Navigator.pop(ctx);
+                },
+              ),
+              ..._identities.map((id) => ListTile(
+                leading: Container(width: 10, height: 10, decoration: BoxDecoration(color: id.color, shape: BoxShape.circle)),
+                title: Text(id.name, style: const TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
+                trailing: _selectedHabitIdentity.toLowerCase() == id.name.toLowerCase()
+                    ? const Icon(Icons.check, color: Color(0xFF5FD0A5), size: 18)
+                    : null,
+                onTap: () {
+                  setState(() => _selectedHabitIdentity = id.name);
+                  Navigator.pop(ctx);
+                },
+              )),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -2190,11 +2394,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildTemplateChip('🌅 Niat Pagi', 'Niat Pagi:\n1. Goal utama:\n2. Sikap yang kuinginkan:\n3. Rasa syukur:', noteInputCtrl),
+                      _buildTemplateChip('Niat Pagi', 'Niat Pagi:\n1. Goal utama:\n2. Sikap yang kuinginkan:\n3. Rasa syukur:', noteInputCtrl),
                       const SizedBox(width: 8),
-                      _buildTemplateChip('🌙 Refleksi Malam', 'Refleksi Malam:\n- Yang sudah terlaksana:\n- Pelajaran hari ini:\n- Hal yang disyukuri:', noteInputCtrl),
+                      _buildTemplateChip('Refleksi Malam', 'Refleksi Malam:\n- Yang sudah terlaksana:\n- Pelajaran hari ini:\n- Hal yang disyukuri:', noteInputCtrl),
                       const SizedBox(width: 8),
-                      _buildTemplateChip('⚡ 1 Langkah Berani', '1 Langkah berani hari ini yang mengubah masa depan:', noteInputCtrl),
+                      _buildTemplateChip('Langkah Berani', '1 Langkah berani hari ini yang mengubah masa depan:', noteInputCtrl),
                     ],
                   ),
                 ),
@@ -2712,6 +2916,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             name: name,
                             color: selectedColor,
                           ));
+                          _selectedPresetIdentity = name;
+                          _selectedHabitIdentity = name;
                         });
                         Navigator.pop(ctx);
                         _showToast('Identitas $name ditambahkan!');
@@ -2729,46 +2935,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
             );
           },
-        );
-      },
-    );
-  }
-
-  // ── 3. Add Preset or Habit to Specific Identity ──
-  void _openAddIdentityItemSheet(IdentityItem identity) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Tambah ke ${identity.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
-              const SizedBox(height: 14),
-              ListTile(
-                leading: Icon(Icons.alarm_add_rounded, color: identity.color),
-                title: const Text('Preset Blok Waktu', style: TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
-                subtitle: const Text('Aktivitas yang siap dimasukkan ke jam', style: TextStyle(color: Color(0xFF8A93A3), fontSize: 11)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _openNewPresetForIdentitySheet(identity);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.check_circle_outline_rounded, color: identity.color),
-                title: const Text('Kebiasaan / Rutinitas', style: TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
-                subtitle: const Text('Rutinitas harian atau tugas sekali saja dengan timer', style: TextStyle(color: Color(0xFF8A93A3), fontSize: 11)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _openNewHabitForIdentitySheet(identity);
-                },
-              ),
-            ],
-          ),
         );
       },
     );
@@ -3834,7 +4000,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Klik "Sekarang" untuk 1-tap instan, atau "⚡ Pasang" untuk atur durasi ke Focus Clock',
+            'Klik "Sekarang" untuk 1-tap instan, atau "Pasang" untuk atur durasi ke Focus Clock',
             style: TextStyle(fontSize: 11, color: tc.textSecondary),
           ),
           const SizedBox(height: 10),
@@ -3932,7 +4098,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   Icon(Icons.watch_later_outlined, size: 12, color: tc.background),
                   const SizedBox(width: 3),
                   Text(
-                    '⚡ Pasang',
+                    'Pasang',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: tc.background),
                   ),
                 ],

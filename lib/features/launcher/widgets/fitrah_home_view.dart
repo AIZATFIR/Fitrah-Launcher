@@ -458,7 +458,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildSegmentTab(
-                title: '🕌 Sholat',
+                title: 'Sholat',
                 isSelected: !isFocusClock,
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -467,7 +467,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
               ),
               const SizedBox(width: 4),
               _buildSegmentTab(
-                title: '⏱️ Focus Clock',
+                title: 'Focus Clock',
                 isSelected: isFocusClock,
                 onTap: () {
                   HapticFeedback.selectionClick();
@@ -715,7 +715,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                         ? 'Aktif: ${activeActivity.title}'
                         : (upcoming.isNotEmpty
                             ? 'Berikutnya: ${upcoming.first.title}'
-                            : 'Semua event hari ini telah selesai ✨'),
+                            : 'Semua event hari ini telah selesai'),
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

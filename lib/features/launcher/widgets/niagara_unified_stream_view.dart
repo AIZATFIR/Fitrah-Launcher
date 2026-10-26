@@ -959,8 +959,8 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                             children: [
                               Text(
                                 nextHabit.habitType == 'timed'
-                                    ? '⏱️ Target ${nextHabit.target} Menit'
-                                    : '🎯 Target ${nextHabit.target} kali',
+                                    ? 'Target ${nextHabit.target} Menit'
+                                    : 'Target ${nextHabit.target} kali',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -968,7 +968,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                                 ),
                               ),
                               const Text(
-                                '• 📍 Buka Laptop & Mulai',
+                                '• Buka Laptop & Mulai',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Color(0xFF8A8993),
@@ -1086,7 +1086,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                 ],
               ] else ...[
                 const Text(
-                  'Semua janji hari ini terpenuhi. 🌿',
+                  'Semua janji hari ini terpenuhi.',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
