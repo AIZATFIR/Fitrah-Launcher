@@ -81,13 +81,27 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
       HapticFeedback.selectionClick();
       setState(() => _selectedScrubLetter = letter);
     }
-    final key = _letterKeys[letter];
-    if (key?.currentContext != null) {
-      Scrollable.ensureVisible(
-        key!.currentContext!,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-      );
+
+    final appsAsync = ref.read(installedAppsFutureProvider);
+    final allApps = appsAsync.valueOrNull ?? [];
+    final filtered = _searchQuery.isEmpty
+        ? allApps
+        : allApps.where((a) => a.appName.toLowerCase().contains(_searchQuery)).toList();
+
+    final targetIdx = filtered.indexWhere((a) => a.firstLetter == letter);
+    if (targetIdx != -1 && _scrollCtrl.hasClients) {
+      // Estimated item height is ~62px (tile + padding)
+      final targetOffset = (targetIdx * 62.0).clamp(0.0, _scrollCtrl.position.maxScrollExtent);
+      _scrollCtrl.jumpTo(targetOffset);
+    } else {
+      final key = _letterKeys[letter];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeInOut,
+        );
+      }
     }
   }
 

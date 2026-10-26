@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -48,6 +49,14 @@ class FitrahLauncherApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       theme: buildDarkTheme(settings.themePalette),
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.touch,
+          PointerDeviceKind.trackpad,
+          PointerDeviceKind.stylus,
+        },
+      ),
       home: const FitrahLauncherShell(),
     );
   }
