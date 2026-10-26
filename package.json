@@ -5,7 +5,8 @@
   "scripts": {
     "build": "echo 'Deploying static web bundle'",
     "build:sadar": "flutter build web -t lib/main_sadar.dart --no-wasm-dry-run",
-    "build:focus": "flutter build web -t lib/main.dart --no-wasm-dry-run",
+    "build:fitrah": "flutter build web -t lib/main.dart --release",
+    "deploy:fitrah": "npm run build:fitrah && npx -y vercel deploy build/web --project fitrah-web --prod --yes",
     "deploy:sadar": "npm run build:sadar && npx -y vercel deploy build/web --project sadar-web --prod --yes",
     "deploy:focus": "npm run build:focus && npx -y vercel deploy build/web --project focus-clock-web --prod --yes"
   }
