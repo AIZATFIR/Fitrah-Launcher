@@ -3,6 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import '../../../core/theme.dart';
 import '../../../core/time_math.dart';
 import '../../../models/activity.dart';
 import '../../../providers/providers.dart';
@@ -10,8 +13,11 @@ import '../../focusclock/analog_clock_face.dart';
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
 import 'fitrah_settings_screen.dart';
+import 'loop_habit_grid_widget.dart';
+import '../../../models/habit_entry.dart';
+import '../../../providers/sadar_providers.dart';
 
-// ── Natural Theme Palettes for Focus Clock Home ──────────────────────────────
+// ── Natural Theme Palettes for Focus Clock Home (Sadar Way of Life M3) ─────────
 class _HomeThemeColors {
   final Color bg;
   final Color card;
@@ -40,17 +46,19 @@ class _HomeThemeColors {
 
   factory _HomeThemeColors.fromPalette(String palette) {
     switch (palette) {
-      case 'fino_green':
+      case 'sand':
+      case 'warm_sand':
+      case 'full_book':
         return const _HomeThemeColors(
-          bg: Color(0xFF0C120E),
-          card: Color(0xFF141C16),
-          cardElevated: Color(0xFF1A261D),
-          stroke: Color(0xFF223327),
-          accent: Color(0xFF70C050),
-          textPrimary: Color(0xFFF0F5F2),
-          textSecondary: Color(0xFF96A89B),
-          textMuted: Color(0xFF67776B),
-          clockThemeIndex: 1,
+          bg: Color(0xFF141210),
+          card: Color(0xFF1D1916),
+          cardElevated: Color(0xFF26211C),
+          stroke: Color(0xFF332B24),
+          accent: Color(0xFFE8C89A),
+          textPrimary: Color(0xFFF7F2EB),
+          textSecondary: Color(0xFFA89F95),
+          textMuted: Color(0xFF736A60),
+          clockThemeIndex: 5,
         );
       case 'sky_blue':
         return const _HomeThemeColors(
@@ -76,29 +84,20 @@ class _HomeThemeColors {
           textMuted: Color(0xFF536879),
           clockThemeIndex: 3,
         );
-      case 'full_book':
-        return const _HomeThemeColors(
-          bg: Color(0xFF141210),
-          card: Color(0xFF1D1916),
-          cardElevated: Color(0xFF26211C),
-          stroke: Color(0xFF332B24),
-          accent: Color(0xFFE2BE82),
-          textPrimary: Color(0xFFF7F2EB),
-          textSecondary: Color(0xFFA89F95),
-          textMuted: Color(0xFF736A60),
-          clockThemeIndex: 5,
-        );
+      case 'sage':
+      case 'fino_green':
       case 'natural_slate':
       default:
+        // Sadar Way of Life M3 Sage Green Aesthetic
         return const _HomeThemeColors(
-          bg: Color(0xFF0F1115),
-          card: Color(0xFF161920),
-          cardElevated: Color(0xFF1C202A),
-          stroke: Color(0xFF232834),
-          accent: Color(0xFFD4AF37),
-          textPrimary: Color(0xFFF0F2F5),
-          textSecondary: Color(0xFF9AA3B2),
-          textMuted: Color(0xFF687182),
+          bg: AppPalette.bg,
+          card: AppPalette.card,
+          cardElevated: AppPalette.cardHigh,
+          stroke: AppPalette.stroke,
+          accent: AppPalette.accent,
+          textPrimary: AppPalette.text,
+          textSecondary: AppPalette.textDim,
+          textMuted: Color(0xFF5A7A60),
           clockThemeIndex: 1,
         );
     }
@@ -237,9 +236,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   String _currentScreen = 'home';
 
   // Clock View Settings (AnalogClockFace from Left Focus Clock is default)
-  bool _isPieMode = false;
   bool _isListView = false;
-  bool _is24hDial = true;
+  AmPmHalf _clockViewHalf = DateTime.now().hour < 12 ? AmPmHalf.am : AmPmHalf.pm;
+
+  // Single Daily Scratchpad (Obsidian Mobile Philosophy)
+  late final TextEditingController _dailyNoteController;
+  String _dailyNote = '';
 
   // Header Toggle: false = Focus Clock Agenda Carousel, true = Prayer Schedule Bar
   bool _showPrayerSchedule = false;
@@ -285,6 +287,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     super.initState();
     _currentTime = DateTime.now();
     _selectedNoteDate = _dateKey(0);
+    _dailyNoteController = TextEditingController(text: _dailyNote);
 
     if (widget.useSampleData) {
       // Seed data for tests
@@ -441,6 +444,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   @override
   void dispose() {
+    _dailyNoteController.dispose();
     const MethodChannel('fitrah_launcher/apps')
         .invokeMethod('setLockscreenFocus', {'enabled': false})
         .catchError((_) => null);
@@ -652,6 +656,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           break;
         }
       }
+      try {
+        final now = DateTime.now();
+        final todayStr = DateFormat('yyyy-MM-dd').format(now);
+        ref.read(sadarRepoProvider).recordEntryStatus(
+          habitId: timer.sourceId!,
+          dateString: todayStr,
+          status: HabitStatus.yes,
+        );
+      } catch (_) {}
     } else if (src == 'preset') {
       final nowH = _hourNow();
       var st = timer.startHour;
@@ -737,44 +750,47 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final currentAct = _getCurrentActivityInfo();
     final tc = _HomeThemeColors.fromPalette(settings.themePalette);
 
-    final todayNotesCount = _notes.where((n) => n.dateKey == _dateKey(0)).length;
-    final importantNotesCount = _notes.where((n) => n.isImportant).length;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
-      bottomNavigationBar: _buildBottomFloatingDock(tc),
       body: SafeArea(
         child: Stack(
           children: [
             ListView(
               physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
               children: [
                 // ── Top Header Bar (Now/Next Carousel or Prayer Timeline) ──
                 _buildTopHeaderBar(prayers, nextPrayer, tc),
-                const SizedBox(height: 22),
+                const SizedBox(height: 18),
 
-                // ── Middle Section: Left Rail + Center Focus Clock Face + Right Tools ──
-                SizedBox(
-                  height: 320,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Left Rail (Notes & Dates)
-                      _buildLeftRail(todayNotesCount, importantNotesCount, tc),
-                      const SizedBox(width: 8),
+                // ── Center Focus Clock Analog Face Dial with AM/PM pill switch ──
+                _isListView
+                    ? _buildChronologicalListView(tc)
+                    : _buildCenterFocusClockDial(hr, currentAct, tc),
+                const SizedBox(height: 18),
 
-                      // Center: Official Focus Clock Analog Dial + Instant Clarity Badge
-                      Expanded(
-                        child: _isListView
-                            ? _buildChronologicalListView(tc)
-                            : _buildCenterFocusClockDial(hr, currentAct, tc),
-                      ),
-                      const SizedBox(width: 8),
+                // ── Obsidian Daily Note Card (Direct scratchpad) ──
+                _buildObsidianDailyNoteCard(tc),
+                const SizedBox(height: 18),
 
-                      // Right Tools Rail (Compact, Separated as in Sketch)
-                      _buildRightToolsRail(tc),
-                    ],
+                // ── Loop Habit Tracker (Pixel-faithful to user screenshot) ──
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.08), width: 0.5),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: LoopHabitGridWidget(
+                    onStartTimer: (habit) {
+                      _startTimer(
+                        habit.name,
+                        habit.target > 0 ? habit.target : 25,
+                        source: 'habit',
+                        sourceId: habit.id,
+                        identity: 'Habit',
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -1077,16 +1093,143 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // ── Center Focus Clock Analog Face Dial ───────────────────────────────────
   // ── Center Focus Clock Analog Face Dial (Compact 215x215, Clean Pie / Dial) ──
+  Widget _buildAmPmPill(String text, bool active, VoidCallback onTap, _HomeThemeColors tc) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? tc.accent.withOpacity(0.25) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: active ? Border.all(color: tc.accent, width: 1.0) : null,
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+            color: active ? tc.accent : Colors.white60,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderToolPill({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+    required _HomeThemeColors tc,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? tc.accent.withOpacity(0.2) : Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive ? tc.accent : Colors.white.withOpacity(0.08),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: isActive ? tc.accent : Colors.white70),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                color: isActive ? tc.accent : Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Center Focus Clock Analog Face Dial (Spacious 240x240, Clean 12h + AM/PM) ──
   Widget _buildCenterFocusClockDial(double hr, Map<String, dynamic> currentAct, _HomeThemeColors tc) {
-    final currentHalf = _currentTime.hour < 12 ? AmPmHalf.am : AmPmHalf.pm;
     final liveActs = ref.watch(activitiesByDateProvider).valueOrNull ?? [];
     final effectiveActivities = liveActs.isNotEmpty ? liveActs : _toFocusClockActivities();
 
-    return Column(
-      children: [
-        // Center Clock: Clean Pie Arc Chart or Focus Clock Official Dial
-        Expanded(
-          child: GestureDetector(
+    return Container(
+      decoration: BoxDecoration(
+        color: tc.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tc.stroke, width: 1.0),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Top Control Pill Row: [ AM | PM Switch ] + [ Cari / Daftar / Timer ]
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // AM / PM Switch Pill
+              Container(
+                decoration: BoxDecoration(
+                  color: tc.cardElevated,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: tc.stroke, width: 1.0),
+                ),
+                padding: const EdgeInsets.all(2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildAmPmPill('AM', _clockViewHalf == AmPmHalf.am, () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _clockViewHalf = AmPmHalf.am);
+                    }, tc),
+                    _buildAmPmPill('PM', _clockViewHalf == AmPmHalf.pm, () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _clockViewHalf = AmPmHalf.pm);
+                    }, tc),
+                  ],
+                ),
+              ),
+
+              // Right Tool Pills: Cari, Daftar & Timer
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeaderToolPill(
+                    icon: Icons.search_rounded,
+                    label: 'Cari',
+                    isActive: false,
+                    onTap: _openSearchSheet,
+                    tc: tc,
+                  ),
+                  const SizedBox(width: 6),
+                  _buildHeaderToolPill(
+                    icon: Icons.format_list_bulleted_rounded,
+                    label: 'Daftar',
+                    isActive: _isListView,
+                    onTap: () => setState(() => _isListView = !_isListView),
+                    tc: tc,
+                  ),
+                  const SizedBox(width: 6),
+                  _buildHeaderToolPill(
+                    icon: Icons.timer_outlined,
+                    label: 'Timer',
+                    isActive: _activeTimer != null && _activeTimer!.isRunning,
+                    onTap: _openFocusTimerHub,
+                    tc: tc,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Center 12h Analog Clock Face
+          GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
               _openScheduleToClockSheet(
@@ -1095,369 +1238,182 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 identity: 'Programmer',
               );
             },
-            child: Center(
-              child: SizedBox(
-                width: 215,
-                height: 215,
-                child: _isPieMode
-                    ? CustomPaint(
-                        painter: _CleanPieClockPainter(
-                          now: _currentTime,
-                          activities: effectiveActivities,
-                          is24h: _is24hDial,
-                        ),
-                      )
-                    : AnalogClockFace(
-                        now: _currentTime,
-                        activities: effectiveActivities,
-                        tasks: const [],
-                        viewHalf: currentHalf,
-                        clockHandsMode: 1,
-                        is24hDial: _is24hDial,
-                        is24hTime: _is24hDial,
-                        showCurrentTime: true,
-                        clockFaceTheme: tc.clockThemeIndex,
-                      ),
+            child: SizedBox(
+              width: 240,
+              height: 240,
+              child: AnalogClockFace(
+                now: _currentTime,
+                activities: effectiveActivities,
+                tasks: const [],
+                viewHalf: _clockViewHalf,
+                clockHandsMode: 1,
+                is24hDial: false,
+                is24hTime: false,
+                showCurrentTime: true,
+                clockFaceTheme: tc.clockThemeIndex,
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 6),
+          const SizedBox(height: 14),
 
-        // Instant User Clarity Status Badge (Current Time + What Am I Doing Now)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _formatHour(hr),
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-                color: tc.textPrimary,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: (currentAct['color'] as Color).withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: (currentAct['color'] as Color).withOpacity(0.5), width: 1.0),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(color: currentAct['color'] as Color, shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        currentAct['remaining'] != null
-                            ? '${currentAct['name']} (${currentAct['remaining']})'
-                            : currentAct['name'],
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: currentAct['color'] as Color,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-
-        // Quick Button: Pasang Jadwal ke Jam
-        InkWell(
-          onTap: () => _openScheduleToClockSheet(
-            title: '',
-            initialDurationMinutes: 60,
-            identity: 'Programmer',
-          ),
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: tc.card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: tc.accent.withOpacity(0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.add, color: tc.accent, size: 14),
-                const SizedBox(width: 4),
-                Text(
-                  'Pasang Jadwal ke Jam',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: tc.accent),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── Left Rail (Enlarged: Kemarin, Catatan, Penting, Tanggal) ───────────────
-  Widget _buildLeftRail(int todayNotesCount, int importantNotesCount, _HomeThemeColors tc) {
-    return SizedBox(
-      width: 68,
-      child: Column(
-        children: [
-          // Kemarin
-          Expanded(
-            child: _buildRailButton(
-              title: 'Kemarin',
-              tc: tc,
-              onTap: () {
-                setState(() {
-                  _selectedNoteDate = _dateKey(-1);
-                  _notesFilter = 'date';
-                  _currentScreen = 'catatan';
-                });
-              },
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Catatan (Journal)
-          Expanded(
-            child: _buildRailButton(
-              title: 'Catatan',
-              badge: todayNotesCount.toString(),
-              tc: tc,
-              onTap: () {
-                setState(() {
-                  _selectedNoteDate = _dateKey(0);
-                  _notesFilter = 'date';
-                  _currentScreen = 'catatan';
-                });
-              },
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Penting
-          Expanded(
-            child: _buildRailButton(
-              title: 'Penting',
-              badge: importantNotesCount.toString(),
-              tc: tc,
-              onTap: () {
-                setState(() {
-                  _notesFilter = 'important';
-                  _currentScreen = 'catatan';
-                });
-              },
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Date Selector
-          Expanded(
-            child: _buildRailButton(
-              title: _formatDateShort(_dateKey(0)),
-              tc: tc,
-              onTap: _openDatePickerSheet,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // 3 Fulfillment Status Dots
+          // Instant User Clarity Status Badge (Current Time + What Am I Doing Now)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildFulfillmentDot(true, tc),
-              const SizedBox(width: 4),
-              _buildFulfillmentDot(true, tc),
-              const SizedBox(width: 4),
-              _buildFulfillmentDot(todayNotesCount > 0, tc),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFulfillmentDot(bool active, _HomeThemeColors tc) {
-    return Container(
-      width: 6,
-      height: 6,
-      decoration: BoxDecoration(
-        color: active ? const Color(0xFF5FD0A5) : tc.stroke,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
-
-  Widget _buildRailButton({
-    required String title,
-    String? badge,
-    required VoidCallback onTap,
-    required _HomeThemeColors tc,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 68,
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-        decoration: BoxDecoration(
-          color: tc.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: tc.stroke, width: 1.2),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
               Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: tc.textPrimary, fontWeight: FontWeight.w700, height: 1.2),
-              ),
-              if (badge != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  badge,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: tc.accent),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Right Tools Rail (5 Core Tools: Ganti, Daftar, 24h, Cari, Timer) ────────
-  Widget _buildRightToolsRail(_HomeThemeColors tc) {
-    return SizedBox(
-      width: 68,
-      child: Column(
-        children: [
-          // Ganti (Pie vs Dial)
-          Expanded(
-            child: _buildToolButton(
-              icon: _isPieMode ? Icons.watch_later_outlined : Icons.pie_chart_outline_rounded,
-              label: 'Ganti',
-              isActive: !_isPieMode,
-              tc: tc,
-              onTap: () => setState(() => _isPieMode = !_isPieMode),
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Daftar (List vs Dial)
-          Expanded(
-            child: _buildToolButton(
-              icon: Icons.format_list_bulleted_rounded,
-              label: 'Daftar',
-              isActive: _isListView,
-              tc: tc,
-              onTap: () => setState(() => _isListView = !_isListView),
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // 24 / 12 jam
-          Expanded(
-            child: _buildToolButton(
-              icon: Icons.access_time_rounded,
-              label: _is24hDial ? '24 jam' : '12 jam',
-              isActive: _is24hDial,
-              tc: tc,
-              onTap: () => setState(() => _is24hDial = !_is24hDial),
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Cari
-          Expanded(
-            child: _buildToolButton(
-              icon: Icons.search_rounded,
-              label: 'Cari',
-              isActive: false,
-              tc: tc,
-              onTap: _openSearchSheet,
-            ),
-          ),
-          const SizedBox(height: 6),
-
-          // Timer (Opens Focus Timer Hub)
-          Expanded(
-            child: _buildToolButton(
-              icon: Icons.timer_outlined,
-              label: 'Timer',
-              isActive: _activeTimer != null && _activeTimer!.isRunning,
-              tc: tc,
-              onTap: _openFocusTimerHub,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToolButton({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-    Color? accentColor,
-    required _HomeThemeColors tc,
-  }) {
-    final activeCol = accentColor ?? tc.accent;
-    final inactiveCol = tc.textSecondary;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 68,
-        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 3),
-        decoration: BoxDecoration(
-          color: tc.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive ? activeCol.withOpacity(0.6) : tc.stroke,
-            width: 1.2,
-          ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: isActive ? activeCol : (accentColor ?? inactiveCol), size: 20),
-              const SizedBox(height: 2),
-              Text(
-                label,
+                _formatHour(hr),
                 style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: isActive ? activeCol : (accentColor ?? inactiveCol),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                  color: tc.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (currentAct['color'] as Color).withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: (currentAct['color'] as Color).withOpacity(0.5), width: 1.0),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(color: currentAct['color'] as Color, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          currentAct['remaining'] != null
+                              ? '${currentAct['name']} (${currentAct['remaining']})'
+                              : currentAct['name'],
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: currentAct['color'] as Color,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+
+          // Clean Inline Tap Button to Schedule Activity
+          InkWell(
+            onTap: () => _openScheduleToClockSheet(
+              title: '',
+              initialDurationMinutes: 60,
+              identity: 'Programmer',
+            ),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: tc.accent.withOpacity(0.3), width: 0.8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add_rounded, color: tc.accent, size: 15),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Pasang Jadwal ke Jam',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: tc.accent),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  // ── Obsidian Daily Note Card (Direct friction-free scratchpad) ─────────────
+  Widget _buildObsidianDailyNoteCard(_HomeThemeColors tc) {
+    return Container(
+      decoration: BoxDecoration(
+        color: tc.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tc.stroke, width: 1.0),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.edit_note_rounded, size: 18, color: tc.accent),
+                  const SizedBox(width: 8),
+                  Text(
+                    'DAILY NOTE',
+                    style: GoogleFonts.inter(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                      color: tc.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                DateFormat('EEEE, d MMM').format(DateTime.now()),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: tc.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _dailyNoteController,
+            maxLines: 4,
+            minLines: 2,
+            style: GoogleFonts.inter(
+              fontSize: 13.5,
+              height: 1.45,
+              color: tc.textPrimary,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: false,
+              hintText: 'Tulis pemikiran, niat, atau catatan hari ini...',
+              hintStyle: GoogleFonts.inter(
+                fontSize: 13,
+                color: tc.textMuted,
+              ),
+            ),
+            onChanged: (val) {
+              _dailyNote = val;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+
 
   // ── Chronological List View Fallback ──────────────────────────────────────
   Widget _buildChronologicalListView(_HomeThemeColors tc) {
@@ -1484,50 +1440,84 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     return Container(
       decoration: BoxDecoration(
         color: tc.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: tc.stroke),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tc.stroke, width: 1.0),
       ),
-      child: ListView.separated(
-        padding: const EdgeInsets.all(10),
-        itemCount: nonSleep.length,
-        separatorBuilder: (_, __) => Divider(color: tc.stroke, height: 1),
-        itemBuilder: (context, i) {
-          final b = nonSleep[i];
-          final col = _colorForIdentity(b.identity);
-
-          return ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: InkWell(
-              onTap: () {
-                final durationMins = math.max(1, ((b.endHour - b.startHour) * 60).round());
-                _startTimer(b.name, durationMins, source: 'block', sourceId: b.id, identity: b.identity);
-              },
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: col, width: 1.5),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 8, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Daftar Blok Waktu',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                    color: tc.textPrimary,
+                  ),
                 ),
-                child: Icon(Icons.play_arrow_rounded, color: col, size: 20),
-              ),
+                TextButton.icon(
+                  icon: const Icon(Icons.schedule_rounded, size: 16),
+                  label: const Text('Ke Jam'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: tc.accent,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  ),
+                  onPressed: () => setState(() => _isListView = false),
+                ),
+              ],
             ),
-            title: Text(
-              b.isDone ? '${b.name} (selesai)' : b.name,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-                color: b.isDone ? tc.textMuted : tc.textPrimary,
-              ),
-            ),
-            subtitle: Text(
-              '${_formatHour(b.startHour)} - ${_formatHour(b.endHour)}',
-              style: TextStyle(fontSize: 11, color: tc.textSecondary),
-            ),
-            onTap: () => _openBlockDetailSheet(b),
-          );
-        },
+          ),
+          Divider(color: tc.stroke, height: 1),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(10),
+            itemCount: nonSleep.length,
+            separatorBuilder: (_, __) => Divider(color: tc.stroke, height: 1),
+            itemBuilder: (context, i) {
+              final b = nonSleep[i];
+              final col = _colorForIdentity(b.identity);
+
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: InkWell(
+                  onTap: () {
+                    final durationMins = math.max(1, ((b.endHour - b.startHour) * 60).round());
+                    _startTimer(b.name, durationMins, source: 'block', sourceId: b.id, identity: b.identity);
+                  },
+                  borderRadius: BorderRadius.circular(18),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: col, width: 1.5),
+                    ),
+                    child: Icon(Icons.play_arrow_rounded, color: col, size: 20),
+                  ),
+                ),
+                title: Text(
+                  b.isDone ? '${b.name} (selesai)' : b.name,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: b.isDone ? tc.textMuted : tc.textPrimary,
+                  ),
+                ),
+                subtitle: Text(
+                  '${_formatHour(b.startHour)} - ${_formatHour(b.endHour)}',
+                  style: GoogleFonts.inter(fontSize: 11, color: tc.textSecondary),
+                ),
+                onTap: () => _openBlockDetailSheet(b),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -2843,18 +2833,17 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   // ── 2. Create New Custom Identity Dialog ──
   void _openCreateNewIdentityDialog() {
     final nameCtrl = TextEditingController();
-    Color selectedColor = const Color(0xFFE8C07D);
-
-    final paletteOptions = [
-      const Color(0xFFE8C07D), // Gold
-      const Color(0xFF8FB8E8), // Sky
-      const Color(0xFFE88F7D), // Coral
-      const Color(0xFF5FD0A5), // Emerald
-      const Color(0xFFC3A6F0), // Lavender
-      const Color(0xFFFFB300), // Amber
-      const Color(0xFF4DD0E1), // Cyan
-      const Color(0xFFFF8A80), // Rose
+    final naturalBaseColors = [
+      const Color(0xFF6B9080), // Sage Green
+      const Color(0xFF4A5568), // Muted Slate
+      const Color(0xFF4682B4), // Dusty Ocean
+      const Color(0xFFC27D60), // Terracotta Clay
+      const Color(0xFF52796F), // Forest Moss
+      const Color(0xFFA39274), // Warm Sand
+      const Color(0xFF8A93A3), // Soft Charcoal
     ];
+    Color selectedColor = naturalBaseColors.first;
+    double spectrumHue = 180.0;
 
     showModalBottomSheet(
       context: context,
@@ -2876,6 +2865,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   const SizedBox(height: 14),
 
                   TextField(
+                    key: const ValueKey('new_identity_name_field'),
                     controller: nameCtrl,
                     style: const TextStyle(color: Color(0xFFEDEFF2)),
                     decoration: InputDecoration(
@@ -2888,28 +2878,59 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ),
                   const SizedBox(height: 14),
 
-                  const Text('Pilih Warna Identitas:', style: TextStyle(fontSize: 12, color: Color(0xFF8A93A3))),
+                  // 7 Natural Base Colors
+                  const Text('7 Warna Dasar Natural:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF8A93A3))),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 10,
-                    children: paletteOptions.map((c) {
-                      final isSel = selectedColor == c;
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: naturalBaseColors.map((c) {
+                      final isSel = selectedColor.value == c.value;
                       return GestureDetector(
                         onTap: () => setSheetState(() => selectedColor = c),
                         child: Container(
-                          width: 32,
-                          height: 32,
+                          width: 34,
+                          height: 34,
                           decoration: BoxDecoration(
                             color: c,
                             shape: BoxShape.circle,
                             border: Border.all(color: isSel ? Colors.white : Colors.transparent, width: 2),
                           ),
-                          child: isSel ? const Icon(Icons.check, color: Color(0xFF0E1116), size: 18) : null,
+                          child: isSel ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
                         ),
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
+
+                  // Interactive HSL Spectrum Slider
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Atau Spektrum Bebas (HSL):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF8A93A3))),
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: selectedColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white24),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: spectrumHue,
+                    min: 0.0,
+                    max: 360.0,
+                    activeColor: selectedColor,
+                    onChanged: (val) {
+                      setSheetState(() {
+                        spectrumHue = val;
+                        selectedColor = HSVColor.fromAHSV(1.0, val, 0.55, 0.75).toColor();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 14),
 
                   ElevatedButton(
                     onPressed: () {
@@ -4120,89 +4141,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-  // ── Bottom Floating Dock (Focus Clock | Beranda | App Launcher) ───────────
-  Widget _buildBottomFloatingDock(_HomeThemeColors tc) {
-    return Container(
-      height: 60,
-      margin: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-      decoration: BoxDecoration(
-        color: tc.card.withOpacity(0.96),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: tc.stroke, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.6),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildDockButton(
-            icon: Icons.access_time_filled_rounded,
-            label: 'Focus Clock',
-            tc: tc,
-            onTap: widget.onOpenFocusClock,
-          ),
-          _buildDockButton(
-            icon: Icons.home_rounded,
-            label: 'Beranda',
-            isActive: true,
-            tc: tc,
-            onTap: () {},
-          ),
-          _buildDockButton(
-            icon: Icons.apps_rounded,
-            label: 'App Launcher',
-            isAccent: true,
-            tc: tc,
-            onTap: widget.onOpenAppDrawer,
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildDockButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required _HomeThemeColors tc,
-    bool isActive = false,
-    bool isAccent = false,
-  }) {
-    final col = isAccent
-        ? tc.accent
-        : (isActive ? tc.textPrimary : tc.textSecondary);
-
-    return InkWell(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: col, size: 22),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isActive || isAccent ? FontWeight.w700 : FontWeight.w500,
-                color: col,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ── 7. Habit Actions Popover (Ya, Tidak, Mulai, Catatan, Gambar) ──
   void _openHabitActionsSheet(HabitModel h) {
@@ -4808,151 +4747,4 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 }
 
-// ── Clean Pie Clock Painter (Lampiran 1 Custom Aesthetic) ────────────────────
-class _CleanPieClockPainter extends CustomPainter {
-  final DateTime now;
-  final List<Activity> activities;
-  final bool is24h;
 
-  _CleanPieClockPainter({
-    required this.now,
-    required this.activities,
-    this.is24h = true,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2;
-
-    // 1. Dark outer dial background
-    final bgPaint = Paint()
-      ..color = const Color(0xFF141820)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius - 2, bgPaint);
-
-    // 2. Outer rim border with subtle gold accent
-    final rimPaint = Paint()
-      ..color = const Color(0xFF262D3D)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    canvas.drawCircle(center, radius - 2, rimPaint);
-
-    // 3. Draw Activity Pie Wedges
-    final pieRadius = radius - 18;
-    final pieRect = Rect.fromCircle(center: center, radius: pieRadius);
-    final totalMinutes = is24h ? 1440.0 : 720.0;
-
-    for (final act in activities) {
-      final startMin = toUiMinute(act.startMinute, act.ampmHalf, is24h: is24h);
-      final endMin = toUiMinute(act.endMinute, act.ampmHalf, is24h: is24h);
-      if (endMin <= startMin) continue;
-
-      // Top (12 o'clock / 00:00) is -pi / 2. Slices sweep clockwise.
-      final startAngle = -math.pi / 2 + (startMin / totalMinutes) * 2 * math.pi;
-      final sweepAngle = ((endMin - startMin) / totalMinutes) * 2 * math.pi;
-
-      final wedgePaint = Paint()
-        ..color = Color(act.colorValue).withOpacity(0.82)
-        ..style = PaintingStyle.fill;
-
-      canvas.drawArc(pieRect, startAngle, sweepAngle, true, wedgePaint);
-
-      // Wedge stroke outline
-      final wedgeBorder = Paint()
-        ..color = Colors.black.withOpacity(0.4)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5;
-      canvas.drawArc(pieRect, startAngle, sweepAngle, true, wedgeBorder);
-    }
-
-    // 4. Subtle hour track ring
-    final trackPaint = Paint()
-      ..color = const Color(0xFF1E2430)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawCircle(center, pieRadius, trackPaint);
-
-    // 5. Major hour labels (00, 06, 12, 18 in 24h, or 12, 3, 6, 9 in 12h)
-    final labelHours = is24h ? [0, 6, 12, 18] : [12, 3, 6, 9];
-    const textStyle = TextStyle(
-      color: Color(0xFF8A93A3),
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-    );
-
-    for (final h in labelHours) {
-      final hourFrac = is24h ? (h / 24.0) : ((h % 12) / 12.0);
-      final angle = -math.pi / 2 + hourFrac * 2 * math.pi;
-      final labelDist = radius - 30;
-      final offset = Offset(
-        center.dx + labelDist * math.cos(angle),
-        center.dy + labelDist * math.sin(angle),
-      );
-
-      final label = h.toString().padLeft(2, '0');
-      final tp = TextPainter(
-        text: TextSpan(text: label, style: textStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(offset.dx - tp.width / 2, offset.dy - tp.height / 2));
-    }
-
-    // 6. Current Time Golden Pointer Hand
-    final currentMinute = is24h
-        ? (now.hour * 60 + now.minute)
-        : ((now.hour % 12) * 60 + now.minute);
-    final handAngle = -math.pi / 2 + (currentMinute / totalMinutes) * 2 * math.pi;
-
-    final handLen = radius - 20;
-    final handEnd = Offset(
-      center.dx + handLen * math.cos(handAngle),
-      center.dy + handLen * math.sin(handAngle),
-    );
-
-    // Glowing pointer line
-    final handGlow = Paint()
-      ..color = const Color(0xFFE8C07D).withOpacity(0.4)
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(center, handEnd, handGlow);
-
-    final handPaint = Paint()
-      ..color = const Color(0xFFE8C07D)
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(center, handEnd, handPaint);
-
-    // Hand tip diamond / arrow head
-    final tipPaint = Paint()
-      ..color = const Color(0xFFE8C07D)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(handEnd, 4, tipPaint);
-
-    // 7. Center pivot
-    final pivotBg = Paint()
-      ..color = const Color(0xFF161A22)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 9, pivotBg);
-
-    final pivotBorder = Paint()
-      ..color = const Color(0xFFE8C07D)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, 9, pivotBorder);
-
-    final pivotDot = Paint()
-      ..color = const Color(0xFFE8C07D)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 3.5, pivotDot);
-  }
-
-  @override
-  bool shouldRepaint(covariant _CleanPieClockPainter oldDelegate) {
-    return oldDelegate.now.minute != now.minute ||
-        oldDelegate.activities != activities ||
-        oldDelegate.is24h != is24h;
-  }
-}

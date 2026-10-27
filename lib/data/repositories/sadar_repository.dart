@@ -113,6 +113,19 @@ class SadarRepository {
         .findAll();
   }
 
+  Future<List<Habit>> getArchivedHabits() async {
+    if (_isar == null) {
+      final list = _memHabits.values.where((h) => h.isArchived).toList();
+      list.sort((a, b) => (b.updatedAt ?? b.createdAt).compareTo(a.updatedAt ?? a.createdAt));
+      return list;
+    }
+    return _isar.habits
+        .filter()
+        .isArchivedEqualTo(true)
+        .sortByUpdatedAtDesc()
+        .findAll();
+  }
+
   Future<int> upsertHabit(Habit habit) async {
     habit.updatedAt = DateTime.now();
     if (_isar == null) {
@@ -124,6 +137,28 @@ class SadarRepository {
       return habit.id;
     }
     return _isar.writeTxn(() => _isar.habits.put(habit));
+  }
+
+  Future<void> reorderHabits(List<int> habitIds) async {
+    if (_isar == null) {
+      for (int i = 0; i < habitIds.length; i++) {
+        final h = _memHabits[habitIds[i]];
+        if (h != null) {
+          h.orderIndex = i;
+        }
+      }
+      _habitsStreamCtrl.add(null);
+      return;
+    }
+    await _isar.writeTxn(() async {
+      for (int i = 0; i < habitIds.length; i++) {
+        final h = await _isar.habits.get(habitIds[i]);
+        if (h != null) {
+          h.orderIndex = i;
+          await _isar.habits.put(h);
+        }
+      }
+    });
   }
 
   Future<bool> deleteHabit(int id, {bool hardDelete = false}) async {
@@ -458,7 +493,7 @@ class SadarRepository {
       ..target = 45
       ..unit = HabitUnit.min
       ..timerEnabled = true
-      ..colorValue = 0xFF10B981 // Emerald
+      ..colorValue = 0xFF48C774 // Vibrant Green
       ..orderIndex = 0
       ..createdAt = DateTime.now(),
     Habit()
@@ -468,38 +503,78 @@ class SadarRepository {
       ..target = 30
       ..unit = HabitUnit.min
       ..timerEnabled = true
-      ..colorValue = 0xFFF97316 // Orange
+      ..colorValue = 0xFF48C774
       ..orderIndex = 1
       ..createdAt = DateTime.now(),
     Habit()
       ..id = 3
-      ..name = 'Membaca / Reading'
-      ..iconKey = '📚'
-      ..target = 20
+      ..name = '1 ayat Al quran (smkdutalib, jalan yg benar, pencerahan)'
+      ..iconKey = '😇 🕌'
+      ..target = 10
       ..unit = HabitUnit.min
       ..timerEnabled = true
-      ..colorValue = 0xFF8B5CF6 // Purple
+      ..colorValue = 0xFF48C774
       ..orderIndex = 2
       ..createdAt = DateTime.now(),
     Habit()
       ..id = 4
-      ..name = 'Meditasi / Mindfulness'
-      ..iconKey = '🧘'
-      ..target = 15
+      ..name = '10 min Open Laptop and throw my phone'
+      ..iconKey = '💻'
+      ..target = 10
       ..unit = HabitUnit.min
       ..timerEnabled = true
-      ..colorValue = 0xFF06B6D4 // Cyan
+      ..colorValue = 0xFF48C774
       ..orderIndex = 3
       ..createdAt = DateTime.now(),
     Habit()
       ..id = 5
-      ..name = 'Belajar Bahasa'
-      ..iconKey = '🌐'
+      ..name = '1 module AI 50% - Dicoding - Portofolio, skill, knowledge, advantage'
+      ..iconKey = '🎓'
+      ..target = 45
+      ..unit = HabitUnit.min
+      ..timerEnabled = true
+      ..colorValue = 0xFF48C774
+      ..orderIndex = 4
+      ..createdAt = DateTime.now(),
+    Habit()
+      ..id = 6
+      ..name = 'Grind Physique (abs, shoulder, Hand group, back)'
+      ..iconKey = '💪'
+      ..target = 30
+      ..unit = HabitUnit.min
+      ..timerEnabled = true
+      ..colorValue = 0xFF48C774
+      ..orderIndex = 5
+      ..createdAt = DateTime.now(),
+    Habit()
+      ..id = 7
+      ..name = '1 Kalaam harian (Paham Rahmat tuhan)'
+      ..iconKey = '🪶 😇'
+      ..target = 15
+      ..unit = HabitUnit.min
+      ..timerEnabled = true
+      ..colorValue = 0xFF48C774
+      ..orderIndex = 6
+      ..createdAt = DateTime.now(),
+    Habit()
+      ..id = 8
+      ..name = 'Baca 5 halaman (growth, lebih pintar)'
+      ..iconKey = '🧠 📖'
       ..target = 20
       ..unit = HabitUnit.min
       ..timerEnabled = true
-      ..colorValue = 0xFF3B82F6 // Blue
-      ..orderIndex = 4
+      ..colorValue = 0xFF48C774
+      ..orderIndex = 7
+      ..createdAt = DateTime.now(),
+    Habit()
+      ..id = 9
+      ..name = 'Tonton 2 Watch later edukasi (growth, lebih pintar)'
+      ..iconKey = '🧠 🎬'
+      ..target = 25
+      ..unit = HabitUnit.min
+      ..timerEnabled = true
+      ..colorValue = 0xFF48C774
+      ..orderIndex = 8
       ..createdAt = DateTime.now(),
   ];
 }

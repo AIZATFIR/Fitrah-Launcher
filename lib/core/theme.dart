@@ -1,301 +1,336 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// AppPalette — Obsidian Warm Bookpaper Aesthetic Design System
+// ─────────────────────────────────────────────────────────────────────────────
+// M3 Seed — Sage Green + Warm Sand (Sadar Way of Life Design System)
+// ─────────────────────────────────────────────────────────────────────────────
+const _seedGreen    = Color(0xFF4E9A7A);
+const _seedTertiary = Color(0xFFD4956A);
+
+/// AppPalette — Sage Green + Warm Sand Dark Aesthetic (M3 aligned)
 class AppPalette {
-  // Dark Obsidian & Warm Bookpaper Tones
-  static const bg = Color(0xFF18181F);
-  static const card = Color(0xFF23222B);
-  static const accent = Color(0xFFF0C987); // Warm Bookpaper Amber Gold
-  static const text = Color(0xFFF5EBE6); // Warm Cream Text
-  static const textDim = Color(0xFFA69F95); // Muted Warm Slate
-  static const stroke = Color(0xFF363340); // Soft Obsidian Border
-  static const danger = Color(0xFFE5484D); // Conflict / Destructive
+  static const bg         = Color(0xFF0F1410);
+  static const card       = Color(0xFF1A2018);
+  static const cardHigh   = Color(0xFF222B20);
+  static const accent     = Color(0xFF7FCFAA); // M3 primary on dark — sage mint
+  static const accentDim  = Color(0xFF4E9A7A);
+  static const sand       = Color(0xFFE8C89A); // tertiary — warm sand
+  static const sandDim    = Color(0xFFD4956A);
 
-  // Bookpaper Journaling Environment Tokens
-  static const bookpaperFieldBg = Color(0xFF2B2933);
-  static const bookpaperBorder = Color(0xFF403C4B);
-  static const bookpaperText = Color(0xFFF4E8D1);
+  static const text       = Color(0xFFE8F0EB);
+  static const textDim    = Color(0xFF8FAF9A);
+  static const stroke     = Color(0xFF2E3E30);
+  static const outline    = Color(0xFF4A6050);
+  static const danger     = Color(0xFFFF8A80);
 
-  // Glassmorphism & Gemini design tokens
-  static const glassSurface = Color(0xF21C1B24); // Frosted Warm Slate
-  static const geminiGlassBg = Color(0xE6201F29); // Frosted Obsidian Container
-  static const geminiGlassBorder = Color(0x33F0C987); // Soft Gold Frosted Stroke
-  static const geminiGlow = Color(0x40F0C987); // Ambient warm gold glow
+  // Legacy aliases (keep old names compiling)
+  static const bookpaperFieldBg  = Color(0xFF1C2A1E);
+  static const bookpaperBorder   = Color(0xFF324535);
+  static const bookpaperText     = Color(0xFFD8EAD8);
+  static const glassSurface      = Color(0xF21A2018);
+  static const geminiGlassBg    = Color(0xE61A2018);
+  static const geminiGlassBorder = Color(0x337FCFAA);
+  static const geminiGlow        = Color(0x407FCFAA);
 
-  // Responsive Breakpoints
   static const double mobileBreakpoint = 600.0;
   static const double tabletBreakpoint = 1024.0;
 
-  // True black (AMOLED)
-  static const blackBg = Color(0xFF0C0C0F);
-  static const blackCard = Color(0xFF16151A);
+  static const blackBg   = Color(0xFF080D09);
+  static const blackCard = Color(0xFF0F1810);
 
-  // Light equivalents
-  static const lightBg = Color(0xFFF7F3EB); // Soft Sepia Cream Paper
-  static const lightCard = Color(0xFFFFFFFF);
-  static const lightText = Color(0xFF2B2823);
-  static const lightTextDim = Color(0xFF7A746B);
-  static const lightStroke = Color(0xFFE6DFC9);
-  static const lightAccent = Color(0xFFD49A35);
+  static const lightBg      = Color(0xFFF3F8F2);
+  static const lightCard    = Color(0xFFFFFFFF);
+  static const lightText    = Color(0xFF1A2A1C);
+  static const lightTextDim = Color(0xFF5A7A60);
+  static const lightStroke  = Color(0xFFCBE0CC);
+  static const lightAccent  = Color(0xFF2E7D55);
 }
 
 class GeminiMotion {
-  static const Duration fast = Duration(milliseconds: 180);
-  static const Duration medium = Duration(milliseconds: 300);
-  static const Duration slow = Duration(milliseconds: 450);
-
+  static const Duration fast   = Duration(milliseconds: 180);
+  static const Duration medium = Duration(milliseconds: 280);
+  static const Duration slow   = Duration(milliseconds: 420);
   static const Curve springCurve = Curves.easeOutCubic;
   static const Curve bouncyCurve = Curves.elasticOut;
+  static const Curve emphasisIn  = Curves.fastEaseInToSlowEaseOut;
 }
 
-ThemeData buildDarkTheme([String palette = 'executive']) {
-  // Default to Obsidian Warm Bookpaper Theme
-  Color bg = AppPalette.bg;
-  Color card = AppPalette.card;
-  Color accent = AppPalette.accent;
-  Color stroke = AppPalette.stroke;
+ThemeData buildDarkTheme([String palette = 'sage']) {
+  final m3scheme = ColorScheme.fromSeed(
+    seedColor: _seedGreen,
+    brightness: Brightness.dark,
+  ).copyWith(
+    surface:                 AppPalette.bg,
+    surfaceContainerLowest:  AppPalette.blackBg,
+    surfaceContainerLow:     AppPalette.bg,
+    surfaceContainer:        AppPalette.card,
+    surfaceContainerHigh:    AppPalette.cardHigh,
+    surfaceContainerHighest: const Color(0xFF2C3A2A),
 
-  if (palette == 'fino_green' || palette == 'green' || palette == 'sage') {
-    bg = const Color(0xFF0E140F);
-    card = const Color(0xFF151E17);
-    accent = const Color(0xFF70C050); // Catchy Fino Matcha Green
-    stroke = const Color(0xFF233226);
-  } else if (palette == 'sky_blue' || palette == 'sky') {
-    bg = const Color(0xFF0A131A);
-    card = const Color(0xFF101D28);
-    accent = const Color(0xFF38BDF8); // Catchy Sky Blue
-    stroke = const Color(0xFF1A2F40);
-  } else if (palette == 'ocean_blue' || palette == 'ocean') {
-    bg = const Color(0xFF07101B);
-    card = const Color(0xFF0E1B2C);
-    accent = const Color(0xFF0284C7); // Catchy Deep Ocean Blue
-    stroke = const Color(0xFF162C46);
-  } else if (palette == 'full_book' || palette == 'bookpaper' || palette == 'sepia') {
-    bg = const Color(0xFF1B1916);
-    card = const Color(0xFF26231E);
-    accent = const Color(0xFFE2BE82);
-    stroke = const Color(0xFF3B352D);
-  } else if (palette == 'cream') {
-    bg = const Color(0xFF17181F);
-    card = const Color(0xFF222430);
-    accent = const Color(0xFF8C9EFF);
-    stroke = const Color(0xFF2E3244);
-  }
+    primary:            AppPalette.accent,
+    onPrimary:          const Color(0xFF0A2518),
+    primaryContainer:   const Color(0xFF1D4535),
+    onPrimaryContainer: const Color(0xFFA8E6C8),
 
-  final base = ThemeData.dark(useMaterial3: true);
+    secondary:            const Color(0xFF8FAF9A),
+    onSecondary:          const Color(0xFF162820),
+    secondaryContainer:   const Color(0xFF243D2A),
+    onSecondaryContainer: const Color(0xFFBDD8C6),
+
+    tertiary:            AppPalette.sand,
+    onTertiary:          const Color(0xFF2E1800),
+    tertiaryContainer:   const Color(0xFF4A2D10),
+    onTertiaryContainer: const Color(0xFFF5D8B5),
+
+    error:            AppPalette.danger,
+    onError:          const Color(0xFF690012),
+    errorContainer:   const Color(0xFF5C0010),
+    onErrorContainer: const Color(0xFFFFB3B0),
+
+    onSurface:        AppPalette.text,
+    onSurfaceVariant: AppPalette.textDim,
+    outline:          AppPalette.outline,
+    outlineVariant:   AppPalette.stroke,
+
+    inverseSurface:   AppPalette.lightCard,
+    onInverseSurface: AppPalette.lightText,
+    inversePrimary:   AppPalette.lightAccent,
+  );
+
+  final base = ThemeData(
+    useMaterial3: true,
+    colorScheme: m3scheme,
+    brightness: Brightness.dark,
+  );
+
   return base.copyWith(
-    splashFactory: NoSplash.splashFactory,
-    splashColor: Colors.transparent,
-    highlightColor: Colors.transparent,
-    scaffoldBackgroundColor: bg,
-    cardTheme: CardThemeData(
-      color: card,
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(2), // Square card optimization
-        side: BorderSide(color: stroke, width: 1),
-      ),
-    ),
-    colorScheme: base.colorScheme.copyWith(
-      surface: bg,
-      primary: accent,
-      secondary: accent,
-      onSurface: AppPalette.text,
-    ),
+    scaffoldBackgroundColor: AppPalette.bg,
+
     appBarTheme: AppBarTheme(
-      backgroundColor: bg,
-      foregroundColor: AppPalette.text,
+      backgroundColor:          AppPalette.bg,
+      foregroundColor:          AppPalette.text,
+      surfaceTintColor:         Colors.transparent,
+      shadowColor:              Colors.transparent,
+      elevation:                0,
+      scrolledUnderElevation:   1,
+      titleTextStyle: GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+        color: AppPalette.text,
+      ),
+      centerTitle: false,
+    ),
+
+    cardTheme: CardThemeData(
+      color:     AppPalette.card,
       elevation: 0,
-      centerTitle: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppPalette.stroke, width: 1),
+      ),
+      margin: EdgeInsets.zero,
     ),
-    cardColor: card,
-    dividerColor: stroke,
-    textTheme: GoogleFonts.outfitTextTheme(base.textTheme).apply(
-      bodyColor: AppPalette.text,
-      displayColor: AppPalette.text,
+
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor:  AppPalette.card,
+      surfaceTintColor: Colors.transparent,
+      shadowColor:      Colors.transparent,
+      elevation:        0,
+      height:           64,
+      indicatorColor: AppPalette.accent.withValues(alpha: 0.18),
+      indicatorShape: const StadiumBorder(),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final sel = states.contains(WidgetState.selected);
+        return GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
+          color: sel ? AppPalette.accent : AppPalette.textDim,
+        );
+      }),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final sel = states.contains(WidgetState.selected);
+        return IconThemeData(
+          size: 22,
+          color: sel ? AppPalette.accent : AppPalette.textDim,
+        );
+      }),
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
     ),
+
     inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: card,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      filled:          true,
+      fillColor:       AppPalette.bookpaperFieldBg,
+      contentPadding:  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(2),
-        borderSide: BorderSide(color: stroke),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppPalette.bookpaperBorder),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(2),
-        borderSide: BorderSide(color: stroke),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppPalette.bookpaperBorder),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(2),
-        borderSide: BorderSide(color: accent, width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppPalette.accent, width: 1.5),
       ),
-      hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 14),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppPalette.danger),
+      ),
+      hintStyle:  const TextStyle(color: AppPalette.textDim, fontSize: 14),
       labelStyle: const TextStyle(color: AppPalette.textDim, fontSize: 13),
     ),
+
+    dividerTheme: const DividerThemeData(
+      color: AppPalette.stroke,
+      space: 1,
+      thickness: 1,
+    ),
+
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: AppPalette.cardHigh,
+      contentTextStyle: GoogleFonts.inter(color: AppPalette.text, fontSize: 13),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+
+    dialogTheme: DialogThemeData(
+      backgroundColor:  AppPalette.cardHigh,
+      surfaceTintColor: Colors.transparent,
+      elevation:        4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: AppPalette.stroke),
+      ),
+    ),
+
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor:  AppPalette.bg,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle:   true,
+      dragHandleColor:  AppPalette.outline,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+    ),
+
+    chipTheme: ChipThemeData(
+      backgroundColor: AppPalette.card,
+      selectedColor:   AppPalette.accent.withValues(alpha: 0.22),
+      side: const BorderSide(color: AppPalette.stroke),
+      shape: const StadiumBorder(),
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: AppPalette.text),
+    ),
+
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color:              AppPalette.accent,
+      linearTrackColor:   AppPalette.stroke,
+      circularTrackColor: AppPalette.stroke,
+    ),
+
+    textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+      bodyColor:    AppPalette.text,
+      displayColor: AppPalette.text,
+    ),
+
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: card,
-      selectedItemColor: accent,
+      backgroundColor:     AppPalette.card,
+      selectedItemColor:   AppPalette.accent,
       unselectedItemColor: AppPalette.textDim,
       type: BottomNavigationBarType.fixed,
-    ),
-    snackBarTheme: SnackBarThemeData(
-      backgroundColor: card,
-      contentTextStyle: const TextStyle(color: AppPalette.text),
-    ),
-    navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: card,
-      indicatorColor: accent.withValues(alpha: 0.22),
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (states) => TextStyle(
-          fontSize: 12,
-          fontWeight: states.contains(WidgetState.selected)
-              ? FontWeight.w600
-              : FontWeight.w400,
-          color: states.contains(WidgetState.selected)
-              ? accent
-              : AppPalette.textDim,
-        ),
-      ),
-      iconTheme: WidgetStateProperty.resolveWith(
-        (states) => IconThemeData(
-          color: states.contains(WidgetState.selected)
-              ? accent
-              : AppPalette.textDim,
-        ),
-      ),
     ),
   );
 }
 
-/// AMOLED variant: true black background, deep cards.
 ThemeData buildBlackTheme() {
   final base = buildDarkTheme();
   return base.copyWith(
     scaffoldBackgroundColor: AppPalette.blackBg,
-    colorScheme: base.colorScheme.copyWith(surface: AppPalette.blackBg),
-    appBarTheme: base.appBarTheme.copyWith(
-      backgroundColor: AppPalette.blackBg,
+    colorScheme: base.colorScheme.copyWith(
+      surface:                AppPalette.blackBg,
+      surfaceContainerLowest: AppPalette.blackBg,
+      surfaceContainerLow:    AppPalette.blackBg,
+      surfaceContainer:       AppPalette.blackCard,
     ),
-    cardColor: AppPalette.blackCard,
-    navigationBarTheme: base.navigationBarTheme.copyWith(
-      backgroundColor: AppPalette.blackCard,
-    ),
+    appBarTheme:         base.appBarTheme.copyWith(backgroundColor: AppPalette.blackBg),
+    navigationBarTheme:  base.navigationBarTheme.copyWith(backgroundColor: AppPalette.blackCard),
+    cardTheme:           base.cardTheme.copyWith(color: AppPalette.blackCard),
   );
 }
 
 ThemeData buildLightTheme() {
-  final base = ThemeData.light(useMaterial3: true);
+  final m3scheme = ColorScheme.fromSeed(
+    seedColor: _seedGreen,
+    brightness: Brightness.light,
+  ).copyWith(
+    surface:   AppPalette.lightBg,
+    onSurface: AppPalette.lightText,
+    primary:   AppPalette.lightAccent,
+    tertiary:  _seedTertiary,
+  );
+
+  final base = ThemeData(
+    useMaterial3: true,
+    colorScheme: m3scheme,
+    brightness: Brightness.light,
+  );
+
   return base.copyWith(
-    splashFactory: NoSplash.splashFactory,
-    splashColor: Colors.transparent,
-    highlightColor: Colors.transparent,
     scaffoldBackgroundColor: AppPalette.lightBg,
-    colorScheme: base.colorScheme.copyWith(
-      surface: AppPalette.lightBg,
-      primary: AppPalette.lightAccent,
-      secondary: AppPalette.lightAccent,
-      onSurface: AppPalette.lightText,
-    ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: AppPalette.lightBg,
-      foregroundColor: AppPalette.lightText,
+    appBarTheme: AppBarTheme(
+      backgroundColor:  AppPalette.lightBg,
+      foregroundColor:  AppPalette.lightText,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
-      centerTitle: true,
+      centerTitle: false,
+      titleTextStyle: GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: AppPalette.lightText,
+      ),
     ),
-    cardColor: AppPalette.lightCard,
-    dividerColor: AppPalette.lightStroke,
-    textTheme: GoogleFonts.outfitTextTheme(base.textTheme).apply(
-      bodyColor: AppPalette.lightText,
-      displayColor: AppPalette.lightText,
-    ),
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: AppPalette.lightCard,
-      selectedItemColor: AppPalette.lightAccent,
-      unselectedItemColor: AppPalette.lightTextDim,
-      type: BottomNavigationBarType.fixed,
-    ),
-    snackBarTheme: SnackBarThemeData(
-      backgroundColor: AppPalette.lightCard,
-      contentTextStyle: const TextStyle(color: AppPalette.lightText),
+    cardTheme: CardThemeData(
+      color: AppPalette.lightCard,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppPalette.lightStroke),
       ),
     ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppPalette.lightStroke),
-      ),
-      labelStyle: const TextStyle(color: AppPalette.lightTextDim),
+    textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+      bodyColor:    AppPalette.lightText,
+      displayColor: AppPalette.lightText,
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: AppPalette.lightCard,
-      indicatorColor: AppPalette.lightAccent.withValues(alpha: 0.18),
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (states) => TextStyle(
-          fontSize: 12,
-          fontWeight: states.contains(WidgetState.selected)
-              ? FontWeight.w600
-              : FontWeight.w400,
-          color: states.contains(WidgetState.selected)
-              ? AppPalette.lightAccent
-              : AppPalette.lightTextDim,
-        ),
-      ),
-      iconTheme: WidgetStateProperty.resolveWith(
-        (states) => IconThemeData(
-          color: states.contains(WidgetState.selected)
-              ? AppPalette.lightAccent
-              : AppPalette.lightTextDim,
-        ),
-      ),
+      indicatorColor: AppPalette.lightAccent.withValues(alpha: 0.16),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final sel = states.contains(WidgetState.selected);
+        return GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
+          color: sel ? AppPalette.lightAccent : AppPalette.lightTextDim,
+        );
+      }),
     ),
   );
 }
 
-/// Full Book / Warm Journal theme with gentle paper aesthetic
-ThemeData buildFullBookTheme() {
-  return buildDarkTheme('full_book');
-}
+ThemeData buildFullBookTheme() => buildDarkTheme('sage');
 
-/// Pastel Book Palette — Eye-Friendly & Relaxing Muted Tones
 const pastelBookColors = <int>[
-  0xFF8DA399, // Muted Sage Green
-  0xFFC89F98, // Dusty Rose
-  0xFF9CAAC6, // Soft Periwinkle
-  0xFFD6BE93, // Warm Ochre
-  0xFFB2A3C4, // Soft Lavender
-  0xFFA8B896, // Matcha Tea
-  0xFFCFA085, // Soft Terracotta
-  0xFF8DB8B2, // Dusty Teal
-  0xFFD4B28C, // Muted Sand
-  0xFFA69C90, // Warm Slate
+  0xFF7AAFA0, 0xFFC8A882, 0xFF9CAAC6, 0xFFB8C88A,
+  0xFFB2A3C4, 0xFFA8B896, 0xFFCFA085, 0xFF8DB8B2,
+  0xFFD4B28C, 0xFFA69C90,
 ];
 
 const presetColors = <int>[
-  0xFFF44336, // Red
-  0xFFE64A19, // Deep Orange
-  0xFFFF9800, // Orange
-  0xFFFFC107, // Amber
-  0xFFFFEB3B, // Yellow
-  0xFFCDDC39, // Lime
-  0xFF8BC34A, // Light Green
-  0xFF4CAF50, // Green
-  0xFF009688, // Teal
-  0xFF00BCD4, // Cyan
-  0xFF03A9F4, // Light Blue
-  0xFF2196F3, // Blue
-  0xFF3F51B5, // Indigo
-  0xFF673AB7, // Deep Purple
-  0xFF9C27B0, // Purple
-  0xFFE91E63, // Pink
-  0xFF795548, // Brown
+  0xFF4E9A7A, 0xFF7FCFAA, 0xFFD4956A, 0xFFE8C89A,
+  0xFF9CAAC6, 0xFFB2A3C4, 0xFFFF8A80, 0xFF4CAF50,
+  0xFF009688, 0xFF00BCD4, 0xFF03A9F4, 0xFF2196F3,
+  0xFF3F51B5, 0xFF673AB7, 0xFF9C27B0, 0xFFE91E63,
+  0xFF795548,
 ];
 
 const presetIcons = <String>[

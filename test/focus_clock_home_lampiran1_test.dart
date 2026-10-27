@@ -42,23 +42,22 @@ void main() {
       expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
     });
 
-    testWidgets('Renders Left Rail buttons with notes count and status dots', (tester) async {
+    testWidgets('Renders Obsidian Daily Note Card with scratchpad', (tester) async {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
 
-      expect(find.text('Kemarin'), findsOneWidget);
-      expect(find.text('Catatan'), findsOneWidget);
-      expect(find.text('Penting'), findsOneWidget);
+      expect(find.text('DAILY NOTE'), findsOneWidget);
+      expect(find.text('Tulis pemikiran, niat, atau catatan hari ini...'), findsOneWidget);
     });
 
-    testWidgets('Renders Right Tools Rail with Ganti, Daftar, 24/12h, Cari, Timer', (tester) async {
+    testWidgets('Renders Clock Dial Controls with AM/PM switcher, Cari, Daftar, Timer', (tester) async {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
 
-      expect(find.text('Ganti'), findsOneWidget);
-      expect(find.text('Daftar'), findsOneWidget);
-      expect(find.text('24 jam'), findsOneWidget);
+      expect(find.text('AM'), findsOneWidget);
+      expect(find.text('PM'), findsOneWidget);
       expect(find.text('Cari'), findsOneWidget);
+      expect(find.text('Daftar'), findsOneWidget);
       expect(find.text('Timer'), findsOneWidget);
     });
 
@@ -73,13 +72,13 @@ void main() {
       // In list view, SE - Orkestrasi AI should be listed
       expect(find.text('SE - Orkestrasi AI'), findsWidgets);
 
-      // Tap Daftar again to return to Dial
-      await tester.tap(find.text('Daftar'));
+      // Tap Ke Jam to return to Dial
+      await tester.tap(find.text('Ke Jam'));
       await tester.pumpAndSettle();
     });
 
     testWidgets('Renders Stacked Identity Cards with Presets and Habits', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -95,7 +94,7 @@ void main() {
     });
 
     testWidgets('Starting preset timer transitions to Timer screen', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -105,6 +104,9 @@ void main() {
 
       // Find first play arrow button in presets
       final playBtn = find.byKey(const ValueKey('preset_play_1'));
+      await tester.scrollUntilVisible(playBtn, 300, scrollable: find.byType(Scrollable).first);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -100));
+      await tester.pumpAndSettle();
       await tester.tap(playBtn);
       await tester.pumpAndSettle();
 
@@ -117,17 +119,25 @@ void main() {
       await tester.tap(find.text('Selesai sekarang'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Identitas: Programmer'), findsOneWidget);
+      final identitasText = find.text('Identitas: Programmer');
+      await tester.scrollUntilVisible(identitasText, -300, scrollable: find.byType(Scrollable).first);
+      expect(identitasText, findsOneWidget);
     });
 
     testWidgets('Renders Habits section with done toggle and 5-action popover', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
+
+      for (int i = 0; i < 6; i++) {
+        if (find.text('Deep Coding & Refactoring 30m').evaluate().isNotEmpty) break;
+        await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+        await tester.pumpAndSettle();
+      }
 
       expect(find.text('Deep Coding & Refactoring 30m'), findsOneWidget);
 
@@ -169,7 +179,7 @@ void main() {
     });
 
     testWidgets('Adds a new Identity block dynamically via Tambah Blok Identitas Baru', (tester) async {
-      tester.view.physicalSize = const Size(800, 1800);
+      tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -177,19 +187,11 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
 
-      // Scroll down until the Add Identity button is visible in ListView
-      for (int i = 0; i < 5; i++) {
-        if (find.text('Tambah Blok Identitas Baru').evaluate().isNotEmpty) break;
-        await tester.drag(find.byType(ListView).first, const Offset(0, -400));
-        await tester.pumpAndSettle();
-      }
-
-      // Drag a bit more to clear bottom dock
-      await tester.drag(find.byType(ListView).first, const Offset(0, -200));
+      final addIdentityBtn = find.text('Tambah Blok Identitas Baru');
+      await tester.scrollUntilVisible(addIdentityBtn, 400, scrollable: find.byType(Scrollable).first);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -150));
       await tester.pumpAndSettle();
-
-      expect(find.text('Tambah Blok Identitas Baru'), findsOneWidget);
-      await tester.tap(find.text('Tambah Blok Identitas Baru'), warnIfMissed: false);
+      await tester.tap(addIdentityBtn);
       await tester.pumpAndSettle();
 
       // Verify bottom sheet for new identity is open
@@ -197,53 +199,44 @@ void main() {
       expect(find.text('Buat Identitas'), findsOneWidget);
 
       // Enter identity name
-      await tester.enterText(find.byType(TextField).first, 'Penulis');
+      await tester.enterText(find.byKey(const ValueKey('new_identity_name_field')), 'Penulis');
       await tester.pumpAndSettle();
 
       // Tap create
       await tester.tap(find.text('Buat Identitas'));
       await tester.pumpAndSettle();
 
+      // Scroll up to locate the updated preset section
+      for (int i = 0; i < 8; i++) {
+        if (find.text('Identitas: Penulis').evaluate().isNotEmpty) break;
+        await tester.drag(find.byType(ListView).first, const Offset(0, 300), warnIfMissed: false);
+        await tester.pumpAndSettle();
+      }
+
       // New identity card block should be rendered
       expect(find.text('Identitas: Penulis'), findsOneWidget);
     });
 
-    testWidgets('Renders App Launcher dock, quick launcher bar, and schedules task dump to clock face', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
+    testWidgets('Clean minimalist interface without bottom dock, and schedules task dump to clock face', (tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      bool appDrawerOpened = false;
-      bool focusClockOpened = false;
-
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: FocusClockHomeView(
-              onOpenFocusClock: () => focusClockOpened = true,
-              onOpenAppDrawer: () => appDrawerOpened = true,
-              useSampleData: true,
-            ),
-          ),
-        ),
-      );
+      await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
 
-      // 1. Verify Floating Bottom Dock
-      expect(find.text('Focus Clock'), findsWidgets);
-      expect(find.text('Beranda'), findsOneWidget);
-      expect(find.text('App Launcher'), findsOneWidget);
+      // 1. Verify Floating Bottom Dock is removed for clean minimalist experience
+      expect(find.text('Beranda'), findsNothing);
 
-      // Tap App Launcher in dock
-      await tester.tap(find.text('App Launcher'));
-      expect(appDrawerOpened, isTrue);
+      // 2. Scroll to Task Dump section
+      for (int i = 0; i < 6; i++) {
+        if (find.text('Task & Habit Dump (Inbox)').evaluate().isNotEmpty) break;
+        await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+        await tester.pumpAndSettle();
+      }
 
-      // Tap Focus Clock in dock
-      await tester.tap(find.text('Focus Clock').first);
-      expect(focusClockOpened, isTrue);
-
-      // 2. Verify Task Dump section
+      // 3. Verify Task Dump section
       expect(find.text('Task & Habit Dump (Inbox)'), findsOneWidget);
       expect(find.text('Selesaikan modul UI Focus Clock'), findsOneWidget);
       expect(find.text('Sekarang'), findsWidgets);
@@ -259,4 +252,3 @@ void main() {
     });
   });
 }
-
