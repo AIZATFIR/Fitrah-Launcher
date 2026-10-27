@@ -24,12 +24,15 @@ class AppIconWidget extends ConsumerWidget {
       data: (bytes) {
         if (bytes != null && bytes.isNotEmpty) {
           return ClipRRect(
-            borderRadius: BorderRadius.circular(size * 0.22),
+            borderRadius: BorderRadius.circular(size * 0.24),
             child: Image.memory(
               bytes,
               width: size,
               height: size,
+              cacheWidth: (size * 2.5).toInt(),
+              cacheHeight: (size * 2.5).toInt(),
               fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
               errorBuilder: (_, __, ___) => _buildFallback(),
             ),
           );

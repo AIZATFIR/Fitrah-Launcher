@@ -32,7 +32,6 @@ class NiagaraWaveScrubber extends StatefulWidget {
 
 class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
     with SingleTickerProviderStateMixin {
-  double? _touchX;
   double? _touchY;
   bool _isDragging = false;
   String _activeLetter = '';
@@ -76,7 +75,6 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
 
     setState(() {
       _touchY = localPos.dy;
-      _touchX = localPos.dx;
     });
   }
 
@@ -179,24 +177,18 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
                   // Floating Magnifying Indicator Bubble follows thumb horizontally
                   if (_isDragging && _touchY != null)
                     Positioned(
-                      right: _touchX != null
-                          ? ((totalWidth - _touchX!) + 28).clamp(widget.waveBulgeWidth + 24, totalWidth - 60)
-                          : widget.waveBulgeWidth + 24,
+                      right: 56.0,
                       top: (_touchY! - 24).clamp(widget.topPadding, totalHeight - widget.bottomPadding - 48),
                       child: Container(
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF222226),
+                          color: const Color(0xFF0D64A8),
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
-                            width: 1.5,
-                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.55),
-                              blurRadius: 10,
+                              color: Colors.black.withOpacity(0.45),
+                              blurRadius: 12,
                               offset: const Offset(0, 4),
                             ),
                           ],
@@ -204,10 +196,10 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber>
                         child: Center(
                           child: Text(
                             _activeLetter,
-                            style: TextStyle(
-                              fontSize: _activeLetter == '★' ? 20 : 22,
-                              fontWeight: FontWeight.w800,
-                              color: _activeLetter == '★' ? const Color(0xFFE5A93C) : Colors.white,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
                             ),
                           ),
                         ),

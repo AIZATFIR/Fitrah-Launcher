@@ -441,6 +441,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   @override
   void dispose() {
+    const MethodChannel('fitrah_launcher/apps')
+        .invokeMethod('setLockscreenFocus', {'enabled': false})
+        .catchError((_) => null);
     _periodicTimer.cancel();
     super.dispose();
   }
@@ -609,6 +612,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   // ── Timer Logic ────────────────────────────────────────────────────────────
   void _startTimer(String label, int minutes, {String? source, int? sourceId, String? identity}) {
     HapticFeedback.mediumImpact();
+    const MethodChannel('fitrah_launcher/apps')
+        .invokeMethod('setLockscreenFocus', {'enabled': true})
+        .catchError((_) => null);
     setState(() {
       _activeTimer = ActiveTimer(
         label: label,
@@ -628,6 +634,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   void _finishTimer({bool autoComplete = false}) {
     if (_activeTimer == null) return;
     HapticFeedback.heavyImpact();
+    const MethodChannel('fitrah_launcher/apps')
+        .invokeMethod('setLockscreenFocus', {'enabled': false})
+        .catchError((_) => null);
     final timer = _activeTimer!;
     final src = timer.source;
     String message = 'Timer selesai';
@@ -732,26 +741,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final importantNotesCount = _notes.where((n) => n.isImportant).length;
 
     return Scaffold(
-      backgroundColor: tc.bg,
+      backgroundColor: Colors.transparent,
       bottomNavigationBar: _buildBottomFloatingDock(tc),
       body: SafeArea(
         child: Stack(
           children: [
             ListView(
               physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 120),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
               children: [
                 // ── Top Header Bar (Now/Next Carousel or Prayer Timeline) ──
                 _buildTopHeaderBar(prayers, nextPrayer, tc),
-                const SizedBox(height: 10),
-
-                // ── Direct App Launcher Access Bar (Niagara Integration) ──
-                _buildQuickLauncherBar(tc),
-                const SizedBox(height: 12),
+                const SizedBox(height: 22),
 
                 // ── Middle Section: Left Rail + Center Focus Clock Face + Right Tools ──
                 SizedBox(
-                  height: 310,
+                  height: 320,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -3871,52 +3876,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             color: isSelected ? const Color(0xFF161A22) : const Color(0xFFEDEFF2),
           ),
         ),
-      ),
-    );
-  }
-
-  // ── Quick Launcher Bar (Direct Niagara Launcher Drawer Access) ────────────
-  Widget _buildQuickLauncherBar(_HomeThemeColors tc) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: tc.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: tc.stroke),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.apps_rounded, color: tc.accent, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Aplikasi Terpasang (Niagara Launcher)',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tc.textPrimary),
-            ),
-          ),
-          InkWell(
-            onTap: widget.onOpenAppDrawer,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: tc.accent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Buka Drawer',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: tc.background),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, color: tc.background, size: 14),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

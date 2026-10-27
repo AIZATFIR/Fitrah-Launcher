@@ -32,9 +32,9 @@ class LauncherSettings {
   final String themePalette;
 
   const LauncherSettings({
-    this.wallpaperType = 'amoled_black',
+    this.wallpaperType = 'system',
     this.customImageUrl = '',
-    this.wallpaperDimming = 0.35,
+    this.wallpaperDimming = 0.0,
     this.wallpaperBlur = 0.0,
     this.is24h = true,
     this.showSeconds = false,
@@ -56,8 +56,8 @@ class LauncherSettings {
     this.prayerMaghrib = '17:54',
     this.prayerIsya = '19:03',
     this.widgetDisplayMode = 'prayer',
-    this.autoFocusSearch = true,
-    this.themePalette = 'fino_green',
+    this.autoFocusSearch = false,
+    this.themePalette = 'ocean_blue',
   });
 
   LauncherSettings copyWith({
@@ -136,9 +136,9 @@ class LauncherSettings {
 
   factory LauncherSettings.fromMap(Map<String, dynamic> map) {
     return LauncherSettings(
-      wallpaperType: map['wallpaperType'] as String? ?? 'amoled_black',
+      wallpaperType: map['wallpaperType'] as String? ?? 'system',
       customImageUrl: map['customImageUrl'] as String? ?? '',
-      wallpaperDimming: (map['wallpaperDimming'] as num?)?.toDouble() ?? 0.35,
+      wallpaperDimming: (map['wallpaperDimming'] as num?)?.toDouble() ?? 0.0,
       wallpaperBlur: (map['wallpaperBlur'] as num?)?.toDouble() ?? 0.0,
       is24h: map['is24h'] as bool? ?? true,
       showSeconds: map['showSeconds'] as bool? ?? false,
@@ -161,8 +161,8 @@ class LauncherSettings {
       prayerMaghrib: map['prayerMaghrib'] as String? ?? '17:54',
       prayerIsya: map['prayerIsya'] as String? ?? '19:03',
       widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'prayer',
-      autoFocusSearch: map['autoFocusSearch'] as bool? ?? true,
-      themePalette: map['themePalette'] as String? ?? 'fino_green',
+      autoFocusSearch: map['autoFocusSearch'] as bool? ?? false,
+      themePalette: map['themePalette'] as String? ?? 'ocean_blue',
     );
   }
 

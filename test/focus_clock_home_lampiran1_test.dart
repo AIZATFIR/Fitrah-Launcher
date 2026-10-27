@@ -243,11 +243,7 @@ void main() {
       await tester.tap(find.text('Focus Clock').first);
       expect(focusClockOpened, isTrue);
 
-      // 2. Verify Quick Launcher Bar
-      expect(find.text('Aplikasi Terpasang (Niagara Launcher)'), findsOneWidget);
-      expect(find.text('Buka Drawer'), findsOneWidget);
-
-      // 3. Verify Task Dump section
+      // 2. Verify Task Dump section
       expect(find.text('Task & Habit Dump (Inbox)'), findsOneWidget);
       expect(find.text('Selesaikan modul UI Focus Clock'), findsOneWidget);
       expect(find.text('Sekarang'), findsWidgets);

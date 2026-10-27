@@ -7,6 +7,7 @@ import 'package:fitrah_launcher/features/launcher/services/app_launcher_service.
 import 'package:fitrah_launcher/features/launcher/widgets/fitrah_home_view.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/minimalist_app_drawer.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/niagara_wave_scrubber.dart';
 
 void main() {
   group('Fitrah Launcher Tests', () {
@@ -53,8 +54,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      expect(find.byType(NiagaraWaveScrubber), findsOneWidget);
+      final searchFab = find.byIcon(Icons.search_rounded);
+      expect(searchFab, findsOneWidget);
+      await tester.tap(searchFab);
+      await tester.pumpAndSettle();
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Search Apps'), findsOneWidget);
+      expect(find.text('Search apps'), findsOneWidget);
     });
 
     testWidgets('FitrahLauncherShell initial page is center Home', (tester) async {
@@ -75,11 +81,11 @@ void main() {
 
     test('LauncherSettings serialization, defaults, and copyWith', () {
       const settings = LauncherSettings();
-      expect(settings.wallpaperType, 'amoled_black');
+      expect(settings.wallpaperType, 'system');
       expect(settings.is24h, true);
       expect(settings.showSeconds, false);
       expect(settings.dockPackages.length, 4);
-      expect(settings.autoFocusSearch, true);
+      expect(settings.autoFocusSearch, false);
 
       final modified = settings.copyWith(
         wallpaperType: 'midnight_slate',

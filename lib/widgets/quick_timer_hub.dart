@@ -69,6 +69,9 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
     ref.read(activeTimerTotalSecondsProvider.notifier).state = minutes * 60;
     ref.read(activeTimerIsPausedProvider.notifier).state = false;
     ref.read(activeTimerEndTimeProvider.notifier).state = now.add(Duration(minutes: minutes));
+    const MethodChannel('fitrah_launcher/apps')
+        .invokeMethod('setLockscreenFocus', {'enabled': true})
+        .catchError((_) => null);
 
     _titleCtrl.clear();
   }
@@ -76,6 +79,9 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
   void _stopTimer() {
     SystemSound.play(SystemSoundType.click);
     HapticFeedback.lightImpact();
+    const MethodChannel('fitrah_launcher/apps')
+        .invokeMethod('setLockscreenFocus', {'enabled': false})
+        .catchError((_) => null);
     ref.read(activeTimerEndTimeProvider.notifier).state = null;
     ref.read(activeTimerIsPausedProvider.notifier).state = false;
   }

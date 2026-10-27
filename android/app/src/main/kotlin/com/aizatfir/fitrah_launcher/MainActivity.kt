@@ -13,12 +13,30 @@ import android.provider.Settings
 import android.view.WindowManager
 import android.util.LruCache
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterActivityLaunchConfigs
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "fitrah_launcher/apps"
+
+    override fun getBackgroundMode(): FlutterActivityLaunchConfigs.BackgroundMode {
+        return FlutterActivityLaunchConfigs.BackgroundMode.transparent
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // By default, never show over lockscreen unless explicitly requested by an active timer
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(false)
+            setTurnScreenOn(false)
+        }
+        window.clearFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+        )
+    }
 
     // In-memory icon cache to prevent frame drops during list scrolling (1/8 max heap)
     private val iconCache = object : LruCache<String, ByteArray>((Runtime.getRuntime().maxMemory() / 1024 / 8).toInt()) {
