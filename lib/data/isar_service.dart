@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/activity.dart';
@@ -10,7 +10,6 @@ import '../models/habit.dart';
 import '../models/habit_entry.dart';
 import '../models/daily_reflection.dart';
 import '../models/timer_session.dart';
-import '../core/theme.dart';
 
 class IsarService {
   IsarService._(this.isar);
@@ -30,131 +29,41 @@ class IsarService {
 
   static Future<IsarService> open() async {
     if (kIsWeb) {
-      try {
-        await Isar.initializeIsarCore(download: true);
-        final isar = await Isar.open(
-          schemas,
-          directory: '',
-          inspector: false,
-        );
-        await _seed(isar);
-        return IsarService._(isar);
-      } catch (e) {
-        debugPrint('Isar Web fallback mode activated: $e');
-        return IsarService.fallback();
-      }
+      await Isar.initializeIsarCore(download: true);
+      final isar = await Isar.open(schemas, directory: '', inspector: false);
+      await _seed(isar);
+      return IsarService._(isar);
     }
 
     final dir = await getApplicationDocumentsDirectory();
+    return openAt(dir.path, inspector: true);
+  }
+
+  /// Open a native Isar store at an explicit path.
+  /// Used by migration and reopen checks that must not touch the user's store.
+  static Future<IsarService> openAt(
+    String directory, {
+    bool inspector = false,
+  }) async {
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'An explicit directory is only available natively.',
+      );
+    }
     final isar = await Isar.open(
       schemas,
-      directory: dir.path,
-      inspector: true,
+      directory: directory,
+      inspector: inspector,
     );
     await _seed(isar);
     return IsarService._(isar);
   }
 
   static Future<void> _seed(Isar isar) async {
-    final hasPresets = await isar.presets.count() > 0;
-    if (!hasPresets) {
-      await isar.writeTxn(() async {
-        await isar.presets.putAll([
-          Preset()
-            ..name = 'Deepwork'
-            ..colorValue = presetColors[11] // Blue
-            ..iconKey = '💻'
-            ..createdAt = DateTime.now(),
-          Preset()
-            ..name = 'Intentional Rest'
-            ..colorValue = presetColors[15] // Pink
-            ..iconKey = '🧘'
-            ..createdAt = DateTime.now(),
-          Preset()
-            ..name = 'Social activity'
-            ..colorValue = presetColors[2] // Orange
-            ..iconKey = '🤝'
-            ..createdAt = DateTime.now(),
-          Preset()
-            ..name = 'Hobbies'
-            ..colorValue = presetColors[14] // Purple
-            ..iconKey = '🎨'
-            ..createdAt = DateTime.now(),
-          Preset()
-            ..name = 'Exercise'
-            ..colorValue = presetColors[7] // Green
-            ..iconKey = '🏃'
-            ..createdAt = DateTime.now(),
-          Preset()
-            ..name = 'Wind down'
-            ..colorValue = presetColors[13] // Deep Purple
-            ..iconKey = '💆'
-            ..createdAt = DateTime.now(),
-          Preset()
-            ..name = 'Sleep'
-            ..colorValue = presetColors[16] // Brown
-            ..iconKey = '😴'
-            ..createdAt = DateTime.now(),
-        ]);
-      });
-    }
     final hasSettings = await isar.appSettings.count() > 0;
     if (!hasSettings) {
       await isar.writeTxn(() async {
         await isar.appSettings.put(AppSettings());
-      });
-    }
-
-    final hasHabits = await isar.habits.count() > 0;
-    if (!hasHabits) {
-      await isar.writeTxn(() async {
-        await isar.habits.putAll([
-          Habit()
-            ..name = 'Fokus / Deep Work'
-            ..iconKey = '💻'
-            ..target = 45
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFF10B981 // Emerald
-            ..orderIndex = 0
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Olahraga / Exercise'
-            ..iconKey = '🏃'
-            ..target = 30
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFFF97316 // Orange
-            ..orderIndex = 1
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Membaca / Reading'
-            ..iconKey = '📚'
-            ..target = 20
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFF8B5CF6 // Purple
-            ..orderIndex = 2
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Meditasi / Mindfulness'
-            ..iconKey = '🧘'
-            ..target = 15
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFF06B6D4 // Cyan
-            ..orderIndex = 3
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Belajar Bahasa'
-            ..iconKey = '🌐'
-            ..target = 20
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFF3B82F6 // Blue
-            ..orderIndex = 4
-            ..createdAt = DateTime.now(),
-        ]);
       });
     }
   }

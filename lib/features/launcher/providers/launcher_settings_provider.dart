@@ -9,8 +9,14 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
 
   final SecureStorageService _storage;
   static const _storageKey = 'fitrah_launcher_settings_v1';
+  Future<void>? _loadFuture;
 
   Future<void> _loadSettings() async {
+    _loadFuture = _readSettings();
+    await _loadFuture;
+  }
+
+  Future<void> _readSettings() async {
     try {
       final jsonStr = await _storage.readCustomKey(_storageKey);
       if (jsonStr != null && jsonStr.isNotEmpty) {
@@ -121,6 +127,19 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
   Future<void> setThemePalette(String palette) async {
     state = state.copyWith(themePalette: palette);
     await _saveSettings();
+  }
+
+  Future<bool> setFocusGoal(String goal) async {
+    await _loadFuture;
+    final previous = state;
+    state = state.copyWith(focusGoal: goal.trim());
+    try {
+      await _storage.writeCustomKey(_storageKey, state.toJson());
+      return true;
+    } catch (_) {
+      state = previous;
+      return false;
+    }
   }
 }
 

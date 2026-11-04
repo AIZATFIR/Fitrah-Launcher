@@ -30,6 +30,7 @@ class LauncherSettings {
 
   /// Dynamic Theme Palette: 'fino_green', 'sky_blue', 'ocean_blue'
   final String themePalette;
+  final String focusGoal;
 
   const LauncherSettings({
     this.wallpaperType = 'system',
@@ -58,6 +59,7 @@ class LauncherSettings {
     this.widgetDisplayMode = 'prayer',
     this.autoFocusSearch = false,
     this.themePalette = 'ocean_blue',
+    this.focusGoal = '',
   });
 
   LauncherSettings copyWith({
@@ -82,6 +84,7 @@ class LauncherSettings {
     String? widgetDisplayMode,
     bool? autoFocusSearch,
     String? themePalette,
+    String? focusGoal,
   }) {
     return LauncherSettings(
       wallpaperType: wallpaperType ?? this.wallpaperType,
@@ -105,6 +108,7 @@ class LauncherSettings {
       widgetDisplayMode: widgetDisplayMode ?? this.widgetDisplayMode,
       autoFocusSearch: autoFocusSearch ?? this.autoFocusSearch,
       themePalette: themePalette ?? this.themePalette,
+      focusGoal: focusGoal ?? this.focusGoal,
     );
   }
 
@@ -131,6 +135,7 @@ class LauncherSettings {
       'widgetDisplayMode': widgetDisplayMode,
       'autoFocusSearch': autoFocusSearch,
       'themePalette': themePalette,
+      'focusGoal': focusGoal,
     };
   }
 
@@ -163,6 +168,7 @@ class LauncherSettings {
       widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'prayer',
       autoFocusSearch: map['autoFocusSearch'] as bool? ?? false,
       themePalette: map['themePalette'] as String? ?? 'ocean_blue',
+      focusGoal: map['focusGoal'] as String? ?? '',
     );
   }
 

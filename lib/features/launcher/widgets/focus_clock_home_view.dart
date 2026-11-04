@@ -8,8 +8,10 @@ import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
 import '../../../core/time_math.dart';
 import '../../../models/activity.dart';
+import '../../../models/habit.dart';
 import '../../../providers/providers.dart';
 import '../../focusclock/analog_clock_face.dart';
+import '../../sadar/widgets/sadar_timer_view.dart';
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
 import 'fitrah_settings_screen.dart';
@@ -58,7 +60,7 @@ class _HomeThemeColors {
           textPrimary: Color(0xFFF7F2EB),
           textSecondary: Color(0xFFA89F95),
           textMuted: Color(0xFF736A60),
-          clockThemeIndex: 5,
+          clockThemeIndex: 7,
         );
       case 'sky_blue':
         return const _HomeThemeColors(
@@ -116,9 +118,10 @@ class IdentityItem {
 class BlockItem {
   final int id;
   double startHour; // 0.0 .. 24.0
-  double endHour;   // 0.0 .. 24.0
+  double endHour; // 0.0 .. 24.0
   String name;
   String? identity;
+  final Activity? activity;
   bool isSleep;
   bool isDone;
 
@@ -128,6 +131,7 @@ class BlockItem {
     required this.endHour,
     required this.name,
     this.identity,
+    this.activity,
     this.isSleep = false,
     this.isDone = false,
   });
@@ -199,6 +203,7 @@ class ActiveTimer {
   String? identity;
   double startHour;
   bool hasStarted;
+  DateTime? endsAt;
 
   ActiveTimer({
     required this.label,
@@ -210,6 +215,7 @@ class ActiveTimer {
     this.identity,
     required this.startHour,
     this.hasStarted = false,
+    this.endsAt,
   });
 }
 
@@ -237,7 +243,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // Clock View Settings (AnalogClockFace from Left Focus Clock is default)
   bool _isListView = false;
-  AmPmHalf _clockViewHalf = DateTime.now().hour < 12 ? AmPmHalf.am : AmPmHalf.pm;
+  AmPmHalf _clockViewHalf = DateTime.now().hour < 12
+      ? AmPmHalf.am
+      : AmPmHalf.pm;
 
   // Single Daily Scratchpad (Obsidian Mobile Philosophy)
   late final TextEditingController _dailyNoteController;
@@ -247,7 +255,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   bool _showPrayerSchedule = false;
 
   // Selected Filter for Unified Sections (Lampiran 1 & Sadar Prototype)
-  String _selectedPresetIdentity = 'Programmer';
+  String _selectedPresetIdentity = '';
   String _selectedHabitIdentity = 'Semua';
 
   // Selected Note Filter
@@ -260,6 +268,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // Active Focus Timer
   ActiveTimer? _activeTimer;
+  bool _isFinishingTimer = false;
 
   // Next ID Counter
   int _nextId = 300;
@@ -292,26 +301,89 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     if (widget.useSampleData) {
       // Seed data for tests
       _identities = [
-        IdentityItem(id: 'programmer', name: 'Programmer', color: const Color(0xFFE8C07D)),
-        IdentityItem(id: 'pembaca', name: 'Pembaca', color: const Color(0xFF8FB8E8)),
-        IdentityItem(id: 'binaragawan', name: 'Binaragawan', color: const Color(0xFFE88F7D)),
-        IdentityItem(id: 'baik_hati', name: 'Baik hati', color: const Color(0xFF5FD0A5)),
-        IdentityItem(id: 'masa_depan', name: 'Masa depan', color: const Color(0xFFC3A6F0)),
+        IdentityItem(
+          id: 'programmer',
+          name: 'Programmer',
+          color: const Color(0xFFE8C07D),
+        ),
+        IdentityItem(
+          id: 'pembaca',
+          name: 'Pembaca',
+          color: const Color(0xFF8FB8E8),
+        ),
+        IdentityItem(
+          id: 'binaragawan',
+          name: 'Binaragawan',
+          color: const Color(0xFFE88F7D),
+        ),
+        IdentityItem(
+          id: 'baik_hati',
+          name: 'Baik hati',
+          color: const Color(0xFF5FD0A5),
+        ),
+        IdentityItem(
+          id: 'masa_depan',
+          name: 'Masa depan',
+          color: const Color(0xFFC3A6F0),
+        ),
       ];
 
       _blocks = [
-        BlockItem(id: 1, startHour: 22.0, endHour: 24.0, name: 'Tidur', isSleep: true),
-        BlockItem(id: 2, startHour: 0.0, endHour: 4.5, name: 'Tidur', isSleep: true),
-        BlockItem(id: 3, startHour: 19.5, endHour: 21.0, name: 'SE - Orkestrasi AI', identity: 'Programmer'),
+        BlockItem(
+          id: 1,
+          startHour: 22.0,
+          endHour: 24.0,
+          name: 'Tidur',
+          isSleep: true,
+        ),
+        BlockItem(
+          id: 2,
+          startHour: 0.0,
+          endHour: 4.5,
+          name: 'Tidur',
+          isSleep: true,
+        ),
+        BlockItem(
+          id: 3,
+          startHour: 19.5,
+          endHour: 21.0,
+          name: 'SE - Orkestrasi AI',
+          identity: 'Programmer',
+        ),
       ];
 
       _presets = [
-        PresetItem(id: 1, name: 'SE - Orkestrasi AI', minutes: 90, identity: 'Programmer'),
-        PresetItem(id: 2, name: 'LKS ITSSB', minutes: 45, identity: 'Programmer'),
+        PresetItem(
+          id: 1,
+          name: 'SE - Orkestrasi AI',
+          minutes: 90,
+          identity: 'Programmer',
+        ),
+        PresetItem(
+          id: 2,
+          name: 'LKS ITSSB',
+          minutes: 45,
+          identity: 'Programmer',
+        ),
         PresetItem(id: 3, name: 'Baca Buku', minutes: 15, identity: 'Pembaca'),
-        PresetItem(id: 4, name: 'Latihan Beban', minutes: 30, identity: 'Binaragawan'),
-        PresetItem(id: 5, name: 'Sedekah & Silaturahmi', minutes: 15, identity: 'Baik hati'),
-        PresetItem(id: 6, name: 'Visualisasi Cita-cita', minutes: 10, identity: 'Masa depan'),
+        PresetItem(
+          id: 4,
+          name: 'Latihan Beban',
+          minutes: 30,
+          identity: 'Binaragawan',
+        ),
+        PresetItem(
+          id: 5,
+          name: 'Sedekah & Silaturahmi',
+          minutes: 15,
+          identity: 'Baik hati',
+        ),
+        PresetItem(
+          id: 6,
+          name: 'Visualisasi Cita-cita',
+          minutes: 10,
+          identity: 'Masa depan',
+        ),
       ];
 
       _habits = [
@@ -324,10 +396,17 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           minutes: 30,
           elapsedSeconds: 0,
         ),
-        HabitModel(id: 2, title: 'Selalu bersikap baik', identity: 'Baik hati', isDone: true, isDaily: true),
+        HabitModel(
+          id: 2,
+          title: 'Selalu bersikap baik',
+          identity: 'Baik hati',
+          isDone: true,
+          isDaily: true,
+        ),
         HabitModel(
           id: 3,
-          title: 'Visualisasikan future selfmu, pejamkan mata, lakukan apa yang future selfmu lakukan',
+          title:
+              'Visualisasikan future selfmu, pejamkan mata, lakukan apa yang future selfmu lakukan',
           identity: 'Masa depan',
           isDone: false,
           isVision: true,
@@ -344,7 +423,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           minutes: 15,
           elapsedSeconds: 300, // 5m saved progress!
         ),
-        HabitModel(id: 5, title: 'Jurnal sampai pikiran lega', identity: 'Pembaca', isDone: true, isDaily: true),
+        HabitModel(
+          id: 5,
+          title: 'Jurnal sampai pikiran lega',
+          identity: 'Pembaca',
+          isDone: true,
+          isDaily: true,
+        ),
         HabitModel(
           id: 6,
           title: 'Push up 20 reps & Dips',
@@ -357,8 +442,18 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       ];
 
       _notes = [
-        NoteItem(id: 1, dateKey: _dateKey(-1), text: 'Tauhid satu-satunya kebenaran. Sedikit itu lebih.', isImportant: true),
-        NoteItem(id: 2, dateKey: _dateKey(0), text: 'Lepaskan perfeksionisme, menuju penguasaan.', isImportant: false),
+        NoteItem(
+          id: 1,
+          dateKey: _dateKey(-1),
+          text: 'Tauhid satu-satunya kebenaran. Sedikit itu lebih.',
+          isImportant: true,
+        ),
+        NoteItem(
+          id: 2,
+          dateKey: _dateKey(0),
+          text: 'Lepaskan perfeksionisme, menuju penguasaan.',
+          isImportant: false,
+        ),
       ];
 
       _dumpedTasks = [
@@ -367,16 +462,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         'Beli suplemen gym & air galon',
       ];
     } else {
-      // Clean slate on fresh install (empty by default)
-      _identities = [
-        IdentityItem(id: 'programmer', name: 'Programmer', color: const Color(0xFFE8C07D)),
-      ];
-
-      _blocks = [
-        BlockItem(id: 1, startHour: 23.0, endHour: 24.0, name: 'Tidur', isSleep: true),
-        BlockItem(id: 2, startHour: 0.0, endHour: 5.0, name: 'Tidur', isSleep: true),
-      ];
-
+      // Production starts with no assumed identity, schedule, preset or habit.
+      _identities = [];
+      _blocks = [];
       _presets = [];
       _habits = [];
       _notes = [];
@@ -391,10 +479,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
         // Tick Active Timer
         if (_activeTimer != null && _activeTimer!.isRunning) {
-          if (_activeTimer!.leftSeconds > 0) {
-            _activeTimer!.leftSeconds--;
-          } else {
-            _finishTimer(autoComplete: true);
+          final endsAt = _activeTimer!.endsAt;
+          if (endsAt != null) {
+            _activeTimer!.leftSeconds = math.max(
+              0,
+              endsAt.difference(DateTime.now()).inSeconds,
+            );
+          }
+          if (_activeTimer!.leftSeconds <= 0) {
+            unawaited(_finishTimer(autoComplete: true));
           }
         }
 
@@ -411,35 +504,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         }
       });
     });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      _syncInitialActivitiesWithSharedRepo();
-    });
-  }
-
-  Future<void> _syncInitialActivitiesWithSharedRepo() async {
-    try {
-      final now = DateTime.now();
-      final today = dateOnly(now);
-      final repo = ref.read(activityRepoProvider);
-      final existing = await repo.watchByDate(today).first;
-      if (existing.isEmpty) {
-        for (final b in _blocks) {
-          final stMin = (b.startHour * 60).round();
-          final enMin = (b.endHour * 60).round();
-          final half = b.startHour < 12.0 ? AmPmHalf.am : AmPmHalf.pm;
-          final color = _colorForIdentity(b.identity);
-          await repo.upsert(Activity()
-            ..title = b.name
-            ..startMinute = stMin % 720
-            ..endMinute = enMin % 720
-            ..ampmHalf = half
-            ..colorValue = color.value
-            ..date = today
-            ..description = b.identity != null ? 'Identitas: ${b.identity}' : '');
-        }
-      }
-    } catch (_) {}
   }
 
   @override
@@ -478,7 +542,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   double _hourNow() {
-    return _currentTime.hour + _currentTime.minute / 60.0 + _currentTime.second / 3600.0;
+    return _currentTime.hour +
+        _currentTime.minute / 60.0 +
+        _currentTime.second / 3600.0;
   }
 
   String _formatHour(double h) {
@@ -512,7 +578,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF0E1116))),
+        content: Text(
+          msg,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF0E1116),
+          ),
+        ),
         backgroundColor: const Color(0xFFE8C07D),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(milliseconds: 2200),
@@ -522,49 +594,85 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   // ── Convert In-Memory Blocks to Focus Clock Activity Models ───────────────
-  List<Activity> _toFocusClockActivities() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return _blocks.map((b) {
-      final stMin = (b.startHour * 60).round();
-      final enMin = (b.endHour * 60).round();
-      final half = b.startHour < 12.0 ? AmPmHalf.am : AmPmHalf.pm;
-      return Activity()
-        ..title = b.name
-        ..startMinute = stMin % 720
-        ..endMinute = enMin % 720
-        ..ampmHalf = half
-        ..colorValue = _colorForIdentity(b.identity).value
-        ..date = today
-        ..id = b.id;
+  List<BlockItem> _blocksFromActivities(List<Activity> activities) {
+    return activities.map((activity) {
+      final startMinute = toUiMinute(activity.startMinute, activity.ampmHalf);
+      final endMinute = toUiMinute(activity.endMinute, activity.ampmHalf);
+      return BlockItem(
+        id: activity.id,
+        startHour: startMinute / 60.0,
+        endHour: endMinute / 60.0,
+        name: activity.title,
+        activity: activity,
+        identity: activity.description.startsWith('Identitas: ')
+            ? activity.description.substring('Identitas: '.length)
+            : null,
+        isDone: activity.isCompleted,
+      );
     }).toList();
   }
 
-  // Current Activity Calculation for instant user clarity
-  Map<String, dynamic> _getCurrentActivityInfo() {
-    final hr = _hourNow();
-    for (final b in _blocks) {
-      if (hr >= b.startHour && hr <= b.endHour) {
-        final remainingMins = ((b.endHour - hr) * 60).round();
+  // Schedule status and title derive from the persisted Activity projection.
+  Map<String, dynamic> _getCurrentActivityInfo(
+    AsyncValue<List<Activity>> state,
+  ) {
+    if (state.hasError) {
+      return {
+        'name': 'Jadwal tidak dapat dimuat',
+        'isFree': false,
+        'color': const Color(0xFFCC8E7B),
+      };
+    }
+    if (state.isLoading) {
+      return {
+        'name': 'Memuat jadwal…',
+        'isFree': false,
+        'color': const Color(0xFF8A93A3),
+      };
+    }
+    final activities = state.valueOrNull ?? const <Activity>[];
+    if (activities.isEmpty) {
+      return {
+        'name': 'Belum ada jadwal',
+        'isFree': false,
+        'color': const Color(0xFF8A93A3),
+      };
+    }
+    final nowMinute = _currentTime.hour * 60 + _currentTime.minute;
+    for (final activity in activities) {
+      if (activity.isCompleted) continue;
+      final start = toUiMinute(activity.startMinute, activity.ampmHalf);
+      final end = toUiMinute(activity.endMinute, activity.ampmHalf);
+      // Zero-length/equal endpoints are not an active event.
+      if (end <= start) continue;
+      if (nowMinute >= start && nowMinute < end) {
+        final remainingMins = end - nowMinute;
         return {
-          'name': b.name,
-          'remaining': remainingMins > 0 ? 'sisa ${remainingMins}m' : 'segera berakhir',
+          'name': 'Terjadwal sekarang · ${activity.title}',
+          'remaining': 'sisa ${remainingMins}m',
           'isFree': false,
-          'color': _colorForIdentity(b.identity),
+          'color': Color(activity.colorValue),
         };
       }
     }
     return {
-      'name': 'Waktu Luang',
-      'remaining': 'Tidak ada jadwal aktif',
-      'isFree': true,
+      'name': 'Tidak ada kegiatan terjadwal sekarang',
+      'remaining': null,
+      'isFree': false,
       'color': const Color(0xFF8A93A3),
     };
   }
 
   // ── Conflict Check & Add Block ─────────────────────────────────────────────
+  List<BlockItem>? _scheduleBlocksForConflictCheck() {
+    if (widget.useSampleData) return _blocks;
+    final state = ref.read(activitiesByDateProvider);
+    if (state.isLoading || state.hasError || !state.hasValue) return null;
+    return _blocksFromActivities(state.valueOrNull ?? const []);
+  }
+
   BlockItem? _findConflict(double start, double end) {
-    for (final b in _blocks) {
+    for (final b in _scheduleBlocksForConflictCheck() ?? const <BlockItem>[]) {
       if (!b.isSleep && start < b.endHour && end > b.startHour) {
         return b;
       }
@@ -572,13 +680,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     return null;
   }
 
-  String? _addBlock(double start, double end, String name, String? identity, {bool isDone = false}) {
+  Future<String?> _addBlock(
+    double start,
+    double end,
+    String name,
+    String? identity, {
+    bool isDone = false,
+  }) async {
+    if (_scheduleBlocksForConflictCheck() == null) {
+      return 'Jadwal belum siap. Coba lagi setelah selesai dimuat.';
+    }
+    if (start < 0 || end > 24.0 || end <= start) {
+      return 'Waktu kegiatan tidak valid.';
+    }
     final conflict = _findConflict(start, end);
     if (conflict != null) {
       return 'Bentrok dengan ${conflict.name} (${_formatHour(conflict.startHour)}-${_formatHour(conflict.endHour)})';
-    }
-    if (end > 24.0) {
-      return 'Melewati tengah malam';
     }
     final now = DateTime.now();
     final today = dateOnly(now);
@@ -594,27 +711,47 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       ..ampmHalf = half
       ..colorValue = color.value
       ..date = today
-      ..description = identity != null ? 'Identitas: $identity' : '';
+      ..description = identity != null && identity.isNotEmpty
+          ? 'Identitas: $identity'
+          : ''
+      ..isCompleted = isDone
+      ..createdAt = now
+      ..updatedAt = now;
 
-    try {
-      ref.read(activityRepoProvider).upsert(act);
-    } catch (_) {}
-
-    setState(() {
-      _blocks.add(BlockItem(
-        id: _nextId++,
-        startHour: start,
-        endHour: end,
-        name: name,
-        identity: identity,
-        isDone: isDone,
-      ));
-    });
+    if (widget.useSampleData) {
+      final id = _nextId++;
+      act.id = id;
+      setState(() {
+        _blocks.add(
+          BlockItem(
+            id: id,
+            startHour: start,
+            endHour: end,
+            name: name,
+            identity: identity,
+            activity: act,
+            isDone: isDone,
+          ),
+        );
+      });
+    } else {
+      try {
+        await ref.read(activityRepoProvider).upsert(act);
+      } catch (_) {
+        return 'Jadwal belum tersimpan. Coba lagi.';
+      }
+    }
     return null;
   }
 
   // ── Timer Logic ────────────────────────────────────────────────────────────
-  void _startTimer(String label, int minutes, {String? source, int? sourceId, String? identity}) {
+  void _startTimer(
+    String label,
+    int minutes, {
+    String? source,
+    int? sourceId,
+    String? identity,
+  }) {
     HapticFeedback.mediumImpact();
     const MethodChannel('fitrah_launcher/apps')
         .invokeMethod('setLockscreenFocus', {'enabled': true})
@@ -625,6 +762,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         totalSeconds: minutes * 60,
         leftSeconds: minutes * 60,
         isRunning: true,
+        endsAt: DateTime.now().add(Duration(minutes: minutes)),
         source: source,
         sourceId: sourceId,
         identity: identity,
@@ -635,8 +773,32 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     });
   }
 
-  void _finishTimer({bool autoComplete = false}) {
-    if (_activeTimer == null) return;
+  void _toggleTimer(ActiveTimer timer) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (timer.isRunning) {
+        if (timer.endsAt != null) {
+          timer.leftSeconds = math.max(
+            0,
+            timer.endsAt!.difference(DateTime.now()).inSeconds,
+          );
+        }
+        timer.endsAt = null;
+        timer.isRunning = false;
+      } else {
+        timer.isRunning = true;
+        timer.endsAt = DateTime.now().add(Duration(seconds: timer.leftSeconds));
+        if (!timer.hasStarted) {
+          timer.hasStarted = true;
+          timer.startHour = _hourNow();
+        }
+      }
+    });
+  }
+
+  Future<void> _finishTimer({bool autoComplete = false}) async {
+    if (_activeTimer == null || _isFinishingTimer) return;
+    _isFinishingTimer = true;
     HapticFeedback.heavyImpact();
     const MethodChannel('fitrah_launcher/apps')
         .invokeMethod('setLockscreenFocus', {'enabled': false})
@@ -651,7 +813,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           h.isDone = true;
           h.isRunning = false;
           h.isSkipped = false;
-          h.elapsedSeconds = h.minutes != null ? h.minutes! * 60 : timer.totalSeconds;
+          h.elapsedSeconds = h.minutes != null
+              ? h.minutes! * 60
+              : timer.totalSeconds;
           message = 'Kebiasaan ditandai selesai';
           break;
         }
@@ -659,44 +823,108 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       try {
         final now = DateTime.now();
         final todayStr = DateFormat('yyyy-MM-dd').format(now);
-        ref.read(sadarRepoProvider).recordEntryStatus(
-          habitId: timer.sourceId!,
-          dateString: todayStr,
-          status: HabitStatus.yes,
-        );
+        ref
+            .read(sadarRepoProvider)
+            .recordEntryStatus(
+              habitId: timer.sourceId!,
+              dateString: todayStr,
+              status: HabitStatus.yes,
+            );
       } catch (_) {}
     } else if (src == 'preset') {
       final nowH = _hourNow();
       var st = timer.startHour;
       var en = nowH;
       if (en - st < 0.05) en = st + 0.25; // minimum 15 mins
-      final res = _addBlock(st, math.min(en, 24.0), timer.label, timer.identity, isDone: true);
-      message = res != null ? 'Tercatat, tapi $res' : 'Dicatat di jam ${_formatHour(st)}-${_formatHour(en)}';
+      final res = await _addBlock(
+        st,
+        math.min(en, 24.0),
+        timer.label,
+        timer.identity,
+        isDone: true,
+      );
+      message = res != null
+          ? 'Tercatat, tapi $res'
+          : 'Dicatat di jam ${_formatHour(st)}-${_formatHour(en)}';
     } else if (src == 'block' && timer.sourceId != null) {
-      for (final b in _blocks) {
-        if (b.id == timer.sourceId) {
-          b.isDone = true;
-          message = 'Blok ditandai selesai';
-          break;
+      if (widget.useSampleData) {
+        for (final b in _blocks) {
+          if (b.id == timer.sourceId) {
+            b.isDone = true;
+            message = 'Blok ditandai selesai';
+            break;
+          }
+        }
+      } else {
+        final activity = ref
+            .read(activitiesByDateProvider)
+            .valueOrNull
+            ?.where((item) => item.id == timer.sourceId)
+            .firstOrNull;
+        if (activity == null) {
+          message = 'Timer selesai, tetapi jadwalnya belum dapat diperbarui.';
+        } else {
+          try {
+            await ref.read(activityRepoProvider).markComplete(activity, true);
+            message = 'Blok ditandai selesai';
+          } catch (_) {
+            message = 'Timer selesai, tetapi perubahan belum tersimpan.';
+          }
         }
       }
     }
 
-    setState(() {
-      _activeTimer = null;
-      _currentScreen = 'home';
-    });
-    _showToast(message);
+    if (mounted) {
+      setState(() {
+        _activeTimer = null;
+        _currentScreen = 'home';
+      });
+      _showToast(message);
+    }
+    _isFinishingTimer = false;
+  }
+
+  void _openHabitFocusTimer(Habit habit) {
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (routeContext) => SadarTimerView(
+            habit: habit,
+            onClose: () => Navigator.of(routeContext).pop(),
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Prayers Calculation ───────────────────────────────────────────────────
   List<Map<String, dynamic>> _getPrayerList(LauncherSettings settings) {
     return [
-      {'name': 'Subuh', 'time': settings.prayerSubuh, 'hour': _timeStringToHour(settings.prayerSubuh)},
-      {'name': 'Dzuhur', 'time': settings.prayerDzuhur, 'hour': _timeStringToHour(settings.prayerDzuhur)},
-      {'name': 'Asar', 'time': settings.prayerAshar, 'hour': _timeStringToHour(settings.prayerAshar)},
-      {'name': 'Maghrib', 'time': settings.prayerMaghrib, 'hour': _timeStringToHour(settings.prayerMaghrib)},
-      {'name': 'Isya', 'time': settings.prayerIsya, 'hour': _timeStringToHour(settings.prayerIsya)},
+      {
+        'name': 'Subuh',
+        'time': settings.prayerSubuh,
+        'hour': _timeStringToHour(settings.prayerSubuh),
+      },
+      {
+        'name': 'Dzuhur',
+        'time': settings.prayerDzuhur,
+        'hour': _timeStringToHour(settings.prayerDzuhur),
+      },
+      {
+        'name': 'Asar',
+        'time': settings.prayerAshar,
+        'hour': _timeStringToHour(settings.prayerAshar),
+      },
+      {
+        'name': 'Maghrib',
+        'time': settings.prayerMaghrib,
+        'hour': _timeStringToHour(settings.prayerMaghrib),
+      },
+      {
+        'name': 'Isya',
+        'time': settings.prayerIsya,
+        'hour': _timeStringToHour(settings.prayerIsya),
+      },
     ];
   }
 
@@ -709,16 +937,26 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     }
   }
 
-  Map<String, dynamic> _calculateNextPrayer(List<Map<String, dynamic>> prayers) {
+  Map<String, dynamic> _calculateNextPrayer(
+    List<Map<String, dynamic>> prayers,
+  ) {
     final nowH = _hourNow();
     for (int i = 0; i < prayers.length; i++) {
       final pHour = prayers[i]['hour'] as double;
       if (pHour > nowH) {
-        return {'index': i, 'name': prayers[i]['name'], 'diffHours': pHour - nowH};
+        return {
+          'index': i,
+          'name': prayers[i]['name'],
+          'diffHours': pHour - nowH,
+        };
       }
     }
     final firstFajr = prayers[0]['hour'] as double;
-    return {'index': 0, 'name': prayers[0]['name'], 'diffHours': 24.0 - nowH + firstFajr};
+    return {
+      'index': 0,
+      'name': prayers[0]['name'],
+      'diffHours': 24.0 - nowH + firstFajr,
+    };
   }
 
   @override
@@ -744,10 +982,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   // SCREEN 1: HOME VIEW (Lampiran 1 with Stacked Identity Cards)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildHomeScreen(LauncherSettings settings, ThemeData theme) {
+    final activitiesState = widget.useSampleData
+        ? AsyncData<List<Activity>>(_sampleActivities())
+        : ref.watch(activitiesByDateProvider);
     final prayers = _getPrayerList(settings);
     final nextPrayer = _calculateNextPrayer(prayers);
     final hr = _hourNow();
-    final currentAct = _getCurrentActivityInfo();
+    final currentAct = _getCurrentActivityInfo(activitiesState);
     final tc = _HomeThemeColors.fromPalette(settings.themePalette);
 
     return Scaffold(
@@ -759,14 +1000,21 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
               children: [
+                _buildFocusGoalCue(settings.focusGoal, tc),
+                const SizedBox(height: 18),
                 // ── Top Header Bar (Now/Next Carousel or Prayer Timeline) ──
-                _buildTopHeaderBar(prayers, nextPrayer, tc),
+                _buildTopHeaderBar(prayers, nextPrayer, tc, activitiesState),
                 const SizedBox(height: 18),
 
                 // ── Center Focus Clock Analog Face Dial with AM/PM pill switch ──
                 _isListView
-                    ? _buildChronologicalListView(tc)
-                    : _buildCenterFocusClockDial(hr, currentAct, tc),
+                    ? _buildChronologicalListView(activitiesState, tc)
+                    : _buildCenterFocusClockDial(
+                        hr,
+                        currentAct,
+                        activitiesState,
+                        tc,
+                      ),
                 const SizedBox(height: 18),
 
                 // ── Obsidian Daily Note Card (Direct scratchpad) ──
@@ -778,19 +1026,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.25),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.08), width: 0.5),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.08),
+                      width: 0.5,
+                    ),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: LoopHabitGridWidget(
-                    onStartTimer: (habit) {
-                      _startTimer(
-                        habit.name,
-                        habit.target > 0 ? habit.target : 25,
-                        source: 'habit',
-                        sourceId: habit.id,
-                        identity: 'Habit',
-                      );
-                    },
+                    onStartTimer: _openHabitFocusTimer,
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -840,7 +1083,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         Row(
                           children: [
                             Icon(
-                              _activeTimer!.isRunning ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                              _activeTimer!.isRunning
+                                  ? Icons.play_arrow_rounded
+                                  : Icons.pause_rounded,
                               color: const Color(0xFF161A22),
                               size: 22,
                             ),
@@ -875,8 +1120,36 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
+  List<Activity> _sampleActivities() {
+    final now = DateTime.now();
+    return _blocks.where((block) => !block.isSleep).map((block) {
+      final start = (block.startHour * 60).round();
+      final end = (block.endHour * 60).round();
+      final half = block.startHour < 12 ? AmPmHalf.am : AmPmHalf.pm;
+      return Activity()
+        ..id = block.id
+        ..title = block.name
+        ..startMinute = start % 720
+        ..endMinute = toDbEndMinute(end, half)
+        ..ampmHalf = half
+        ..date = dateOnly(now)
+        ..colorValue = _colorForIdentity(block.identity).value
+        ..description = block.identity == null
+            ? ''
+            : 'Identitas: ${block.identity}'
+        ..isCompleted = block.isDone
+        ..createdAt = now
+        ..updatedAt = now;
+    }).toList();
+  }
+
   // ── Top Header Bar (Now/Next Carousel or Prayer Timeline) ──────────────────
-  Widget _buildTopHeaderBar(List<Map<String, dynamic>> prayers, Map<String, dynamic> nextPrayer, _HomeThemeColors tc) {
+  Widget _buildTopHeaderBar(
+    List<Map<String, dynamic>> prayers,
+    Map<String, dynamic> nextPrayer,
+    _HomeThemeColors tc,
+    AsyncValue<List<Activity>> activitiesState,
+  ) {
     return Row(
       children: [
         // Hamburger Menu Button
@@ -928,12 +1201,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                   p['name'] as String,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: isNext ? FontWeight.w700 : FontWeight.w500,
+                                    fontWeight: isNext
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
                                     color: isDone
                                         ? const Color(0xFF5FD0A5)
                                         : isNext
-                                            ? tc.accent
-                                            : tc.textSecondary,
+                                        ? tc.accent
+                                        : tc.textSecondary,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -942,7 +1217,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
-                                    color: isDone ? const Color(0xFF5FD0A5) : tc.textPrimary,
+                                    color: isDone
+                                        ? const Color(0xFF5FD0A5)
+                                        : tc.textPrimary,
                                   ),
                                 ),
                               ],
@@ -953,7 +1230,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     );
                   }),
                 )
-              : _buildAgendaCarousel(tc),
+              : _buildAgendaCarousel(activitiesState, tc),
         ),
         const SizedBox(width: 6),
 
@@ -969,11 +1246,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: tc.stroke),
             ),
-            child: Icon(
-              Icons.palette_outlined,
-              color: tc.accent,
-              size: 20,
-            ),
+            child: Icon(Icons.palette_outlined, color: tc.accent, size: 20),
           ),
         ),
         const SizedBox(width: 6),
@@ -989,14 +1262,18 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: _showPrayerSchedule ? tc.accent.withOpacity(0.18) : tc.card,
+              color: _showPrayerSchedule
+                  ? tc.accent.withOpacity(0.18)
+                  : tc.card,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: _showPrayerSchedule ? tc.accent : tc.stroke,
               ),
             ),
             child: Icon(
-              _showPrayerSchedule ? Icons.mosque_rounded : Icons.schedule_rounded,
+              _showPrayerSchedule
+                  ? Icons.mosque_rounded
+                  : Icons.schedule_rounded,
               color: _showPrayerSchedule ? tc.accent : tc.textSecondary,
               size: 20,
             ),
@@ -1007,10 +1284,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   // Horizontal Scrollable Agenda Carousel (Focus Clock Now & Next)
-  Widget _buildAgendaCarousel(_HomeThemeColors tc) {
-    final nonSleep = _blocks.where((b) => !b.isSleep).toList()
-      ..sort((a, b) => a.startHour.compareTo(b.startHour));
+  Widget _buildAgendaCarousel(
+    AsyncValue<List<Activity>> activitiesState,
+    _HomeThemeColors tc,
+  ) {
+    final nonSleep = _blocksFromActivities(
+      activitiesState.valueOrNull ?? const [],
+    )..sort((a, b) => a.startHour.compareTo(b.startHour));
 
+    if (activitiesState.hasError || activitiesState.isLoading) {
+      return _scheduleStatusPill(
+        activitiesState.hasError
+            ? 'Jadwal tidak dapat dimuat'
+            : 'Memuat jadwal…',
+        tc,
+      );
+    }
     if (nonSleep.isEmpty) {
       return Container(
         height: 44,
@@ -1021,7 +1310,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           border: Border.all(color: tc.stroke),
         ),
         alignment: Alignment.centerLeft,
-        child: Text('Belum ada jadwal. Tambah di bawah.', style: TextStyle(color: tc.textSecondary, fontSize: 12)),
+        child: Text(
+          'Belum ada jadwal hari ini.',
+          style: TextStyle(color: tc.textSecondary, fontSize: 12),
+        ),
       );
     }
 
@@ -1035,7 +1327,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         separatorBuilder: (_, __) => const SizedBox(width: 6),
         itemBuilder: (context, i) {
           final b = nonSleep[i];
-          final isCurrent = hr >= b.startHour && hr <= b.endHour;
+          final isCurrent =
+              hr >= b.startHour && hr < b.endHour && b.endHour > b.startHour;
           final col = _colorForIdentity(b.identity);
 
           return InkWell(
@@ -1057,7 +1350,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   Container(
                     width: 7,
                     height: 7,
-                    decoration: BoxDecoration(color: col, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: col,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Column(
@@ -1068,7 +1364,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         b.name,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w600,
+                          fontWeight: isCurrent
+                              ? FontWeight.w700
+                              : FontWeight.w600,
                           color: isCurrent ? Colors.white : tc.textPrimary,
                         ),
                       ),
@@ -1091,9 +1389,29 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
+  Widget _scheduleStatusPill(String message, _HomeThemeColors tc) => Container(
+    height: 44,
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    decoration: BoxDecoration(
+      color: tc.card,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: tc.stroke),
+    ),
+    alignment: Alignment.centerLeft,
+    child: Text(
+      message,
+      style: TextStyle(color: tc.textSecondary, fontSize: 12),
+    ),
+  );
+
   // ── Center Focus Clock Analog Face Dial ───────────────────────────────────
   // ── Center Focus Clock Analog Face Dial (Compact 215x215, Clean Pie / Dial) ──
-  Widget _buildAmPmPill(String text, bool active, VoidCallback onTap, _HomeThemeColors tc) {
+  Widget _buildAmPmPill(
+    String text,
+    bool active,
+    VoidCallback onTap,
+    _HomeThemeColors tc,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1128,7 +1446,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? tc.accent.withOpacity(0.2) : Colors.white.withOpacity(0.06),
+          color: isActive
+              ? tc.accent.withOpacity(0.2)
+              : Colors.white.withOpacity(0.06),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isActive ? tc.accent : Colors.white.withOpacity(0.08),
@@ -1155,9 +1475,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   // ── Center Focus Clock Analog Face Dial (Spacious 240x240, Clean 12h + AM/PM) ──
-  Widget _buildCenterFocusClockDial(double hr, Map<String, dynamic> currentAct, _HomeThemeColors tc) {
-    final liveActs = ref.watch(activitiesByDateProvider).valueOrNull ?? [];
-    final effectiveActivities = liveActs.isNotEmpty ? liveActs : _toFocusClockActivities();
+  Widget _buildCenterFocusClockDial(
+    double hr,
+    Map<String, dynamic> currentAct,
+    AsyncValue<List<Activity>> activitiesState,
+    _HomeThemeColors tc,
+  ) {
+    final effectiveActivities =
+        activitiesState.valueOrNull ?? const <Activity>[];
 
     return Container(
       decoration: BoxDecoration(
@@ -1168,12 +1493,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Top Control Pill Row: [ AM | PM Switch ] + [ Cari / Daftar / Timer ]
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // AM / PM Switch Pill
-              Container(
+          // Keep every labeled action visible on narrow phone screens.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final amPmSelector = Container(
                 decoration: BoxDecoration(
                   color: tc.cardElevated,
                   borderRadius: BorderRadius.circular(20),
@@ -1193,38 +1516,62 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     }, tc),
                   ],
                 ),
-              ),
+              );
+              final searchTool = _buildHeaderToolPill(
+                icon: Icons.search_rounded,
+                label: 'Cari',
+                isActive: false,
+                onTap: _openSearchSheet,
+                tc: tc,
+              );
+              final listTool = _buildHeaderToolPill(
+                icon: Icons.format_list_bulleted_rounded,
+                label: 'Daftar',
+                isActive: _isListView,
+                onTap: () => setState(() => _isListView = !_isListView),
+                tc: tc,
+              );
+              final timerTool = _buildHeaderToolPill(
+                icon: Icons.timer_outlined,
+                label: 'Timer',
+                isActive: _activeTimer != null && _activeTimer!.isRunning,
+                onTap: _openFocusTimerHub,
+                tc: tc,
+              );
 
-              // Right Tool Pills: Cari, Daftar & Timer
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              if (constraints.maxWidth < 400) {
+                return Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [amPmSelector, timerTool],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [searchTool, listTool],
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildHeaderToolPill(
-                    icon: Icons.search_rounded,
-                    label: 'Cari',
-                    isActive: false,
-                    onTap: _openSearchSheet,
-                    tc: tc,
-                  ),
-                  const SizedBox(width: 6),
-                  _buildHeaderToolPill(
-                    icon: Icons.format_list_bulleted_rounded,
-                    label: 'Daftar',
-                    isActive: _isListView,
-                    onTap: () => setState(() => _isListView = !_isListView),
-                    tc: tc,
-                  ),
-                  const SizedBox(width: 6),
-                  _buildHeaderToolPill(
-                    icon: Icons.timer_outlined,
-                    label: 'Timer',
-                    isActive: _activeTimer != null && _activeTimer!.isRunning,
-                    onTap: _openFocusTimerHub,
-                    tc: tc,
+                  amPmSelector,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      searchTool,
+                      const SizedBox(width: 6),
+                      listTool,
+                      const SizedBox(width: 6),
+                      timerTool,
+                    ],
                   ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
           const SizedBox(height: 18),
 
@@ -1235,7 +1582,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               _openScheduleToClockSheet(
                 title: '',
                 initialDurationMinutes: 60,
-                identity: 'Programmer',
+                identity: '',
               );
             },
             child: SizedBox(
@@ -1272,11 +1619,17 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               const SizedBox(width: 8),
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: (currentAct['color'] as Color).withOpacity(0.18),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: (currentAct['color'] as Color).withOpacity(0.5), width: 1.0),
+                    border: Border.all(
+                      color: (currentAct['color'] as Color).withOpacity(0.5),
+                      width: 1.0,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1284,7 +1637,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       Container(
                         width: 6,
                         height: 6,
-                        decoration: BoxDecoration(color: currentAct['color'] as Color, shape: BoxShape.circle),
+                        decoration: BoxDecoration(
+                          color: currentAct['color'] as Color,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                       const SizedBox(width: 6),
                       Flexible(
@@ -1313,7 +1669,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             onTap: () => _openScheduleToClockSheet(
               title: '',
               initialDurationMinutes: 60,
-              identity: 'Programmer',
+              identity: '',
             ),
             borderRadius: BorderRadius.circular(10),
             child: Container(
@@ -1321,7 +1677,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.04),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: tc.accent.withOpacity(0.3), width: 0.8),
+                border: Border.all(
+                  color: tc.accent.withOpacity(0.3),
+                  width: 0.8,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1330,7 +1689,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   const SizedBox(width: 4),
                   Text(
                     'Pasang Jadwal ke Jam',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: tc.accent),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: tc.accent,
+                    ),
                   ),
                 ],
               ),
@@ -1371,12 +1734,17 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ),
                 ],
               ),
-              Text(
-                DateFormat('EEEE, d MMM').format(DateTime.now()),
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: tc.textSecondary,
+              Flexible(
+                child: Text(
+                  DateFormat('EEEE, d MMM').format(DateTime.now()),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: tc.textSecondary,
+                  ),
                 ),
               ),
             ],
@@ -1399,10 +1767,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               focusedBorder: InputBorder.none,
               filled: false,
               hintText: 'Tulis pemikiran, niat, atau catatan hari ini...',
-              hintStyle: GoogleFonts.inter(
-                fontSize: 13,
-                color: tc.textMuted,
-              ),
+              hintStyle: GoogleFonts.inter(fontSize: 13, color: tc.textMuted),
             ),
             onChanged: (val) {
               _dailyNote = val;
@@ -1413,12 +1778,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-
-
   // ── Chronological List View Fallback ──────────────────────────────────────
-  Widget _buildChronologicalListView(_HomeThemeColors tc) {
-    final nonSleep = _blocks.where((b) => !b.isSleep).toList()
-      ..sort((a, b) => a.startHour.compareTo(b.startHour));
+  Widget _buildChronologicalListView(
+    AsyncValue<List<Activity>> activitiesState,
+    _HomeThemeColors tc,
+  ) {
+    if (activitiesState.hasError || activitiesState.isLoading) {
+      return _scheduleStatusPill(
+        activitiesState.hasError
+            ? 'Jadwal tidak dapat dimuat. Coba lagi.'
+            : 'Memuat jadwal…',
+        tc,
+      );
+    }
+    final nonSleep = _blocksFromActivities(
+      activitiesState.valueOrNull ?? const [],
+    )..sort((a, b) => a.startHour.compareTo(b.startHour));
 
     if (nonSleep.isEmpty) {
       return Container(
@@ -1430,7 +1805,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         alignment: Alignment.center,
         padding: const EdgeInsets.all(16),
         child: Text(
-          'Belum ada blok hari ini.\nTambahkan dari preset di bawah.',
+          'Belum ada jadwal hari ini.',
           textAlign: TextAlign.center,
           style: TextStyle(color: tc.textSecondary, fontSize: 13),
         ),
@@ -1465,7 +1840,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   label: const Text('Ke Jam'),
                   style: TextButton.styleFrom(
                     foregroundColor: tc.accent,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                   ),
                   onPressed: () => setState(() => _isListView = false),
                 ),
@@ -1487,8 +1865,17 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 contentPadding: EdgeInsets.zero,
                 leading: InkWell(
                   onTap: () {
-                    final durationMins = math.max(1, ((b.endHour - b.startHour) * 60).round());
-                    _startTimer(b.name, durationMins, source: 'block', sourceId: b.id, identity: b.identity);
+                    final durationMins = math.max(
+                      1,
+                      ((b.endHour - b.startHour) * 60).round(),
+                    );
+                    _startTimer(
+                      b.name,
+                      durationMins,
+                      source: 'block',
+                      sourceId: b.id,
+                      identity: b.identity,
+                    );
                   },
                   borderRadius: BorderRadius.circular(18),
                   child: Container(
@@ -1511,7 +1898,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 ),
                 subtitle: Text(
                   '${_formatHour(b.startHour)} - ${_formatHour(b.endHour)}',
-                  style: GoogleFonts.inter(fontSize: 11, color: tc.textSecondary),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: tc.textSecondary,
+                  ),
                 ),
                 onTap: () => _openBlockDetailSheet(b),
               );
@@ -1526,15 +1916,43 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   // SECTION: UNIFIED PRESET & HABIT SECTIONS (Sadar Prototype & Lampiran 1)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildUnifiedPresetSection(_HomeThemeColors tc) {
+    if (_identities.isEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          color: tc.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: tc.stroke),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Preset Blok Waktu',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: tc.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Belum ada preset atau identitas yang kamu tambahkan.',
+              style: TextStyle(color: tc.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
     final activeIdentity = _identities.firstWhere(
       (id) => id.name.toLowerCase() == _selectedPresetIdentity.toLowerCase(),
-      orElse: () => _identities.isNotEmpty
-          ? _identities.first
-          : IdentityItem(id: 'programmer', name: 'Programmer', color: const Color(0xFFE8C07D)),
+      orElse: () => _identities.first,
     );
 
     final presets = _presets
-        .where((p) => p.identity.toLowerCase() == activeIdentity.name.toLowerCase())
+        .where(
+          (p) => p.identity.toLowerCase() == activeIdentity.name.toLowerCase(),
+        )
         .toList();
 
     return Container(
@@ -1560,16 +1978,21 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ),
                 ),
               ),
-              // Filter pill: Identitas: Programmer ▾
+              // Filter pill for user-created identities.
               InkWell(
                 onTap: _openPresetIdentityFilterSheet,
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: tc.cardElevated,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: activeIdentity.color.withOpacity(0.5)),
+                    border: Border.all(
+                      color: activeIdentity.color.withOpacity(0.5),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1592,7 +2015,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down, color: activeIdentity.color, size: 16),
+                      Icon(
+                        Icons.arrow_drop_down,
+                        color: activeIdentity.color,
+                        size: 16,
+                      ),
                     ],
                   ),
                 ),
@@ -1685,7 +2112,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 onTap: _openHabitFilterSheet,
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: tc.cardElevated,
                     borderRadius: BorderRadius.circular(10),
@@ -1703,7 +2133,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down, color: tc.textSecondary, size: 16),
+                      Icon(
+                        Icons.arrow_drop_down,
+                        color: tc.textSecondary,
+                        size: 16,
+                      ),
                     ],
                   ),
                 ),
@@ -1713,8 +2147,17 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               InkWell(
                 onTap: () {
                   final identity = _identities.firstWhere(
-                    (id) => _selectedHabitIdentity != 'Semua' && id.name.toLowerCase() == _selectedHabitIdentity.toLowerCase(),
-                    orElse: () => _identities.isNotEmpty ? _identities.first : IdentityItem(id: 'fokus', name: 'Fokus', color: const Color(0xFFE8C07D)),
+                    (id) =>
+                        _selectedHabitIdentity != 'Semua' &&
+                        id.name.toLowerCase() ==
+                            _selectedHabitIdentity.toLowerCase(),
+                    orElse: () => _identities.isNotEmpty
+                        ? _identities.first
+                        : IdentityItem(
+                            id: 'fokus',
+                            name: 'Fokus',
+                            color: const Color(0xFFE8C07D),
+                          ),
                   );
                   _openNewHabitForIdentitySheet(identity);
                 },
@@ -1744,7 +2187,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
             )
           else
-            ...habits.map((h) => _buildHabitRow(h, _colorForIdentity(h.identity), tc)),
+            ...habits.map(
+              (h) => _buildHabitRow(h, _colorForIdentity(h.identity), tc),
+            ),
         ],
       ),
     );
@@ -1754,7 +2199,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
@@ -1762,23 +2209,60 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Pilih Identitas Preset', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+              const Text(
+                'Pilih Identitas Preset',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFEDEFF2),
+                ),
+              ),
               const SizedBox(height: 12),
-              ..._identities.map((id) => ListTile(
-                leading: Container(width: 10, height: 10, decoration: BoxDecoration(color: id.color, shape: BoxShape.circle)),
-                title: Text(id.name, style: const TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
-                trailing: _selectedPresetIdentity.toLowerCase() == id.name.toLowerCase()
-                    ? const Icon(Icons.check, color: Color(0xFF5FD0A5), size: 18)
-                    : null,
-                onTap: () {
-                  setState(() => _selectedPresetIdentity = id.name);
-                  Navigator.pop(ctx);
-                },
-              )),
+              ..._identities.map(
+                (id) => ListTile(
+                  leading: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: id.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  title: Text(
+                    id.name,
+                    style: const TextStyle(
+                      color: Color(0xFFEDEFF2),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  trailing:
+                      _selectedPresetIdentity.toLowerCase() ==
+                          id.name.toLowerCase()
+                      ? const Icon(
+                          Icons.check,
+                          color: Color(0xFF5FD0A5),
+                          size: 18,
+                        )
+                      : null,
+                  onTap: () {
+                    setState(() => _selectedPresetIdentity = id.name);
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ),
               const Divider(color: Color(0xFF1E2430)),
               ListTile(
-                leading: const Icon(Icons.add_circle_outline, color: Color(0xFFE8C07D)),
-                title: const Text('Tambah Identitas Baru', style: TextStyle(color: Color(0xFFE8C07D), fontWeight: FontWeight.w700)),
+                leading: const Icon(
+                  Icons.add_circle_outline,
+                  color: Color(0xFFE8C07D),
+                ),
+                title: const Text(
+                  'Tambah Identitas Baru',
+                  style: TextStyle(
+                    color: Color(0xFFE8C07D),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _openCreateNewIdentityDialog();
@@ -1795,7 +2279,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
@@ -1803,28 +2289,71 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Filter Kebiasaan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+              const Text(
+                'Filter Kebiasaan',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFEDEFF2),
+                ),
+              ),
               const SizedBox(height: 12),
               ListTile(
-                leading: const Icon(Icons.apps_rounded, color: Color(0xFF8A93A3)),
-                title: const Text('Semua', style: TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
-                trailing: _selectedHabitIdentity == 'Semua' ? const Icon(Icons.check, color: Color(0xFF5FD0A5), size: 18) : null,
+                leading: const Icon(
+                  Icons.apps_rounded,
+                  color: Color(0xFF8A93A3),
+                ),
+                title: const Text(
+                  'Semua',
+                  style: TextStyle(
+                    color: Color(0xFFEDEFF2),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                trailing: _selectedHabitIdentity == 'Semua'
+                    ? const Icon(
+                        Icons.check,
+                        color: Color(0xFF5FD0A5),
+                        size: 18,
+                      )
+                    : null,
                 onTap: () {
                   setState(() => _selectedHabitIdentity = 'Semua');
                   Navigator.pop(ctx);
                 },
               ),
-              ..._identities.map((id) => ListTile(
-                leading: Container(width: 10, height: 10, decoration: BoxDecoration(color: id.color, shape: BoxShape.circle)),
-                title: Text(id.name, style: const TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
-                trailing: _selectedHabitIdentity.toLowerCase() == id.name.toLowerCase()
-                    ? const Icon(Icons.check, color: Color(0xFF5FD0A5), size: 18)
-                    : null,
-                onTap: () {
-                  setState(() => _selectedHabitIdentity = id.name);
-                  Navigator.pop(ctx);
-                },
-              )),
+              ..._identities.map(
+                (id) => ListTile(
+                  leading: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: id.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  title: Text(
+                    id.name,
+                    style: const TextStyle(
+                      color: Color(0xFFEDEFF2),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  trailing:
+                      _selectedHabitIdentity.toLowerCase() ==
+                          id.name.toLowerCase()
+                      ? const Icon(
+                          Icons.check,
+                          color: Color(0xFF5FD0A5),
+                          size: 18,
+                        )
+                      : null,
+                  onTap: () {
+                    setState(() => _selectedHabitIdentity = id.name);
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ),
             ],
           ),
         );
@@ -1832,7 +2361,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-  Widget _buildPresetRow(PresetItem p, Color identityColor, _HomeThemeColors tc) {
+  Widget _buildPresetRow(
+    PresetItem p,
+    Color identityColor,
+    _HomeThemeColors tc,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -1840,7 +2373,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           // ▶ Play Button (Starts Timer & Records Block on Finish)
           InkWell(
             key: ValueKey('preset_play_${p.id}'),
-            onTap: () => _startTimer(p.name, p.minutes, source: 'preset', sourceId: p.id, identity: p.identity),
+            onTap: () => _startTimer(
+              p.name,
+              p.minutes,
+              source: 'preset',
+              sourceId: p.id,
+              identity: p.identity,
+            ),
             borderRadius: BorderRadius.circular(18),
             child: Container(
               width: 34,
@@ -1849,7 +2388,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 shape: BoxShape.circle,
                 border: Border.all(color: identityColor, width: 1.5),
               ),
-              child: Icon(Icons.play_arrow_rounded, color: identityColor, size: 20),
+              child: Icon(
+                Icons.play_arrow_rounded,
+                color: identityColor,
+                size: 20,
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -1861,7 +2404,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               children: [
                 Text(
                   p.name,
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: tc.textPrimary),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: tc.textPrimary,
+                  ),
                 ),
                 Text(
                   '${p.minutes} menit',
@@ -1890,7 +2437,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-  Widget _buildHabitRow(HabitModel h, Color identityColor, _HomeThemeColors tc) {
+  Widget _buildHabitRow(
+    HabitModel h,
+    Color identityColor,
+    _HomeThemeColors tc,
+  ) {
     final hasTimer = h.minutes != null && h.minutes! > 0;
     final totalSecs = hasTimer ? h.minutes! * 60 : 0;
     final elapsedSecs = h.elapsedSeconds;
@@ -1915,12 +2466,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               child: h.isDone
                   ? Icon(Icons.check, color: tc.bg, size: 20)
                   : hasTimer
-                      ? Icon(
-                          h.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                          color: identityColor,
-                          size: 20,
-                        )
-                      : null,
+                  ? Icon(
+                      h.isRunning
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: identityColor,
+                      size: 20,
+                    )
+                  : null,
             ),
           ),
           const SizedBox(width: 10),
@@ -1957,14 +2510,20 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
-                          color: h.isDaily ? const Color(0xFF5FD0A5) : const Color(0xFF8FB8E8),
+                          color: h.isDaily
+                              ? const Color(0xFF5FD0A5)
+                              : const Color(0xFF8FB8E8),
                         ),
                       ),
                       if (hasTimer) ...[
                         const SizedBox(width: 6),
                         Text(
                           '•  ${(elapsedSecs ~/ 60)} / ${h.minutes}m',
-                          style: TextStyle(fontSize: 10, color: tc.textSecondary, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: tc.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -1974,7 +2533,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                               value: progress,
                               minHeight: 4,
                               backgroundColor: tc.stroke,
-                              valueColor: AlwaysStoppedAnimation<Color>(identityColor),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                identityColor,
+                              ),
                             ),
                           ),
                         ),
@@ -2054,11 +2615,120 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
+  Widget _buildFocusGoalCue(String goal, _HomeThemeColors tc) {
+    final hasGoal = goal.trim().isNotEmpty;
+    return Semantics(
+      button: true,
+      label: hasGoal
+          ? 'Tujuan hari ini: $goal. Ubah tujuan.'
+          : 'Tambahkan tujuan hari ini',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _editFocusGoal,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+          decoration: BoxDecoration(
+            color: tc.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: tc.stroke),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'TUJUAN HARI INI',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.7,
+                        color: tc.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      hasGoal ? goal : 'Apa yang ingin kamu jaga hari ini?',
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: hasGoal ? 19 : 16,
+                        height: 1.35,
+                        fontWeight: hasGoal ? FontWeight.w600 : FontWeight.w400,
+                        color: hasGoal ? tc.textPrimary : tc.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                hasGoal ? Icons.edit_outlined : Icons.add_rounded,
+                color: tc.accent,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editFocusGoal() async {
+    final settings = ref.read(launcherSettingsProvider);
+    final controller = TextEditingController(text: settings.focusGoal);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Tujuan hari ini'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 120,
+          maxLines: 3,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            hintText: 'Contoh: Selesaikan latihan LKS',
+            alignLabelWithHint: true,
+          ),
+          onSubmitted: (_) => Navigator.of(dialogContext).pop(controller.text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null || !mounted) return;
+    final saved = await ref
+        .read(launcherSettingsProvider.notifier)
+        .setFocusGoal(result);
+    if (!mounted) return;
+    _showToast(
+      saved ? 'Tujuan disimpan' : 'Gagal menyimpan tujuan. Coba lagi.',
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // SCREEN 2: FOCUS TIMER HUB & FULLSCREEN ZEN MODE
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildTimerScreen(ThemeData theme) {
-    final timer = _activeTimer ?? ActiveTimer(label: 'Fokus bebas', totalSeconds: 25 * 60, leftSeconds: 25 * 60, startHour: _hourNow());
+    final timer =
+        _activeTimer ??
+        ActiveTimer(
+          label: 'Fokus bebas',
+          totalSeconds: 25 * 60,
+          leftSeconds: 25 * 60,
+          startHour: _hourNow(),
+        );
     final isIdle = !timer.hasStarted;
 
     return Scaffold(
@@ -2084,15 +2754,24 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFF1E2430)),
                       ),
-                      child: const Icon(Icons.arrow_back_rounded, color: Color(0xFFEDEFF2), size: 22),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Color(0xFFEDEFF2),
+                        size: 22,
+                      ),
                     ),
                   ),
 
                   // Fullscreen Zen Button
                   IconButton(
-                    icon: const Icon(Icons.fullscreen_rounded, color: Color(0xFFE8C07D), size: 28),
+                    icon: const Icon(
+                      Icons.fullscreen_rounded,
+                      color: Color(0xFFE8C07D),
+                      size: 28,
+                    ),
                     tooltip: 'Mode Zen Layar Penuh (Lockscreen)',
-                    onPressed: () => setState(() => _currentScreen = 'fullscreen_focus'),
+                    onPressed: () =>
+                        setState(() => _currentScreen = 'fullscreen_focus'),
                   ),
                 ],
               ),
@@ -2101,7 +2780,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               // Title & Status
               Text(
                 timer.label,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2)),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFEDEFF2),
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -2143,20 +2826,29 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF161A22),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: selected ? const Color(0xFFE8C07D) : const Color(0xFF1E2430),
+                              color: selected
+                                  ? const Color(0xFFE8C07D)
+                                  : const Color(0xFF1E2430),
                               width: selected ? 1.5 : 1,
                             ),
                           ),
                           child: Text(
                             '$m mnt',
                             style: TextStyle(
-                              color: selected ? const Color(0xFFE8C07D) : const Color(0xFFEDEFF2),
-                              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                              color: selected
+                                  ? const Color(0xFFE8C07D)
+                                  : const Color(0xFFEDEFF2),
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                             ),
                           ),
                         ),
@@ -2169,34 +2861,26 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
               // Play / Pause Button
               ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    if (!timer.isRunning) {
-                      timer.isRunning = true;
-                      if (!timer.hasStarted) {
-                        timer.hasStarted = true;
-                        timer.startHour = _hourNow();
-                      }
-                    } else {
-                      timer.isRunning = false;
-                    }
-                  });
-                },
+                onPressed: () => _toggleTimer(timer),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE8C07D),
                   foregroundColor: const Color(0xFF161A22),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 0,
                 ),
                 child: Text(
                   timer.isRunning
                       ? 'Jeda'
                       : timer.hasStarted
-                          ? 'Lanjut'
-                          : 'Mulai',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ? 'Lanjut'
+                      : 'Mulai',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -2208,10 +2892,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   backgroundColor: const Color(0xFF1E2430),
                   foregroundColor: const Color(0xFFEDEFF2),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text('Selesai sekarang', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                child: const Text(
+                  'Selesai sekarang',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
               ),
               const SizedBox(height: 8),
 
@@ -2223,7 +2912,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     _currentScreen = 'home';
                   });
                 },
-                child: const Text('Batalkan timer', style: TextStyle(color: Color(0xFF8A93A3))),
+                child: const Text(
+                  'Batalkan timer',
+                  style: TextStyle(color: Color(0xFF8A93A3)),
+                ),
               ),
               const SizedBox(height: 8),
             ],
@@ -2235,7 +2927,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // Pure Fullscreen Zen / Lockscreen Focus View (No Launcher leakage!)
   Widget _buildFullscreenFocusMode() {
-    final timer = _activeTimer ?? ActiveTimer(label: 'Fokus', totalSeconds: 25 * 60, leftSeconds: 25 * 60, startHour: _hourNow());
+    final timer =
+        _activeTimer ??
+        ActiveTimer(
+          label: 'Fokus',
+          totalSeconds: 25 * 60,
+          leftSeconds: 25 * 60,
+          startHour: _hourNow(),
+        );
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -2249,7 +2948,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               Align(
                 alignment: Alignment.topRight,
                 child: IconButton(
-                  icon: const Icon(Icons.fullscreen_exit_rounded, color: Colors.white70, size: 30),
+                  icon: const Icon(
+                    Icons.fullscreen_exit_rounded,
+                    color: Colors.white70,
+                    size: 30,
+                  ),
                   onPressed: () => setState(() => _currentScreen = 'timer'),
                 ),
               ),
@@ -2258,7 +2961,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               Center(
                 child: Text(
                   timer.label,
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -2282,18 +2989,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   IconButton(
                     iconSize: 48,
                     icon: Icon(
-                      timer.isRunning ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+                      timer.isRunning
+                          ? Icons.pause_circle_filled_rounded
+                          : Icons.play_circle_fill_rounded,
                       color: const Color(0xFFE8C07D),
                     ),
-                    onPressed: () {
-                      setState(() {
-                        timer.isRunning = !timer.isRunning;
-                      });
-                    },
+                    onPressed: () => _toggleTimer(timer),
                   ),
                   IconButton(
                     iconSize: 48,
-                    icon: const Icon(Icons.check_circle_rounded, color: Color(0xFF5FD0A5)),
+                    icon: const Icon(
+                      Icons.check_circle_rounded,
+                      color: Color(0xFF5FD0A5),
+                    ),
                     onPressed: () {
                       _finishTimer(autoComplete: false);
                     },
@@ -2340,13 +3048,21 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFF1E2430)),
                       ),
-                      child: const Icon(Icons.arrow_back_rounded, color: Color(0xFFEDEFF2), size: 22),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Color(0xFFEDEFF2),
+                        size: 22,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 14),
                   const Text(
                     'Catatan Harian',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2)),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFEDEFF2),
+                    ),
                   ),
                 ],
               ),
@@ -2357,25 +3073,39 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildNoteChip('Kemarin', _notesFilter == 'date' && _selectedNoteDate == _dateKey(-1), () {
-                      setState(() {
-                        _notesFilter = 'date';
-                        _selectedNoteDate = _dateKey(-1);
-                      });
-                    }),
+                    _buildNoteChip(
+                      'Kemarin',
+                      _notesFilter == 'date' &&
+                          _selectedNoteDate == _dateKey(-1),
+                      () {
+                        setState(() {
+                          _notesFilter = 'date';
+                          _selectedNoteDate = _dateKey(-1);
+                        });
+                      },
+                    ),
                     const SizedBox(width: 8),
-                    _buildNoteChip('Hari ini', _notesFilter == 'date' && _selectedNoteDate == _dateKey(0), () {
-                      setState(() {
-                        _notesFilter = 'date';
-                        _selectedNoteDate = _dateKey(0);
-                      });
-                    }),
+                    _buildNoteChip(
+                      'Hari ini',
+                      _notesFilter == 'date' &&
+                          _selectedNoteDate == _dateKey(0),
+                      () {
+                        setState(() {
+                          _notesFilter = 'date';
+                          _selectedNoteDate = _dateKey(0);
+                        });
+                      },
+                    ),
                     const SizedBox(width: 8),
                     _buildNoteChip('Penting', _notesFilter == 'important', () {
                       setState(() => _notesFilter = 'important');
                     }),
                     const SizedBox(width: 8),
-                    _buildNoteChip('Tanggal ${_formatDateShort(_selectedNoteDate)}', false, _openDatePickerSheet),
+                    _buildNoteChip(
+                      'Tanggal ${_formatDateShort(_selectedNoteDate)}',
+                      false,
+                      _openDatePickerSheet,
+                    ),
                   ],
                 ),
               ),
@@ -2383,17 +3113,36 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
               // Journal Templates Chips
               if (_notesFilter != 'important') ...[
-                const Text('Template Jurnal:', style: TextStyle(fontSize: 11, color: Color(0xFF8A93A3), fontWeight: FontWeight.w600)),
+                const Text(
+                  'Template Jurnal:',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF8A93A3),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildTemplateChip('Niat Pagi', 'Niat Pagi:\n1. Goal utama:\n2. Sikap yang kuinginkan:\n3. Rasa syukur:', noteInputCtrl),
+                      _buildTemplateChip(
+                        'Niat Pagi',
+                        'Niat Pagi:\n1. Goal utama:\n2. Sikap yang kuinginkan:\n3. Rasa syukur:',
+                        noteInputCtrl,
+                      ),
                       const SizedBox(width: 8),
-                      _buildTemplateChip('Refleksi Malam', 'Refleksi Malam:\n- Yang sudah terlaksana:\n- Pelajaran hari ini:\n- Hal yang disyukuri:', noteInputCtrl),
+                      _buildTemplateChip(
+                        'Refleksi Malam',
+                        'Refleksi Malam:\n- Yang sudah terlaksana:\n- Pelajaran hari ini:\n- Hal yang disyukuri:',
+                        noteInputCtrl,
+                      ),
                       const SizedBox(width: 8),
-                      _buildTemplateChip('Langkah Berani', '1 Langkah berani hari ini yang mengubah masa depan:', noteInputCtrl),
+                      _buildTemplateChip(
+                        'Langkah Berani',
+                        '1 Langkah berani hari ini yang mengubah masa depan:',
+                        noteInputCtrl,
+                      ),
                     ],
                   ),
                 ),
@@ -2406,7 +3155,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     ? const Center(
                         child: Text(
                           'Belum ada catatan.',
-                          style: TextStyle(color: Color(0xFF8A93A3), fontSize: 14),
+                          style: TextStyle(
+                            color: Color(0xFF8A93A3),
+                            fontSize: 14,
+                          ),
                         ),
                       )
                     : ListView.builder(
@@ -2419,38 +3171,62 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             decoration: BoxDecoration(
                               color: const Color(0xFF161A22),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFF1E2430)),
+                              border: Border.all(
+                                color: const Color(0xFF1E2430),
+                              ),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         n.text,
-                                        style: const TextStyle(fontSize: 14, color: Color(0xFFEDEFF2), height: 1.4),
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFFEDEFF2),
+                                          height: 1.4,
+                                        ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         _formatDateShort(n.dateKey),
-                                        style: const TextStyle(fontSize: 11, color: Color(0xFF8A93A3)),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF8A93A3),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 IconButton(
                                   icon: Icon(
-                                    n.isImportant ? Icons.star_rounded : Icons.star_border_rounded,
-                                    color: n.isImportant ? const Color(0xFFE8C07D) : const Color(0xFF8A93A3),
+                                    n.isImportant
+                                        ? Icons.star_rounded
+                                        : Icons.star_border_rounded,
+                                    color: n.isImportant
+                                        ? const Color(0xFFE8C07D)
+                                        : const Color(0xFF8A93A3),
                                   ),
-                                  onPressed: () => setState(() => n.isImportant = !n.isImportant),
+                                  onPressed: () => setState(
+                                    () => n.isImportant = !n.isImportant,
+                                  ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.close_rounded, color: Color(0xFF8A93A3), size: 18),
+                                  icon: const Icon(
+                                    Icons.close_rounded,
+                                    color: Color(0xFF8A93A3),
+                                    size: 18,
+                                  ),
                                   onPressed: () {
-                                    setState(() => _notes.removeWhere((item) => item.id == n.id));
+                                    setState(
+                                      () => _notes.removeWhere(
+                                        (item) => item.id == n.id,
+                                      ),
+                                    );
                                   },
                                 ),
                               ],
@@ -2467,12 +3243,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   maxLines: 3,
                   style: const TextStyle(color: Color(0xFFEDEFF2)),
                   decoration: InputDecoration(
-                    hintText: 'Tulis catatan harian untuk ${_formatDateShort(_selectedNoteDate)}...',
-                    hintStyle: const TextStyle(color: Color(0xFF8A93A3), fontSize: 13),
+                    hintText:
+                        'Tulis catatan harian untuk ${_formatDateShort(_selectedNoteDate)}...',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF8A93A3),
+                      fontSize: 13,
+                    ),
                     filled: true,
                     fillColor: const Color(0xFF161A22),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E2430))),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE8C07D))),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF1E2430)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE8C07D)),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -2481,7 +3267,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     final t = noteInputCtrl.text.trim();
                     if (t.isEmpty) return;
                     setState(() {
-                      _notes.insert(0, NoteItem(id: _nextId++, dateKey: _selectedNoteDate, text: t));
+                      _notes.insert(
+                        0,
+                        NoteItem(
+                          id: _nextId++,
+                          dateKey: _selectedNoteDate,
+                          text: t,
+                        ),
+                      );
                     });
                     noteInputCtrl.clear();
                     _showToast('Catatan disimpan');
@@ -2490,9 +3283,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     backgroundColor: const Color(0xFFE8C07D),
                     foregroundColor: const Color(0xFF161A22),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text('Simpan Catatan', style: TextStyle(fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    'Simpan Catatan',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ),
               ],
             ],
@@ -2502,7 +3300,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-  Widget _buildTemplateChip(String label, String templateContent, TextEditingController ctrl) {
+  Widget _buildTemplateChip(
+    String label,
+    String templateContent,
+    TextEditingController ctrl,
+  ) {
     return InkWell(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -2516,7 +3318,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFF1E2430)),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFFEDEFF2),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -2530,7 +3339,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         decoration: BoxDecoration(
           color: const Color(0xFF161A22),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: active ? const Color(0xFFE8C07D) : const Color(0xFF1E2430), width: active ? 1.5 : 1),
+          border: Border.all(
+            color: active ? const Color(0xFFE8C07D) : const Color(0xFF1E2430),
+            width: active ? 1.5 : 1,
+          ),
         ),
         child: Text(
           label,
@@ -2548,7 +3360,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   // SCREEN 4: JELAS (FUTURE SELF & GRATITUDE) VIEW
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildJelasScreen(ThemeData theme) {
-    final visionHabit = _habits.firstWhere((h) => h.isVision, orElse: () => _habits.first);
+    final visionHabit = _habits.firstWhere(
+      (h) => h.isVision,
+      orElse: () => _habits.first,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFF0E1116),
@@ -2570,13 +3385,21 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFF1E2430)),
                     ),
-                    child: const Icon(Icons.arrow_back_rounded, color: Color(0xFFEDEFF2), size: 22),
+                    child: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Color(0xFFEDEFF2),
+                      size: 22,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),
                 const Text(
                   'Jelas',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2)),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFEDEFF2),
+                  ),
                 ),
               ],
             ),
@@ -2585,7 +3408,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             // Vision Quote
             const Text(
               'Jernihkan tujuan, jadilah dirimu di masa depan. Setelah kesulitan datang kemudahan. Sedikit itu lebih. Yang sederhana itu dahsyat. Lihat itu, setiap saat.',
-              style: TextStyle(fontSize: 14, color: Color(0xFF8A93A3), height: 1.5),
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF8A93A3),
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -2610,9 +3437,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     : const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.photo_outlined, color: Color(0xFF8A93A3), size: 32),
+                          Icon(
+                            Icons.photo_outlined,
+                            color: Color(0xFF8A93A3),
+                            size: 32,
+                          ),
                           SizedBox(height: 6),
-                          Text('Ketuk untuk menaruh gambar masa depanmu', style: TextStyle(color: Color(0xFF8A93A3), fontSize: 13)),
+                          Text(
+                            'Ketuk untuk menaruh gambar masa depanmu',
+                            style: TextStyle(
+                              color: Color(0xFF8A93A3),
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ),
               ),
@@ -2622,29 +3459,51 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             // 3-Minute Visualization Button
             ElevatedButton(
               onPressed: () {
-                _startTimer('Visualisasi masa depan', 3, source: 'habit', sourceId: visionHabit.id, identity: 'Masa depan');
+                _startTimer(
+                  'Visualisasi masa depan',
+                  3,
+                  source: 'habit',
+                  sourceId: visionHabit.id,
+                  identity: 'Masa depan',
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE8C07D),
                 foregroundColor: const Color(0xFF161A22),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
-              child: const Text('Mulai visualisasi 3 menit', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              child: const Text(
+                'Mulai visualisasi 3 menit',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
-              visionHabit.isDone ? 'Sudah dilakukan hari ini' : 'Belum dilakukan hari ini',
+              visionHabit.isDone
+                  ? 'Sudah dilakukan hari ini'
+                  : 'Belum dilakukan hari ini',
               style: TextStyle(
                 fontSize: 12,
-                color: visionHabit.isDone ? const Color(0xFF5FD0A5) : const Color(0xFF8A93A3),
+                color: visionHabit.isDone
+                    ? const Color(0xFF5FD0A5)
+                    : const Color(0xFF8A93A3),
                 fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 24),
 
             // 3 Top Emotions Checklist (Lampiran 3)
-            const Text('3 emosi utama', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+            const Text(
+              '3 emosi utama',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFEDEFF2),
+              ),
+            ),
             const SizedBox(height: 10),
             ...[
               'Dekat dengan diriku di masa depan',
@@ -2656,7 +3515,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               final isChecked = _topEmotions[idx];
 
               return InkWell(
-                onTap: () => setState(() => _topEmotions[idx] = !_topEmotions[idx]),
+                onTap: () =>
+                    setState(() => _topEmotions[idx] = !_topEmotions[idx]),
                 borderRadius: BorderRadius.circular(10),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -2666,17 +3526,32 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: isChecked ? const Color(0xFF5FD0A5) : Colors.transparent,
+                          color: isChecked
+                              ? const Color(0xFF5FD0A5)
+                              : Colors.transparent,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF5FD0A5), width: 1.5),
+                          border: Border.all(
+                            color: const Color(0xFF5FD0A5),
+                            width: 1.5,
+                          ),
                         ),
-                        child: isChecked ? const Icon(Icons.check, color: Color(0xFF0E1116), size: 18) : null,
+                        child: isChecked
+                            ? const Icon(
+                                Icons.check,
+                                color: Color(0xFF0E1116),
+                                size: 18,
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           text,
-                          style: const TextStyle(fontSize: 14, color: Color(0xFFEDEFF2), fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFFEDEFF2),
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -2687,7 +3562,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             const SizedBox(height: 24),
 
             // Gratitude Journal (3 Items)
-            const Text('Jurnal syukur, 3 hal', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+            const Text(
+              'Jurnal syukur, 3 hal',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFEDEFF2),
+              ),
+            ),
             const SizedBox(height: 10),
             ...[0, 1, 2].map((i) {
               final placeholders = [
@@ -2699,13 +3581,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: TextField(
                   maxLines: 2,
-                  style: const TextStyle(color: Color(0xFFEDEFF2), fontSize: 13),
+                  style: const TextStyle(
+                    color: Color(0xFFEDEFF2),
+                    fontSize: 13,
+                  ),
                   decoration: InputDecoration(
                     hintText: placeholders[i],
-                    hintStyle: const TextStyle(color: Color(0xFF8A93A3), fontSize: 12),
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF8A93A3),
+                      fontSize: 12,
+                    ),
                     filled: true,
                     fillColor: const Color(0xFF161A22),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E2430))),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF1E2430)),
+                    ),
                   ),
                   onChanged: (val) => _gratitudeEntries[i] = val,
                 ),
@@ -2715,17 +3606,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
             ElevatedButton(
               onPressed: () {
-                final nonEmpty = _gratitudeEntries.where((s) => s.trim().isNotEmpty).toList();
+                final nonEmpty = _gratitudeEntries
+                    .where((s) => s.trim().isNotEmpty)
+                    .toList();
                 if (nonEmpty.isEmpty) {
                   _showToast('Tulis minimal satu hal');
                   return;
                 }
                 setState(() {
-                  _notes.insert(0, NoteItem(
-                    id: _nextId++,
-                    dateKey: _dateKey(0),
-                    text: 'Syukur: ${nonEmpty.join("; ")}',
-                  ));
+                  _notes.insert(
+                    0,
+                    NoteItem(
+                      id: _nextId++,
+                      dateKey: _dateKey(0),
+                      text: 'Syukur: ${nonEmpty.join("; ")}',
+                    ),
+                  );
                   _gratitudeEntries[0] = '';
                   _gratitudeEntries[1] = '';
                   _gratitudeEntries[2] = '';
@@ -2736,9 +3632,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 backgroundColor: const Color(0xFF1E2430),
                 foregroundColor: const Color(0xFFEDEFF2),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
-              child: const Text('Simpan syukur ke catatan', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              child: const Text(
+                'Simpan syukur ke catatan',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
@@ -2752,13 +3653,17 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // ── 1. Focus Timer Hub (Quick Start Timed Habits or Free Focus) ──
   void _openFocusTimerHub() {
-    final timedHabits = _habits.where((h) => h.minutes != null && h.minutes! > 0).toList();
+    final timedHabits = _habits
+        .where((h) => h.minutes != null && h.minutes! > 0)
+        .toList();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return SingleChildScrollView(
           child: Padding(
@@ -2767,14 +3672,31 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Pusat Timer Fokus', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+                const Text(
+                  'Pusat Timer Fokus',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFEDEFF2),
+                  ),
+                ),
                 const SizedBox(height: 4),
-                const Text('Pilih kebiasaan atau mulai fokus bebas langsung:', style: TextStyle(fontSize: 12, color: Color(0xFF8A93A3))),
+                const Text(
+                  'Pilih kebiasaan atau mulai fokus bebas langsung:',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF8A93A3)),
+                ),
                 const SizedBox(height: 16),
 
                 // Lanjutkan Kebiasaan Ber-timer
                 if (timedHabits.isNotEmpty) ...[
-                  const Text('Lanjutkan Kebiasaan:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFE8C07D))),
+                  const Text(
+                    'Lanjutkan Kebiasaan:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFE8C07D),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   ...timedHabits.map((h) {
                     final col = _colorForIdentity(h.identity);
@@ -2783,14 +3705,36 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       leading: Container(
                         width: 36,
                         height: 36,
-                        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: col, width: 1.5)),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: col, width: 1.5),
+                        ),
                         child: Icon(Icons.play_arrow_rounded, color: col),
                       ),
-                      title: Text(h.title, style: const TextStyle(color: Color(0xFFEDEFF2), fontSize: 13, fontWeight: FontWeight.w600)),
-                      subtitle: Text('${(h.elapsedSeconds ~/ 60)} / ${h.minutes}m progres', style: const TextStyle(fontSize: 11, color: Color(0xFF8A93A3))),
+                      title: Text(
+                        h.title,
+                        style: const TextStyle(
+                          color: Color(0xFFEDEFF2),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${(h.elapsedSeconds ~/ 60)} / ${h.minutes}m progres',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF8A93A3),
+                        ),
+                      ),
                       onTap: () {
                         Navigator.pop(ctx);
-                        _startTimer(h.title, h.minutes ?? 15, source: 'habit', sourceId: h.id, identity: h.identity);
+                        _startTimer(
+                          h.title,
+                          h.minutes ?? 15,
+                          source: 'habit',
+                          sourceId: h.id,
+                          identity: h.identity,
+                        );
                       },
                     );
                   }),
@@ -2798,7 +3742,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 ],
 
                 // Quick Chips Free Focus
-                const Text('Fokus Bebas Cepat:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFE8C07D))),
+                const Text(
+                  'Fokus Bebas Cepat:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFE8C07D),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -2811,13 +3762,23 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       },
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF0E1116),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: const Color(0xFF1E2430)),
                         ),
-                        child: Text('$m mnt', style: const TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600, fontSize: 12)),
+                        child: Text(
+                          '$m mnt',
+                          style: const TextStyle(
+                            color: Color(0xFFEDEFF2),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     );
                   }).toList(),
@@ -2849,19 +3810,36 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(18, 18, 18, MediaQuery.of(ctx).viewInsets.bottom + 24),
+              padding: EdgeInsets.fromLTRB(
+                18,
+                18,
+                18,
+                MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Identitas Baru', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+                  const Text(
+                    'Identitas Baru',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFEDEFF2),
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  const Text('Buat bidang identitas baru untuk mengelompokkan blok & kebiasaanmu:', style: TextStyle(fontSize: 12, color: Color(0xFF8A93A3))),
+                  const Text(
+                    'Buat bidang identitas baru untuk mengelompokkan blok & kebiasaanmu:',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF8A93A3)),
+                  ),
                   const SizedBox(height: 14),
 
                   TextField(
@@ -2870,16 +3848,29 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     style: const TextStyle(color: Color(0xFFEDEFF2)),
                     decoration: InputDecoration(
                       hintText: 'Misal: Musisi, Desainer, Penulis',
-                      hintStyle: const TextStyle(color: Color(0xFF8A93A3), fontSize: 13),
+                      hintStyle: const TextStyle(
+                        color: Color(0xFF8A93A3),
+                        fontSize: 13,
+                      ),
                       filled: true,
                       fillColor: const Color(0xFF0E1116),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E2430))),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF1E2430)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
 
                   // 7 Natural Base Colors
-                  const Text('7 Warna Dasar Natural:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF8A93A3))),
+                  const Text(
+                    '7 Warna Dasar Natural:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF8A93A3),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2893,9 +3884,18 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           decoration: BoxDecoration(
                             color: c,
                             shape: BoxShape.circle,
-                            border: Border.all(color: isSel ? Colors.white : Colors.transparent, width: 2),
+                            border: Border.all(
+                              color: isSel ? Colors.white : Colors.transparent,
+                              width: 2,
+                            ),
                           ),
-                          child: isSel ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+                          child: isSel
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 18,
+                                )
+                              : null,
                         ),
                       );
                     }).toList(),
@@ -2906,7 +3906,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Atau Spektrum Bebas (HSL):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF8A93A3))),
+                      const Text(
+                        'Atau Spektrum Bebas (HSL):',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF8A93A3),
+                        ),
+                      ),
                       Container(
                         width: 20,
                         height: 20,
@@ -2926,7 +3933,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     onChanged: (val) {
                       setSheetState(() {
                         spectrumHue = val;
-                        selectedColor = HSVColor.fromAHSV(1.0, val, 0.55, 0.75).toColor();
+                        selectedColor = HSVColor.fromAHSV(
+                          1.0,
+                          val,
+                          0.55,
+                          0.75,
+                        ).toColor();
                       });
                     },
                   ),
@@ -2937,11 +3949,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       final name = nameCtrl.text.trim();
                       if (name.isNotEmpty) {
                         setState(() {
-                          _identities.add(IdentityItem(
-                            id: name.toLowerCase().replaceAll(' ', '_'),
-                            name: name,
-                            color: selectedColor,
-                          ));
+                          _identities.add(
+                            IdentityItem(
+                              id: name.toLowerCase().replaceAll(' ', '_'),
+                              name: name,
+                              color: selectedColor,
+                            ),
+                          );
                           _selectedPresetIdentity = name;
                           _selectedHabitIdentity = name;
                         });
@@ -2953,9 +3967,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       backgroundColor: const Color(0xFFE8C07D),
                       foregroundColor: const Color(0xFF161A22),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: const Text('Buat Identitas', style: TextStyle(fontWeight: FontWeight.w700)),
+                    child: const Text(
+                      'Buat Identitas',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ],
               ),
@@ -2975,17 +3994,31 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(18, 18, 18, MediaQuery.of(ctx).viewInsets.bottom + 24),
+              padding: EdgeInsets.fromLTRB(
+                18,
+                18,
+                18,
+                MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Preset Baru • ${identity.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+                  Text(
+                    'Preset Baru • ${identity.name}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFEDEFF2),
+                    ),
+                  ),
                   const SizedBox(height: 12),
 
                   TextField(
@@ -2993,10 +4026,16 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     style: const TextStyle(color: Color(0xFFEDEFF2)),
                     decoration: InputDecoration(
                       hintText: 'Nama Preset (misal: Deep Work)',
-                      hintStyle: const TextStyle(color: Color(0xFF8A93A3), fontSize: 13),
+                      hintStyle: const TextStyle(
+                        color: Color(0xFF8A93A3),
+                        fontSize: 13,
+                      ),
                       filled: true,
                       fillColor: const Color(0xFF0E1116),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E2430))),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF1E2430)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -3005,8 +4044,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Durasi:', style: TextStyle(fontSize: 13, color: Color(0xFF8A93A3), fontWeight: FontWeight.w600)),
-                      Text('$selectedMinutes menit', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: identity.color)),
+                      const Text(
+                        'Durasi:',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8A93A3),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        '$selectedMinutes menit',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: identity.color,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -3015,9 +4068,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF8A93A3)),
+                        icon: const Icon(
+                          Icons.remove_circle_outline,
+                          color: Color(0xFF8A93A3),
+                        ),
                         onPressed: () {
-                          if (selectedMinutes > 5) setSheetState(() => selectedMinutes -= 5);
+                          if (selectedMinutes > 5) {
+                            setSheetState(() => selectedMinutes -= 5);
+                          }
                         },
                       ),
                       ...[15, 25, 30, 45, 60, 90].map((m) {
@@ -3025,19 +4083,31 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 3),
                           child: InkWell(
-                            onTap: () => setSheetState(() => selectedMinutes = m),
+                            onTap: () =>
+                                setSheetState(() => selectedMinutes = m),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
-                                color: isSel ? identity.color : const Color(0xFF0E1116),
+                                color: isSel
+                                    ? identity.color
+                                    : const Color(0xFF0E1116),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: isSel ? identity.color : const Color(0xFF1E2430)),
+                                border: Border.all(
+                                  color: isSel
+                                      ? identity.color
+                                      : const Color(0xFF1E2430),
+                                ),
                               ),
                               child: Text(
                                 '$m',
                                 style: TextStyle(
-                                  color: isSel ? const Color(0xFF0E1116) : const Color(0xFFEDEFF2),
+                                  color: isSel
+                                      ? const Color(0xFF0E1116)
+                                      : const Color(0xFFEDEFF2),
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12,
                                 ),
@@ -3047,8 +4117,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         );
                       }),
                       IconButton(
-                        icon: const Icon(Icons.add_circle_outline, color: Color(0xFF8A93A3)),
-                        onPressed: () => setSheetState(() => selectedMinutes += 5),
+                        icon: const Icon(
+                          Icons.add_circle_outline,
+                          color: Color(0xFF8A93A3),
+                        ),
+                        onPressed: () =>
+                            setSheetState(() => selectedMinutes += 5),
                       ),
                     ],
                   ),
@@ -3059,7 +4133,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       final n = nameCtrl.text.trim();
                       if (n.isNotEmpty) {
                         setState(() {
-                          _presets.add(PresetItem(id: _nextId++, name: n, minutes: selectedMinutes, identity: identity.name));
+                          _presets.add(
+                            PresetItem(
+                              id: _nextId++,
+                              name: n,
+                              minutes: selectedMinutes,
+                              identity: identity.name,
+                            ),
+                          );
                         });
                         Navigator.pop(ctx);
                         _showToast('Preset $n disimpan!');
@@ -3069,9 +4150,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       backgroundColor: identity.color,
                       foregroundColor: const Color(0xFF0E1116),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: const Text('Simpan Preset', style: TextStyle(fontWeight: FontWeight.w700)),
+                    child: const Text(
+                      'Simpan Preset',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ],
               ),
@@ -3093,17 +4179,31 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return Padding(
-              padding: EdgeInsets.fromLTRB(18, 18, 18, MediaQuery.of(ctx).viewInsets.bottom + 24),
+              padding: EdgeInsets.fromLTRB(
+                18,
+                18,
+                18,
+                MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Kebiasaan Baru • ${identity.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+                  Text(
+                    'Kebiasaan Baru • ${identity.name}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFEDEFF2),
+                    ),
+                  ),
                   const SizedBox(height: 12),
 
                   TextField(
@@ -3111,10 +4211,16 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     style: const TextStyle(color: Color(0xFFEDEFF2)),
                     decoration: InputDecoration(
                       hintText: 'Nama kebiasaan / tugas',
-                      hintStyle: const TextStyle(color: Color(0xFF8A93A3), fontSize: 13),
+                      hintStyle: const TextStyle(
+                        color: Color(0xFF8A93A3),
+                        fontSize: 13,
+                      ),
                       filled: true,
                       fillColor: const Color(0xFF0E1116),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E2430))),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF1E2430)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -3126,11 +4232,16 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         child: ChoiceChip(
                           label: const Center(child: Text('Harian (Daily)')),
                           selected: isDaily,
-                          onSelected: (val) => setSheetState(() => isDaily = true),
-                          selectedColor: const Color(0xFF5FD0A5).withOpacity(0.25),
+                          onSelected: (val) =>
+                              setSheetState(() => isDaily = true),
+                          selectedColor: const Color(
+                            0xFF5FD0A5,
+                          ).withOpacity(0.25),
                           backgroundColor: const Color(0xFF0E1116),
                           labelStyle: TextStyle(
-                            color: isDaily ? const Color(0xFF5FD0A5) : const Color(0xFF8A93A3),
+                            color: isDaily
+                                ? const Color(0xFF5FD0A5)
+                                : const Color(0xFF8A93A3),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -3138,13 +4249,20 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('Sekali Saja (One-Time)')),
+                          label: const Center(
+                            child: Text('Sekali Saja (One-Time)'),
+                          ),
                           selected: !isDaily,
-                          onSelected: (val) => setSheetState(() => isDaily = false),
-                          selectedColor: const Color(0xFF8FB8E8).withOpacity(0.25),
+                          onSelected: (val) =>
+                              setSheetState(() => isDaily = false),
+                          selectedColor: const Color(
+                            0xFF8FB8E8,
+                          ).withOpacity(0.25),
                           backgroundColor: const Color(0xFF0E1116),
                           labelStyle: TextStyle(
-                            color: !isDaily ? const Color(0xFF8FB8E8) : const Color(0xFF8A93A3),
+                            color: !isDaily
+                                ? const Color(0xFF8FB8E8)
+                                : const Color(0xFF8A93A3),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -3156,7 +4274,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   // Has Timer Toggle
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Aktifkan Timer Fokus', style: TextStyle(color: Color(0xFFEDEFF2), fontSize: 14)),
+                    title: const Text(
+                      'Aktifkan Timer Fokus',
+                      style: TextStyle(color: Color(0xFFEDEFF2), fontSize: 14),
+                    ),
                     value: hasTimer,
                     activeColor: identity.color,
                     onChanged: (val) => setSheetState(() => hasTimer = val),
@@ -3166,8 +4287,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Target Waktu:', style: TextStyle(fontSize: 13, color: Color(0xFF8A93A3), fontWeight: FontWeight.w600)),
-                        Text('$durationMinutes menit', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: identity.color)),
+                        const Text(
+                          'Target Waktu:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF8A93A3),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '$durationMinutes menit',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: identity.color,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -3175,9 +4310,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF8A93A3)),
+                          icon: const Icon(
+                            Icons.remove_circle_outline,
+                            color: Color(0xFF8A93A3),
+                          ),
                           onPressed: () {
-                            if (durationMinutes > 5) setSheetState(() => durationMinutes -= 5);
+                            if (durationMinutes > 5) {
+                              setSheetState(() => durationMinutes -= 5);
+                            }
                           },
                         ),
                         ...[10, 15, 20, 30, 45].map((m) {
@@ -3185,19 +4325,31 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: InkWell(
-                              onTap: () => setSheetState(() => durationMinutes = m),
+                              onTap: () =>
+                                  setSheetState(() => durationMinutes = m),
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isSel ? identity.color : const Color(0xFF0E1116),
+                                  color: isSel
+                                      ? identity.color
+                                      : const Color(0xFF0E1116),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: isSel ? identity.color : const Color(0xFF1E2430)),
+                                  border: Border.all(
+                                    color: isSel
+                                        ? identity.color
+                                        : const Color(0xFF1E2430),
+                                  ),
                                 ),
                                 child: Text(
                                   '$m',
                                   style: TextStyle(
-                                    color: isSel ? const Color(0xFF0E1116) : const Color(0xFFEDEFF2),
+                                    color: isSel
+                                        ? const Color(0xFF0E1116)
+                                        : const Color(0xFFEDEFF2),
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
@@ -3207,8 +4359,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           );
                         }),
                         IconButton(
-                          icon: const Icon(Icons.add_circle_outline, color: Color(0xFF8A93A3)),
-                          onPressed: () => setSheetState(() => durationMinutes += 5),
+                          icon: const Icon(
+                            Icons.add_circle_outline,
+                            color: Color(0xFF8A93A3),
+                          ),
+                          onPressed: () =>
+                              setSheetState(() => durationMinutes += 5),
                         ),
                       ],
                     ),
@@ -3220,13 +4376,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       final title = titleCtrl.text.trim();
                       if (title.isNotEmpty) {
                         setState(() {
-                          _habits.add(HabitModel(
-                            id: _nextId++,
-                            title: title,
-                            identity: identity.name,
-                            isDaily: isDaily,
-                            minutes: hasTimer ? durationMinutes : null,
-                          ));
+                          _habits.add(
+                            HabitModel(
+                              id: _nextId++,
+                              title: title,
+                              identity: identity.name,
+                              isDaily: isDaily,
+                              minutes: hasTimer ? durationMinutes : null,
+                            ),
+                          );
                         });
                         Navigator.pop(ctx);
                         _showToast('Kebiasaan disimpan');
@@ -3236,9 +4394,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       backgroundColor: identity.color,
                       foregroundColor: const Color(0xFF0E1116),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: const Text('Simpan Kebiasaan', style: TextStyle(fontWeight: FontWeight.w700)),
+                    child: const Text(
+                      'Simpan Kebiasaan',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ],
               ),
@@ -3253,7 +4416,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   void _openScheduleToClockSheet({
     String title = '',
     int initialDurationMinutes = 60,
-    String identity = 'Programmer',
+    String identity = '',
     Color? identityColor,
   }) {
     final settings = ref.read(launcherSettingsProvider);
@@ -3275,7 +4438,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final titleCtrl = TextEditingController(text: selectedTitle);
 
     var startH = (_hourNow() * 2).ceil() / 2.0;
-    while (_findConflict(startH, startH + initialDurationMinutes / 60.0) != null && startH < 23.5) {
+    while (_findConflict(startH, startH + initialDurationMinutes / 60.0) !=
+            null &&
+        startH < 23.5) {
       startH += 0.5;
     }
     if (startH >= 23.5) startH = _hourNow();
@@ -3288,7 +4453,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: tc.card,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
@@ -3296,7 +4463,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             final endH = math.min(24.0, startH + duration / 60.0);
 
             return Padding(
-              padding: EdgeInsets.fromLTRB(18, 16, 18, MediaQuery.of(ctx).viewInsets.bottom + 24),
+              padding: EdgeInsets.fromLTRB(
+                18,
+                16,
+                18,
+                MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -3324,33 +4496,53 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             Container(
                               width: 10,
                               height: 10,
-                              decoration: BoxDecoration(color: activeColor, shape: BoxShape.circle),
+                              decoration: BoxDecoration(
+                                color: activeColor,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Pasang ke Focus Clock',
-                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: tc.textPrimary),
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: tc.textPrimary,
+                              ),
                             ),
                           ],
                         ),
                         // Button to toggle custom mode
                         InkWell(
-                          onTap: () => setSheetState(() => isCustomInput = !isCustomInput),
+                          onTap: () => setSheetState(
+                            () => isCustomInput = !isCustomInput,
+                          ),
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
-                              color: isCustomInput ? tc.accent.withOpacity(0.2) : tc.cardElevated,
+                              color: isCustomInput
+                                  ? tc.accent.withOpacity(0.2)
+                                  : tc.cardElevated,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: isCustomInput ? tc.accent : tc.stroke),
+                              border: Border.all(
+                                color: isCustomInput ? tc.accent : tc.stroke,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  isCustomInput ? Icons.list_alt_rounded : Icons.edit_note_rounded,
+                                  isCustomInput
+                                      ? Icons.list_alt_rounded
+                                      : Icons.edit_note_rounded,
                                   size: 14,
-                                  color: isCustomInput ? tc.accent : tc.textSecondary,
+                                  color: isCustomInput
+                                      ? tc.accent
+                                      : tc.textSecondary,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -3358,7 +4550,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
-                                    color: isCustomInput ? tc.accent : tc.textSecondary,
+                                    color: isCustomInput
+                                        ? tc.accent
+                                        : tc.textSecondary,
                                   ),
                                 ),
                               ],
@@ -3382,11 +4576,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       if (_dumpedTasks.isNotEmpty) ...[
                         Row(
                           children: [
-                            Icon(Icons.inbox_rounded, size: 14, color: tc.accent),
+                            Icon(
+                              Icons.inbox_rounded,
+                              size: 14,
+                              color: tc.accent,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'Dari Dump Inbox:',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tc.textSecondary),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: tc.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -3406,9 +4608,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                               },
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isSel ? tc.accent.withOpacity(0.2) : tc.cardElevated,
+                                  color: isSel
+                                      ? tc.accent.withOpacity(0.2)
+                                      : tc.cardElevated,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: isSel ? tc.accent : tc.stroke,
@@ -3419,15 +4626,23 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     if (isSel) ...[
-                                      Icon(Icons.check_rounded, size: 13, color: tc.accent),
+                                      Icon(
+                                        Icons.check_rounded,
+                                        size: 13,
+                                        color: tc.accent,
+                                      ),
                                       const SizedBox(width: 4),
                                     ],
                                     Text(
                                       task,
                                       style: TextStyle(
                                         fontSize: 12,
-                                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                                        color: isSel ? tc.accent : tc.textPrimary,
+                                        fontWeight: isSel
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: isSel
+                                            ? tc.accent
+                                            : tc.textPrimary,
                                       ),
                                     ),
                                   ],
@@ -3443,11 +4658,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       if (_habits.isNotEmpty) ...[
                         Row(
                           children: [
-                            Icon(Icons.repeat_rounded, size: 14, color: tc.textSecondary),
+                            Icon(
+                              Icons.repeat_rounded,
+                              size: 14,
+                              color: tc.textSecondary,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'Dari Kebiasaan & Rutinitas:',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tc.textSecondary),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: tc.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -3474,9 +4697,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                   },
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: isSel ? hColor.withOpacity(0.2) : tc.cardElevated,
+                                      color: isSel
+                                          ? hColor.withOpacity(0.2)
+                                          : tc.cardElevated,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
                                         color: isSel ? hColor : tc.stroke,
@@ -3489,22 +4717,32 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                         Container(
                                           width: 6,
                                           height: 6,
-                                          decoration: BoxDecoration(color: hColor, shape: BoxShape.circle),
+                                          decoration: BoxDecoration(
+                                            color: hColor,
+                                            shape: BoxShape.circle,
+                                          ),
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
                                           h.title,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                                            color: isSel ? hColor : tc.textPrimary,
+                                            fontWeight: isSel
+                                                ? FontWeight.w700
+                                                : FontWeight.w500,
+                                            color: isSel
+                                                ? hColor
+                                                : tc.textPrimary,
                                           ),
                                         ),
                                         if (h.minutes != null) ...[
                                           const SizedBox(width: 4),
                                           Text(
                                             '(${h.minutes}m)',
-                                            style: TextStyle(fontSize: 10, color: tc.textMuted),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: tc.textMuted,
+                                            ),
                                           ),
                                         ],
                                       ],
@@ -3522,11 +4760,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       if (_presets.isNotEmpty) ...[
                         Row(
                           children: [
-                            Icon(Icons.layers_outlined, size: 14, color: tc.textSecondary),
+                            Icon(
+                              Icons.layers_outlined,
+                              size: 14,
+                              color: tc.textSecondary,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'Dari Preset Waktu:',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tc.textSecondary),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: tc.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -3551,9 +4797,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                   },
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: isSel ? pColor.withOpacity(0.2) : tc.cardElevated,
+                                      color: isSel
+                                          ? pColor.withOpacity(0.2)
+                                          : tc.cardElevated,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
                                         color: isSel ? pColor : tc.stroke,
@@ -3564,7 +4815,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                       '${p.name} (${p.minutes}m)',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                                        fontWeight: isSel
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
                                         color: isSel ? pColor : tc.textPrimary,
                                       ),
                                     ),
@@ -3592,11 +4845,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.add_rounded, size: 16, color: tc.accent),
+                              Icon(
+                                Icons.add_rounded,
+                                size: 16,
+                                color: tc.accent,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 '+ Tulis Kegiatan Kustom Manual',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tc.accent),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: tc.accent,
+                                ),
                               ),
                             ],
                           ),
@@ -3607,11 +4868,18 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       TextField(
                         controller: titleCtrl,
                         autofocus: true,
-                        style: TextStyle(color: tc.textPrimary, fontWeight: FontWeight.w600),
-                        onChanged: (v) => setSheetState(() => selectedTitle = v),
+                        style: TextStyle(
+                          color: tc.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        onChanged: (v) =>
+                            setSheetState(() => selectedTitle = v),
                         decoration: InputDecoration(
                           labelText: 'Nama Kegiatan Kustom',
-                          labelStyle: TextStyle(color: tc.textSecondary, fontSize: 13),
+                          labelStyle: TextStyle(
+                            color: tc.textSecondary,
+                            fontSize: 13,
+                          ),
                           filled: true,
                           fillColor: tc.bg,
                           border: OutlineInputBorder(
@@ -3629,7 +4897,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       // Identity Selector
                       Text(
                         'Pilih Identitas:',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tc.textSecondary),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: tc.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       SizedBox(
@@ -3640,14 +4912,23 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           separatorBuilder: (_, __) => const SizedBox(width: 8),
                           itemBuilder: (context, i) {
                             final id = _identities[i];
-                            final isSel = id.name.toLowerCase() == selectedIdentity.toLowerCase();
+                            final isSel =
+                                id.name.toLowerCase() ==
+                                selectedIdentity.toLowerCase();
                             return InkWell(
-                              onTap: () => setSheetState(() => selectedIdentity = id.name),
+                              onTap: () => setSheetState(
+                                () => selectedIdentity = id.name,
+                              ),
                               borderRadius: BorderRadius.circular(10),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isSel ? id.color.withOpacity(0.2) : tc.bg,
+                                  color: isSel
+                                      ? id.color.withOpacity(0.2)
+                                      : tc.bg,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color: isSel ? id.color : tc.stroke,
@@ -3660,15 +4941,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                     Container(
                                       width: 6,
                                       height: 6,
-                                      decoration: BoxDecoration(color: id.color, shape: BoxShape.circle),
+                                      decoration: BoxDecoration(
+                                        color: id.color,
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
                                       id.name,
                                       style: TextStyle(
                                         fontSize: 12,
-                                        fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-                                        color: isSel ? id.color : tc.textPrimary,
+                                        fontWeight: isSel
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: isSel
+                                            ? id.color
+                                            : tc.textPrimary,
                                       ),
                                     ),
                                   ],
@@ -3683,7 +4971,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
                     // ── TIME BADGE & RANGE SLIDER ──
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: activeColor.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),
@@ -3694,17 +4985,29 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.schedule_rounded, color: activeColor, size: 20),
+                              Icon(
+                                Icons.schedule_rounded,
+                                color: activeColor,
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 '${_formatHour(startH)} — ${_formatHour(endH)}',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: activeColor),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: activeColor,
+                                ),
                               ),
                             ],
                           ),
                           Text(
                             '$duration menit',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: tc.textPrimary),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: tc.textPrimary,
+                            ),
                           ),
                         ],
                       ),
@@ -3717,11 +5020,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       children: [
                         Text(
                           'Geser Jam (00:00 - 24:00):',
-                          style: TextStyle(fontSize: 12, color: tc.textSecondary, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: tc.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         Text(
                           '${_formatHour(startH)} sd ${_formatHour(endH)}',
-                          style: TextStyle(fontSize: 12, color: activeColor, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: activeColor,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ),
@@ -3732,11 +5043,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       divisions: 96,
                       activeColor: activeColor,
                       inactiveColor: tc.stroke,
-                      labels: RangeLabels(_formatHour(startH), _formatHour(endH)),
+                      labels: RangeLabels(
+                        _formatHour(startH),
+                        _formatHour(endH),
+                      ),
                       onChanged: (newVals) {
                         setSheetState(() {
                           startH = newVals.start;
-                          var newDur = ((newVals.end - newVals.start) * 60).round();
+                          var newDur = ((newVals.end - newVals.start) * 60)
+                              .round();
                           if (newDur < 15) newDur = 15;
                           duration = newDur;
                           errorMessage = null;
@@ -3748,7 +5063,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     // Mulai Cepat Chips
                     Text(
                       'Mulai Cepat:',
-                      style: TextStyle(fontSize: 12, color: tc.textSecondary, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tc.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     SingleChildScrollView(
@@ -3758,7 +5077,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           _buildTimeChip(
                             label: 'Sekarang (${_formatHour(_hourNow())})',
                             isSelected: (startH - _hourNow()).abs() < 0.25,
-                            onTap: () => setSheetState(() => startH = _hourNow()),
+                            onTap: () =>
+                                setSheetState(() => startH = _hourNow()),
                           ),
                           ...[9.0, 13.0, 16.0, 19.5, 21.0].map((h) {
                             return Padding(
@@ -3778,7 +5098,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     // Pilihan Durasi Chips
                     Text(
                       'Pilihan Durasi:',
-                      style: TextStyle(fontSize: 12, color: tc.textSecondary, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tc.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     SingleChildScrollView(
@@ -3792,11 +5116,16 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                               onTap: () => setSheetState(() => duration = d),
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isSel ? activeColor : tc.bg,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: isSel ? activeColor : tc.stroke),
+                                  border: Border.all(
+                                    color: isSel ? activeColor : tc.stroke,
+                                  ),
                                 ),
                                 child: Text(
                                   '$d m',
@@ -3817,19 +5146,31 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       const SizedBox(height: 10),
                       Text(
                         errorMessage!,
-                        style: const TextStyle(color: Color(0xFFE88F7D), fontSize: 12, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          color: Color(0xFFE88F7D),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 16),
 
                     // Submit Button
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         final actName = selectedTitle.trim().isNotEmpty
                             ? selectedTitle.trim()
-                            : (titleCtrl.text.trim().isNotEmpty ? titleCtrl.text.trim() : 'Kegiatan Baru');
+                            : (titleCtrl.text.trim().isNotEmpty
+                                  ? titleCtrl.text.trim()
+                                  : 'Kegiatan Baru');
                         final en = math.min(24.0, startH + duration / 60.0);
-                        final res = _addBlock(startH, en, actName, selectedIdentity);
+                        final res = await _addBlock(
+                          startH,
+                          en,
+                          actName,
+                          selectedIdentity,
+                        );
+                        if (!ctx.mounted || !mounted) return;
                         if (res != null) {
                           setSheetState(() => errorMessage = res);
                         } else {
@@ -3838,23 +5179,34 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             setState(() => _dumpedTasks.remove(actName));
                           }
                           Navigator.pop(ctx);
-                          _showToast('$actName berhasil dipasang di jam ${_formatHour(startH)}-${_formatHour(en)}');
+                          _showToast(
+                            '$actName berhasil dipasang di jam ${_formatHour(startH)}-${_formatHour(en)}',
+                          );
                         }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: tc.accent,
                         foregroundColor: tc.bg,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.check_circle_outline_rounded, size: 20),
+                          const Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Pasang ke Focus Clock',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: tc.bg),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: tc.bg,
+                            ),
                           ),
                         ],
                       ),
@@ -3878,7 +5230,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-  Widget _buildTimeChip({required String label, required bool isSelected, required VoidCallback onTap}) {
+  Widget _buildTimeChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -3887,14 +5243,20 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFE8C07D) : const Color(0xFF0E1116),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isSelected ? const Color(0xFFE8C07D) : const Color(0xFF1E2430)),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFFE8C07D)
+                : const Color(0xFF1E2430),
+          ),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: isSelected ? const Color(0xFF161A22) : const Color(0xFFEDEFF2),
+            color: isSelected
+                ? const Color(0xFF161A22)
+                : const Color(0xFFEDEFF2),
           ),
         ),
       ),
@@ -3921,7 +5283,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               Expanded(
                 child: Text(
                   'Task & Habit Dump (Inbox)',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: tc.textPrimary),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: tc.textPrimary,
+                  ),
                 ),
               ),
               Container(
@@ -3932,7 +5298,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 ),
                 child: Text(
                   '${_dumpedTasks.length} tugas',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: tc.accent),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: tc.accent,
+                  ),
                 ),
               ),
               const SizedBox(width: 6),
@@ -3940,7 +5310,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 onTap: () => _openQuickDumpTaskDialog(tc),
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: tc.cardAlt,
                     borderRadius: BorderRadius.circular(8),
@@ -3951,7 +5324,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     children: [
                       Icon(Icons.add, color: tc.accent, size: 14),
                       const SizedBox(width: 2),
-                      Text('Dump', style: TextStyle(fontSize: 11, color: tc.accent, fontWeight: FontWeight.w700)),
+                      Text(
+                        'Dump',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: tc.accent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -3961,7 +5341,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 onTap: () => _openScheduleToClockSheet(),
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: tc.accent,
                     borderRadius: BorderRadius.circular(8),
@@ -3969,9 +5352,20 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.flash_on_rounded, color: tc.background, size: 13),
+                      Icon(
+                        Icons.flash_on_rounded,
+                        color: tc.background,
+                        size: 13,
+                      ),
                       const SizedBox(width: 2),
-                      Text('Pasang', style: TextStyle(fontSize: 11, color: tc.background, fontWeight: FontWeight.w800)),
+                      Text(
+                        'Pasang',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: tc.background,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -4015,25 +5409,34 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           Expanded(
             child: Text(
               task,
-              style: TextStyle(fontSize: 13, color: tc.textPrimary, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 13,
+                color: tc.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           const SizedBox(width: 6),
           // 1-Tap Quick Schedule Sekarang
           InkWell(
-            onTap: () {
+            onTap: () async {
               var nowHr = (_hourNow() * 2).floor() / 2.0;
               var endHr = nowHr + 1.0;
               if (endHr > 24.0) endHr = 24.0;
-              final err = _addBlock(nowHr, endHr, task, 'Programmer');
+              final err = await _addBlock(nowHr, endHr, task, null);
               if (err != null) {
                 _showToast(err);
-                _openScheduleToClockSheet(title: task, initialDurationMinutes: 60, identity: 'Programmer');
+                _openScheduleToClockSheet(
+                  title: task,
+                  initialDurationMinutes: 60,
+                );
               } else {
                 setState(() {
                   _dumpedTasks.remove(task);
                 });
-                _showToast('"$task" dijadwalkan ${_formatHour(nowHr)} - ${_formatHour(endHr)}');
+                _showToast(
+                  '"$task" dijadwalkan ${_formatHour(nowHr)} - ${_formatHour(endHr)}',
+                );
               }
             },
             borderRadius: BorderRadius.circular(8),
@@ -4051,7 +5454,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   const SizedBox(width: 2),
                   Text(
                     'Sekarang',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: tc.accent),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: tc.accent,
+                    ),
                   ),
                 ],
               ),
@@ -4063,7 +5470,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             onTap: () => _openScheduleToClockSheet(
               title: task,
               initialDurationMinutes: 60,
-              identity: 'Programmer',
+              identity: '',
             ),
             borderRadius: BorderRadius.circular(8),
             child: Container(
@@ -4075,11 +5482,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.watch_later_outlined, size: 12, color: tc.background),
+                  Icon(
+                    Icons.watch_later_outlined,
+                    size: 12,
+                    color: tc.background,
+                  ),
                   const SizedBox(width: 3),
                   Text(
                     'Pasang',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: tc.background),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: tc.background,
+                    ),
                   ),
                 ],
               ),
@@ -4105,8 +5520,18 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: tc.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: tc.stroke)),
-        title: Text('Catat Cepat ke Dump Inbox', style: TextStyle(color: tc.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: tc.stroke),
+        ),
+        title: Text(
+          'Catat Cepat ke Dump Inbox',
+          style: TextStyle(
+            color: tc.textPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -4116,7 +5541,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             hintStyle: TextStyle(color: tc.textSecondary),
             filled: true,
             fillColor: tc.cardAlt,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: tc.stroke)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: tc.stroke),
+            ),
           ),
         ),
         actions: [
@@ -4133,7 +5561,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 _showToast('Tugas ditambahkan ke dump');
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: tc.accent, foregroundColor: tc.background),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: tc.accent,
+              foregroundColor: tc.background,
+            ),
             child: const Text('Simpan'),
           ),
         ],
@@ -4141,14 +5572,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-
-
   // ── 7. Habit Actions Popover (Ya, Tidak, Mulai, Catatan, Gambar) ──
   void _openHabitActionsSheet(HabitModel h) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
@@ -4156,7 +5587,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(h.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+              Text(
+                h.title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFEDEFF2),
+                ),
+              ),
               const SizedBox(height: 16),
 
               Row(
@@ -4180,14 +5618,28 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     });
                     _showToast('Ditandai tidak hari ini');
                   }),
-                  _buildHabitActionButton(Icons.play_arrow_rounded, 'Mulai', () {
-                    Navigator.pop(ctx);
-                    _startTimer(h.isVision ? 'Visualisasi masa depan' : h.title, h.minutes ?? 15, source: 'habit', sourceId: h.id, identity: h.identity);
-                  }),
-                  _buildHabitActionButton(Icons.edit_note_rounded, 'Catatan', () {
-                    Navigator.pop(ctx);
-                    _openHabitReflectionSheet(h);
-                  }),
+                  _buildHabitActionButton(
+                    Icons.play_arrow_rounded,
+                    'Mulai',
+                    () {
+                      Navigator.pop(ctx);
+                      _startTimer(
+                        h.isVision ? 'Visualisasi masa depan' : h.title,
+                        h.minutes ?? 15,
+                        source: 'habit',
+                        sourceId: h.id,
+                        identity: h.identity,
+                      );
+                    },
+                  ),
+                  _buildHabitActionButton(
+                    Icons.edit_note_rounded,
+                    'Catatan',
+                    () {
+                      Navigator.pop(ctx);
+                      _openHabitReflectionSheet(h);
+                    },
+                  ),
                   _buildHabitActionButton(Icons.photo_outlined, 'Gambar', () {
                     Navigator.pop(ctx);
                     setState(() {
@@ -4200,11 +5652,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               const SizedBox(height: 16),
 
               ListTile(
-                leading: const Icon(Icons.delete_outline_rounded, color: Color(0xFFE88F7D)),
-                title: const Text('Hapus kebiasaan', style: TextStyle(color: Color(0xFFE88F7D))),
+                leading: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Color(0xFFE88F7D),
+                ),
+                title: const Text(
+                  'Hapus kebiasaan',
+                  style: TextStyle(color: Color(0xFFE88F7D)),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  setState(() => _habits.removeWhere((item) => item.id == h.id));
+                  setState(
+                    () => _habits.removeWhere((item) => item.id == h.id),
+                  );
                   _showToast('Kebiasaan dihapus');
                 },
               ),
@@ -4215,7 +5675,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-  Widget _buildHabitActionButton(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildHabitActionButton(
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -4232,7 +5696,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           children: [
             Icon(icon, color: const Color(0xFFEDEFF2), size: 22),
             const SizedBox(height: 4),
-            Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF8A93A3))),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF8A93A3)),
+            ),
           ],
         ),
       ),
@@ -4245,17 +5712,34 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return Padding(
-          padding: EdgeInsets.fromLTRB(18, 18, 18, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          padding: EdgeInsets.fromLTRB(
+            18,
+            18,
+            18,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Refleksi Kebiasaan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+              const Text(
+                'Refleksi Kebiasaan',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFEDEFF2),
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(h.title, style: const TextStyle(color: Color(0xFF8A93A3), fontSize: 13)),
+              Text(
+                h.title,
+                style: const TextStyle(color: Color(0xFF8A93A3), fontSize: 13),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: ctrl,
@@ -4265,7 +5749,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   hintText: 'Tulis refleksi atau jurnal...',
                   filled: true,
                   fillColor: const Color(0xFF0E1116),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E2430))),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF1E2430)),
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -4274,11 +5761,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   final t = ctrl.text.trim();
                   if (t.isNotEmpty) {
                     setState(() {
-                      _notes.insert(0, NoteItem(
-                        id: _nextId++,
-                        dateKey: _dateKey(0),
-                        text: '[${h.title}] $t',
-                      ));
+                      _notes.insert(
+                        0,
+                        NoteItem(
+                          id: _nextId++,
+                          dateKey: _dateKey(0),
+                          text: '[${h.title}] $t',
+                        ),
+                      );
                     });
                     Navigator.pop(ctx);
                     _showToast('Catatan disimpan');
@@ -4288,9 +5778,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   backgroundColor: const Color(0xFFE8C07D),
                   foregroundColor: const Color(0xFF161A22),
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Simpan ke Catatan Hari Ini', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Simpan ke Catatan Hari Ini',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
               ),
             ],
           ),
@@ -4304,7 +5799,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
@@ -4312,7 +5809,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(b.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+              Text(
+                b.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFEDEFF2),
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
                 '${_formatHour(b.startHour)} sampai ${_formatHour(b.endHour)} (${_formatDuration(b.endHour - b.startHour)})',
@@ -4320,30 +5824,90 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.play_arrow_rounded, color: Color(0xFFE8C07D)),
-                title: const Text('Mulai timer', style: TextStyle(color: Color(0xFFEDEFF2))),
+                leading: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: Color(0xFFE8C07D),
+                ),
+                title: const Text(
+                  'Mulai timer',
+                  style: TextStyle(color: Color(0xFFEDEFF2)),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  final mins = math.max(1, ((b.endHour - b.startHour) * 60).round());
-                  _startTimer(b.name, mins, source: 'block', sourceId: b.id, identity: b.identity);
+                  final mins = math.max(
+                    1,
+                    ((b.endHour - b.startHour) * 60).round(),
+                  );
+                  _startTimer(
+                    b.name,
+                    mins,
+                    source: 'block',
+                    sourceId: b.id,
+                    identity: b.identity,
+                  );
                 },
               ),
               ListTile(
-                leading: Icon(b.isDone ? Icons.undo_rounded : Icons.check_circle_outline_rounded, color: const Color(0xFF5FD0A5)),
-                title: Text(b.isDone ? 'Batalkan selesai' : 'Tandai selesai', style: const TextStyle(color: Color(0xFFEDEFF2))),
-                onTap: () {
+                leading: Icon(
+                  b.isDone
+                      ? Icons.undo_rounded
+                      : Icons.check_circle_outline_rounded,
+                  color: const Color(0xFF5FD0A5),
+                ),
+                title: Text(
+                  b.isDone ? 'Batalkan selesai' : 'Tandai selesai',
+                  style: const TextStyle(color: Color(0xFFEDEFF2)),
+                ),
+                onTap: () async {
                   Navigator.pop(ctx);
-                  setState(() => b.isDone = !b.isDone);
-                  _showToast(b.isDone ? 'Blok ditandai selesai' : 'Dibatalkan');
+                  final isDone = !b.isDone;
+                  if (widget.useSampleData) {
+                    setState(() => b.isDone = isDone);
+                  } else if (b.activity != null) {
+                    try {
+                      await ref
+                          .read(activityRepoProvider)
+                          .markComplete(b.activity!, isDone);
+                    } catch (_) {
+                      if (mounted) {
+                        _showToast('Perubahan belum tersimpan. Coba lagi.');
+                      }
+                      return;
+                    }
+                  }
+                  if (mounted) {
+                    _showToast(isDone ? 'Blok ditandai selesai' : 'Dibatalkan');
+                  }
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.delete_outline_rounded, color: Color(0xFFE88F7D)),
-                title: const Text('Hapus dari jam', style: TextStyle(color: Color(0xFFE88F7D))),
-                onTap: () {
+                leading: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Color(0xFFE88F7D),
+                ),
+                title: const Text(
+                  'Hapus dari jam',
+                  style: TextStyle(color: Color(0xFFE88F7D)),
+                ),
+                onTap: () async {
                   Navigator.pop(ctx);
-                  setState(() => _blocks.removeWhere((item) => item.id == b.id));
-                  _showToast('Blok dihapus');
+                  if (widget.useSampleData) {
+                    setState(
+                      () => _blocks.removeWhere((item) => item.id == b.id),
+                    );
+                  } else if (b.activity != null) {
+                    try {
+                      await ref
+                          .read(activityRepoProvider)
+                          .deleteSingleInstance(b.activity!, b.activity!.date);
+                    } catch (_) {
+                      if (mounted) {
+                        _showToast('Blok belum terhapus. Coba lagi.');
+                      }
+                      return;
+                    }
+                  }
+                  if (mounted) _showToast('Blok dihapus');
                 },
               ),
             ],
@@ -4362,25 +5926,47 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             final q = query.toLowerCase().trim();
 
-            final matchedBlocks = _blocks.where((b) => !b.isSleep && b.name.toLowerCase().contains(q)).toList();
-            final matchedHabits = _habits.where((h) => h.title.toLowerCase().contains(q)).toList();
-            final matchedPresets = _presets.where((p) => p.name.toLowerCase().contains(q)).toList();
-            final matchedNotes = _notes.where((n) => n.text.toLowerCase().contains(q)).toList();
+            final matchedBlocks = _blocks
+                .where((b) => !b.isSleep && b.name.toLowerCase().contains(q))
+                .toList();
+            final matchedHabits = _habits
+                .where((h) => h.title.toLowerCase().contains(q))
+                .toList();
+            final matchedPresets = _presets
+                .where((p) => p.name.toLowerCase().contains(q))
+                .toList();
+            final matchedNotes = _notes
+                .where((n) => n.text.toLowerCase().contains(q))
+                .toList();
 
             return Padding(
-              padding: EdgeInsets.fromLTRB(18, 18, 18, MediaQuery.of(ctx).viewInsets.bottom + 20),
+              padding: EdgeInsets.fromLTRB(
+                18,
+                18,
+                18,
+                MediaQuery.of(ctx).viewInsets.bottom + 20,
+              ),
               child: SizedBox(
                 height: 480,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Cari aktivitas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+                    const Text(
+                      'Cari aktivitas',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFEDEFF2),
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: searchCtrl,
@@ -4388,10 +5974,18 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       style: const TextStyle(color: Color(0xFFEDEFF2)),
                       decoration: InputDecoration(
                         hintText: 'Ketik untuk mencari...',
-                        prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF8A93A3)),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: Color(0xFF8A93A3),
+                        ),
                         filled: true,
                         fillColor: const Color(0xFF0E1116),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E2430))),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1E2430),
+                          ),
+                        ),
                       ),
                       onChanged: (val) => setSheetState(() => query = val),
                     ),
@@ -4399,48 +5993,122 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
                     Expanded(
                       child: q.isEmpty
-                          ? const Center(child: Text('Cari blok, kebiasaan, preset, atau catatan.', style: TextStyle(color: Color(0xFF8A93A3))))
+                          ? const Center(
+                              child: Text(
+                                'Cari blok, kebiasaan, preset, atau catatan.',
+                                style: TextStyle(color: Color(0xFF8A93A3)),
+                              ),
+                            )
                           : ListView(
                               children: [
-                                ...matchedBlocks.map((b) => ListTile(
-                                      title: Text(b.name, style: const TextStyle(color: Color(0xFFEDEFF2))),
-                                      subtitle: Text('${_formatHour(b.startHour)} - ${_formatHour(b.endHour)}', style: const TextStyle(color: Color(0xFF8A93A3))),
-                                      trailing: const Text('Blok', style: TextStyle(color: Color(0xFFE8C07D), fontSize: 11)),
-                                      onTap: () {
-                                        Navigator.pop(ctx);
-                                        _openBlockDetailSheet(b);
-                                      },
-                                    )),
-                                ...matchedHabits.map((h) => ListTile(
-                                      title: Text(h.title, style: const TextStyle(color: Color(0xFFEDEFF2))),
-                                      trailing: const Text('Kebiasaan', style: TextStyle(color: Color(0xFF5FD0A5), fontSize: 11)),
-                                      onTap: () {
-                                        Navigator.pop(ctx);
-                                        _openHabitActionsSheet(h);
-                                      },
-                                    )),
-                                ...matchedPresets.map((p) => ListTile(
-                                      title: Text(p.name, style: const TextStyle(color: Color(0xFFEDEFF2))),
-                                      subtitle: Text('${p.minutes} menit', style: const TextStyle(color: Color(0xFF8A93A3))),
-                                      trailing: const Text('Preset', style: TextStyle(color: Color(0xFF8FB8E8), fontSize: 11)),
-                                      onTap: () {
-                                        Navigator.pop(ctx);
-                                        _openAddToClockSheet(p);
-                                      },
-                                    )),
-                                ...matchedNotes.map((n) => ListTile(
-                                      title: Text(n.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFEDEFF2))),
-                                      subtitle: Text(_formatDateShort(n.dateKey), style: const TextStyle(color: Color(0xFF8A93A3))),
-                                      trailing: const Text('Catatan', style: TextStyle(color: Color(0xFFC3A6F0), fontSize: 11)),
-                                      onTap: () {
-                                        Navigator.pop(ctx);
-                                        setState(() {
-                                          _selectedNoteDate = n.dateKey;
-                                          _notesFilter = 'date';
-                                          _currentScreen = 'catatan';
-                                        });
-                                      },
-                                    )),
+                                ...matchedBlocks.map(
+                                  (b) => ListTile(
+                                    title: Text(
+                                      b.name,
+                                      style: const TextStyle(
+                                        color: Color(0xFFEDEFF2),
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${_formatHour(b.startHour)} - ${_formatHour(b.endHour)}',
+                                      style: const TextStyle(
+                                        color: Color(0xFF8A93A3),
+                                      ),
+                                    ),
+                                    trailing: const Text(
+                                      'Blok',
+                                      style: TextStyle(
+                                        color: Color(0xFFE8C07D),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _openBlockDetailSheet(b);
+                                    },
+                                  ),
+                                ),
+                                ...matchedHabits.map(
+                                  (h) => ListTile(
+                                    title: Text(
+                                      h.title,
+                                      style: const TextStyle(
+                                        color: Color(0xFFEDEFF2),
+                                      ),
+                                    ),
+                                    trailing: const Text(
+                                      'Kebiasaan',
+                                      style: TextStyle(
+                                        color: Color(0xFF5FD0A5),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _openHabitActionsSheet(h);
+                                    },
+                                  ),
+                                ),
+                                ...matchedPresets.map(
+                                  (p) => ListTile(
+                                    title: Text(
+                                      p.name,
+                                      style: const TextStyle(
+                                        color: Color(0xFFEDEFF2),
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${p.minutes} menit',
+                                      style: const TextStyle(
+                                        color: Color(0xFF8A93A3),
+                                      ),
+                                    ),
+                                    trailing: const Text(
+                                      'Preset',
+                                      style: TextStyle(
+                                        color: Color(0xFF8FB8E8),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _openAddToClockSheet(p);
+                                    },
+                                  ),
+                                ),
+                                ...matchedNotes.map(
+                                  (n) => ListTile(
+                                    title: Text(
+                                      n.text,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFFEDEFF2),
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      _formatDateShort(n.dateKey),
+                                      style: const TextStyle(
+                                        color: Color(0xFF8A93A3),
+                                      ),
+                                    ),
+                                    trailing: const Text(
+                                      'Catatan',
+                                      style: TextStyle(
+                                        color: Color(0xFFC3A6F0),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      setState(() {
+                                        _selectedNoteDate = n.dateKey;
+                                        _notesFilter = 'date';
+                                        _currentScreen = 'catatan';
+                                      });
+                                    },
+                                  ),
+                                ),
                               ],
                             ),
                     ),
@@ -4460,7 +6128,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return SingleChildScrollView(
           child: Padding(
@@ -4469,16 +6139,27 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Menu', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+                const Text(
+                  'Menu',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFEDEFF2),
+                  ),
+                ),
                 const SizedBox(height: 12),
                 _buildMenuRow(Icons.home_outlined, 'Beranda', () {
                   Navigator.pop(ctx);
                   setState(() => _currentScreen = 'home');
                 }),
-                _buildMenuRow(Icons.auto_awesome_outlined, 'Jelas: visual dan syukur', () {
-                  Navigator.pop(ctx);
-                  setState(() => _currentScreen = 'jelas');
-                }),
+                _buildMenuRow(
+                  Icons.auto_awesome_outlined,
+                  'Jelas: visual dan syukur',
+                  () {
+                    Navigator.pop(ctx);
+                    setState(() => _currentScreen = 'jelas');
+                  },
+                ),
                 _buildMenuRow(Icons.book_outlined, 'Catatan Harian', () {
                   Navigator.pop(ctx);
                   setState(() {
@@ -4487,22 +6168,38 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     _currentScreen = 'catatan';
                   });
                 }),
-                _buildMenuRow(Icons.person_add_alt_1_outlined, 'Tambah Identitas Baru', () {
-                  Navigator.pop(ctx);
-                  _openCreateNewIdentityDialog();
-                }),
-                _buildMenuRow(Icons.palette_outlined, 'Pilih Tema Focus Clock', () {
-                  Navigator.pop(ctx);
-                  _openThemePickerSheet();
-                }),
+                _buildMenuRow(
+                  Icons.person_add_alt_1_outlined,
+                  'Tambah Identitas Baru',
+                  () {
+                    Navigator.pop(ctx);
+                    _openCreateNewIdentityDialog();
+                  },
+                ),
+                _buildMenuRow(
+                  Icons.palette_outlined,
+                  'Pilih Tema Focus Clock',
+                  () {
+                    Navigator.pop(ctx);
+                    _openThemePickerSheet();
+                  },
+                ),
                 _buildMenuRow(Icons.apps_rounded, 'Buka Apps Drawer', () {
                   Navigator.pop(ctx);
                   widget.onOpenAppDrawer();
                 }),
-                _buildMenuRow(Icons.settings_outlined, 'Pengaturan Launcher', () {
-                  Navigator.pop(ctx);
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FitrahSettingsScreen()));
-                }),
+                _buildMenuRow(
+                  Icons.settings_outlined,
+                  'Pengaturan Launcher',
+                  () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const FitrahSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -4514,7 +6211,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   Widget _buildMenuRow(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFFE8C07D)),
-      title: Text(title, style: const TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Color(0xFFEDEFF2),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       trailing: const Icon(Icons.chevron_right, color: Color(0xFF8A93A3)),
       onTap: onTap,
     );
@@ -4566,7 +6269,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
@@ -4576,16 +6281,27 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.palette_outlined, color: Color(0xFFE8C07D), size: 22),
+                  const Icon(
+                    Icons.palette_outlined,
+                    color: Color(0xFFE8C07D),
+                    size: 22,
+                  ),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
                       'Pilih Tema Tampilan',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2)),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFEDEFF2),
+                      ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Color(0xFF8A93A3)),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Color(0xFF8A93A3),
+                    ),
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],
@@ -4607,7 +6323,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   decoration: BoxDecoration(
-                    color: isSelected ? accent.withOpacity(0.12) : const Color(0xFF0E1116),
+                    color: isSelected
+                        ? accent.withOpacity(0.12)
+                        : const Color(0xFF0E1116),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isSelected ? accent : const Color(0xFF1E2430),
@@ -4615,7 +6333,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     ),
                   ),
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 4,
+                    ),
                     leading: Container(
                       width: 32,
                       height: 32,
@@ -4628,7 +6349,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         child: Container(
                           width: 10,
                           height: 10,
-                          decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+                          decoration: BoxDecoration(
+                            color: accent,
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
                     ),
@@ -4636,19 +6360,30 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       name,
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
                         color: isSelected ? accent : const Color(0xFFEDEFF2),
                       ),
                     ),
                     subtitle: Text(
                       desc,
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF8A93A3)),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8A93A3),
+                      ),
                     ),
                     trailing: isSelected
-                        ? Icon(Icons.check_circle_rounded, color: accent, size: 20)
+                        ? Icon(
+                            Icons.check_circle_rounded,
+                            color: accent,
+                            size: 20,
+                          )
                         : null,
                     onTap: () {
-                      ref.read(launcherSettingsProvider.notifier).setThemePalette(key);
+                      ref
+                          .read(launcherSettingsProvider.notifier)
+                          .setThemePalette(key);
                       setState(() {});
                       Navigator.pop(ctx);
                       _showToast('Tema diubah ke $name');
@@ -4673,7 +6408,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
@@ -4681,23 +6418,48 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('$name $time', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+              Text(
+                '$name $time',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFEDEFF2),
+                ),
+              ),
               const SizedBox(height: 14),
               ListTile(
-                leading: Icon(isDone ? Icons.undo_rounded : Icons.check_circle_outline_rounded, color: const Color(0xFF5FD0A5)),
-                title: Text(isDone ? 'Batalkan tanda sudah salat' : 'Tandai sudah salat', style: const TextStyle(color: Color(0xFFEDEFF2))),
+                leading: Icon(
+                  isDone
+                      ? Icons.undo_rounded
+                      : Icons.check_circle_outline_rounded,
+                  color: const Color(0xFF5FD0A5),
+                ),
+                title: Text(
+                  isDone ? 'Batalkan tanda sudah salat' : 'Tandai sudah salat',
+                  style: const TextStyle(color: Color(0xFFEDEFF2)),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   setState(() => _prayerDone[index] = !isDone);
-                  _showToast(isDone ? 'Batal tandai $name' : '$name ditandai sudah salat');
+                  _showToast(
+                    isDone
+                        ? 'Batal tandai $name'
+                        : '$name ditandai sudah salat',
+                  );
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.add_alarm_rounded, color: Color(0xFFE8C07D)),
-                title: const Text('Tambah blok 15 menit ke jam', style: TextStyle(color: Color(0xFFEDEFF2))),
-                onTap: () {
+                leading: const Icon(
+                  Icons.add_alarm_rounded,
+                  color: Color(0xFFE8C07D),
+                ),
+                title: const Text(
+                  'Tambah blok 15 menit ke jam',
+                  style: TextStyle(color: Color(0xFFEDEFF2)),
+                ),
+                onTap: () async {
                   Navigator.pop(ctx);
-                  final res = _addBlock(pHour, pHour + 0.25, name, 'Baik hati');
+                  final res = await _addBlock(pHour, pHour + 0.25, name, null);
                   _showToast(res ?? 'Blok $name ditambahkan ke jam');
                 },
               ),
@@ -4713,7 +6475,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF161A22),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
@@ -4721,14 +6485,30 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Pilih tanggal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFEDEFF2))),
+              const Text(
+                'Pilih tanggal',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFEDEFF2),
+                ),
+              ),
               const SizedBox(height: 12),
               ...List.generate(7, (i) {
                 final k = _dateKey(-i);
                 final label = i == 0 ? 'Hari ini' : '$i hari lalu';
                 return ListTile(
-                  title: Text(_formatDateShort(k), style: const TextStyle(color: Color(0xFFEDEFF2), fontWeight: FontWeight.w600)),
-                  trailing: Text(label, style: const TextStyle(color: Color(0xFF8A93A3))),
+                  title: Text(
+                    _formatDateShort(k),
+                    style: const TextStyle(
+                      color: Color(0xFFEDEFF2),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  trailing: Text(
+                    label,
+                    style: const TextStyle(color: Color(0xFF8A93A3)),
+                  ),
                   onTap: () {
                     Navigator.pop(ctx);
                     setState(() {
@@ -4746,5 +6526,3 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 }
-
-

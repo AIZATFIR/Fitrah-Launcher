@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'core/theme.dart';
 import 'data/isar_service.dart';
+import 'data/storage_unavailable_app.dart';
 import 'features/sadar/sadar_home_screen.dart';
 import 'firebase_options.dart';
 import 'providers/providers.dart';
@@ -45,8 +46,9 @@ Future<void> main() async {
   try {
     isarService = await IsarService.open();
   } catch (e) {
-    debugPrint('IsarService init fallback: $e');
-    isarService = IsarService.fallback();
+    debugPrint('IsarService open failed: $e');
+    runApp(StorageUnavailableApp(onRetry: main));
+    return;
   }
 
   final notifier = NotificationService();

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,18 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme.dart';
 import '../../../models/habit.dart';
-import '../../../models/habit_entry.dart';
-import '../../../providers/providers.dart';
 import '../../../providers/sadar_providers.dart';
-import '../../../services/chime_service.dart';
 import '../../../services/sadar_timer_engine.dart';
 
 class SadarTimerView extends ConsumerStatefulWidget {
-  const SadarTimerView({
-    super.key,
-    required this.habit,
-    required this.onClose,
-  });
+  const SadarTimerView({super.key, required this.habit, required this.onClose});
 
   final Habit habit;
   final VoidCallback onClose;
@@ -30,17 +22,10 @@ class SadarTimerView extends ConsumerStatefulWidget {
 class _SadarTimerViewState extends ConsumerState<SadarTimerView>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseCtrl;
-  bool _isPaused = false;
-  bool _isCompleted = false;
-  bool _isOverdue = false;
-  bool _hasChimed = false;
-
-  Timer? _ticker;
-  late int _totalSeconds;
-  late int _remainingSeconds;
-  int _overdueSeconds = 0;
-  DateTime? _pausedAt;
-  late DateTime _targetEndTime;
+  bool _isLoadingSession = true;
+  bool _hasSessionConflict = false;
+  bool _couldNotStart = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -53,87 +38,84 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
 
-    final minutes = widget.habit.target > 0 ? widget.habit.target : 20;
-    _totalSeconds = minutes * 60;
-    _remainingSeconds = _totalSeconds;
-    _targetEndTime = DateTime.now().add(Duration(seconds: _totalSeconds));
-
-    _startTimer();
+    _attachToSession();
   }
 
-  void _startTimer() {
-    _ticker?.cancel();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!_isPaused && mounted) {
-        final now = DateTime.now();
-        final diff = _targetEndTime.difference(now).inSeconds;
-        setState(() {
-          if (diff <= 0) {
-            _remainingSeconds = 0;
-            _isOverdue = true;
-            _overdueSeconds = diff.abs();
-
-            if (!_hasChimed) {
-              _hasChimed = true;
-              ChimeService().playTwingChime();
-              try {
-                ref.read(notificationServiceProvider).showNotification(
-                  id: widget.habit.id,
-                  title: 'Waktu Selesai! 🎉',
-                  body: 'Target "${widget.habit.name}" tercapai. Anda dalam mode fokus ekstra!',
-                );
-              } catch (_) {}
-            }
-          } else {
-            _remainingSeconds = diff.clamp(0, _totalSeconds);
-          }
-        });
-      }
-    });
+  Future<void> _attachToSession() async {
+    if (mounted && !_isLoadingSession) {
+      setState(() {
+        _isLoadingSession = true;
+        _couldNotStart = false;
+        _hasSessionConflict = false;
+      });
+    }
+    try {
+      final engine = ref.read(timerEngineProvider.notifier);
+      final attached = await engine.start(widget.habit);
+      if (!mounted) return;
+      setState(() {
+        _isLoadingSession = false;
+        _hasSessionConflict = !attached && !engine.currentState.isSavePending;
+        _couldNotStart = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingSession = false;
+        _couldNotStart = true;
+      });
+    }
   }
 
-  void _togglePause() {
+  Future<void> _togglePause() async {
     HapticFeedback.selectionClick();
-    setState(() {
-      if (_isPaused) {
-        // Resuming
-        if (_pausedAt != null) {
-          final pauseDuration = DateTime.now().difference(_pausedAt!);
-          _targetEndTime = _targetEndTime.add(pauseDuration);
-        }
-        _isPaused = false;
+    final messenger = ScaffoldMessenger.of(context);
+    final engine = ref.read(timerEngineProvider.notifier);
+    try {
+      if (engine.currentState.isPaused) {
+        await engine.resume();
       } else {
-        // Pausing
-        _pausedAt = DateTime.now();
-        _isPaused = true;
+        await engine.pause();
       }
-    });
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Perubahan belum tersimpan. Coba lagi.'),
+          ),
+        );
+      }
+    }
   }
 
-  void _finish() {
+  Future<void> _finish() async {
+    if (_isSaving) return;
     HapticFeedback.mediumImpact();
-    setState(() {
-      _isCompleted = true;
-    });
-    _ticker?.cancel();
-    _autoRecordCompletion();
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(timerEngineProvider.notifier).finishEarly();
+      _refreshSadarSummaries();
+    } catch (_) {
+      // The engine keeps the session and exposes a retry action.
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
-  Future<void> _autoRecordCompletion() async {
-    final now = DateTime.now();
-    final dateStr = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final totalElapsedSecs = _totalSeconds - _remainingSeconds + _overdueSeconds;
-    final elapsedMinutes = (totalElapsedSecs / 60).ceil().clamp(1, 999);
+  Future<void> _retryCompletion() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(timerEngineProvider.notifier).retryCompletion();
+      _refreshSadarSummaries();
+    } catch (_) {
+      // Keep the pending state visible until the transaction succeeds.
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
 
-    await ref.read(sadarRepoProvider).recordEntryStatus(
-      habitId: widget.habit.id,
-      dateString: dateStr,
-      status: HabitStatus.yes,
-      valueCompleted: elapsedMinutes,
-      completedAt: now,
-      source: 'timer',
-    );
-
+  void _refreshSadarSummaries() {
     ref.invalidate(habitsStreamProvider);
     ref.invalidate(dailyFulfillmentProvider);
     ref.invalidate(whatIRepeatProvider);
@@ -142,7 +124,6 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
 
   @override
   void dispose() {
-    _ticker?.cancel();
     _pulseCtrl.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
@@ -154,8 +135,66 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
+  Widget _buildMessageCard({
+    required IconData icon,
+    required String title,
+    required String message,
+    required String actionLabel,
+    required VoidCallback? onAction,
+    bool showBackButton = true,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 420),
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: AppPalette.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppPalette.stroke),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppPalette.accent, size: 34),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppPalette.textDim,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton(onPressed: onAction, child: Text(actionLabel)),
+          if (showBackButton) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: widget.onClose,
+              child: const Text('Kembali ke Hari Ini'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen<TimerState>(timerEngineProvider, (previous, next) {
+      if (next.isCompleted &&
+          !next.isSavePending &&
+          (previous?.isCompleted != true || previous?.isSavePending == true)) {
+        _refreshSadarSummaries();
+      }
+    });
+    final timer = ref.watch(timerEngineProvider);
     final color = Color(widget.habit.colorValue);
 
     return Scaffold(
@@ -168,7 +207,11 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
               top: 16,
               left: 20,
               child: IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppPalette.textDim, size: 24),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: AppPalette.textDim,
+                  size: 24,
+                ),
                 tooltip: 'Keluar',
                 onPressed: () {
                   HapticFeedback.selectionClick();
@@ -178,17 +221,34 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
             ),
 
             // Desktop Floating Pip Top Right
-            if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS) && !_isCompleted)
+            if (!kIsWeb &&
+                (Platform.isWindows || Platform.isLinux || Platform.isMacOS) &&
+                !timer.isCompleted)
               Positioned(
                 top: 16,
                 right: 20,
                 child: IconButton(
-                  icon: const Icon(Icons.picture_in_picture_alt_rounded, color: AppPalette.textDim, size: 22),
+                  icon: const Icon(
+                    Icons.picture_in_picture_alt_rounded,
+                    color: AppPalette.textDim,
+                    size: 22,
+                  ),
                   tooltip: 'Floating Timer',
                   onPressed: () async {
                     HapticFeedback.selectionClick();
+                    final messenger = ScaffoldMessenger.of(context);
                     final engine = ref.read(timerEngineProvider.notifier);
-                    engine.start(widget.habit);
+                    final started = await engine.start(widget.habit);
+                    if (!started) {
+                      if (mounted) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Sesi fokus lain masih berjalan.'),
+                          ),
+                        );
+                      }
+                      return;
+                    }
                     await engine.makeFloatingWindow();
                     widget.onClose();
                   },
@@ -198,7 +258,41 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _isCompleted ? _buildCompletionView(color) : _buildActiveTimer(color),
+                child: _isLoadingSession
+                    ? const CircularProgressIndicator()
+                    : _hasSessionConflict
+                    ? _buildMessageCard(
+                        icon: Icons.timer_off_outlined,
+                        title: 'Sesi lain masih berjalan',
+                        message:
+                            'Selesaikan atau jeda sesi yang aktif sebelum memulai habit ini.',
+                        actionLabel: 'Kembali ke Hari Ini',
+                        onAction: widget.onClose,
+                        showBackButton: false,
+                      )
+                    : _couldNotStart
+                    ? _buildMessageCard(
+                        icon: Icons.cloud_off_outlined,
+                        title: 'Timer belum dimulai',
+                        message:
+                            'Penyimpanan belum siap. Coba lagi setelah koneksi penyimpanan pulih.',
+                        actionLabel: 'Coba lagi',
+                        onAction: _attachToSession,
+                      )
+                    : timer.isSavePending
+                    ? _buildMessageCard(
+                        icon: Icons.sync_problem_rounded,
+                        title: 'Catatan belum tersimpan',
+                        message:
+                            'Sesi tetap tersimpan. Coba lagi untuk memasukkan hasilnya ke riwayat.',
+                        actionLabel: _isSaving
+                            ? 'Menyimpan…'
+                            : 'Coba simpan lagi',
+                        onAction: _isSaving ? null : _retryCompletion,
+                      )
+                    : timer.isCompleted
+                    ? _buildCompletionView(color, timer)
+                    : _buildActiveTimer(color, timer),
               ),
             ),
           ],
@@ -207,10 +301,9 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
     );
   }
 
-  Widget _buildActiveTimer(Color color) {
-    final progress = _isOverdue
-        ? 1.0
-        : (_totalSeconds > 0 ? (1.0 - (_remainingSeconds / _totalSeconds)).clamp(0.0, 1.0) : 0.0);
+  Widget _buildActiveTimer(Color color, TimerState timer) {
+    final isPaused = timer.isPaused;
+    final progress = timer.progress;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -246,13 +339,11 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
 
         const SizedBox(height: 16),
         Text(
-          _isOverdue
-              ? 'Target selesai! Terus melangkah selama fokus.'
-              : 'Stay with it. Fulfill your day.',
+          'Satu hal pada satu waktu. Lanjut sesuai energimu.',
           style: TextStyle(
             fontSize: 13,
-            color: _isOverdue ? AppPalette.accent : AppPalette.textDim,
-            fontWeight: _isOverdue ? FontWeight.w600 : FontWeight.normal,
+            color: AppPalette.textDim,
+            fontWeight: FontWeight.normal,
             letterSpacing: 0.4,
           ),
         ),
@@ -263,7 +354,7 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
         AnimatedBuilder(
           animation: _pulseCtrl,
           builder: (context, child) {
-            final scale = 1.0 + (_pulseCtrl.value * (_isOverdue ? 0.035 : 0.02));
+            final scale = 1.0 + (_pulseCtrl.value * 0.02);
             return Transform.scale(
               scale: scale,
               child: SizedBox(
@@ -278,9 +369,7 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                         value: 1.0,
                         strokeWidth: 4,
                         valueColor: AlwaysStoppedAnimation(
-                          _isOverdue
-                              ? AppPalette.accent.withValues(alpha: 0.2)
-                              : AppPalette.stroke.withValues(alpha: 0.3),
+                          AppPalette.stroke.withValues(alpha: 0.3),
                         ),
                       ),
                     ),
@@ -290,7 +379,7 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                         value: progress,
                         strokeWidth: 6,
                         strokeCap: StrokeCap.round,
-                        valueColor: AlwaysStoppedAnimation(_isOverdue ? AppPalette.accent : color),
+                        valueColor: AlwaysStoppedAnimation(color),
                       ),
                     ),
                     // Digits
@@ -298,26 +387,22 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _isOverdue ? '+${_formatTime(_overdueSeconds)}' : _formatTime(_remainingSeconds),
+                          _formatTime(timer.remainingSeconds),
                           style: TextStyle(
-                            fontSize: _isOverdue ? 48 : 54,
+                            fontSize: 54,
                             fontWeight: FontWeight.w300,
                             letterSpacing: -1.0,
-                            color: _isOverdue ? AppPalette.accent : Colors.white,
+                            color: Colors.white,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _isPaused
-                              ? 'JEDA'
-                              : (_isOverdue ? 'LEBIH (OVERDUE)' : 'SADAR'),
+                          isPaused ? 'JEDA' : 'SADAR',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 3.0,
-                            color: _isPaused
-                                ? AppPalette.textDim
-                                : (_isOverdue ? AppPalette.accent : color),
+                            color: isPaused ? AppPalette.textDim : color,
                           ),
                         ),
                       ],
@@ -337,12 +422,24 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
           children: [
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 14,
+                ),
                 side: const BorderSide(color: AppPalette.stroke),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-              icon: Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, size: 20, color: AppPalette.text),
-              label: Text(_isPaused ? 'Lanjutkan' : 'Jeda', style: const TextStyle(color: AppPalette.text)),
+              icon: Icon(
+                isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                size: 20,
+                color: AppPalette.text,
+              ),
+              label: Text(
+                isPaused ? 'Lanjutkan' : 'Jeda',
+                style: const TextStyle(color: AppPalette.text),
+              ),
               onPressed: _togglePause,
             ),
             const SizedBox(width: 16),
@@ -350,14 +447,20 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
               style: FilledButton.styleFrom(
                 backgroundColor: color.withValues(alpha: 0.2),
                 foregroundColor: color,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(color: color.withValues(alpha: 0.5)),
                 ),
               ),
               icon: const Icon(Icons.check_rounded, size: 20),
-              label: Text(_isOverdue ? 'Selesai (+${_overdueSeconds ~/ 60}m)' : 'Selesai', style: const TextStyle(fontWeight: FontWeight.bold)),
+              label: Text(
+                _isSaving ? 'Menyimpan…' : 'Selesai',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               onPressed: _finish,
             ),
           ],
@@ -366,7 +469,7 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
     );
   }
 
-  Widget _buildCompletionView(Color color) {
+  Widget _buildCompletionView(Color color, TimerState timer) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 420),
       padding: const EdgeInsets.all(32),
@@ -390,13 +493,21 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
           const SizedBox(height: 20),
           Text(
             widget.habit.name,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            '${widget.habit.target} menit terpenuhi.\nKamu telah menepati janji pada dirimu sendiri.',
+            'Kamu fokus selama ${_formatTime(timer.actualDurationSeconds)} dari target ${_formatTime(timer.targetSeconds)}.\nCatatan ini sudah tersimpan.',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14, color: AppPalette.textDim, height: 1.5),
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppPalette.textDim,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 18),
           Container(
@@ -404,16 +515,26 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
             decoration: BoxDecoration(
               color: const Color(0xFF22C55E).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.4)),
+              border: Border.all(
+                color: const Color(0xFF22C55E).withValues(alpha: 0.4),
+              ),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF22C55E)),
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 16,
+                  color: Color(0xFF22C55E),
+                ),
                 SizedBox(width: 8),
                 Text(
-                  'Otomatis Ditandai Selesai (Centang Hijau)',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF22C55E)),
+                  'Tersimpan di riwayat',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF22C55E),
+                  ),
                 ),
               ],
             ),
@@ -424,10 +545,15 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
               backgroundColor: AppPalette.accent,
               foregroundColor: Colors.black,
               minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             onPressed: widget.onClose,
-            child: const Text('Kembali ke Hari Ini', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Kembali ke Hari Ini',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

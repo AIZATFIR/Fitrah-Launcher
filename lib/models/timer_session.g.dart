@@ -7,7 +7,7 @@ part of 'timer_session.dart';
 // **************************************************************************
 
 // coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types, experimental_member_use
 
 extension GetTimerSessionCollection on Isar {
   IsarCollection<TimerSession> get timerSessions => this.collection();
@@ -15,18 +15,14 @@ extension GetTimerSessionCollection on Isar {
 
 const TimerSessionSchema = CollectionSchema(
   name: r'TimerSession',
-  id: -4159859870323604,
+  id: -(718289766589889 * 10000 + 3431),
   properties: {
     r'accumulatedDurationSeconds': PropertySchema(
       id: 0,
       name: r'accumulatedDurationSeconds',
       type: IsarType.long,
     ),
-    r'habitId': PropertySchema(
-      id: 1,
-      name: r'habitId',
-      type: IsarType.long,
-    ),
+    r'habitId': PropertySchema(id: 1, name: r'habitId', type: IsarType.long),
     r'habitName': PropertySchema(
       id: 2,
       name: r'habitName',
@@ -57,8 +53,9 @@ const TimerSessionSchema = CollectionSchema(
       id: 7,
       name: r'updatedAt',
       type: IsarType.dateTime,
-    )
+    ),
   },
+
   estimateSize: _timerSessionEstimateSize,
   serialize: _timerSessionSerialize,
   deserialize: _timerSessionDeserialize,
@@ -67,10 +64,11 @@ const TimerSessionSchema = CollectionSchema(
   indexes: {},
   links: {},
   embeddedSchemas: {},
+
   getId: _timerSessionGetId,
   getLinks: _timerSessionGetLinks,
   attach: _timerSessionAttach,
-  version: '3.1.0+1',
+  version: '3.4.1',
 );
 
 int _timerSessionEstimateSize(
@@ -114,7 +112,7 @@ TimerSession _timerSessionDeserialize(
   object.startedAt = reader.readDateTimeOrNull(offsets[4]);
   object.status =
       _TimerSessionstatusValueEnumMap[reader.readByteOrNull(offsets[5])] ??
-          TimerStateStatus.idle;
+      TimerStateStatus.idle;
   object.targetSeconds = reader.readLong(offsets[6]);
   object.updatedAt = reader.readDateTime(offsets[7]);
   return object;
@@ -139,7 +137,8 @@ P _timerSessionDeserializeProp<P>(
       return (reader.readDateTimeOrNull(offset)) as P;
     case 5:
       return (_TimerSessionstatusValueEnumMap[reader.readByteOrNull(offset)] ??
-          TimerStateStatus.idle) as P;
+              TimerStateStatus.idle)
+          as P;
     case 6:
       return (reader.readLong(offset)) as P;
     case 7:
@@ -171,7 +170,10 @@ List<IsarLinkBase<dynamic>> _timerSessionGetLinks(TimerSession object) {
 }
 
 void _timerSessionAttach(
-    IsarCollection<dynamic> col, Id id, TimerSession object) {
+  IsarCollection<dynamic> col,
+  Id id,
+  TimerSession object,
+) {
   object.id = id;
 }
 
@@ -188,15 +190,13 @@ extension TimerSessionQueryWhere
     on QueryBuilder<TimerSession, TimerSession, QWhereClause> {
   QueryBuilder<TimerSession, TimerSession, QAfterWhereClause> idEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: id,
-        upper: id,
-      ));
+      return query.addWhereClause(IdWhereClause.between(lower: id, upper: id));
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterWhereClause> idNotEqualTo(
-      Id id) {
+    Id id,
+  ) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -219,8 +219,9 @@ extension TimerSessionQueryWhere
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterWhereClause> idGreaterThan(
-      Id id,
-      {bool include = false}) {
+    Id id, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: id, includeLower: include),
@@ -228,8 +229,10 @@ extension TimerSessionQueryWhere
     });
   }
 
-  QueryBuilder<TimerSession, TimerSession, QAfterWhereClause> idLessThan(Id id,
-      {bool include = false}) {
+  QueryBuilder<TimerSession, TimerSession, QAfterWhereClause> idLessThan(
+    Id id, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: id, includeUpper: include),
@@ -244,12 +247,14 @@ extension TimerSessionQueryWhere
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: lowerId,
-        includeLower: includeLower,
-        upper: upperId,
-        includeUpper: includeUpper,
-      ));
+      return query.addWhereClause(
+        IdWhereClause.between(
+          lower: lowerId,
+          includeLower: includeLower,
+          upper: upperId,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 }
@@ -257,165 +262,169 @@ extension TimerSessionQueryWhere
 extension TimerSessionQueryFilter
     on QueryBuilder<TimerSession, TimerSession, QFilterCondition> {
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      accumulatedDurationSecondsEqualTo(int value) {
+  accumulatedDurationSecondsEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'accumulatedDurationSeconds',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'accumulatedDurationSeconds',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      accumulatedDurationSecondsGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
+  accumulatedDurationSecondsGreaterThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'accumulatedDurationSeconds',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'accumulatedDurationSeconds',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      accumulatedDurationSecondsLessThan(
-    int value, {
-    bool include = false,
-  }) {
+  accumulatedDurationSecondsLessThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'accumulatedDurationSeconds',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'accumulatedDurationSeconds',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      accumulatedDurationSecondsBetween(
+  accumulatedDurationSecondsBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'accumulatedDurationSeconds',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'accumulatedDurationSeconds',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitIdEqualTo(int value) {
+  habitIdEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'habitId',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'habitId', value: value),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitIdGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
+  habitIdGreaterThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'habitId',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'habitId',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitIdLessThan(
-    int value, {
-    bool include = false,
-  }) {
+  habitIdLessThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'habitId',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'habitId',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitIdBetween(
+  habitIdBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'habitId',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'habitId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  habitNameEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'habitName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'habitName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'habitName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameLessThan(
+  habitNameGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'habitName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'habitName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameBetween(
+  habitNameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'habitName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  habitNameBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -423,94 +432,96 @@ extension TimerSessionQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'habitName',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'habitName',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  habitNameStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'habitName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'habitName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  habitNameEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'habitName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'habitName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameContains(String value, {bool caseSensitive = true}) {
+  habitNameContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'habitName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'habitName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameMatches(String pattern, {bool caseSensitive = true}) {
+  habitNameMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'habitName',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'habitName',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameIsEmpty() {
+  habitNameIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'habitName',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'habitName', value: ''),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      habitNameIsNotEmpty() {
+  habitNameIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'habitName',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'habitName', value: ''),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition> idEqualTo(
-      Id value) {
+    Id value,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'id', value: value),
+      );
     });
   }
 
@@ -519,11 +530,13 @@ extension TimerSessionQueryFilter
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
@@ -532,11 +545,13 @@ extension TimerSessionQueryFilter
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
@@ -547,199 +562,197 @@ extension TimerSessionQueryFilter
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'id',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'id',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      pausedAtIsNull() {
+  pausedAtIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'pausedAt',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'pausedAt'),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      pausedAtIsNotNull() {
+  pausedAtIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'pausedAt',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'pausedAt'),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      pausedAtEqualTo(DateTime? value) {
+  pausedAtEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'pausedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'pausedAt', value: value),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      pausedAtGreaterThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
+  pausedAtGreaterThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'pausedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'pausedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      pausedAtLessThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
+  pausedAtLessThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'pausedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'pausedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      pausedAtBetween(
+  pausedAtBetween(
     DateTime? lower,
     DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'pausedAt',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'pausedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      startedAtIsNull() {
+  startedAtIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'startedAt',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'startedAt'),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      startedAtIsNotNull() {
+  startedAtIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'startedAt',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'startedAt'),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      startedAtEqualTo(DateTime? value) {
+  startedAtEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'startedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'startedAt', value: value),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      startedAtGreaterThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
+  startedAtGreaterThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'startedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'startedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      startedAtLessThan(
-    DateTime? value, {
-    bool include = false,
-  }) {
+  startedAtLessThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'startedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'startedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      startedAtBetween(
+  startedAtBetween(
     DateTime? lower,
     DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'startedAt',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'startedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition> statusEqualTo(
-      TimerStateStatus value) {
+    TimerStateStatus value,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'status',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'status', value: value),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      statusGreaterThan(
-    TimerStateStatus value, {
-    bool include = false,
-  }) {
+  statusGreaterThan(TimerStateStatus value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'status',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'status',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      statusLessThan(
-    TimerStateStatus value, {
-    bool include = false,
-  }) {
+  statusLessThan(TimerStateStatus value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'status',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'status',
+          value: value,
+        ),
+      );
     });
   }
 
@@ -750,125 +763,125 @@ extension TimerSessionQueryFilter
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'status',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'status',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      targetSecondsEqualTo(int value) {
+  targetSecondsEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'targetSeconds',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'targetSeconds', value: value),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      targetSecondsGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
+  targetSecondsGreaterThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'targetSeconds',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'targetSeconds',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      targetSecondsLessThan(
-    int value, {
-    bool include = false,
-  }) {
+  targetSecondsLessThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'targetSeconds',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'targetSeconds',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      targetSecondsBetween(
+  targetSecondsBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'targetSeconds',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'targetSeconds',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      updatedAtEqualTo(DateTime value) {
+  updatedAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'updatedAt', value: value),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      updatedAtGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  updatedAtGreaterThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'updatedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      updatedAtLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  updatedAtLessThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'updatedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
-      updatedAtBetween(
+  updatedAtBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'updatedAt',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'updatedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 }
@@ -882,14 +895,14 @@ extension TimerSessionQueryLinks
 extension TimerSessionQuerySortBy
     on QueryBuilder<TimerSession, TimerSession, QSortBy> {
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
-      sortByAccumulatedDurationSeconds() {
+  sortByAccumulatedDurationSeconds() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'accumulatedDurationSeconds', Sort.asc);
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
-      sortByAccumulatedDurationSecondsDesc() {
+  sortByAccumulatedDurationSecondsDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'accumulatedDurationSeconds', Sort.desc);
     });
@@ -962,7 +975,7 @@ extension TimerSessionQuerySortBy
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
-      sortByTargetSecondsDesc() {
+  sortByTargetSecondsDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'targetSeconds', Sort.desc);
     });
@@ -984,14 +997,14 @@ extension TimerSessionQuerySortBy
 extension TimerSessionQuerySortThenBy
     on QueryBuilder<TimerSession, TimerSession, QSortThenBy> {
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
-      thenByAccumulatedDurationSeconds() {
+  thenByAccumulatedDurationSeconds() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'accumulatedDurationSeconds', Sort.asc);
     });
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
-      thenByAccumulatedDurationSecondsDesc() {
+  thenByAccumulatedDurationSecondsDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'accumulatedDurationSeconds', Sort.desc);
     });
@@ -1076,7 +1089,7 @@ extension TimerSessionQuerySortThenBy
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
-      thenByTargetSecondsDesc() {
+  thenByTargetSecondsDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'targetSeconds', Sort.desc);
     });
@@ -1098,7 +1111,7 @@ extension TimerSessionQuerySortThenBy
 extension TimerSessionQueryWhereDistinct
     on QueryBuilder<TimerSession, TimerSession, QDistinct> {
   QueryBuilder<TimerSession, TimerSession, QDistinct>
-      distinctByAccumulatedDurationSeconds() {
+  distinctByAccumulatedDurationSeconds() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'accumulatedDurationSeconds');
     });
@@ -1110,8 +1123,9 @@ extension TimerSessionQueryWhereDistinct
     });
   }
 
-  QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByHabitName(
-      {bool caseSensitive = true}) {
+  QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByHabitName({
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'habitName', caseSensitive: caseSensitive);
     });
@@ -1136,7 +1150,7 @@ extension TimerSessionQueryWhereDistinct
   }
 
   QueryBuilder<TimerSession, TimerSession, QDistinct>
-      distinctByTargetSeconds() {
+  distinctByTargetSeconds() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'targetSeconds');
     });
@@ -1158,7 +1172,7 @@ extension TimerSessionQueryProperty
   }
 
   QueryBuilder<TimerSession, int, QQueryOperations>
-      accumulatedDurationSecondsProperty() {
+  accumulatedDurationSecondsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'accumulatedDurationSeconds');
     });
@@ -1189,7 +1203,7 @@ extension TimerSessionQueryProperty
   }
 
   QueryBuilder<TimerSession, TimerStateStatus, QQueryOperations>
-      statusProperty() {
+  statusProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'status');
     });

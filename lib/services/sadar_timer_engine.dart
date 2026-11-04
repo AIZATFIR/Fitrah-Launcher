@@ -8,7 +8,6 @@ import 'package:window_manager/window_manager.dart';
 
 import '../data/repositories/sadar_repository.dart';
 import '../models/habit.dart';
-import '../models/habit_entry.dart';
 import '../models/timer_session.dart';
 import '../providers/providers.dart';
 import '../providers/sadar_providers.dart';
@@ -19,16 +18,20 @@ class TimerState {
   final String habitName;
   final int targetSeconds;
   final int remainingSeconds;
+  final int actualDurationSeconds;
   final TimerStateStatus status;
   final bool isFloating;
+  final bool isSavePending;
 
   const TimerState({
     this.habitId = 0,
     this.habitName = '',
     this.targetSeconds = 0,
     this.remainingSeconds = 0,
+    this.actualDurationSeconds = 0,
     this.status = TimerStateStatus.idle,
     this.isFloating = false,
+    this.isSavePending = false,
   });
 
   bool get isRunning => status == TimerStateStatus.running;
@@ -43,16 +46,21 @@ class TimerState {
 
 class SadarTimerEngine extends StateNotifier<TimerState> {
   SadarTimerEngine(this._repo, [this._notifier]) : super(const TimerState()) {
-    _restoreSavedSession();
+    _restoreFuture = _restoreSavedSession();
   }
 
   final SadarRepository _repo;
   final NotificationService? _notifier;
+  late final Future<void> _restoreFuture;
   Timer? _ticker;
 
+  TimerState get currentState => state;
+
   DateTime? _startedAt;
+  DateTime? _sessionStartedAt;
   int _accumulatedSeconds = 0;
   Size? _savedWindowSize;
+  int? _pendingActualDurationSeconds;
 
   Future<void> _restoreSavedSession() async {
     final saved = await _repo.getActiveTimerSession();
@@ -62,9 +70,13 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _accumulatedSeconds = saved.accumulatedDurationSeconds;
 
     if (saved.status == TimerStateStatus.running && saved.startedAt != null) {
+      _sessionStartedAt = saved.startedAt;
       final elapsedSinceStart = now.difference(saved.startedAt!).inSeconds;
       final totalElapsed = _accumulatedSeconds + elapsedSinceStart;
-      final remaining = (saved.targetSeconds - totalElapsed).clamp(0, saved.targetSeconds);
+      final remaining = (saved.targetSeconds - totalElapsed).clamp(
+        0,
+        saved.targetSeconds,
+      );
 
       if (remaining <= 0) {
         // Completed while app was closed
@@ -73,9 +85,16 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           habitName: saved.habitName,
           targetSeconds: saved.targetSeconds,
           remainingSeconds: 0,
+          actualDurationSeconds: saved.targetSeconds,
           status: TimerStateStatus.completed,
+          isSavePending: true,
         );
-        await _completeSession(autoRecord: true);
+        _pendingActualDurationSeconds = null;
+        try {
+          await _completeSession(autoRecord: true);
+        } catch (error) {
+          debugPrint('Timer completion will retry: $error');
+        }
         return;
       } else {
         _startedAt = saved.startedAt;
@@ -84,25 +103,57 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           habitName: saved.habitName,
           targetSeconds: saved.targetSeconds,
           remainingSeconds: remaining,
+          actualDurationSeconds: totalElapsed,
           status: TimerStateStatus.running,
         );
         _startTicker();
       }
     } else if (saved.status == TimerStateStatus.paused) {
-      final remaining = (saved.targetSeconds - _accumulatedSeconds).clamp(0, saved.targetSeconds);
+      _sessionStartedAt = saved.startedAt;
+      final remaining = (saved.targetSeconds - _accumulatedSeconds).clamp(
+        0,
+        saved.targetSeconds,
+      );
       state = TimerState(
         habitId: saved.habitId,
         habitName: saved.habitName,
         targetSeconds: saved.targetSeconds,
         remainingSeconds: remaining,
+        actualDurationSeconds: _accumulatedSeconds,
         status: TimerStateStatus.paused,
       );
+    } else if (saved.status == TimerStateStatus.completed) {
+      _sessionStartedAt = saved.startedAt;
+      state = TimerState(
+        habitId: saved.habitId,
+        habitName: saved.habitName,
+        targetSeconds: saved.targetSeconds,
+        remainingSeconds: 0,
+        actualDurationSeconds: saved.accumulatedDurationSeconds,
+        status: TimerStateStatus.completed,
+        isSavePending: true,
+      );
+      _pendingActualDurationSeconds = saved.accumulatedDurationSeconds;
+      try {
+        await _completeSession(
+          autoRecord: saved.habitId > 0,
+          actualDurationSeconds: saved.accumulatedDurationSeconds,
+        );
+      } catch (error) {
+        debugPrint('Timer completion will retry: $error');
+      }
     }
   }
 
-  void start(Habit habit) {
+  Future<bool> start(Habit habit) async {
+    await _restoreFuture;
+    if (state.isActive) return state.habitId == habit.id;
+    if (state.isSavePending || _isCompleting) return false;
+
+    final previousState = state;
     final targetSec = (habit.target > 0 ? habit.target : 20) * 60;
     _startedAt = DateTime.now();
+    _sessionStartedAt = _startedAt;
     _accumulatedSeconds = 0;
 
     state = TimerState(
@@ -113,16 +164,30 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       status: TimerStateStatus.running,
     );
 
-    _persistState();
+    try {
+      await _persistState();
+    } catch (_) {
+      _startedAt = null;
+      _sessionStartedAt = null;
+      _accumulatedSeconds = 0;
+      state = previousState;
+      rethrow;
+    }
     _startTicker();
+    return true;
   }
 
   void _startTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.status == TimerStateStatus.running && _startedAt != null) {
-        final elapsed = _accumulatedSeconds + DateTime.now().difference(_startedAt!).inSeconds;
-        final remaining = (state.targetSeconds - elapsed).clamp(0, state.targetSeconds);
+        final elapsed =
+            _accumulatedSeconds +
+            DateTime.now().difference(_startedAt!).inSeconds;
+        final remaining = (state.targetSeconds - elapsed).clamp(
+          0,
+          state.targetSeconds,
+        );
 
         if (remaining <= 0) {
           _ticker?.cancel();
@@ -131,16 +196,27 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             habitName: state.habitName,
             targetSeconds: state.targetSeconds,
             remainingSeconds: 0,
+            actualDurationSeconds: elapsed,
             status: TimerStateStatus.completed,
             isFloating: state.isFloating,
+            isSavePending: true,
           );
-          _completeSession(autoRecord: true);
+          _pendingActualDurationSeconds = null;
+          unawaited(
+            _completeSession(
+              autoRecord: true,
+              actualDurationSeconds: elapsed,
+            ).catchError((Object error) {
+              debugPrint('Timer completion will retry: $error');
+            }),
+          );
         } else {
           state = TimerState(
             habitId: state.habitId,
             habitName: state.habitName,
             targetSeconds: state.targetSeconds,
             remainingSeconds: remaining,
+            actualDurationSeconds: elapsed,
             status: TimerStateStatus.running,
             isFloating: state.isFloating,
           );
@@ -149,9 +225,12 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     });
   }
 
-  void pause() {
+  Future<void> pause() async {
     if (state.status != TimerStateStatus.running) return;
 
+    final previousState = state;
+    final previousStartedAt = _startedAt;
+    final previousAccumulatedSeconds = _accumulatedSeconds;
     if (_startedAt != null) {
       _accumulatedSeconds += DateTime.now().difference(_startedAt!).inSeconds;
       _startedAt = null;
@@ -162,66 +241,152 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       habitId: state.habitId,
       habitName: state.habitName,
       targetSeconds: state.targetSeconds,
-      remainingSeconds: (state.targetSeconds - _accumulatedSeconds).clamp(0, state.targetSeconds),
+      remainingSeconds: (state.targetSeconds - _accumulatedSeconds).clamp(
+        0,
+        state.targetSeconds,
+      ),
+      actualDurationSeconds: _accumulatedSeconds,
       status: TimerStateStatus.paused,
       isFloating: state.isFloating,
     );
 
-    _persistState();
+    try {
+      await _persistState();
+    } catch (_) {
+      _startedAt = previousStartedAt;
+      _accumulatedSeconds = previousAccumulatedSeconds;
+      state = previousState;
+      _startTicker();
+      rethrow;
+    }
   }
 
-  void resume() {
+  Future<void> resume() async {
     if (state.status != TimerStateStatus.paused) return;
 
+    final previousState = state;
     _startedAt = DateTime.now();
+    _sessionStartedAt ??= _startedAt;
     state = TimerState(
       habitId: state.habitId,
       habitName: state.habitName,
       targetSeconds: state.targetSeconds,
       remainingSeconds: state.remainingSeconds,
+      actualDurationSeconds: _accumulatedSeconds,
       status: TimerStateStatus.running,
       isFloating: state.isFloating,
     );
 
-    _persistState();
+    try {
+      await _persistState();
+    } catch (_) {
+      _startedAt = null;
+      state = previousState;
+      rethrow;
+    }
     _startTicker();
   }
 
   Future<void> finishEarly() async {
     if (!state.isActive) return;
+    final now = DateTime.now();
+    final actualDurationSeconds =
+        _accumulatedSeconds +
+        (_startedAt == null ? 0 : now.difference(_startedAt!).inSeconds);
     _ticker?.cancel();
     state = TimerState(
       habitId: state.habitId,
       habitName: state.habitName,
       targetSeconds: state.targetSeconds,
       remainingSeconds: 0,
+      actualDurationSeconds: actualDurationSeconds,
       status: TimerStateStatus.completed,
       isFloating: state.isFloating,
+      isSavePending: true,
     );
-    await _completeSession(autoRecord: true);
+    _accumulatedSeconds = actualDurationSeconds;
+    _startedAt = null;
+    _pendingActualDurationSeconds = actualDurationSeconds;
+    await _completeSession(
+      autoRecord: true,
+      actualDurationSeconds: actualDurationSeconds,
+    );
   }
 
-  void cancel() {
+  Future<void> retryCompletion() async {
+    if (!state.isSavePending || _isCompleting) return;
+    await _completeSession(
+      autoRecord: state.habitId > 0,
+      actualDurationSeconds: _pendingActualDurationSeconds,
+    );
+  }
+
+  Future<void> cancel() async {
+    if (state.isSavePending) return;
+    final wasFloating = state.isFloating;
     _ticker?.cancel();
+    try {
+      await _repo.clearTimerSession();
+    } catch (_) {
+      if (state.isRunning) _startTicker();
+      rethrow;
+    }
+
     _startedAt = null;
+    _sessionStartedAt = null;
     _accumulatedSeconds = 0;
     state = const TimerState();
-    _repo.clearTimerSession();
 
-    if (state.isFloating) {
-      restoreNormalWindow();
+    if (wasFloating) {
+      await restoreNormalWindow();
     }
   }
 
   bool _isCompleting = false;
 
-  Future<void> _completeSession({bool autoRecord = true}) async {
+  Future<void> _completeSession({
+    bool autoRecord = true,
+    int? actualDurationSeconds,
+  }) async {
     if (_isCompleting) return;
     _isCompleting = true;
 
     try {
       _ticker?.cancel();
-      await _repo.clearTimerSession();
+
+      if (autoRecord && state.habitId > 0) {
+        final now = DateTime.now();
+        // Attribute the session to the date it was started, including pauses.
+        final sessionStartDate = _sessionStartedAt ?? _startedAt ?? now;
+        final dateStr =
+            '${sessionStartDate.year.toString().padLeft(4, '0')}-${sessionStartDate.month.toString().padLeft(2, '0')}-${sessionStartDate.day.toString().padLeft(2, '0')}';
+        final actualMinutes = actualDurationSeconds == null
+            ? (state.targetSeconds / 60).ceil()
+            : (actualDurationSeconds / 60).floor();
+        final targetMinutes = (state.targetSeconds / 60).ceil();
+        await _repo.completeTimerSession(
+          habitId: state.habitId,
+          dateString: dateStr,
+          actualDurationMinutes: actualMinutes,
+          targetSnapshot: targetMinutes,
+          completedAt: now,
+        );
+      } else {
+        await _repo.clearTimerSession();
+      }
+
+      state = TimerState(
+        habitId: state.habitId,
+        habitName: state.habitName,
+        targetSeconds: state.targetSeconds,
+        remainingSeconds: state.remainingSeconds,
+        actualDurationSeconds: state.actualDurationSeconds,
+        status: state.status,
+        isFloating: state.isFloating,
+        isSavePending: false,
+      );
+      _sessionStartedAt = null;
+      _pendingActualDurationSeconds = null;
 
       try {
         SystemSound.play(SystemSoundType.alert);
@@ -232,27 +397,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         _notifier.showNotification(
           id: 8888,
           title: 'Selesai: ${state.habitName}',
-          body: 'Waktu fokus selesai. Satu tindakan bermakna telah terpenuhi hari ini.',
-        );
-      }
-
-      if (autoRecord && state.habitId > 0) {
-        final now = DateTime.now();
-        // PRD 3 §75: Midnight Boundary Resolution
-        // Attribute the session to the date it was started
-        final sessionStartDate = _startedAt ?? now;
-        final dateStr = '${sessionStartDate.year.toString().padLeft(4, '0')}-${sessionStartDate.month.toString().padLeft(2, '0')}-${sessionStartDate.day.toString().padLeft(2, '0')}';
-        final completedMinutes = (state.targetSeconds / 60).ceil();
-
-        await _repo.recordEntryStatus(
-          habitId: state.habitId,
-          dateString: dateStr,
-          status: HabitStatus.yes,
-          valueCompleted: completedMinutes,
-          targetSnapshot: completedMinutes,
-          actualDurationMinutes: completedMinutes,
-          source: 'timer',
-          completedAt: now,
+          body:
+              'Waktu fokus selesai. Satu tindakan bermakna telah terpenuhi hari ini.',
         );
       }
     } finally {
@@ -260,16 +406,16 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     }
   }
 
-  void _persistState() {
+  Future<void> _persistState() async {
     final session = TimerSession()
       ..habitId = state.habitId
       ..habitName = state.habitName
       ..targetSeconds = state.targetSeconds
-      ..startedAt = _startedAt
+      ..startedAt = _startedAt ?? _sessionStartedAt
       ..accumulatedDurationSeconds = _accumulatedSeconds
       ..status = state.status;
 
-    _repo.saveTimerSession(session);
+    await _repo.saveTimerSession(session);
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -277,7 +423,10 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   // ──────────────────────────────────────────────────────────────────────────
 
   Future<void> toggleFloatingWindow() async {
-    if (kIsWeb || !(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
+    if (kIsWeb ||
+        !(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      return;
+    }
 
     if (state.isFloating) {
       await restoreNormalWindow();
@@ -287,7 +436,10 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> makeFloatingWindow() async {
-    if (kIsWeb || !(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
+    if (kIsWeb ||
+        !(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      return;
+    }
 
     try {
       _savedWindowSize = await windowManager.getSize();
@@ -308,7 +460,10 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> restoreNormalWindow() async {
-    if (kIsWeb || !(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
+    if (kIsWeb ||
+        !(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      return;
+    }
 
     try {
       await windowManager.setAlwaysOnTop(false);
@@ -334,12 +489,13 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 }
 
-final timerEngineProvider =
-    StateNotifierProvider<SadarTimerEngine, TimerState>((ref) {
-  final repo = ref.watch(sadarRepoProvider);
-  NotificationService? notifier;
-  try {
-    notifier = ref.watch(notificationServiceProvider);
-  } catch (_) {}
-  return SadarTimerEngine(repo, notifier);
-});
+final timerEngineProvider = StateNotifierProvider<SadarTimerEngine, TimerState>(
+  (ref) {
+    final repo = ref.watch(sadarRepoProvider);
+    NotificationService? notifier;
+    try {
+      notifier = ref.watch(notificationServiceProvider);
+    } catch (_) {}
+    return SadarTimerEngine(repo, notifier);
+  },
+);

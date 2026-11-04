@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 
 import '../../models/app_settings.dart';
 

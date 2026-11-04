@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme.dart';
 import 'data/isar_service.dart';
+import 'data/storage_unavailable_app.dart';
 import 'features/launcher/fitrah_launcher_shell.dart';
 import 'features/launcher/providers/launcher_settings_provider.dart';
 import 'providers/providers.dart';
@@ -16,8 +17,9 @@ Future<void> main() async {
   try {
     isarService = await IsarService.open();
   } catch (e) {
-    debugPrint('IsarService fallback: $e');
-    isarService = IsarService.fallback();
+    debugPrint('IsarService open failed: $e');
+    runApp(StorageUnavailableApp(onRetry: main));
+    return;
   }
 
   final notifier = NotificationService();

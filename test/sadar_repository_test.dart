@@ -20,6 +20,69 @@ void main() {
       expect(habits.any((h) => h.name.contains('Olahraga / Exercise')), true);
     });
 
+    test(
+      'Completing a timer records the entry and clears its active session',
+      () async {
+        final session = TimerSession()
+          ..habitId = 42
+          ..habitName = 'LKS'
+          ..targetSeconds = 1200
+          ..accumulatedDurationSeconds = 615
+          ..status = TimerStateStatus.completed
+          ..updatedAt = DateTime.now();
+        await repo.saveTimerSession(session);
+
+        await repo.completeTimerSession(
+          habitId: 42,
+          dateString: '2026-11-04',
+          actualDurationMinutes: 10,
+          targetSnapshot: 20,
+          completedAt: DateTime(2026, 11, 4, 17),
+        );
+
+        final entries = await repo.getEntriesForDateRange(
+          '2026-11-04',
+          '2026-11-04',
+        );
+        expect(entries, hasLength(1));
+        expect(entries.single.habitId, 42);
+        expect(entries.single.actualDurationMinutes, 10);
+        expect(entries.single.targetSnapshot, 20);
+        expect(entries.single.source, 'timer');
+        expect(await repo.getActiveTimerSession(), isNull);
+      },
+    );
+
+    test('Completing two timers adds their actual duration for the day', () async {
+      for (final minutes in [10, 8]) {
+        await repo.saveTimerSession(
+          TimerSession()
+            ..habitId = 42
+            ..habitName = 'LKS'
+            ..targetSeconds = 1200
+            ..accumulatedDurationSeconds = minutes * 60
+            ..status = TimerStateStatus.completed
+            ..updatedAt = DateTime.now(),
+        );
+        await repo.completeTimerSession(
+          habitId: 42,
+          dateString: '2026-11-04',
+          actualDurationMinutes: minutes,
+          targetSnapshot: 20,
+          completedAt: DateTime(2026, 11, 4, 17),
+        );
+      }
+
+      final entries = await repo.getEntriesForDateRange(
+        '2026-11-04',
+        '2026-11-04',
+      );
+      expect(entries, hasLength(1));
+      expect(entries.single.actualDurationMinutes, 18);
+      expect(entries.single.valueCompleted, 18);
+      expect(entries.single.targetSnapshot, 20);
+    });
+
     test('Can upsert a new habit and retrieve it', () async {
       final habit = Habit()
         ..name = 'Meditation'
@@ -104,14 +167,34 @@ void main() {
       final habits = await repo.getHabits();
       final h1 = habits[0];
       final h2 = habits[1];
+      String recentDay(int daysAgo) => DateTime.now()
+          .subtract(Duration(days: daysAgo))
+          .toIso8601String()
+          .substring(0, 10);
 
       // Record 3 days for h1
-      await repo.recordEntryStatus(habitId: h1.id, dateString: '2026-09-01', status: HabitStatus.yes);
-      await repo.recordEntryStatus(habitId: h1.id, dateString: '2026-09-02', status: HabitStatus.yes);
-      await repo.recordEntryStatus(habitId: h1.id, dateString: '2026-09-03', status: HabitStatus.yes);
+      await repo.recordEntryStatus(
+        habitId: h1.id,
+        dateString: recentDay(3),
+        status: HabitStatus.yes,
+      );
+      await repo.recordEntryStatus(
+        habitId: h1.id,
+        dateString: recentDay(2),
+        status: HabitStatus.yes,
+      );
+      await repo.recordEntryStatus(
+        habitId: h1.id,
+        dateString: recentDay(1),
+        status: HabitStatus.yes,
+      );
 
       // Record 1 no for h2
-      await repo.recordEntryStatus(habitId: h2.id, dateString: '2026-09-01', status: HabitStatus.no);
+      await repo.recordEntryStatus(
+        habitId: h2.id,
+        dateString: recentDay(3),
+        status: HabitStatus.no,
+      );
 
       final stats = await repo.getAwarenessStats(daysBack: 60);
       expect(stats.habitCompletedCounts[h1.id], 3);
@@ -122,8 +205,18 @@ void main() {
       final habits = await repo.getHabits();
       final h = habits.first;
 
-      await repo.recordEntryStatus(habitId: h.id, dateString: '2026-09-01', status: HabitStatus.yes, valueCompleted: 20);
-      await repo.recordEntryStatus(habitId: h.id, dateString: '2026-09-02', status: HabitStatus.yes, valueCompleted: 15);
+      await repo.recordEntryStatus(
+        habitId: h.id,
+        dateString: '2026-09-01',
+        status: HabitStatus.yes,
+        valueCompleted: 20,
+      );
+      await repo.recordEntryStatus(
+        habitId: h.id,
+        dateString: '2026-09-02',
+        status: HabitStatus.yes,
+        valueCompleted: 15,
+      );
 
       final repeatStats = await repo.getWhatIRepeat();
       expect(repeatStats.isNotEmpty, true);
@@ -132,117 +225,156 @@ void main() {
       expect(stat.totalMinutes, 35);
     });
 
-    test('DailyReflection saves and retrieves proudOfToday and feeling', () async {
-      final reflection = DailyReflection()
-        ..dateString = '2026-09-10'
-        ..feeling = ReflectionFeeling.proud
-        ..proudOfToday = 'Practiced Quranic Arabic even though tired.'
-        ..note = 'Felt deeply focused after 10 minutes.';
+    test(
+      'DailyReflection saves and retrieves proudOfToday and feeling',
+      () async {
+        final reflection = DailyReflection()
+          ..dateString = '2026-09-10'
+          ..feeling = ReflectionFeeling.proud
+          ..proudOfToday = 'Practiced Quranic Arabic even though tired.'
+          ..note = 'Felt deeply focused after 10 minutes.';
 
-      await repo.saveDailyReflection(reflection);
+        await repo.saveDailyReflection(reflection);
 
-      final retrieved = await repo.getDailyReflection('2026-09-10');
-      expect(retrieved, isNotNull);
-      expect(retrieved!.feeling, ReflectionFeeling.proud);
-      expect(retrieved.proudOfToday, 'Practiced Quranic Arabic even though tired.');
-      expect(retrieved.note, 'Felt deeply focused after 10 minutes.');
-    });
+        final retrieved = await repo.getDailyReflection('2026-09-10');
+        expect(retrieved, isNotNull);
+        expect(retrieved!.feeling, ReflectionFeeling.proud);
+        expect(
+          retrieved.proudOfToday,
+          'Practiced Quranic Arabic even though tired.',
+        );
+        expect(retrieved.note, 'Felt deeply focused after 10 minutes.');
+      },
+    );
 
-    test('TimerSession saves active session and clears on completion', () async {
-      final session = TimerSession()
-        ..habitId = 1
-        ..habitName = 'Quranic Arabic'
-        ..targetSeconds = 1200
-        ..startedAt = DateTime.now()
-        ..status = TimerStateStatus.running;
+    test(
+      'TimerSession saves active session and clears on completion',
+      () async {
+        final session = TimerSession()
+          ..habitId = 1
+          ..habitName = 'Quranic Arabic'
+          ..targetSeconds = 1200
+          ..startedAt = DateTime.now()
+          ..status = TimerStateStatus.running;
 
-      await repo.saveTimerSession(session);
+        await repo.saveTimerSession(session);
 
-      var active = await repo.getActiveTimerSession();
-      expect(active, isNotNull);
-      expect(active!.habitName, 'Quranic Arabic');
-      expect(active.status, TimerStateStatus.running);
+        var active = await repo.getActiveTimerSession();
+        expect(active, isNotNull);
+        expect(active!.habitName, 'Quranic Arabic');
+        expect(active.status, TimerStateStatus.running);
 
-      await repo.clearTimerSession();
-      active = await repo.getActiveTimerSession();
-      expect(active, isNull);
-    });
+        await repo.clearTimerSession();
+        active = await repo.getActiveTimerSession();
+        expect(active, isNull);
+      },
+    );
 
-    test('Historical immutability: changing habit target does not alter past entry targetSnapshot (PRD 3 §59, §60)', () async {
-      final habit = Habit()
-        ..name = 'French Practice'
-        ..target = 15
-        ..unit = HabitUnit.min
-        ..createdAt = DateTime.now();
+    test(
+      'Historical immutability: changing habit target does not alter past entry targetSnapshot (PRD 3 §59, §60)',
+      () async {
+        final habit = Habit()
+          ..name = 'French Practice'
+          ..target = 15
+          ..unit = HabitUnit.min
+          ..createdAt = DateTime.now();
 
-      final habitId = await repo.upsertHabit(habit);
+        final habitId = await repo.upsertHabit(habit);
 
-      // Record entry when target is 15 min
-      await repo.recordEntryStatus(
-        habitId: habitId,
-        dateString: '2026-09-01',
-        status: HabitStatus.yes,
-      );
+        // Record entry when target is 15 min
+        await repo.recordEntryStatus(
+          habitId: habitId,
+          dateString: '2026-09-01',
+          status: HabitStatus.yes,
+        );
 
-      final entryBefore = (await repo.getEntriesForDateRange('2026-09-01', '2026-09-01')).first;
-      expect(entryBefore.targetSnapshot, 15);
+        final entryBefore = (await repo.getEntriesForDateRange(
+          '2026-09-01',
+          '2026-09-01',
+        )).first;
+        expect(entryBefore.targetSnapshot, 15);
 
-      // User later updates habit target to 45 min
-      habit.target = 45;
-      await repo.upsertHabit(habit);
+        // User later updates habit target to 45 min
+        habit.target = 45;
+        await repo.upsertHabit(habit);
 
-      // Historical entry must remain untouched with targetSnapshot == 15
-      final entryAfter = (await repo.getEntriesForDateRange('2026-09-01', '2026-09-01')).first;
-      expect(entryAfter.targetSnapshot, 15);
-    });
+        // Historical entry must remain untouched with targetSnapshot == 15
+        final entryAfter = (await repo.getEntriesForDateRange(
+          '2026-09-01',
+          '2026-09-01',
+        )).first;
+        expect(entryAfter.targetSnapshot, 15);
+      },
+    );
 
-    test('Duplicate entry status recording is idempotent (PRD 3 §16)', () async {
-      final habit = Habit()
-        ..name = 'Morning Walk'
-        ..target = 30
-        ..createdAt = DateTime.now();
+    test(
+      'Duplicate entry status recording is idempotent (PRD 3 §16)',
+      () async {
+        final habit = Habit()
+          ..name = 'Morning Walk'
+          ..target = 30
+          ..createdAt = DateTime.now();
 
-      final habitId = await repo.upsertHabit(habit);
+        final habitId = await repo.upsertHabit(habit);
 
-      // Record multiple times for the same habit and date
-      await repo.recordEntryStatus(habitId: habitId, dateString: '2026-09-05', status: HabitStatus.yes);
-      await repo.recordEntryStatus(habitId: habitId, dateString: '2026-09-05', status: HabitStatus.yes);
-      await repo.recordEntryStatus(habitId: habitId, dateString: '2026-09-05', status: HabitStatus.yes);
+        // Record multiple times for the same habit and date
+        await repo.recordEntryStatus(
+          habitId: habitId,
+          dateString: '2026-09-05',
+          status: HabitStatus.yes,
+        );
+        await repo.recordEntryStatus(
+          habitId: habitId,
+          dateString: '2026-09-05',
+          status: HabitStatus.yes,
+        );
+        await repo.recordEntryStatus(
+          habitId: habitId,
+          dateString: '2026-09-05',
+          status: HabitStatus.yes,
+        );
 
-      final entries = await repo.getEntriesForDateRange('2026-09-05', '2026-09-05');
-      expect(entries.length, 1);
-      expect(entries.first.habitId, habitId);
-      expect(entries.first.status, HabitStatus.yes);
-    });
+        final entries = await repo.getEntriesForDateRange(
+          '2026-09-05',
+          '2026-09-05',
+        );
+        expect(entries.length, 1);
+        expect(entries.first.habitId, habitId);
+        expect(entries.first.status, HabitStatus.yes);
+      },
+    );
 
-    test('Bodybuilding progression advances only when completed and wraps around', () async {
-      final habit = Habit()
-        ..name = 'Workout Routine'
-        ..habitType = 'progression'
-        ..currentProgressionIndex = 0
-        ..createdAt = DateTime.now();
+    test(
+      'Bodybuilding progression advances only when completed and wraps around',
+      () async {
+        final habit = Habit()
+          ..name = 'Workout Routine'
+          ..habitType = 'progression'
+          ..currentProgressionIndex = 0
+          ..createdAt = DateTime.now();
 
-      final habitId = await repo.upsertHabit(habit);
+        final habitId = await repo.upsertHabit(habit);
 
-      // Step 0: Senin (Push Up 20 reps)
-      var h = await repo.getHabitById(habitId);
-      expect(h!.currentStep.dayName, 'Senin');
-      expect(h.currentStep.title, 'Push Up');
-      expect(h.currentStep.target, 20);
+        // Step 0: Senin (Push Up 20 reps)
+        var h = await repo.getHabitById(habitId);
+        expect(h!.currentStep.dayName, 'Senin');
+        expect(h.currentStep.title, 'Push Up');
+        expect(h.currentStep.target, 20);
 
-      // Advance progression upon completion
-      await repo.advanceProgression(habitId);
-      h = await repo.getHabitById(habitId);
-      expect(h!.currentProgressionIndex, 1);
-      expect(h.currentStep.dayName, 'Selasa');
-      expect(h.currentStep.title, 'Pull Up');
+        // Advance progression upon completion
+        await repo.advanceProgression(habitId);
+        h = await repo.getHabitById(habitId);
+        expect(h!.currentProgressionIndex, 1);
+        expect(h.currentStep.dayName, 'Selasa');
+        expect(h.currentStep.title, 'Pull Up');
 
-      // Advance again to Rabu (Rest Day)
-      await repo.advanceProgression(habitId);
-      h = await repo.getHabitById(habitId);
-      expect(h!.currentProgressionIndex, 2);
-      expect(h.currentStep.isRest, true);
-    });
+        // Advance again to Rabu (Rest Day)
+        await repo.advanceProgression(habitId);
+        h = await repo.getHabitById(habitId);
+        expect(h!.currentProgressionIndex, 2);
+        expect(h.currentStep.isRest, true);
+      },
+    );
 
     test('Bodybuilding routine does not change if not accomplished', () async {
       final habit = Habit()
@@ -264,25 +396,36 @@ void main() {
       expect(h.currentStep.title, 'Push Up');
     });
 
-    test('incrementHabitCount updates count and marks status yes when target met', () async {
-      final habit = Habit()
-        ..name = 'Water Intake'
-        ..habitType = 'count'
-        ..target = 3
-        ..createdAt = DateTime.now();
+    test(
+      'incrementHabitCount updates count and marks status yes when target met',
+      () async {
+        final habit = Habit()
+          ..name = 'Water Intake'
+          ..habitType = 'count'
+          ..target = 3
+          ..createdAt = DateTime.now();
 
-      final habitId = await repo.upsertHabit(habit);
-      const testDate = '2026-09-16';
+        final habitId = await repo.upsertHabit(habit);
+        const testDate = '2026-09-16';
 
-      // Increment 1
-      var entry = await repo.incrementHabitCount(habitId: habitId, dateString: testDate, delta: 1);
-      expect(entry.valueCompleted, 1);
-      expect(entry.status, HabitStatus.unmarked);
+        // Increment 1
+        var entry = await repo.incrementHabitCount(
+          habitId: habitId,
+          dateString: testDate,
+          delta: 1,
+        );
+        expect(entry.valueCompleted, 1);
+        expect(entry.status, HabitStatus.unmarked);
 
-      // Increment 2 more (total 3 >= target)
-      entry = await repo.incrementHabitCount(habitId: habitId, dateString: testDate, delta: 2);
-      expect(entry.valueCompleted, 3);
-      expect(entry.status, HabitStatus.yes);
-    });
+        // Increment 2 more (total 3 >= target)
+        entry = await repo.incrementHabitCount(
+          habitId: habitId,
+          dateString: testDate,
+          delta: 2,
+        );
+        expect(entry.valueCompleted, 3);
+        expect(entry.status, HabitStatus.yes);
+      },
+    );
   });
 }

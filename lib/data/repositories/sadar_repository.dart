@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 
 import '../../models/habit.dart';
 import '../../models/habit_entry.dart';
@@ -29,7 +29,8 @@ class DailyFulfillmentSummary {
     required this.totalCount,
   });
 
-  double get ratio => totalCount > 0 ? (completedCount / totalCount).clamp(0.0, 1.0) : 0.0;
+  double get ratio =>
+      totalCount > 0 ? (completedCount / totalCount).clamp(0.0, 1.0) : 0.0;
   bool get isFulfilled => completedCount > 0 && completedCount >= totalCount;
 }
 
@@ -65,8 +66,10 @@ class SadarRepository {
   int _memHabitIdCounter = 100;
   int _memEntryIdCounter = 1000;
 
-  final StreamController<void> _habitsStreamCtrl = StreamController<void>.broadcast();
-  final StreamController<void> _entriesStreamCtrl = StreamController<void>.broadcast();
+  final StreamController<void> _habitsStreamCtrl =
+      StreamController<void>.broadcast();
+  final StreamController<void> _entriesStreamCtrl =
+      StreamController<void>.broadcast();
 
   // ──────────────────────────────────────────────────────────────────────────
   // Habits
@@ -116,7 +119,10 @@ class SadarRepository {
   Future<List<Habit>> getArchivedHabits() async {
     if (_isar == null) {
       final list = _memHabits.values.where((h) => h.isArchived).toList();
-      list.sort((a, b) => (b.updatedAt ?? b.createdAt).compareTo(a.updatedAt ?? a.createdAt));
+      list.sort(
+        (a, b) =>
+            (b.updatedAt ?? b.createdAt).compareTo(a.updatedAt ?? a.createdAt),
+      );
       return list;
     }
     return _isar.habits
@@ -191,7 +197,10 @@ class SadarRepository {
   // Habit Entries
   // ──────────────────────────────────────────────────────────────────────────
 
-  Stream<List<HabitEntry>> watchEntriesForDateRange(String startDate, String endDate) {
+  Stream<List<HabitEntry>> watchEntriesForDateRange(
+    String startDate,
+    String endDate,
+  ) {
     if (_isar == null) {
       return _watchMemEntries(startDate, endDate);
     }
@@ -201,7 +210,10 @@ class SadarRepository {
         .watch(fireImmediately: true);
   }
 
-  Stream<List<HabitEntry>> _watchMemEntries(String startDate, String endDate) async* {
+  Stream<List<HabitEntry>> _watchMemEntries(
+    String startDate,
+    String endDate,
+  ) async* {
     yield _getMemEntriesList(startDate, endDate);
     await for (final _ in _entriesStreamCtrl.stream) {
       yield _getMemEntriesList(startDate, endDate);
@@ -210,11 +222,18 @@ class SadarRepository {
 
   List<HabitEntry> _getMemEntriesList(String startDate, String endDate) {
     return _memEntries.values
-        .where((e) => e.dateString.compareTo(startDate) >= 0 && e.dateString.compareTo(endDate) <= 0)
+        .where(
+          (e) =>
+              e.dateString.compareTo(startDate) >= 0 &&
+              e.dateString.compareTo(endDate) <= 0,
+        )
         .toList();
   }
 
-  Future<List<HabitEntry>> getEntriesForDateRange(String startDate, String endDate) async {
+  Future<List<HabitEntry>> getEntriesForDateRange(
+    String startDate,
+    String endDate,
+  ) async {
     if (_isar == null) {
       return _getMemEntriesList(startDate, endDate);
     }
@@ -243,22 +262,30 @@ class SadarRepository {
     final now = DateTime.now();
     final habit = await getHabitById(habitId);
     final resolvedTargetSnapshot = targetSnapshot ?? habit?.target ?? 0;
-    final resolvedActualDuration = actualDurationMinutes ?? valueCompleted ?? (status == HabitStatus.yes ? resolvedTargetSnapshot : 0);
+    final resolvedActualDuration =
+        actualDurationMinutes ??
+        valueCompleted ??
+        (status == HabitStatus.yes ? resolvedTargetSnapshot : 0);
     final resolvedSource = source ?? 'manual';
-    final resolvedCompletedAt = completedAt ?? (status == HabitStatus.yes ? now : null);
+    final resolvedCompletedAt =
+        completedAt ?? (status == HabitStatus.yes ? now : null);
 
     if (_isar == null) {
       final key = '$habitId-$dateString';
       final existing = _memEntries[key];
-      final entry = existing ?? (HabitEntry()
-        ..id = _memEntryIdCounter++
-        ..habitId = habitId
-        ..dateString = dateString
-        ..createdAt = now);
+      final entry =
+          existing ??
+          (HabitEntry()
+            ..id = _memEntryIdCounter++
+            ..habitId = habitId
+            ..dateString = dateString
+            ..createdAt = now);
 
       entry.status = status;
       if (valueCompleted != null) entry.valueCompleted = valueCompleted;
-      entry.targetSnapshot = entry.targetSnapshot > 0 ? entry.targetSnapshot : resolvedTargetSnapshot;
+      entry.targetSnapshot = entry.targetSnapshot > 0
+          ? entry.targetSnapshot
+          : resolvedTargetSnapshot;
       entry.actualDurationMinutes = resolvedActualDuration;
       entry.completedAt = resolvedCompletedAt;
       entry.source = resolvedSource;
@@ -277,14 +304,18 @@ class SadarRepository {
           .dateStringEqualTo(dateString)
           .findFirst();
 
-      final entry = existing ?? (HabitEntry()
-        ..habitId = habitId
-        ..dateString = dateString
-        ..createdAt = now);
+      final entry =
+          existing ??
+          (HabitEntry()
+            ..habitId = habitId
+            ..dateString = dateString
+            ..createdAt = now);
 
       entry.status = status;
       if (valueCompleted != null) entry.valueCompleted = valueCompleted;
-      entry.targetSnapshot = entry.targetSnapshot > 0 ? entry.targetSnapshot : resolvedTargetSnapshot;
+      entry.targetSnapshot = entry.targetSnapshot > 0
+          ? entry.targetSnapshot
+          : resolvedTargetSnapshot;
       entry.actualDurationMinutes = resolvedActualDuration;
       entry.completedAt = resolvedCompletedAt;
       entry.source = resolvedSource;
@@ -301,7 +332,8 @@ class SadarRepository {
     if (habit == null) return;
     final totalSteps = habit.progressionSteps.length;
     if (totalSteps <= 0) return;
-    habit.currentProgressionIndex = (habit.currentProgressionIndex + 1) % totalSteps;
+    habit.currentProgressionIndex =
+        (habit.currentProgressionIndex + 1) % totalSteps;
     await upsertHabit(habit);
   }
 
@@ -313,10 +345,14 @@ class SadarRepository {
     final habit = await getHabitById(habitId);
     final target = habit?.target ?? 1;
     final currentEntries = await getEntriesForDateRange(dateString, dateString);
-    final existing = currentEntries.where((e) => e.habitId == habitId).firstOrNull;
+    final existing = currentEntries
+        .where((e) => e.habitId == habitId)
+        .firstOrNull;
     final currentVal = existing?.valueCompleted ?? 0;
     final newVal = (currentVal + delta).clamp(0, 9999);
-    final newStatus = newVal >= target ? HabitStatus.yes : (newVal > 0 ? HabitStatus.unmarked : HabitStatus.unmarked);
+    final newStatus = newVal >= target
+        ? HabitStatus.yes
+        : (newVal > 0 ? HabitStatus.unmarked : HabitStatus.unmarked);
 
     return recordEntryStatus(
       habitId: habitId,
@@ -362,7 +398,10 @@ class SadarRepository {
     if (_isar == null) {
       return _memReflections[dateString];
     }
-    return _isar.dailyReflections.filter().dateStringEqualTo(dateString).findFirst();
+    return _isar.dailyReflections
+        .filter()
+        .dateStringEqualTo(dateString)
+        .findFirst();
   }
 
   Future<void> saveDailyReflection(DailyReflection reflection) async {
@@ -385,7 +424,9 @@ class SadarRepository {
         for (final entry in _memEntries.values) {
           if (entry.habitId == h.id && entry.status == HabitStatus.yes) {
             days++;
-            minutes += entry.valueCompleted > 0 ? entry.valueCompleted : h.target;
+            minutes += entry.valueCompleted > 0
+                ? entry.valueCompleted
+                : h.target;
           }
         }
       } else {
@@ -399,11 +440,9 @@ class SadarRepository {
           minutes += e.valueCompleted > 0 ? e.valueCompleted : h.target;
         }
       }
-      stats.add(RepetitionStat(
-        habit: h,
-        totalDays: days,
-        totalMinutes: minutes,
-      ));
+      stats.add(
+        RepetitionStat(habit: h, totalDays: days, totalMinutes: minutes),
+      );
     }
 
     stats.sort((a, b) => b.totalDays.compareTo(a.totalDays));
@@ -424,7 +463,8 @@ class SadarRepository {
 
     for (final e in entries) {
       if (e.status == HabitStatus.yes) {
-        habitCompletedCounts[e.habitId] = (habitCompletedCounts[e.habitId] ?? 0) + 1;
+        habitCompletedCounts[e.habitId] =
+            (habitCompletedCounts[e.habitId] ?? 0) + 1;
       } else if (e.status == HabitStatus.no) {
         habitMissedCounts[e.habitId] = (habitMissedCounts[e.habitId] ?? 0) + 1;
       }
@@ -478,6 +518,70 @@ class SadarRepository {
     await _isar.writeTxn(() => _isar.timerSessions.delete(1));
   }
 
+  /// Commits a completed focus session and removes its active record together.
+  /// A failed native write leaves the session available for recovery on restart.
+  Future<HabitEntry> completeTimerSession({
+    required int habitId,
+    required String dateString,
+    required int actualDurationMinutes,
+    required int targetSnapshot,
+    required DateTime completedAt,
+  }) async {
+    final now = DateTime.now();
+    if (_isar == null) {
+      final key = '$habitId-$dateString';
+      final existing = _memEntries[key];
+      final entry =
+          existing ??
+          (HabitEntry()
+            ..id = _memEntryIdCounter++
+            ..habitId = habitId
+            ..dateString = dateString
+            ..createdAt = now);
+      entry.status = HabitStatus.yes;
+      entry.valueCompleted += actualDurationMinutes;
+      if (entry.targetSnapshot <= 0) {
+        entry.targetSnapshot = targetSnapshot;
+      }
+      entry.actualDurationMinutes += actualDurationMinutes;
+      entry.completedAt = completedAt;
+      entry.source = 'timer';
+      entry.updatedAt = now;
+      _memEntries[key] = entry;
+      _memTimerSession = null;
+      _entriesStreamCtrl.add(null);
+      return entry;
+    }
+
+    return _isar.writeTxn(() async {
+      final existing = await _isar.habitEntrys
+          .filter()
+          .habitIdEqualTo(habitId)
+          .dateStringEqualTo(dateString)
+          .findFirst();
+
+      final entry =
+          existing ??
+          (HabitEntry()
+            ..habitId = habitId
+            ..dateString = dateString
+            ..createdAt = now);
+      entry.status = HabitStatus.yes;
+      entry.valueCompleted += actualDurationMinutes;
+      if (entry.targetSnapshot <= 0) {
+        entry.targetSnapshot = targetSnapshot;
+      }
+      entry.actualDurationMinutes += actualDurationMinutes;
+      entry.completedAt = completedAt;
+      entry.source = 'timer';
+      entry.updatedAt = now;
+
+      await _isar.habitEntrys.put(entry);
+      await _isar.timerSessions.delete(1);
+      return entry;
+    });
+  }
+
   String _formatDate(DateTime dt) {
     final y = dt.year.toString().padLeft(4, '0');
     final m = dt.month.toString().padLeft(2, '0');
@@ -493,7 +597,8 @@ class SadarRepository {
       ..target = 45
       ..unit = HabitUnit.min
       ..timerEnabled = true
-      ..colorValue = 0xFF48C774 // Vibrant Green
+      ..colorValue =
+          0xFF48C774 // Vibrant Green
       ..orderIndex = 0
       ..createdAt = DateTime.now(),
     Habit()
@@ -528,7 +633,8 @@ class SadarRepository {
       ..createdAt = DateTime.now(),
     Habit()
       ..id = 5
-      ..name = '1 module AI 50% - Dicoding - Portofolio, skill, knowledge, advantage'
+      ..name =
+          '1 module AI 50% - Dicoding - Portofolio, skill, knowledge, advantage'
       ..iconKey = '🎓'
       ..target = 45
       ..unit = HabitUnit.min
