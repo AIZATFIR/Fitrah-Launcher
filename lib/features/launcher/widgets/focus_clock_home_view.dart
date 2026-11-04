@@ -17,7 +17,9 @@ import '../providers/launcher_settings_provider.dart';
 import 'fitrah_settings_screen.dart';
 import 'loop_habit_grid_widget.dart';
 import '../../../models/habit_entry.dart';
+import '../../../models/timer_session.dart';
 import '../../../providers/sadar_providers.dart';
+import '../../../services/sadar_timer_engine.dart';
 
 // ── Natural Theme Palettes for Focus Clock Home (Sadar Way of Life M3) ─────────
 class _HomeThemeColors {
@@ -471,25 +473,46 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       _dumpedTasks = [];
     }
 
-    // 1-Second Timer Tick
+    ref.listenManual<TimerState>(timerEngineProvider, (previous, next) {
+      if (!mounted) return;
+      final wasPending = previous?.isSavePending ?? false;
+      setState(() {
+        if (next.isActive || next.isSavePending || next.isCompleted) {
+          _activeTimer = ActiveTimer(
+            label: next.habitName,
+            totalSeconds: next.targetSeconds,
+            leftSeconds: next.remainingSeconds,
+            isRunning: next.isRunning,
+            source: switch (next.sourceKind) {
+              TimerSessionSourceKind.preset => 'preset',
+              TimerSessionSourceKind.activity => 'block',
+              TimerSessionSourceKind.free => 'free',
+              _ => null,
+            },
+            sourceId: next.activityId,
+            startHour: _hourNow() - next.actualDurationSeconds / 3600,
+            hasStarted: true,
+            endsAt: next.isRunning
+                ? DateTime.now().add(Duration(seconds: next.remainingSeconds))
+                : null,
+          );
+        } else if (_activeTimer?.source != 'habit') {
+          _activeTimer = null;
+        }
+      });
+      if (wasPending && next.isCompleted && !next.isSavePending) {
+        unawaited(_finishTimer(autoComplete: true));
+      }
+      if (next.restoreError != null) {
+        _showToast(next.restoreError!);
+      }
+    }, fireImmediately: true);
+
+    // One-second presentation clock; the shared engine owns session time.
     _periodicTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
         _currentTime = DateTime.now();
-
-        // Tick Active Timer
-        if (_activeTimer != null && _activeTimer!.isRunning) {
-          final endsAt = _activeTimer!.endsAt;
-          if (endsAt != null) {
-            _activeTimer!.leftSeconds = math.max(
-              0,
-              endsAt.difference(DateTime.now()).inSeconds,
-            );
-          }
-          if (_activeTimer!.leftSeconds <= 0) {
-            unawaited(_finishTimer(autoComplete: true));
-          }
-        }
 
         // Tick any running habit timer
         for (final h in _habits) {
@@ -745,36 +768,87 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   // ── Timer Logic ────────────────────────────────────────────────────────────
-  void _startTimer(
+  Future<void> _startTimer(
     String label,
     int minutes, {
     String? source,
     int? sourceId,
     String? identity,
-  }) {
+  }) async {
+    final engine = ref.read(timerEngineProvider.notifier);
+    await engine.waitUntilRestored();
+    if (source == 'habit') {
+      if (ref.read(timerEngineProvider).isActive) return;
+      HapticFeedback.mediumImpact();
+      setState(() {
+        _activeTimer = ActiveTimer(
+          label: label,
+          totalSeconds: minutes * 60,
+          leftSeconds: minutes * 60,
+          isRunning: true,
+          source: source,
+          sourceId: sourceId,
+          identity: identity,
+          startHour: _hourNow(),
+          hasStarted: true,
+        );
+        _currentScreen = 'timer';
+      });
+      return;
+    }
+    if (ref.read(timerEngineProvider).isActive ||
+        ref.read(timerEngineProvider).isSavePending) {
+      _showToast('Selesaikan sesi aktif sebelum memulai timer lain.');
+      return;
+    }
+    final kind = switch (source) {
+      'preset' => TimerSessionSourceKind.preset,
+      'block' when !widget.useSampleData => TimerSessionSourceKind.activity,
+      _ => TimerSessionSourceKind.free,
+    };
+    bool started;
+    try {
+      started = await engine.startNonHabit(
+        title: label,
+        targetSeconds: minutes * 60,
+        sourceKind: kind,
+        activityId: kind == TimerSessionSourceKind.activity ? sourceId : null,
+        sourceIdentity: kind == TimerSessionSourceKind.preset ? identity : null,
+        sourceColorValue: kind == TimerSessionSourceKind.preset
+            ? _colorForIdentity(identity).value
+            : null,
+      );
+    } catch (_) {
+      if (mounted) _showToast('Timer belum tersimpan. Coba lagi.');
+      return;
+    }
+    if (!started || !mounted) return;
     HapticFeedback.mediumImpact();
     const MethodChannel('fitrah_launcher/apps')
         .invokeMethod('setLockscreenFocus', {'enabled': true})
         .catchError((_) => null);
-    setState(() {
-      _activeTimer = ActiveTimer(
-        label: label,
-        totalSeconds: minutes * 60,
-        leftSeconds: minutes * 60,
-        isRunning: true,
-        endsAt: DateTime.now().add(Duration(minutes: minutes)),
-        source: source,
-        sourceId: sourceId,
-        identity: identity,
-        startHour: _hourNow(),
-        hasStarted: true,
-      );
-      _currentScreen = 'timer';
-    });
+    setState(() => _currentScreen = 'timer');
   }
 
-  void _toggleTimer(ActiveTimer timer) {
+  Future<void> _toggleTimer(ActiveTimer timer) async {
     HapticFeedback.selectionClick();
+    if (timer.source != 'habit') {
+      final engine = ref.read(timerEngineProvider.notifier);
+      if (timer.isRunning) {
+        try {
+          await engine.pause();
+        } catch (_) {
+          if (mounted) _showToast('Jeda belum tersimpan. Coba lagi.');
+        }
+      } else {
+        try {
+          await engine.resume();
+        } catch (_) {
+          if (mounted) _showToast('Timer belum dilanjutkan. Coba lagi.');
+        }
+      }
+      return;
+    }
     setState(() {
       if (timer.isRunning) {
         if (timer.endsAt != null) {
@@ -800,12 +874,28 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     if (_activeTimer == null || _isFinishingTimer) return;
     _isFinishingTimer = true;
     HapticFeedback.heavyImpact();
-    const MethodChannel('fitrah_launcher/apps')
-        .invokeMethod('setLockscreenFocus', {'enabled': false})
-        .catchError((_) => null);
     final timer = _activeTimer!;
     final src = timer.source;
     String message = 'Timer selesai';
+
+    final engine = ref.read(timerEngineProvider.notifier);
+    if (src != 'habit' && ref.read(timerEngineProvider).isSavePending) {
+      try {
+        await engine.retryCompletion();
+      } catch (_) {
+        if (mounted) _showToast('Timer belum tersimpan. Coba lagi.');
+        _isFinishingTimer = false;
+        return;
+      }
+    } else if (src != 'habit' && ref.read(timerEngineProvider).isActive) {
+      try {
+        await engine.finishEarly();
+      } catch (_) {
+        if (mounted) _showToast('Timer belum tersimpan. Coba lagi.');
+        _isFinishingTimer = false;
+        return;
+      }
+    }
 
     if (src == 'habit' && timer.sourceId != null) {
       for (final h in _habits) {
@@ -832,20 +922,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             );
       } catch (_) {}
     } else if (src == 'preset') {
-      final nowH = _hourNow();
-      var st = timer.startHour;
-      var en = nowH;
-      if (en - st < 0.05) en = st + 0.25; // minimum 15 mins
-      final res = await _addBlock(
-        st,
-        math.min(en, 24.0),
-        timer.label,
-        timer.identity,
-        isDone: true,
-      );
-      message = res != null
-          ? 'Tercatat, tapi $res'
-          : 'Dicatat di jam ${_formatHour(st)}-${_formatHour(en)}';
+      message = 'Preset selesai dan tersimpan';
     } else if (src == 'block' && timer.sourceId != null) {
       if (widget.useSampleData) {
         for (final b in _blocks) {
@@ -856,23 +933,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           }
         }
       } else {
-        final activity = ref
-            .read(activitiesByDateProvider)
-            .valueOrNull
-            ?.where((item) => item.id == timer.sourceId)
-            .firstOrNull;
-        if (activity == null) {
-          message = 'Timer selesai, tetapi jadwalnya belum dapat diperbarui.';
-        } else {
-          try {
-            await ref.read(activityRepoProvider).markComplete(activity, true);
-            message = 'Blok ditandai selesai';
-          } catch (_) {
-            message = 'Timer selesai, tetapi perubahan belum tersimpan.';
-          }
-        }
+        message = 'Blok ditandai selesai';
       }
     }
+
+    const MethodChannel('fitrah_launcher/apps')
+        .invokeMethod('setLockscreenFocus', {'enabled': false})
+        .catchError((_) => null);
 
     if (mounted) {
       setState(() {
@@ -2906,7 +2973,32 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
               // Cancel Button
               TextButton(
-                onPressed: () {
+                onPressed: () async {
+                  final session = ref.read(timerEngineProvider);
+                  final sharedNonHabit =
+                      session.restoreError != null ||
+                      (session.sourceKind != null &&
+                          session.sourceKind != TimerSessionSourceKind.habit);
+                  if (sharedNonHabit) {
+                    if (session.isSavePending) {
+                      _showToast(
+                        session.restoreError ??
+                            'Sesi belum tersimpan. Coba lagi sebelum membatalkan.',
+                      );
+                      return;
+                    }
+                    try {
+                      await ref.read(timerEngineProvider.notifier).cancel();
+                    } catch (_) {
+                      if (mounted) {
+                        _showToast(
+                          'Timer belum berhasil dibatalkan. Ketuk coba lagi.',
+                        );
+                      }
+                      return;
+                    }
+                  }
+                  if (!mounted) return;
                   setState(() {
                     _activeTimer = null;
                     _currentScreen = 'home';

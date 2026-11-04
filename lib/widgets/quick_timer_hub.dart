@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme.dart';
 import '../core/time_math.dart';
 import '../models/activity.dart';
+import '../models/timer_session.dart';
 import '../providers/providers.dart';
+import '../services/sadar_timer_engine.dart';
 
 class QuickTimerHub extends ConsumerStatefulWidget {
   const QuickTimerHub({super.key});
@@ -27,8 +29,12 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
   }
 
   Future<void> _startTimer(int minutes, {String? customTitle}) async {
-    SystemSound.play(SystemSoundType.click);
-    HapticFeedback.mediumImpact();
+    final engine = ref.read(timerEngineProvider.notifier);
+    await engine.waitUntilRestored();
+    if (ref.read(timerEngineProvider).isActive ||
+        ref.read(timerEngineProvider).isSavePending) {
+      return;
+    }
     final now = DateTime.now();
     final date = dateOnly(now);
     final is24h = ref.read(settingsProvider).valueOrNull?.is24hDial ?? false;
@@ -37,8 +43,12 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
     final startMinute = now.hour * 60 + now.minute;
     final endMinute = (startMinute + minutes).clamp(0, 1440);
 
-    final start24 = is24h ? startMinute : (startMinute + (half == AmPmHalf.pm ? 720 : 0));
-    final end24 = is24h ? endMinute : (endMinute + (half == AmPmHalf.pm ? 720 : 0));
+    final start24 = is24h
+        ? startMinute
+        : (startMinute + (half == AmPmHalf.pm ? 720 : 0));
+    final end24 = is24h
+        ? endMinute
+        : (endMinute + (half == AmPmHalf.pm ? 720 : 0));
 
     final dbHalf = toDbHalf(start24);
     final dbStart = toDbMinute(start24);
@@ -63,12 +73,54 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
       ..updatedAt = now;
 
     final repo = ref.read(activityRepoProvider);
-    await repo.upsert(activity);
-
-    ref.read(activeTimerTitleProvider.notifier).state = title;
-    ref.read(activeTimerTotalSecondsProvider.notifier).state = minutes * 60;
-    ref.read(activeTimerIsPausedProvider.notifier).state = false;
-    ref.read(activeTimerEndTimeProvider.notifier).state = now.add(Duration(minutes: minutes));
+    int? activityId;
+    var durableStart = false;
+    try {
+      final bool started;
+      if (ref.read(isarProvider) == null) {
+        activityId = await repo.upsert(activity);
+        started = await engine.startNonHabit(
+          title: title,
+          targetSeconds: minutes * 60,
+          sourceKind: TimerSessionSourceKind.activity,
+          activityId: activityId,
+        );
+      } else {
+        started = await engine.startNonHabit(
+          title: title,
+          targetSeconds: minutes * 60,
+          sourceKind: TimerSessionSourceKind.activity,
+          activityToCreate: activity,
+        );
+      }
+      durableStart = ref.read(isarProvider) != null && started;
+      activityId = durableStart ? engine.currentState.activityId : activityId;
+      if (!started) {
+        if (activityId != null) await repo.delete(activityId);
+        return;
+      }
+      if (durableStart) {
+        // The Activity and timer already committed atomically; notification
+        // scheduling is a follow-up and must not roll back the live session.
+        try {
+          await repo.upsert(activity);
+        } catch (_) {}
+      }
+    } catch (_) {
+      if (!durableStart && activityId != null) {
+        try {
+          await repo.delete(activityId);
+        } catch (_) {}
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Timer belum tersimpan. Coba lagi.')),
+        );
+      }
+      return;
+    }
+    SystemSound.play(SystemSoundType.click);
+    HapticFeedback.mediumImpact();
     const MethodChannel('fitrah_launcher/apps')
         .invokeMethod('setLockscreenFocus', {'enabled': true})
         .catchError((_) => null);
@@ -76,24 +128,34 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
     _titleCtrl.clear();
   }
 
-  void _stopTimer() {
+  Future<void> _stopTimer() async {
     SystemSound.play(SystemSoundType.click);
     HapticFeedback.lightImpact();
-    const MethodChannel('fitrah_launcher/apps')
-        .invokeMethod('setLockscreenFocus', {'enabled': false})
-        .catchError((_) => null);
-    ref.read(activeTimerEndTimeProvider.notifier).state = null;
-    ref.read(activeTimerIsPausedProvider.notifier).state = false;
+    try {
+      final engine = ref.read(timerEngineProvider.notifier);
+      if (ref.read(timerEngineProvider).isSavePending) {
+        await engine.retryCompletion();
+      } else {
+        await engine.finishEarly();
+      }
+      const MethodChannel('fitrah_launcher/apps')
+          .invokeMethod('setLockscreenFocus', {'enabled': false})
+          .catchError((_) => null);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sesi belum tersimpan. Tekan coba lagi.'),
+          ),
+        );
+      }
+    }
   }
 
-  void _rescheduleTimer(int shiftMinutes) {
+  Future<void> _rescheduleTimer(int shiftMinutes) async {
     SystemSound.play(SystemSoundType.click);
     HapticFeedback.selectionClick();
-    final currentEnd = ref.read(activeTimerEndTimeProvider);
-    if (currentEnd != null) {
-      ref.read(activeTimerEndTimeProvider.notifier).state = currentEnd.add(Duration(minutes: shiftMinutes));
-      ref.read(activeTimerTotalSecondsProvider.notifier).update((total) => total + (shiftMinutes * 60));
-    }
+    await ref.read(timerEngineProvider.notifier).extendBy(shiftMinutes * 60);
   }
 
   void _showRescheduleDialog() {
@@ -112,13 +174,23 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.schedule_rounded, color: AppPalette.accent, size: 20),
+                  Icon(
+                    Icons.schedule_rounded,
+                    color: AppPalette.accent,
+                    size: 20,
+                  ),
                   SizedBox(width: 8),
-                  Text('Reschedule Aktivitas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    'Reschedule Aktivitas',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
-              const Text('Geser atau tambahkan durasi fokus saat ini:', style: TextStyle(fontSize: 12, color: AppPalette.textDim)),
+              const Text(
+                'Geser atau tambahkan durasi fokus saat ini:',
+                style: TextStyle(fontSize: 12, color: AppPalette.textDim),
+              ),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 10,
@@ -174,17 +246,30 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
 
   @override
   Widget build(BuildContext context) {
-    final activeEndTime = ref.watch(activeTimerEndTimeProvider);
-    final title = ref.watch(activeTimerTitleProvider);
-    final totalSecs = ref.watch(activeTimerTotalSecondsProvider);
-    final isPaused = ref.watch(activeTimerIsPausedProvider);
-    final nowTime = ref.watch(currentTimeProvider).valueOrNull ?? DateTime.now();
+    final session = ref.watch(timerEngineProvider);
+    final title = session.habitName;
+    final totalSecs = session.targetSeconds;
+    final isPaused = session.isPaused;
+
+    if (session.restoreError != null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppPalette.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppPalette.stroke),
+        ),
+        child: Text(
+          session.restoreError!,
+          style: const TextStyle(color: AppPalette.textDim, fontSize: 13),
+        ),
+      );
+    }
 
     // ACTIVE ONGOING TIMER STATE
-    if (activeEndTime != null) {
-      final remainingSecs = isPaused
-          ? (activeEndTime.difference(nowTime).inSeconds).clamp(0, totalSecs)
-          : activeEndTime.difference(nowTime).inSeconds;
+    if (session.isActive) {
+      final remainingSecs = session.remainingSeconds;
 
       if (remainingSecs <= 0) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -203,9 +288,17 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
         });
       }
 
-      final mins = (remainingSecs.clamp(0, 86400) ~/ 60).toString().padLeft(2, '0');
-      final secs = (remainingSecs.clamp(0, 86400) % 60).toString().padLeft(2, '0');
-      final progress = totalSecs > 0 ? (1.0 - (remainingSecs / totalSecs)).clamp(0.0, 1.0) : 0.0;
+      final mins = (remainingSecs.clamp(0, 86400) ~/ 60).toString().padLeft(
+        2,
+        '0',
+      );
+      final secs = (remainingSecs.clamp(0, 86400) % 60).toString().padLeft(
+        2,
+        '0',
+      );
+      final progress = totalSecs > 0
+          ? (1.0 - (remainingSecs / totalSecs)).clamp(0.0, 1.0)
+          : 0.0;
 
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -213,7 +306,10 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
         decoration: BoxDecoration(
           color: AppPalette.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6), width: 1.5),
+          border: Border.all(
+            color: AppPalette.accent.withValues(alpha: 0.6),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
               color: AppPalette.accent.withValues(alpha: 0.2),
@@ -238,7 +334,11 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                     color: AppPalette.accent,
                   ),
                   const Center(
-                    child: Icon(Icons.flash_on_rounded, size: 18, color: AppPalette.accent),
+                    child: Icon(
+                      Icons.flash_on_rounded,
+                      size: 18,
+                      color: AppPalette.accent,
+                    ),
                   ),
                 ],
               ),
@@ -252,14 +352,21 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppPalette.accent.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
                           'SEDANG BERLANGSUNG',
-                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppPalette.accent),
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            color: AppPalette.accent,
+                          ),
                         ),
                       ),
                     ],
@@ -267,7 +374,10 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                   const SizedBox(height: 2),
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -284,24 +394,65 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
             ),
             // Reschedule Button
             IconButton(
-              icon: const Icon(Icons.edit_calendar_rounded, size: 18, color: AppPalette.accent),
+              icon: const Icon(
+                Icons.edit_calendar_rounded,
+                size: 18,
+                color: AppPalette.accent,
+              ),
               tooltip: 'Reschedule',
               onPressed: _showRescheduleDialog,
             ),
             // Pause / Resume
             IconButton(
-              icon: Icon(isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, size: 20),
+              icon: Icon(
+                isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                size: 20,
+              ),
               tooltip: isPaused ? 'Lanjutkan' : 'Jeda',
               onPressed: () {
-                ref.read(activeTimerIsPausedProvider.notifier).state = !isPaused;
+                final engine = ref.read(timerEngineProvider.notifier);
+                final messenger = ScaffoldMessenger.of(context);
+                (isPaused ? engine.resume() : engine.pause()).catchError((_) {
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Perubahan timer belum tersimpan.'),
+                      ),
+                    );
+                  }
+                });
               },
             ),
             // Stop Button
             IconButton(
-              icon: const Icon(Icons.stop_rounded, size: 20, color: AppPalette.danger),
+              icon: const Icon(
+                Icons.stop_rounded,
+                size: 20,
+                color: AppPalette.danger,
+              ),
               tooltip: 'Stop / Selesai',
               onPressed: _stopTimer,
             ),
+          ],
+        ),
+      );
+    }
+
+    if (session.isSavePending) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppPalette.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppPalette.danger),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.sync_problem_rounded, color: AppPalette.danger),
+            const SizedBox(width: 10),
+            Expanded(child: Text('${session.habitName} belum tersimpan')),
+            TextButton(onPressed: _stopTimer, child: const Text('Coba lagi')),
           ],
         ),
       );
@@ -322,7 +473,11 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
         children: [
           Row(
             children: [
-              const Icon(Icons.bolt_rounded, size: 14, color: AppPalette.accent),
+              const Icon(
+                Icons.bolt_rounded,
+                size: 14,
+                color: AppPalette.accent,
+              ),
               const SizedBox(width: 4),
               const Text(
                 'QUICK INPUT — START FOCUS NOW',
@@ -345,12 +500,17 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                     },
                     child: Container(
                       margin: const EdgeInsets.only(left: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected ? AppPalette.accent : AppPalette.bg,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                          color: isSelected ? AppPalette.accent : AppPalette.stroke,
+                          color: isSelected
+                              ? AppPalette.accent
+                              : AppPalette.stroke,
                         ),
                       ),
                       child: Text(
@@ -375,15 +535,22 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
               Expanded(
                 child: TextField(
                   controller: _titleCtrl,
-                  onSubmitted: (val) => _startTimer(_selectedDuration, customTitle: val),
+                  onSubmitted: (val) =>
+                      _startTimer(_selectedDuration, customTitle: val),
                   style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Ngapain persis? (misal: Coding fitur A)',
-                    hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 12),
+                    hintStyle: const TextStyle(
+                      color: AppPalette.textDim,
+                      fontSize: 12,
+                    ),
                     filled: true,
                     fillColor: AppPalette.bg,
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide.none,
@@ -396,16 +563,25 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppPalette.accent,
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                onPressed: () => _startTimer(_selectedDuration, customTitle: _titleCtrl.text),
+                onPressed: () => _startTimer(
+                  _selectedDuration,
+                  customTitle: _titleCtrl.text,
+                ),
                 icon: const Icon(Icons.play_arrow_rounded, size: 18),
                 label: Text(
                   'Mulai ${_selectedDuration}m',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],

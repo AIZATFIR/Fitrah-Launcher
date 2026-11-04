@@ -17,76 +17,81 @@ const ActivitySchema = CollectionSchema(
   name: r'Activity81850',
   id: 543891907935250 * 10000 + 2174,
   properties: {
-    r'ampmHalf': PropertySchema(
+    r'actualDurationSeconds': PropertySchema(
       id: 0,
+      name: r'actualDurationSeconds',
+      type: IsarType.long,
+    ),
+    r'ampmHalf': PropertySchema(
+      id: 1,
       name: r'ampmHalf',
       type: IsarType.byte,
       enumMap: _ActivityampmHalfEnumValueMap,
     ),
     r'colorValue': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'colorValue',
       type: IsarType.long,
     ),
     r'createdAt': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'date': PropertySchema(id: 3, name: r'date', type: IsarType.dateTime),
+    r'date': PropertySchema(id: 4, name: r'date', type: IsarType.dateTime),
     r'deadline': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'deadline',
       type: IsarType.dateTime,
     ),
     r'description': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'description',
       type: IsarType.string,
     ),
     r'eisenhowerQuadrant': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'eisenhowerQuadrant',
       type: IsarType.long,
     ),
     r'endMinute': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'endMinute',
       type: IsarType.long,
     ),
     r'excludedDates': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'excludedDates',
       type: IsarType.dateTimeList,
     ),
-    r'groupId': PropertySchema(id: 9, name: r'groupId', type: IsarType.string),
-    r'iconKey': PropertySchema(id: 10, name: r'iconKey', type: IsarType.string),
+    r'groupId': PropertySchema(id: 10, name: r'groupId', type: IsarType.string),
+    r'iconKey': PropertySchema(id: 11, name: r'iconKey', type: IsarType.string),
     r'importance': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'importance',
       type: IsarType.long,
     ),
     r'isCompleted': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'isCompleted',
       type: IsarType.bool,
     ),
-    r'isLocked': PropertySchema(id: 13, name: r'isLocked', type: IsarType.bool),
-    r'isUrgent': PropertySchema(id: 14, name: r'isUrgent', type: IsarType.bool),
-    r'presetId': PropertySchema(id: 15, name: r'presetId', type: IsarType.long),
+    r'isLocked': PropertySchema(id: 14, name: r'isLocked', type: IsarType.bool),
+    r'isUrgent': PropertySchema(id: 15, name: r'isUrgent', type: IsarType.bool),
+    r'presetId': PropertySchema(id: 16, name: r'presetId', type: IsarType.long),
     r'recurrence': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'recurrence',
       type: IsarType.string,
     ),
     r'startMinute': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'startMinute',
       type: IsarType.long,
     ),
-    r'title': PropertySchema(id: 18, name: r'title', type: IsarType.string),
+    r'title': PropertySchema(id: 19, name: r'title', type: IsarType.string),
     r'updatedAt': PropertySchema(
-      id: 19,
+      id: 20,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
@@ -165,26 +170,27 @@ void _activitySerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeByte(offsets[0], object.ampmHalf.index);
-  writer.writeLong(offsets[1], object.colorValue);
-  writer.writeDateTime(offsets[2], object.createdAt);
-  writer.writeDateTime(offsets[3], object.date);
-  writer.writeDateTime(offsets[4], object.deadline);
-  writer.writeString(offsets[5], object.description);
-  writer.writeLong(offsets[6], object.eisenhowerQuadrant);
-  writer.writeLong(offsets[7], object.endMinute);
-  writer.writeDateTimeList(offsets[8], object.excludedDates);
-  writer.writeString(offsets[9], object.groupId);
-  writer.writeString(offsets[10], object.iconKey);
-  writer.writeLong(offsets[11], object.importance);
-  writer.writeBool(offsets[12], object.isCompleted);
-  writer.writeBool(offsets[13], object.isLocked);
-  writer.writeBool(offsets[14], object.isUrgent);
-  writer.writeLong(offsets[15], object.presetId);
-  writer.writeString(offsets[16], object.recurrence);
-  writer.writeLong(offsets[17], object.startMinute);
-  writer.writeString(offsets[18], object.title);
-  writer.writeDateTime(offsets[19], object.updatedAt);
+  writer.writeLong(offsets[0], object.actualDurationSeconds);
+  writer.writeByte(offsets[1], object.ampmHalf.index);
+  writer.writeLong(offsets[2], object.colorValue);
+  writer.writeDateTime(offsets[3], object.createdAt);
+  writer.writeDateTime(offsets[4], object.date);
+  writer.writeDateTime(offsets[5], object.deadline);
+  writer.writeString(offsets[6], object.description);
+  writer.writeLong(offsets[7], object.eisenhowerQuadrant);
+  writer.writeLong(offsets[8], object.endMinute);
+  writer.writeDateTimeList(offsets[9], object.excludedDates);
+  writer.writeString(offsets[10], object.groupId);
+  writer.writeString(offsets[11], object.iconKey);
+  writer.writeLong(offsets[12], object.importance);
+  writer.writeBool(offsets[13], object.isCompleted);
+  writer.writeBool(offsets[14], object.isLocked);
+  writer.writeBool(offsets[15], object.isUrgent);
+  writer.writeLong(offsets[16], object.presetId);
+  writer.writeString(offsets[17], object.recurrence);
+  writer.writeLong(offsets[18], object.startMinute);
+  writer.writeString(offsets[19], object.title);
+  writer.writeDateTime(offsets[20], object.updatedAt);
 }
 
 Activity _activityDeserialize(
@@ -194,27 +200,28 @@ Activity _activityDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = Activity();
+  object.actualDurationSeconds = reader.readLong(offsets[0]);
   object.ampmHalf =
-      _ActivityampmHalfValueEnumMap[reader.readByteOrNull(offsets[0])] ??
+      _ActivityampmHalfValueEnumMap[reader.readByteOrNull(offsets[1])] ??
       AmPmHalf.am;
-  object.colorValue = reader.readLong(offsets[1]);
-  object.createdAt = reader.readDateTime(offsets[2]);
-  object.date = reader.readDateTime(offsets[3]);
-  object.deadline = reader.readDateTimeOrNull(offsets[4]);
-  object.description = reader.readString(offsets[5]);
-  object.endMinute = reader.readLong(offsets[7]);
-  object.excludedDates = reader.readDateTimeList(offsets[8]) ?? [];
-  object.groupId = reader.readStringOrNull(offsets[9]);
-  object.iconKey = reader.readStringOrNull(offsets[10]);
+  object.colorValue = reader.readLong(offsets[2]);
+  object.createdAt = reader.readDateTime(offsets[3]);
+  object.date = reader.readDateTime(offsets[4]);
+  object.deadline = reader.readDateTimeOrNull(offsets[5]);
+  object.description = reader.readString(offsets[6]);
+  object.endMinute = reader.readLong(offsets[8]);
+  object.excludedDates = reader.readDateTimeList(offsets[9]) ?? [];
+  object.groupId = reader.readStringOrNull(offsets[10]);
+  object.iconKey = reader.readStringOrNull(offsets[11]);
   object.id = id;
-  object.importance = reader.readLong(offsets[11]);
-  object.isCompleted = reader.readBool(offsets[12]);
-  object.isLocked = reader.readBool(offsets[13]);
-  object.presetId = reader.readLongOrNull(offsets[15]);
-  object.recurrence = reader.readString(offsets[16]);
-  object.startMinute = reader.readLong(offsets[17]);
-  object.title = reader.readString(offsets[18]);
-  object.updatedAt = reader.readDateTime(offsets[19]);
+  object.importance = reader.readLong(offsets[12]);
+  object.isCompleted = reader.readBool(offsets[13]);
+  object.isLocked = reader.readBool(offsets[14]);
+  object.presetId = reader.readLongOrNull(offsets[16]);
+  object.recurrence = reader.readString(offsets[17]);
+  object.startMinute = reader.readLong(offsets[18]);
+  object.title = reader.readString(offsets[19]);
+  object.updatedAt = reader.readDateTime(offsets[20]);
   return object;
 }
 
@@ -226,46 +233,48 @@ P _activityDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
+      return (reader.readLong(offset)) as P;
+    case 1:
       return (_ActivityampmHalfValueEnumMap[reader.readByteOrNull(offset)] ??
               AmPmHalf.am)
           as P;
-    case 1:
-      return (reader.readLong(offset)) as P;
     case 2:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 3:
       return (reader.readDateTime(offset)) as P;
     case 4:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 6:
-      return (reader.readLong(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 7:
       return (reader.readLong(offset)) as P;
     case 8:
-      return (reader.readDateTimeList(offset) ?? []) as P;
+      return (reader.readLong(offset)) as P;
     case 9:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeList(offset) ?? []) as P;
     case 10:
       return (reader.readStringOrNull(offset)) as P;
     case 11:
-      return (reader.readLong(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 12:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 13:
       return (reader.readBool(offset)) as P;
     case 14:
       return (reader.readBool(offset)) as P;
     case 15:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 16:
-      return (reader.readString(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 17:
-      return (reader.readLong(offset)) as P;
-    case 18:
       return (reader.readString(offset)) as P;
+    case 18:
+      return (reader.readLong(offset)) as P;
     case 19:
+      return (reader.readString(offset)) as P;
+    case 20:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -555,6 +564,64 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
 
 extension ActivityQueryFilter
     on QueryBuilder<Activity, Activity, QFilterCondition> {
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+  actualDurationSecondsEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'actualDurationSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+  actualDurationSecondsGreaterThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'actualDurationSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+  actualDurationSecondsLessThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'actualDurationSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+  actualDurationSecondsBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'actualDurationSeconds',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterFilterCondition> ampmHalfEqualTo(
     AmPmHalf value,
   ) {
@@ -2198,6 +2265,19 @@ extension ActivityQueryLinks
     on QueryBuilder<Activity, Activity, QFilterCondition> {}
 
 extension ActivityQuerySortBy on QueryBuilder<Activity, Activity, QSortBy> {
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByActualDurationSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'actualDurationSeconds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy>
+  sortByActualDurationSecondsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'actualDurationSeconds', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> sortByAmpmHalf() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ampmHalf', Sort.asc);
@@ -2430,6 +2510,19 @@ extension ActivityQuerySortBy on QueryBuilder<Activity, Activity, QSortBy> {
 
 extension ActivityQuerySortThenBy
     on QueryBuilder<Activity, Activity, QSortThenBy> {
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByActualDurationSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'actualDurationSeconds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy>
+  thenByActualDurationSecondsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'actualDurationSeconds', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> thenByAmpmHalf() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ampmHalf', Sort.asc);
@@ -2674,6 +2767,13 @@ extension ActivityQuerySortThenBy
 
 extension ActivityQueryWhereDistinct
     on QueryBuilder<Activity, Activity, QDistinct> {
+  QueryBuilder<Activity, Activity, QDistinct>
+  distinctByActualDurationSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'actualDurationSeconds');
+    });
+  }
+
   QueryBuilder<Activity, Activity, QDistinct> distinctByAmpmHalf() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'ampmHalf');
@@ -2810,6 +2910,13 @@ extension ActivityQueryProperty
   QueryBuilder<Activity, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<Activity, int, QQueryOperations>
+  actualDurationSecondsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'actualDurationSeconds');
     });
   }
 

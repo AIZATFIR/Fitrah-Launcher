@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../data/repositories/sadar_repository.dart';
+import '../models/activity.dart';
 import '../models/habit.dart';
 import '../models/timer_session.dart';
 import '../providers/providers.dart';
@@ -16,20 +17,26 @@ import 'notification_service.dart';
 class TimerState {
   final int habitId;
   final String habitName;
+  final TimerSessionSourceKind? sourceKind;
+  final int? activityId;
   final int targetSeconds;
   final int remainingSeconds;
   final int actualDurationSeconds;
   final TimerStateStatus status;
+  final String? restoreError;
   final bool isFloating;
   final bool isSavePending;
 
   const TimerState({
     this.habitId = 0,
     this.habitName = '',
+    this.sourceKind,
+    this.activityId,
     this.targetSeconds = 0,
     this.remainingSeconds = 0,
     this.actualDurationSeconds = 0,
     this.status = TimerStateStatus.idle,
+    this.restoreError,
     this.isFloating = false,
     this.isSavePending = false,
   });
@@ -61,17 +68,46 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   int _accumulatedSeconds = 0;
   Size? _savedWindowSize;
   int? _pendingActualDurationSeconds;
+  String? _sourceIdentity;
+  int? _sourceColorValue;
 
   Future<void> _restoreSavedSession() async {
     final saved = await _repo.getActiveTimerSession();
     if (saved == null || saved.status == TimerStateStatus.idle) return;
 
+    if (!saved.hasValidSourceKind) {
+      state = TimerState(
+        habitId: saved.habitId,
+        habitName: saved.habitName,
+        targetSeconds: saved.targetSeconds,
+        remainingSeconds:
+            (saved.targetSeconds - saved.accumulatedDurationSeconds).clamp(
+              0,
+              saved.targetSeconds,
+            ),
+        actualDurationSeconds: saved.accumulatedDurationSeconds,
+        status: TimerStateStatus.paused,
+        isSavePending: true,
+        restoreError:
+            'Timer ini memakai sumber yang tidak dikenali. Data sesi tetap disimpan; mulai timer baru dinonaktifkan.',
+      );
+      return;
+    }
+
     final now = DateTime.now();
+    final sourceKind =
+        saved.sourceKind ??
+        (saved.habitId > 0
+            ? TimerSessionSourceKind.habit
+            : TimerSessionSourceKind.free);
+    _sourceIdentity = saved.sourceIdentity;
+    _sourceColorValue = saved.sourceColorValue;
     _accumulatedSeconds = saved.accumulatedDurationSeconds;
 
     if (saved.status == TimerStateStatus.running && saved.startedAt != null) {
       _sessionStartedAt = saved.startedAt;
-      final elapsedSinceStart = now.difference(saved.startedAt!).inSeconds;
+      final runningSince = saved.runningSince ?? saved.startedAt!;
+      final elapsedSinceStart = now.difference(runningSince).inSeconds;
       final totalElapsed = _accumulatedSeconds + elapsedSinceStart;
       final remaining = (saved.targetSeconds - totalElapsed).clamp(
         0,
@@ -83,24 +119,31 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         state = TimerState(
           habitId: saved.habitId,
           habitName: saved.habitName,
+          sourceKind: sourceKind,
+          activityId: saved.activityId,
           targetSeconds: saved.targetSeconds,
           remainingSeconds: 0,
-          actualDurationSeconds: saved.targetSeconds,
+          actualDurationSeconds: totalElapsed,
           status: TimerStateStatus.completed,
           isSavePending: true,
         );
-        _pendingActualDurationSeconds = null;
+        _pendingActualDurationSeconds = totalElapsed;
         try {
-          await _completeSession(autoRecord: true);
+          await _completeSession(
+            autoRecord: true,
+            actualDurationSeconds: totalElapsed,
+          );
         } catch (error) {
           debugPrint('Timer completion will retry: $error');
         }
         return;
       } else {
-        _startedAt = saved.startedAt;
+        _startedAt = runningSince;
         state = TimerState(
           habitId: saved.habitId,
           habitName: saved.habitName,
+          sourceKind: sourceKind,
+          activityId: saved.activityId,
           targetSeconds: saved.targetSeconds,
           remainingSeconds: remaining,
           actualDurationSeconds: totalElapsed,
@@ -117,6 +160,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       state = TimerState(
         habitId: saved.habitId,
         habitName: saved.habitName,
+        sourceKind: sourceKind,
+        activityId: saved.activityId,
         targetSeconds: saved.targetSeconds,
         remainingSeconds: remaining,
         actualDurationSeconds: _accumulatedSeconds,
@@ -127,6 +172,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       state = TimerState(
         habitId: saved.habitId,
         habitName: saved.habitName,
+        sourceKind: sourceKind,
+        activityId: saved.activityId,
         targetSeconds: saved.targetSeconds,
         remainingSeconds: 0,
         actualDurationSeconds: saved.accumulatedDurationSeconds,
@@ -136,7 +183,10 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _pendingActualDurationSeconds = saved.accumulatedDurationSeconds;
       try {
         await _completeSession(
-          autoRecord: saved.habitId > 0,
+          autoRecord:
+              saved.habitId > 0 ||
+              saved.activityId != null ||
+              sourceKind == TimerSessionSourceKind.preset,
           actualDurationSeconds: saved.accumulatedDurationSeconds,
         );
       } catch (error) {
@@ -144,6 +194,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       }
     }
   }
+
+  Future<void> waitUntilRestored() => _restoreFuture;
 
   Future<bool> start(Habit habit) async {
     await _restoreFuture;
@@ -155,10 +207,13 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _startedAt = DateTime.now();
     _sessionStartedAt = _startedAt;
     _accumulatedSeconds = 0;
+    _sourceIdentity = null;
+    _sourceColorValue = null;
 
     state = TimerState(
       habitId: habit.id,
       habitName: habit.name,
+      sourceKind: TimerSessionSourceKind.habit,
       targetSeconds: targetSec,
       remainingSeconds: targetSec,
       status: TimerStateStatus.running,
@@ -170,6 +225,70 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _startedAt = null;
       _sessionStartedAt = null;
       _accumulatedSeconds = 0;
+      state = previousState;
+      rethrow;
+    }
+    _startTicker();
+    return true;
+  }
+
+  Future<bool> startNonHabit({
+    required String title,
+    required int targetSeconds,
+    required TimerSessionSourceKind sourceKind,
+    int? activityId,
+    String? sourceIdentity,
+    int? sourceColorValue,
+    Activity? activityToCreate,
+  }) async {
+    if (sourceKind == TimerSessionSourceKind.habit || targetSeconds <= 0) {
+      throw ArgumentError(
+        'A non-habit session needs a positive duration and source.',
+      );
+    }
+    await _restoreFuture;
+    if (state.isActive || state.isSavePending || _isCompleting) return false;
+
+    final previousState = state;
+    final previousIdentity = _sourceIdentity;
+    final previousColorValue = _sourceColorValue;
+    _startedAt = DateTime.now();
+    _sessionStartedAt = _startedAt;
+    _accumulatedSeconds = 0;
+    _sourceIdentity = sourceIdentity;
+    _sourceColorValue = sourceColorValue;
+    state = TimerState(
+      habitName: title,
+      targetSeconds: targetSeconds,
+      remainingSeconds: targetSeconds,
+      status: TimerStateStatus.running,
+      sourceKind: sourceKind,
+      activityId: activityId,
+    );
+    try {
+      if (activityToCreate == null) {
+        await _persistState();
+      } else {
+        final session = _buildSession();
+        final activityId = await _repo.createActivityAndStartTimerSession(
+          activityToCreate,
+          session,
+        );
+        state = TimerState(
+          habitName: title,
+          targetSeconds: targetSeconds,
+          remainingSeconds: targetSeconds,
+          status: TimerStateStatus.running,
+          sourceKind: sourceKind,
+          activityId: activityId,
+        );
+      }
+    } catch (_) {
+      _startedAt = null;
+      _sessionStartedAt = null;
+      _accumulatedSeconds = 0;
+      _sourceIdentity = previousIdentity;
+      _sourceColorValue = previousColorValue;
       state = previousState;
       rethrow;
     }
@@ -194,6 +313,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           state = TimerState(
             habitId: state.habitId,
             habitName: state.habitName,
+            sourceKind: state.sourceKind,
+            activityId: state.activityId,
             targetSeconds: state.targetSeconds,
             remainingSeconds: 0,
             actualDurationSeconds: elapsed,
@@ -201,7 +322,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             isFloating: state.isFloating,
             isSavePending: true,
           );
-          _pendingActualDurationSeconds = null;
+          _pendingActualDurationSeconds = elapsed;
           unawaited(
             _completeSession(
               autoRecord: true,
@@ -214,6 +335,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           state = TimerState(
             habitId: state.habitId,
             habitName: state.habitName,
+            sourceKind: state.sourceKind,
+            activityId: state.activityId,
             targetSeconds: state.targetSeconds,
             remainingSeconds: remaining,
             actualDurationSeconds: elapsed,
@@ -240,6 +363,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     state = TimerState(
       habitId: state.habitId,
       habitName: state.habitName,
+      sourceKind: state.sourceKind,
+      activityId: state.activityId,
       targetSeconds: state.targetSeconds,
       remainingSeconds: (state.targetSeconds - _accumulatedSeconds).clamp(
         0,
@@ -262,6 +387,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> resume() async {
+    if (state.restoreError != null) throw StateError(state.restoreError!);
     if (state.status != TimerStateStatus.paused) return;
 
     final previousState = state;
@@ -270,6 +396,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     state = TimerState(
       habitId: state.habitId,
       habitName: state.habitName,
+      sourceKind: state.sourceKind,
+      activityId: state.activityId,
       targetSeconds: state.targetSeconds,
       remainingSeconds: state.remainingSeconds,
       actualDurationSeconds: _accumulatedSeconds,
@@ -287,7 +415,31 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _startTicker();
   }
 
+  Future<void> extendBy(int seconds) async {
+    if (state.restoreError != null) throw StateError(state.restoreError!);
+    if (!state.isActive || seconds <= 0) return;
+    final previousState = state;
+    state = TimerState(
+      habitId: state.habitId,
+      habitName: state.habitName,
+      sourceKind: state.sourceKind,
+      activityId: state.activityId,
+      targetSeconds: state.targetSeconds + seconds,
+      remainingSeconds: state.remainingSeconds + seconds,
+      actualDurationSeconds: state.actualDurationSeconds,
+      status: state.status,
+      isFloating: state.isFloating,
+    );
+    try {
+      await _persistState();
+    } catch (_) {
+      state = previousState;
+      rethrow;
+    }
+  }
+
   Future<void> finishEarly() async {
+    if (state.restoreError != null) throw StateError(state.restoreError!);
     if (!state.isActive) return;
     final now = DateTime.now();
     final actualDurationSeconds =
@@ -297,6 +449,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     state = TimerState(
       habitId: state.habitId,
       habitName: state.habitName,
+      sourceKind: state.sourceKind,
+      activityId: state.activityId,
       targetSeconds: state.targetSeconds,
       remainingSeconds: 0,
       actualDurationSeconds: actualDurationSeconds,
@@ -314,9 +468,13 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> retryCompletion() async {
+    if (state.restoreError != null) throw StateError(state.restoreError!);
     if (!state.isSavePending || _isCompleting) return;
     await _completeSession(
-      autoRecord: state.habitId > 0,
+      autoRecord:
+          state.habitId > 0 ||
+          state.activityId != null ||
+          state.sourceKind == TimerSessionSourceKind.preset,
       actualDurationSeconds: _pendingActualDurationSeconds,
     );
   }
@@ -335,6 +493,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _startedAt = null;
     _sessionStartedAt = null;
     _accumulatedSeconds = 0;
+    _sourceIdentity = null;
+    _sourceColorValue = null;
     state = const TimerState();
 
     if (wasFloating) {
@@ -371,6 +531,24 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           targetSnapshot: targetMinutes,
           completedAt: now,
         );
+      } else if (autoRecord && state.activityId != null) {
+        await _repo.completeActivityTimerSession(
+          activityId: state.activityId!,
+          actualDurationSeconds:
+              actualDurationSeconds ?? state.actualDurationSeconds,
+          completedAt: DateTime.now(),
+        );
+      } else if (autoRecord &&
+          state.sourceKind == TimerSessionSourceKind.preset) {
+        await _repo.completePresetTimerSession(
+          title: state.habitName,
+          identity: _sourceIdentity,
+          colorValue: _sourceColorValue,
+          startedAt: _sessionStartedAt ?? DateTime.now(),
+          actualDurationSeconds:
+              actualDurationSeconds ?? state.actualDurationSeconds,
+          completedAt: DateTime.now(),
+        );
       } else {
         await _repo.clearTimerSession();
       }
@@ -378,6 +556,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       state = TimerState(
         habitId: state.habitId,
         habitName: state.habitName,
+        sourceKind: state.sourceKind,
+        activityId: state.activityId,
         targetSeconds: state.targetSeconds,
         remainingSeconds: state.remainingSeconds,
         actualDurationSeconds: state.actualDurationSeconds,
@@ -387,6 +567,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       );
       _sessionStartedAt = null;
       _pendingActualDurationSeconds = null;
+      _sourceIdentity = null;
+      _sourceColorValue = null;
 
       try {
         SystemSound.play(SystemSoundType.alert);
@@ -407,16 +589,21 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> _persistState() async {
-    final session = TimerSession()
-      ..habitId = state.habitId
-      ..habitName = state.habitName
-      ..targetSeconds = state.targetSeconds
-      ..startedAt = _startedAt ?? _sessionStartedAt
-      ..accumulatedDurationSeconds = _accumulatedSeconds
-      ..status = state.status;
-
-    await _repo.saveTimerSession(session);
+    await _repo.saveTimerSession(_buildSession());
   }
+
+  TimerSession _buildSession() => TimerSession()
+    ..habitId = state.habitId
+    ..habitName = state.habitName
+    ..sourceKind = state.sourceKind
+    ..activityId = state.activityId
+    ..sourceIdentity = _sourceIdentity
+    ..sourceColorValue = _sourceColorValue
+    ..targetSeconds = state.targetSeconds
+    ..startedAt = _sessionStartedAt ?? _startedAt
+    ..runningSince = state.isRunning ? _startedAt : null
+    ..accumulatedDurationSeconds = _accumulatedSeconds
+    ..status = state.status;
 
   // ──────────────────────────────────────────────────────────────────────────
   // Desktop Floating Always-on-Top Timer (Windows / Desktop)

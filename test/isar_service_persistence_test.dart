@@ -11,10 +11,13 @@ import 'package:fitrah_launcher/models/habit.dart';
 import 'package:fitrah_launcher/models/habit_entry.dart';
 import 'package:fitrah_launcher/models/preset.dart';
 import 'package:fitrah_launcher/models/timer_session.dart';
+import 'package:fitrah_launcher/services/sadar_timer_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar_community/isar.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUpAll(() async {
     if (Platform.isLinux) {
       final config =
@@ -165,4 +168,247 @@ void main() {
     expect(await reopened.isar!.timerSessions.get(1), isNotNull);
     expect(await reopened.isar!.habitEntrys.count(), 0);
   });
+
+  test(
+    'activity timer completion updates only its exact Activity and retains actual seconds',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'focus_clock_activity_timer_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final opened = await IsarService.openAt(directory.path);
+      addTearDown(() => opened.isar!.close());
+      final db = opened.isar!;
+      final now = DateTime(2026, 11, 4, 9);
+      Activity makeActivity(String title) => Activity()
+        ..title = title
+        ..startMinute = 540
+        ..endMinute = 600
+        ..ampmHalf = AmPmHalf.am
+        ..date = dateOnly(now)
+        ..colorValue = 0xFF8BAE9A
+        ..createdAt = now
+        ..updatedAt = now;
+      final linkedId = await db.writeTxn(
+        () => db.activitys.put(makeActivity('Linked')),
+      );
+      final unrelatedId = await db.writeTxn(
+        () => db.activitys.put(makeActivity('Unrelated')),
+      );
+      final repository = SadarRepository(db);
+      await repository.saveTimerSession(
+        TimerSession()
+          ..activityId = linkedId
+          ..sourceKind = TimerSessionSourceKind.activity
+          ..habitName = 'Linked'
+          ..targetSeconds = 2700
+          ..startedAt = now
+          ..accumulatedDurationSeconds = 503
+          ..status = TimerStateStatus.completed
+          ..updatedAt = now,
+      );
+
+      await repository.completeActivityTimerSession(
+        activityId: linkedId,
+        actualDurationSeconds: 503,
+        completedAt: now.add(const Duration(minutes: 9)),
+      );
+
+      expect((await db.activitys.get(linkedId))!.isCompleted, isTrue);
+      expect((await db.activitys.get(linkedId))!.actualDurationSeconds, 503);
+      expect((await db.activitys.get(unrelatedId))!.isCompleted, isFalse);
+      expect((await db.activitys.get(unrelatedId))!.actualDurationSeconds, 0);
+      expect(await repository.getActiveTimerSession(), isNull);
+    },
+  );
+
+  test(
+    'missing linked Activity leaves the active timer available for retry',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'focus_clock_missing_activity_timer_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final opened = await IsarService.openAt(directory.path);
+      addTearDown(() => opened.isar!.close());
+      final repository = SadarRepository(opened.isar!);
+      await repository.saveTimerSession(
+        TimerSession()
+          ..activityId = 9876
+          ..sourceKind = TimerSessionSourceKind.activity
+          ..habitName = 'Missing'
+          ..targetSeconds = 900
+          ..status = TimerStateStatus.completed
+          ..updatedAt = DateTime.now(),
+      );
+
+      await expectLater(
+        repository.completeActivityTimerSession(
+          activityId: 9876,
+          actualDurationSeconds: 12,
+          completedAt: DateTime.now(),
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(await repository.getActiveTimerSession(), isNotNull);
+    },
+  );
+
+  test('paused non-habit source survives a store reopen', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'focus_clock_paused_non_habit_',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final firstOpen = await IsarService.openAt(directory.path);
+    final now = DateTime(2026, 11, 4, 9);
+    final repository = SadarRepository(firstOpen.isar!);
+    await repository.saveTimerSession(
+      TimerSession()
+        ..sourceKind = TimerSessionSourceKind.activity
+        ..activityId = 456
+        ..habitName = 'Read exact activity'
+        ..targetSeconds = 1800
+        ..startedAt = now
+        ..accumulatedDurationSeconds = 321
+        ..status = TimerStateStatus.paused
+        ..updatedAt = now,
+    );
+    await firstOpen.isar!.close();
+
+    final reopened = await IsarService.openAt(directory.path);
+    addTearDown(() => reopened.isar!.close());
+    final restored = await SadarRepository(
+      reopened.isar!,
+    ).getActiveTimerSession();
+    expect(restored?.status, TimerStateStatus.paused);
+    expect(restored?.sourceKind, TimerSessionSourceKind.activity);
+    expect(restored?.activityId, 456);
+    expect(restored?.accumulatedDurationSeconds, 321);
+  });
+
+  test(
+    'preset Activity write failure keeps session; retry creates one Activity',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'focus_clock_preset_completion_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final opened = await IsarService.openAt(directory.path);
+      addTearDown(() => opened.isar!.close());
+      final repository = _FailOncePresetRepository(opened.isar!);
+      final engine = SadarTimerEngine(repository);
+      addTearDown(engine.dispose);
+
+      await engine.startNonHabit(
+        title: 'LKS ITSSB',
+        targetSeconds: 2700,
+        sourceKind: TimerSessionSourceKind.preset,
+        sourceIdentity: 'Programmer',
+        sourceColorValue: 0xFFE8C07D,
+      );
+      await expectLater(engine.finishEarly(), throwsA(isA<StateError>()));
+      expect(engine.state.isSavePending, isTrue);
+      expect(await repository.getActiveTimerSession(), isNotNull);
+      expect(await opened.isar!.activitys.count(), 0);
+
+      await engine.retryCompletion();
+      expect(engine.state.isSavePending, isFalse);
+      expect(await repository.getActiveTimerSession(), isNull);
+      expect(await opened.isar!.activitys.count(), 1);
+      final activity = (await opened.isar!.activitys.where().findAll()).single;
+      expect(activity.title, 'LKS ITSSB');
+      expect(activity.isCompleted, isTrue);
+      expect(activity.actualDurationSeconds, lessThan(2700));
+      expect(activity.description, 'Identitas: Programmer');
+
+      await engine.retryCompletion();
+      expect(await opened.isar!.activitys.count(), 1);
+    },
+  );
+
+  test('Activity and timer start roll back together and retry once', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'focus_clock_atomic_activity_timer_start_',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final opened = await IsarService.openAt(directory.path);
+    addTearDown(() => opened.isar!.close());
+    final repository = _FailOnceTimerStartRepository(opened.isar!);
+    final engine = SadarTimerEngine(repository);
+    addTearDown(engine.dispose);
+    final now = DateTime.now();
+    final activity = Activity()
+      ..title = 'Quick activity'
+      ..startMinute = now.hour * 60 + now.minute
+      ..endMinute = (now.hour * 60 + now.minute + 30).clamp(0, 1440)
+      ..ampmHalf = now.hour < 12 ? AmPmHalf.am : AmPmHalf.pm
+      ..date = dateOnly(now)
+      ..colorValue = 0xFF8BAE9A
+      ..createdAt = now
+      ..updatedAt = now;
+
+    Future<bool> start() => engine.startNonHabit(
+      title: activity.title,
+      targetSeconds: 1800,
+      sourceKind: TimerSessionSourceKind.activity,
+      activityToCreate: activity,
+    );
+
+    await expectLater(start(), throwsA(isA<StateError>()));
+    expect(await opened.isar!.activitys.count(), 0);
+    expect(await repository.getActiveTimerSession(), isNull);
+    expect(engine.state.isActive, isFalse);
+
+    expect(await start(), isTrue);
+    final saved = await repository.getActiveTimerSession();
+    final activities = await opened.isar!.activitys.where().findAll();
+    expect(activities, hasLength(1));
+    expect(saved?.activityId, activities.single.id);
+    expect(saved?.sourceKind, TimerSessionSourceKind.activity);
+    await engine.cancel();
+  });
+}
+
+class _FailOncePresetRepository extends SadarRepository {
+  _FailOncePresetRepository(super.isar);
+
+  bool _failNext = true;
+
+  @override
+  Future<void> completePresetTimerSession({
+    required String title,
+    required String? identity,
+    required int? colorValue,
+    required DateTime startedAt,
+    required int actualDurationSeconds,
+    required DateTime completedAt,
+  }) async {
+    if (_failNext) {
+      _failNext = false;
+      throw StateError('injected Activity write failure');
+    }
+    return super.completePresetTimerSession(
+      title: title,
+      identity: identity,
+      colorValue: colorValue,
+      startedAt: startedAt,
+      actualDurationSeconds: actualDurationSeconds,
+      completedAt: completedAt,
+    );
+  }
+}
+
+class _FailOnceTimerStartRepository extends SadarRepository {
+  _FailOnceTimerStartRepository(super.isar);
+
+  bool _failNext = true;
+
+  @override
+  Future<void> putTimerSessionInTxn(TimerSession session) async {
+    if (_failNext) {
+      _failNext = false;
+      throw StateError('injected timer session write failure');
+    }
+    return super.putTimerSessionInTxn(session);
+  }
 }

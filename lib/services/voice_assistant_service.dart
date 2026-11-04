@@ -7,6 +7,8 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../core/time_math.dart';
 import '../models/activity.dart';
 import '../providers/providers.dart';
+import '../models/timer_session.dart';
+import 'sadar_timer_engine.dart';
 import 'secure_storage_service.dart';
 
 final voiceAssistantServiceProvider = Provider<VoiceAssistantService>((ref) {
@@ -26,8 +28,9 @@ class VoiceAssistantService {
   final ValueNotifier<bool> isListening = ValueNotifier<bool>(false);
   final ValueNotifier<bool> isSpeaking = ValueNotifier<bool>(false);
   final ValueNotifier<String> recognizedText = ValueNotifier<String>('');
-  final ValueNotifier<String> statusMessage =
-      ValueNotifier<String>('Sekretaris Waktu Aura Siap Mendampingi');
+  final ValueNotifier<String> statusMessage = ValueNotifier<String>(
+    'Sekretaris Waktu Aura Siap Mendampingi',
+  );
 
   bool _speechInitialized = false;
 
@@ -56,7 +59,9 @@ class VoiceAssistantService {
 
   /// Speak response text using Aura's voice
   Future<void> speak(String text) async {
-    final enabled = await _ref.read(secureStorageServiceProvider).isVoiceEnabled();
+    final enabled = await _ref
+        .read(secureStorageServiceProvider)
+        .isVoiceEnabled();
     if (!enabled || text.trim().isEmpty) return;
 
     try {
@@ -116,12 +121,14 @@ class VoiceAssistantService {
           listenOptions: stt.SpeechListenOptions(localeId: 'id_ID'),
         );
       } else {
-        statusMessage.value = 'Mikrofon tidak tersedia di platform ini. Ketik perintah di bawah.';
+        statusMessage.value =
+            'Mikrofon tidak tersedia di platform ini. Ketik perintah di bawah.';
         isListening.value = false;
       }
     } catch (e) {
       isListening.value = false;
-      statusMessage.value = 'Audio input belum tersedia. Gunakan kolom teks di bawah.';
+      statusMessage.value =
+          'Audio input belum tersedia. Gunakan kolom teks di bawah.';
     }
   }
 
@@ -145,9 +152,9 @@ class VoiceAssistantService {
     final lower = text.toLowerCase().trim();
 
     // 1. Voice Command: Quick Timer (e.g. "Timer 15 menit", "Fokus 30 menit")
-    final timerMatch =
-        RegExp(r'(?:timer|fokus|set timer|mulai)\s+(\d+)\s*(?:menit|min|m)?')
-            .firstMatch(lower);
+    final timerMatch = RegExp(
+      r'(?:timer|fokus|set timer|mulai)\s+(\d+)\s*(?:menit|min|m)?',
+    ).firstMatch(lower);
     if (timerMatch != null) {
       final mins = int.tryParse(timerMatch.group(1) ?? '') ?? 15;
       await _startQuickTimer(mins, lower);
@@ -163,8 +170,9 @@ class VoiceAssistantService {
         lower.contains('kegiatan') ||
         lower.contains('agenda')) {
       final now = DateTime.now();
-      final acts =
-          await _ref.read(activityRepoProvider).getByDate(dateOnly(now));
+      final acts = await _ref
+          .read(activityRepoProvider)
+          .getByDate(dateOnly(now));
       if (acts.isEmpty) {
         final resp =
             'Jadwal hari ini masih kosong, Pak/Bu. Anda dapat meminta saya membuatkan Fitrah Blueprint.';
@@ -205,10 +213,12 @@ class VoiceAssistantService {
     final startMinute = now.hour * 60 + now.minute;
     final endMinute = (startMinute + minutes).clamp(0, 1440);
 
-    final start24 =
-        is24h ? startMinute : (startMinute + (half == AmPmHalf.pm ? 720 : 0));
-    final end24 =
-        is24h ? endMinute : (endMinute + (half == AmPmHalf.pm ? 720 : 0));
+    final start24 = is24h
+        ? startMinute
+        : (startMinute + (half == AmPmHalf.pm ? 720 : 0));
+    final end24 = is24h
+        ? endMinute
+        : (endMinute + (half == AmPmHalf.pm ? 720 : 0));
 
     final dbHalf = toDbHalf(start24);
     final dbStart = toDbMinute(start24);
@@ -228,13 +238,15 @@ class VoiceAssistantService {
       ..createdAt = now
       ..updatedAt = now;
 
-    await _ref.read(activityRepoProvider).upsert(activity);
-
-    _ref.read(activeTimerTitleProvider.notifier).state = title;
-    _ref.read(activeTimerTotalSecondsProvider.notifier).state = minutes * 60;
-    _ref.read(activeTimerIsPausedProvider.notifier).state = false;
-    _ref.read(activeTimerEndTimeProvider.notifier).state =
-        now.add(Duration(minutes: minutes));
+    final id = await _ref.read(activityRepoProvider).upsert(activity);
+    await _ref
+        .read(timerEngineProvider.notifier)
+        .startNonHabit(
+          title: title,
+          targetSeconds: minutes * 60,
+          sourceKind: TimerSessionSourceKind.activity,
+          activityId: id,
+        );
   }
 
   String _fmtTime(AmPmHalf half, int relMin) {

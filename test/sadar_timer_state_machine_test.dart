@@ -67,6 +67,34 @@ void main() {
       },
     );
 
+    test('invalid source index stays visible and blocks replacement', () async {
+      engine.dispose();
+      final saved = TimerSession()
+        ..sourceKindIndex = 999
+        ..habitName = 'Unknown source timer'
+        ..targetSeconds = 900
+        ..accumulatedDurationSeconds = 60
+        ..status = TimerStateStatus.paused
+        ..updatedAt = DateTime.now();
+      await repo.saveTimerSession(saved);
+      engine = SadarTimerEngine(repo);
+
+      await engine.waitUntilRestored();
+      final started = await engine.startNonHabit(
+        title: 'Replacement',
+        targetSeconds: 600,
+        sourceKind: TimerSessionSourceKind.free,
+      );
+      await expectLater(engine.resume(), throwsA(isA<StateError>()));
+      await expectLater(engine.finishEarly(), throwsA(isA<StateError>()));
+
+      expect(started, isFalse);
+      expect(engine.state.restoreError, isNotNull);
+      expect(engine.state.isSavePending, isTrue);
+      expect((await repo.getActiveTimerSession())?.sourceKindIndex, 999);
+      expect(await repo.getActiveTimerSession(), isNotNull);
+    });
+
     test('start attaches to an active session for the same habit', () async {
       await engine.start(habit);
 
@@ -157,6 +185,7 @@ void main() {
 
     test('Transitions RUNNING -> PAUSED -> RUNNING correctly', () async {
       await engine.start(habit);
+      final originalStart = (await repo.getActiveTimerSession())!.startedAt;
       expect(engine.state.isRunning, true);
 
       await engine.pause();
@@ -168,6 +197,9 @@ void main() {
       await engine.resume();
       expect(engine.state.status, TimerStateStatus.running);
       expect(engine.state.isRunning, true);
+      final resumed = await repo.getActiveTimerSession();
+      expect(resumed?.startedAt, originalStart);
+      expect(resumed?.runningSince, isNotNull);
     });
 
     test(
@@ -245,6 +277,81 @@ void main() {
       final saved = await repo.getActiveTimerSession();
       expect(saved, isNull);
     });
+
+    test(
+      'non-habit timer is persisted and rejects overlapping starts',
+      () async {
+        final started = await engine.startNonHabit(
+          title: 'Deep work',
+          targetSeconds: 900,
+          sourceKind: TimerSessionSourceKind.free,
+        );
+
+        final overlapping = await engine.startNonHabit(
+          title: 'Another timer',
+          targetSeconds: 600,
+          sourceKind: TimerSessionSourceKind.preset,
+        );
+
+        expect(started, isTrue);
+        expect(overlapping, isFalse);
+        expect(engine.state.habitName, 'Deep work');
+        expect(engine.state.isRunning, isTrue);
+        final saved = await repo.getActiveTimerSession();
+        expect(saved?.sourceKind, TimerSessionSourceKind.free);
+      },
+    );
+
+    test(
+      'paused non-habit session restores with its source and remaining time',
+      () async {
+        await engine.startNonHabit(
+          title: 'Quick read',
+          targetSeconds: 1200,
+          sourceKind: TimerSessionSourceKind.activity,
+          activityId: 73,
+        );
+        await engine.pause();
+        engine.dispose();
+
+        engine = SadarTimerEngine(repo);
+        await engine.waitUntilRestored();
+
+        expect(engine.state.isPaused, isTrue);
+        expect(engine.state.habitId, 0);
+        expect(engine.state.activityId, 73);
+        expect(engine.state.sourceKind, TimerSessionSourceKind.activity);
+        expect(engine.state.habitName, 'Quick read');
+        expect(engine.state.remainingSeconds, lessThanOrEqualTo(1200));
+      },
+    );
+
+    test(
+      'failed Activity completion remains pending and retries the same ID',
+      () async {
+        final retryRepo = _FailOnceActivityTimerRepository();
+        final retryEngine = SadarTimerEngine(retryRepo);
+        addTearDown(retryEngine.dispose);
+        await retryEngine.startNonHabit(
+          title: 'Exact Activity',
+          targetSeconds: 1800,
+          sourceKind: TimerSessionSourceKind.activity,
+          activityId: 88,
+        );
+
+        await expectLater(
+          retryEngine.finishEarly(),
+          throwsA(isA<StateError>()),
+        );
+        expect(retryEngine.state.isSavePending, isTrue);
+        expect((await retryRepo.getActiveTimerSession())?.activityId, 88);
+
+        await retryEngine.retryCompletion();
+        expect(retryRepo.completedActivityId, 88);
+        expect(retryEngine.state.isSavePending, isFalse);
+        expect(await retryRepo.getActiveTimerSession(), isNull);
+      },
+    );
   });
 }
 
@@ -306,5 +413,26 @@ class _FailOnClearRepository extends SadarRepository {
   @override
   Future<void> clearTimerSession() async {
     throw StateError('temporary storage failure');
+  }
+}
+
+class _FailOnceActivityTimerRepository extends SadarRepository {
+  _FailOnceActivityTimerRepository() : super(null);
+
+  bool _failNext = true;
+  int? completedActivityId;
+
+  @override
+  Future<void> completeActivityTimerSession({
+    required int activityId,
+    required int actualDurationSeconds,
+    required DateTime completedAt,
+  }) async {
+    if (_failNext) {
+      _failNext = false;
+      throw StateError('temporary storage failure');
+    }
+    completedActivityId = activityId;
+    await clearTimerSession();
   }
 }

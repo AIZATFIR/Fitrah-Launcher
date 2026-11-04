@@ -22,35 +22,60 @@ const TimerSessionSchema = CollectionSchema(
       name: r'accumulatedDurationSeconds',
       type: IsarType.long,
     ),
-    r'habitId': PropertySchema(id: 1, name: r'habitId', type: IsarType.long),
+    r'activityId': PropertySchema(
+      id: 1,
+      name: r'activityId',
+      type: IsarType.long,
+    ),
+    r'habitId': PropertySchema(id: 2, name: r'habitId', type: IsarType.long),
     r'habitName': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'habitName',
       type: IsarType.string,
     ),
     r'pausedAt': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'pausedAt',
       type: IsarType.dateTime,
     ),
+    r'runningSince': PropertySchema(
+      id: 5,
+      name: r'runningSince',
+      type: IsarType.dateTime,
+    ),
+    r'sourceColorValue': PropertySchema(
+      id: 6,
+      name: r'sourceColorValue',
+      type: IsarType.long,
+    ),
+    r'sourceIdentity': PropertySchema(
+      id: 7,
+      name: r'sourceIdentity',
+      type: IsarType.string,
+    ),
+    r'sourceKindIndex': PropertySchema(
+      id: 8,
+      name: r'sourceKindIndex',
+      type: IsarType.long,
+    ),
     r'startedAt': PropertySchema(
-      id: 4,
+      id: 9,
       name: r'startedAt',
       type: IsarType.dateTime,
     ),
     r'status': PropertySchema(
-      id: 5,
+      id: 10,
       name: r'status',
       type: IsarType.byte,
       enumMap: _TimerSessionstatusEnumValueMap,
     ),
     r'targetSeconds': PropertySchema(
-      id: 6,
+      id: 11,
       name: r'targetSeconds',
       type: IsarType.long,
     ),
     r'updatedAt': PropertySchema(
-      id: 7,
+      id: 12,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
@@ -78,6 +103,12 @@ int _timerSessionEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.habitName.length * 3;
+  {
+    final value = object.sourceIdentity;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -88,13 +119,18 @@ void _timerSessionSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeLong(offsets[0], object.accumulatedDurationSeconds);
-  writer.writeLong(offsets[1], object.habitId);
-  writer.writeString(offsets[2], object.habitName);
-  writer.writeDateTime(offsets[3], object.pausedAt);
-  writer.writeDateTime(offsets[4], object.startedAt);
-  writer.writeByte(offsets[5], object.status.index);
-  writer.writeLong(offsets[6], object.targetSeconds);
-  writer.writeDateTime(offsets[7], object.updatedAt);
+  writer.writeLong(offsets[1], object.activityId);
+  writer.writeLong(offsets[2], object.habitId);
+  writer.writeString(offsets[3], object.habitName);
+  writer.writeDateTime(offsets[4], object.pausedAt);
+  writer.writeDateTime(offsets[5], object.runningSince);
+  writer.writeLong(offsets[6], object.sourceColorValue);
+  writer.writeString(offsets[7], object.sourceIdentity);
+  writer.writeLong(offsets[8], object.sourceKindIndex);
+  writer.writeDateTime(offsets[9], object.startedAt);
+  writer.writeByte(offsets[10], object.status.index);
+  writer.writeLong(offsets[11], object.targetSeconds);
+  writer.writeDateTime(offsets[12], object.updatedAt);
 }
 
 TimerSession _timerSessionDeserialize(
@@ -105,16 +141,21 @@ TimerSession _timerSessionDeserialize(
 ) {
   final object = TimerSession();
   object.accumulatedDurationSeconds = reader.readLong(offsets[0]);
-  object.habitId = reader.readLong(offsets[1]);
-  object.habitName = reader.readString(offsets[2]);
+  object.activityId = reader.readLongOrNull(offsets[1]);
+  object.habitId = reader.readLong(offsets[2]);
+  object.habitName = reader.readString(offsets[3]);
   object.id = id;
-  object.pausedAt = reader.readDateTimeOrNull(offsets[3]);
-  object.startedAt = reader.readDateTimeOrNull(offsets[4]);
+  object.pausedAt = reader.readDateTimeOrNull(offsets[4]);
+  object.runningSince = reader.readDateTimeOrNull(offsets[5]);
+  object.sourceColorValue = reader.readLongOrNull(offsets[6]);
+  object.sourceIdentity = reader.readStringOrNull(offsets[7]);
+  object.sourceKindIndex = reader.readLongOrNull(offsets[8]);
+  object.startedAt = reader.readDateTimeOrNull(offsets[9]);
   object.status =
-      _TimerSessionstatusValueEnumMap[reader.readByteOrNull(offsets[5])] ??
+      _TimerSessionstatusValueEnumMap[reader.readByteOrNull(offsets[10])] ??
       TimerStateStatus.idle;
-  object.targetSeconds = reader.readLong(offsets[6]);
-  object.updatedAt = reader.readDateTime(offsets[7]);
+  object.targetSeconds = reader.readLong(offsets[11]);
+  object.updatedAt = reader.readDateTime(offsets[12]);
   return object;
 }
 
@@ -128,20 +169,30 @@ P _timerSessionDeserializeProp<P>(
     case 0:
       return (reader.readLong(offset)) as P;
     case 1:
-      return (reader.readLong(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 3:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 4:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 5:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 6:
+      return (reader.readLongOrNull(offset)) as P;
+    case 7:
+      return (reader.readStringOrNull(offset)) as P;
+    case 8:
+      return (reader.readLongOrNull(offset)) as P;
+    case 9:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 10:
       return (_TimerSessionstatusValueEnumMap[reader.readByteOrNull(offset)] ??
               TimerStateStatus.idle)
           as P;
-    case 6:
+    case 11:
       return (reader.readLong(offset)) as P;
-    case 7:
+    case 12:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -310,6 +361,79 @@ extension TimerSessionQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'accumulatedDurationSeconds',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  activityIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'activityId'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  activityIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'activityId'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  activityIdEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'activityId', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  activityIdGreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'activityId',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  activityIdLessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'activityId',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  activityIdBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'activityId',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -648,6 +772,384 @@ extension TimerSessionQueryFilter
   }
 
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  runningSinceIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'runningSince'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  runningSinceIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'runningSince'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  runningSinceEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'runningSince', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  runningSinceGreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'runningSince',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  runningSinceLessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'runningSince',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  runningSinceBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'runningSince',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceColorValueIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'sourceColorValue'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceColorValueIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'sourceColorValue'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceColorValueEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'sourceColorValue', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceColorValueGreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'sourceColorValue',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceColorValueLessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'sourceColorValue',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceColorValueBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'sourceColorValue',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'sourceIdentity'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'sourceIdentity'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'sourceIdentity',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'sourceIdentity',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'sourceIdentity',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'sourceIdentity',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'sourceIdentity',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'sourceIdentity',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'sourceIdentity',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'sourceIdentity',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'sourceIdentity', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceIdentityIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'sourceIdentity', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceKindIndexIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'sourceKindIndex'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceKindIndexIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'sourceKindIndex'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceKindIndexEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'sourceKindIndex', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceKindIndexGreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'sourceKindIndex',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceKindIndexLessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'sourceKindIndex',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  sourceKindIndexBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'sourceKindIndex',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
   startedAtIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -908,6 +1410,19 @@ extension TimerSessionQuerySortBy
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByActivityId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activityId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByActivityIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activityId', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByHabitId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'habitId', Sort.asc);
@@ -941,6 +1456,61 @@ extension TimerSessionQuerySortBy
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByPausedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'pausedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByRunningSince() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'runningSince', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByRunningSinceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'runningSince', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortBySourceColorValue() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceColorValue', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortBySourceColorValueDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceColorValue', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortBySourceIdentity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceIdentity', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortBySourceIdentityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceIdentity', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortBySourceKindIndex() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceKindIndex', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortBySourceKindIndexDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceKindIndex', Sort.desc);
     });
   }
 
@@ -1010,6 +1580,19 @@ extension TimerSessionQuerySortThenBy
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenByActivityId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activityId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByActivityIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activityId', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenByHabitId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'habitId', Sort.asc);
@@ -1055,6 +1638,61 @@ extension TimerSessionQuerySortThenBy
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenByPausedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'pausedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenByRunningSince() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'runningSince', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByRunningSinceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'runningSince', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenBySourceColorValue() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceColorValue', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenBySourceColorValueDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceColorValue', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenBySourceIdentity() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceIdentity', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenBySourceIdentityDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceIdentity', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenBySourceKindIndex() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceKindIndex', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenBySourceKindIndexDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sourceKindIndex', Sort.desc);
     });
   }
 
@@ -1117,6 +1755,12 @@ extension TimerSessionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByActivityId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'activityId');
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByHabitId() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'habitId');
@@ -1134,6 +1778,37 @@ extension TimerSessionQueryWhereDistinct
   QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByPausedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'pausedAt');
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByRunningSince() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'runningSince');
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QDistinct>
+  distinctBySourceColorValue() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'sourceColorValue');
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QDistinct> distinctBySourceIdentity({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'sourceIdentity',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QDistinct>
+  distinctBySourceKindIndex() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'sourceKindIndex');
     });
   }
 
@@ -1178,6 +1853,12 @@ extension TimerSessionQueryProperty
     });
   }
 
+  QueryBuilder<TimerSession, int?, QQueryOperations> activityIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'activityId');
+    });
+  }
+
   QueryBuilder<TimerSession, int, QQueryOperations> habitIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'habitId');
@@ -1193,6 +1874,33 @@ extension TimerSessionQueryProperty
   QueryBuilder<TimerSession, DateTime?, QQueryOperations> pausedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'pausedAt');
+    });
+  }
+
+  QueryBuilder<TimerSession, DateTime?, QQueryOperations>
+  runningSinceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'runningSince');
+    });
+  }
+
+  QueryBuilder<TimerSession, int?, QQueryOperations>
+  sourceColorValueProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'sourceColorValue');
+    });
+  }
+
+  QueryBuilder<TimerSession, String?, QQueryOperations>
+  sourceIdentityProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'sourceIdentity');
+    });
+  }
+
+  QueryBuilder<TimerSession, int?, QQueryOperations> sourceKindIndexProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'sourceKindIndex');
     });
   }
 

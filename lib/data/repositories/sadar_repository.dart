@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:isar_community/isar.dart';
 
+import '../../core/time_math.dart';
 import '../../models/habit.dart';
 import '../../models/habit_entry.dart';
 import '../../models/daily_reflection.dart';
 import '../../models/timer_session.dart';
+import '../../models/activity.dart';
 
 class RepetitionStat {
   final Habit habit;
@@ -510,6 +512,31 @@ class SadarRepository {
     await _isar.writeTxn(() => _isar.timerSessions.put(session));
   }
 
+  /// Creates the QuickTimer Activity and active session as one durable write.
+  Future<int> createActivityAndStartTimerSession(
+    Activity activity,
+    TimerSession session,
+  ) async {
+    if (_isar == null) {
+      throw StateError('Atomic Activity timer start requires durable storage.');
+    }
+    session.id = 1;
+    session.updatedAt = DateTime.now();
+    return _isar.writeTxn(() async {
+      if (await _isar.timerSessions.get(1) != null) {
+        throw StateError('An active timer session already exists.');
+      }
+      final activityId = await _isar.activitys.put(activity);
+      session.activityId = activityId;
+      await putTimerSessionInTxn(session);
+      return activityId;
+    });
+  }
+
+  Future<void> putTimerSessionInTxn(TimerSession session) async {
+    await _isar!.timerSessions.put(session);
+  }
+
   Future<void> clearTimerSession() async {
     if (_isar == null) {
       _memTimerSession = null;
@@ -579,6 +606,110 @@ class SadarRepository {
       await _isar.habitEntrys.put(entry);
       await _isar.timerSessions.delete(1);
       return entry;
+    });
+  }
+
+  /// Marks only the Activity linked by ID and clears its timer in one commit.
+  Future<void> completeActivityTimerSession({
+    required int activityId,
+    required int actualDurationSeconds,
+    required DateTime completedAt,
+  }) async {
+    if (_isar == null) {
+      throw StateError('Activity timer completion requires durable storage.');
+    }
+    await _isar.writeTxn(() async {
+      final session = await _isar.timerSessions.get(1);
+      if (session == null) return;
+      final activity = await _isar.activitys.get(activityId);
+      if (activity == null) {
+        throw StateError('The linked Activity no longer exists.');
+      }
+      final startedAt = session.startedAt ?? completedAt;
+      if (activity.recurrence != 'none' &&
+          DateTime(
+                activity.date.year,
+                activity.date.month,
+                activity.date.day,
+              ) !=
+              DateTime(startedAt.year, startedAt.month, startedAt.day)) {
+        final occurrence = Activity()
+          ..presetId = activity.presetId
+          ..iconKey = activity.iconKey
+          ..title = activity.title
+          ..startMinute = activity.startMinute
+          ..endMinute = activity.endMinute
+          ..ampmHalf = activity.ampmHalf
+          ..date = DateTime(startedAt.year, startedAt.month, startedAt.day)
+          ..description = activity.description
+          ..colorValue = activity.colorValue
+          ..recurrence = 'none'
+          ..groupId = activity.groupId
+          ..importance = activity.importance
+          ..deadline = activity.deadline
+          ..isCompleted = true
+          ..isLocked = activity.isLocked
+          ..excludedDates = [...activity.excludedDates]
+          ..actualDurationSeconds = actualDurationSeconds
+          ..createdAt = completedAt
+          ..updatedAt = completedAt;
+        await _isar.activitys.put(occurrence);
+      } else {
+        activity
+          ..isCompleted = true
+          ..actualDurationSeconds = actualDurationSeconds
+          ..updatedAt = completedAt;
+        await _isar.activitys.put(activity);
+      }
+      await _isar.timerSessions.delete(1);
+    });
+  }
+
+  /// Creates the Home preset's completed Activity and clears its session atomically.
+  Future<void> completePresetTimerSession({
+    required String title,
+    required String? identity,
+    required int? colorValue,
+    required DateTime startedAt,
+    required int actualDurationSeconds,
+    required DateTime completedAt,
+  }) async {
+    if (_isar == null) {
+      throw StateError('Preset timer completion requires durable storage.');
+    }
+    await _isar.writeTxn(() async {
+      final session = await _isar.timerSessions.get(1);
+      if (session == null) return;
+      if (session.sourceKind != TimerSessionSourceKind.preset) {
+        throw StateError('The active timer is not a Home preset session.');
+      }
+      final spanMinutes = (actualDurationSeconds / 60).ceil().clamp(1, 1440);
+      final endAt = startedAt.add(Duration(minutes: spanMinutes));
+      final segments = splitSpan(startedAt, endAt);
+      final groupId = segments.length > 1
+          ? 'focus_${startedAt.microsecondsSinceEpoch}'
+          : null;
+      for (var index = 0; index < segments.length; index++) {
+        final segment = segments[index];
+        final activity = Activity()
+          ..title = title
+          ..startMinute = segment.start
+          ..endMinute = segment.end
+          ..ampmHalf = segment.half
+          ..date = segment.date
+          ..colorValue = colorValue ?? 0xFFE8C07D
+          ..description = identity == null || identity.isEmpty
+              ? ''
+              : 'Identitas: $identity'
+          ..recurrence = 'none'
+          ..groupId = groupId
+          ..isCompleted = true
+          ..actualDurationSeconds = index == 0 ? actualDurationSeconds : 0
+          ..createdAt = completedAt
+          ..updatedAt = completedAt;
+        await _isar.activitys.put(activity);
+      }
+      await _isar.timerSessions.delete(1);
     });
   }
 

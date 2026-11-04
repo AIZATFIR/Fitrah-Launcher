@@ -3,6 +3,7 @@ import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
 import 'package:fitrah_launcher/features/sadar/widgets/sadar_timer_view.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
 import 'package:fitrah_launcher/models/activity.dart';
+import 'package:fitrah_launcher/models/timer_session.dart';
 import 'package:fitrah_launcher/providers/providers.dart';
 import 'package:fitrah_launcher/providers/sadar_providers.dart';
 import 'package:fitrah_launcher/services/sadar_timer_engine.dart';
@@ -80,7 +81,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tidak ada kegiatan terjadwal sekarang'), findsOneWidget);
-    expect(find.textContaining('Terjadwal sekarang · Sesi yang sudah selesai'), findsNothing);
+    expect(
+      find.textContaining('Terjadwal sekarang · Sesi yang sudah selesai'),
+      findsNothing,
+    );
   });
 
   testWidgets('Home habit Play opens the shared Sadar session', (tester) async {
@@ -106,9 +110,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     final playButtons = find.byTooltip('Mulai di Focus Clock');
-    for (var attempt = 0;
-        attempt < 10 && playButtons.evaluate().isEmpty;
-        attempt++) {
+    for (
+      var attempt = 0;
+      attempt < 10 && playButtons.evaluate().isEmpty;
+      attempt++
+    ) {
       await tester.drag(find.byType(ListView).first, const Offset(0, -500));
       await tester.pumpAndSettle();
     }
@@ -121,6 +127,107 @@ void main() {
     expect(container.read(timerEngineProvider).isRunning, isTrue);
     await container.read(timerEngineProvider.notifier).cancel();
   });
+
+  testWidgets('Home observes a non-habit session from the shared owner', (
+    tester,
+  ) async {
+    final repository = SadarRepository(null);
+    final container = ProviderContainer(
+      overrides: [
+        activitiesByDateProvider.overrideWith((ref) => Stream.value(const [])),
+        sadarRepoProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container
+        .read(timerEngineProvider.notifier)
+        .startNonHabit(
+          title: 'Shared preset timer',
+          targetSeconds: 900,
+          sourceKind: TimerSessionSourceKind.preset,
+        );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: FocusClockHomeView(
+            onOpenFocusClock: _noop,
+            onOpenAppDrawer: _noop,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Shared preset timer'), findsOneWidget);
+    await container.read(timerEngineProvider.notifier).cancel();
+  });
+
+  testWidgets('Home cancellation clears shared timer before hiding it', (
+    tester,
+  ) async {
+    final repository = _FailOnceClearRepository();
+    final container = ProviderContainer(
+      overrides: [
+        activitiesByDateProvider.overrideWith((ref) => Stream.value(const [])),
+        sadarRepoProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(() async {
+      await container.read(timerEngineProvider.notifier).cancel();
+      container.dispose();
+    });
+    await container
+        .read(timerEngineProvider.notifier)
+        .startNonHabit(
+          title: 'Cancelable preset',
+          targetSeconds: 900,
+          sourceKind: TimerSessionSourceKind.preset,
+        );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: FocusClockHomeView(
+            onOpenFocusClock: _noop,
+            onOpenAppDrawer: _noop,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Cancelable preset'));
+    await tester.pumpAndSettle();
+    expect(find.text('Batalkan timer'), findsOneWidget);
+
+    await tester.tap(find.text('Batalkan timer'));
+    await tester.pumpAndSettle();
+    expect(await repository.getActiveTimerSession(), isNotNull);
+    expect(find.text('Batalkan timer'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Batalkan timer'));
+    await tester.pumpAndSettle();
+    expect(await repository.getActiveTimerSession(), isNull);
+    expect(find.text('Batalkan timer'), findsNothing);
+  });
+}
+
+class _FailOnceClearRepository extends SadarRepository {
+  _FailOnceClearRepository() : super(null);
+
+  bool _failNext = true;
+
+  @override
+  Future<void> clearTimerSession() async {
+    if (_failNext) {
+      _failNext = false;
+      throw StateError('injected clear failure');
+    }
+    return super.clearTimerSession();
+  }
 }
 
 void _noop() {}

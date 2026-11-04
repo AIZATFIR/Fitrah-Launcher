@@ -7,12 +7,15 @@ import '../features/ai_chat/voice_assistant_sheet.dart';
 import '../features/flowchart/flowchart_canvas_view.dart';
 import '../features/settings/settings_screen.dart';
 import '../providers/providers.dart';
+import '../models/timer_session.dart';
+import '../services/sadar_timer_engine.dart';
 
 class CommandPaletteModal extends ConsumerStatefulWidget {
   const CommandPaletteModal({super.key});
 
   @override
-  ConsumerState<CommandPaletteModal> createState() => _CommandPaletteModalState();
+  ConsumerState<CommandPaletteModal> createState() =>
+      _CommandPaletteModalState();
 }
 
 class _CommandPaletteModalState extends ConsumerState<CommandPaletteModal> {
@@ -151,9 +154,9 @@ class _CommandPaletteModalState extends ConsumerState<CommandPaletteModal> {
         category: 'System',
         onExecute: (context, ref) {
           Navigator.pop(context);
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const SettingsScreen()),
-          );
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
         },
       ),
     ];
@@ -161,11 +164,13 @@ class _CommandPaletteModalState extends ConsumerState<CommandPaletteModal> {
 
   void _triggerTimer(BuildContext context, WidgetRef ref, int minutes) async {
     Navigator.pop(context);
-    final now = DateTime.now();
-    ref.read(activeTimerTitleProvider.notifier).state = '$minutes Min Focus Session';
-    ref.read(activeTimerTotalSecondsProvider.notifier).state = minutes * 60;
-    ref.read(activeTimerIsPausedProvider.notifier).state = false;
-    ref.read(activeTimerEndTimeProvider.notifier).state = now.add(Duration(minutes: minutes));
+    await ref
+        .read(timerEngineProvider.notifier)
+        .startNonHabit(
+          title: '$minutes Min Focus Session',
+          targetSeconds: minutes * 60,
+          sourceKind: TimerSessionSourceKind.free,
+        );
     HapticFeedback.mediumImpact();
   }
 
@@ -206,7 +211,10 @@ class _CommandPaletteModalState extends ConsumerState<CommandPaletteModal> {
         decoration: BoxDecoration(
           color: AppPalette.card,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5), width: 1.5),
+          border: Border.all(
+            color: AppPalette.accent.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.6),
@@ -224,21 +232,36 @@ class _CommandPaletteModalState extends ConsumerState<CommandPaletteModal> {
               child: TextField(
                 controller: _searchCtrl,
                 autofocus: true,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
                 onChanged: (_) => setState(() => _selectedIndex = 0),
                 decoration: InputDecoration(
                   hintText: 'Ketik perintah atau cari senjata (Ctrl+K)...',
-                  hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 14),
-                  prefixIcon: const Icon(Icons.search_rounded, color: AppPalette.accent),
+                  hintStyle: const TextStyle(
+                    color: AppPalette.textDim,
+                    fontSize: 14,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: AppPalette.accent,
+                  ),
                   suffixIcon: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
                       color: AppPalette.bg,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: AppPalette.stroke),
                     ),
-                    child: const Text('ESC', style: TextStyle(fontSize: 10, color: AppPalette.textDim)),
+                    child: const Text(
+                      'ESC',
+                      style: TextStyle(fontSize: 10, color: AppPalette.textDim),
+                    ),
                   ),
                   filled: true,
                   fillColor: AppPalette.bg,
@@ -259,7 +282,10 @@ class _CommandPaletteModalState extends ConsumerState<CommandPaletteModal> {
               child: filtered.isEmpty
                   ? const Padding(
                       padding: EdgeInsets.all(24),
-                      child: Text('Tidak ada perintah yang cocok', style: TextStyle(color: AppPalette.textDim)),
+                      child: Text(
+                        'Tidak ada perintah yang cocok',
+                        style: TextStyle(color: AppPalette.textDim),
+                      ),
                     )
                   : ListView.builder(
                       shrinkWrap: true,
@@ -272,48 +298,77 @@ class _CommandPaletteModalState extends ConsumerState<CommandPaletteModal> {
                         return InkWell(
                           onTap: () => item.onExecute(context, ref),
                           child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
-                              color: isSelected ? AppPalette.accent.withValues(alpha: 0.18) : Colors.transparent,
+                              color: isSelected
+                                  ? AppPalette.accent.withValues(alpha: 0.18)
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: isSelected ? AppPalette.accent.withValues(alpha: 0.4) : Colors.transparent,
+                                color: isSelected
+                                    ? AppPalette.accent.withValues(alpha: 0.4)
+                                    : Colors.transparent,
                               ),
                             ),
                             child: Row(
                               children: [
-                                Icon(item.icon, size: 20, color: isSelected ? AppPalette.accent : AppPalette.textDim),
+                                Icon(
+                                  item.icon,
+                                  size: 20,
+                                  color: isSelected
+                                      ? AppPalette.accent
+                                      : AppPalette.textDim,
+                                ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         item.title,
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
-                                          color: isSelected ? AppPalette.accent : AppPalette.text,
+                                          color: isSelected
+                                              ? AppPalette.accent
+                                              : AppPalette.text,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         item.subtitle,
-                                        style: const TextStyle(fontSize: 11, color: AppPalette.textDim),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppPalette.textDim,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: AppPalette.bg,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     item.category,
-                                    style: const TextStyle(fontSize: 9, color: AppPalette.textDim, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      color: AppPalette.textDim,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],

@@ -43,6 +43,9 @@ class Activity {
   /// Whether this activity has been completed.
   bool isCompleted = false;
 
+  /// Measured seconds from the focus timer associated with this activity.
+  int actualDurationSeconds = 0;
+
   /// Whether this activity is locked against accidental edit/drag/delete.
   bool isLocked = false;
 

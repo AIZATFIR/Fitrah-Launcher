@@ -21,20 +21,25 @@ import '../services/secure_storage_service.dart';
 
 /// Overridden in main().
 final isarProvider = Provider<Isar?>((_) => null);
-final notificationServiceProvider =
-    Provider<NotificationService>((_) => throw UnimplementedError());
+final notificationServiceProvider = Provider<NotificationService>(
+  (_) => throw UnimplementedError(),
+);
 
 final presetRepoProvider = Provider<PresetRepository>(
   (ref) => PresetRepository(ref.watch(isarProvider)),
 );
 
-final blueprintRepoProvider = Provider<BlueprintRepository>((_) => BlueprintRepository());
+final blueprintRepoProvider = Provider<BlueprintRepository>(
+  (_) => BlueprintRepository(),
+);
 
 final blueprintsProvider = StreamProvider<List<RoutineBlueprint>>((ref) {
   return ref.watch(blueprintRepoProvider).watchAll();
 });
 
-final blueprintApplierServiceProvider = Provider<BlueprintApplierService>((ref) {
+final blueprintApplierServiceProvider = Provider<BlueprintApplierService>((
+  ref,
+) {
   return BlueprintApplierService(ref.watch(activityRepoProvider));
 });
 
@@ -62,12 +67,12 @@ final presetsProvider = StreamProvider<List<Preset>>(
 );
 
 /// Current date being viewed (default today).
-final currentDateProvider =
-    StateProvider<DateTime>((_) => dateOnly(DateTime.now()));
+final currentDateProvider = StateProvider<DateTime>(
+  (_) => dateOnly(DateTime.now()),
+);
 
 /// Current AM/PM half being viewed in FocusClock.
-final ampmHalfProvider =
-    StateProvider<AmPmHalf>((_) => halfOfNow());
+final ampmHalfProvider = StateProvider<AmPmHalf>((_) => halfOfNow());
 
 /// Realtime clock tick.
 final currentTimeProvider = StreamProvider<DateTime>(
@@ -114,30 +119,36 @@ final tasksByHalfProvider = Provider<List<Task>>((ref) {
   final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
   final date = ref.watch(currentDateProvider);
   final half = ref.watch(ampmHalfProvider);
-  final activities = ref.watch(activitiesByHalfProvider).valueOrNull ?? const [];
+  final activities =
+      ref.watch(activitiesByHalfProvider).valueOrNull ?? const [];
   final activityIds = activities.map((a) => a.id).toSet();
-  
+
   return tasks.where((t) {
     if (t.startMinute == null || t.endMinute == null) return false;
     if (t.activityId != null) {
       return activityIds.contains(t.activityId);
     }
-    return t.date != null && 
-           t.date!.year == date.year &&
-           t.date!.month == date.month &&
-           t.date!.day == date.day &&
-           t.ampmHalf == half;
+    return t.date != null &&
+        t.date!.year == date.year &&
+        t.date!.month == date.month &&
+        t.date!.day == date.day &&
+        t.ampmHalf == half;
   }).toList();
 });
 
 /// Unscheduled tasks (Inbox) that don't have start/end minutes.
 final unscheduledTasksProvider = Provider<List<Task>>((ref) {
   final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
-  return tasks.where((t) => t.startMinute == null || t.endMinute == null).toList();
+  return tasks
+      .where((t) => t.startMinute == null || t.endMinute == null)
+      .toList();
 });
 
 /// Tasks assigned to a specific activity.
-final tasksForActivityProvider = StreamProvider.family<List<Task>, int>((ref, activityId) {
+final tasksForActivityProvider = StreamProvider.family<List<Task>, int>((
+  ref,
+  activityId,
+) {
   return ref.watch(taskRepoProvider).watchByActivity(activityId);
 });
 
@@ -146,8 +157,9 @@ final schedulingTaskProvider = StateProvider<Task?>((_) => null);
 
 /// Chat transcript — survives panel open/close so conversation continues.
 /// "New chat" replaces it with an empty list.
-final aiTranscriptProvider =
-    StateProvider<List<ChatMessage>>((_) => <ChatMessage>[]);
+final aiTranscriptProvider = StateProvider<List<ChatMessage>>(
+  (_) => <ChatMessage>[],
+);
 
 // ── Planning Mode & App Mode State ───────────────────────────────────────
 
@@ -180,7 +192,9 @@ final selectedAppModeProvider = StateProvider<String>((ref) => initialAppMode);
 final planningModeProvider = StateProvider<bool>((ref) => false);
 
 /// Tracks the specific date being planned. Defaults to today.
-final planningDateProvider = StateProvider<DateTime>((ref) => dateOnly(DateTime.now()));
+final planningDateProvider = StateProvider<DateTime>(
+  (ref) => dateOnly(DateTime.now()),
+);
 
 /// Tracks whether the clock is in Precision Mode (1-minute snapping)
 final precisionModeProvider = StateProvider<bool>((ref) => false);
@@ -194,28 +208,23 @@ final isClockDraggingProvider = StateProvider<bool>((ref) => false);
 /// Tracks the selected duration interval for Instant Mode (default 60 minutes)
 final instantIntervalProvider = StateProvider<int>((ref) => 60);
 
-// ── Quick Focus Timer State ─────────────────────────────────────────────
-final activeTimerEndTimeProvider = StateProvider<DateTime?>((_) => null);
-final activeTimerTotalSecondsProvider = StateProvider<int>((_) => 0);
-final activeTimerTitleProvider = StateProvider<String>((_) => 'Deep Focus');
-final activeTimerIsPausedProvider = StateProvider<bool>((_) => false);
-
 /// Tasks scheduled for the currently selected date (entire 24h day).
 final tasksByDateProvider = Provider<List<Task>>((ref) {
   final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
   final date = ref.watch(currentDateProvider);
-  final activities = ref.watch(activitiesByDateProvider).valueOrNull ?? const [];
+  final activities =
+      ref.watch(activitiesByDateProvider).valueOrNull ?? const [];
   final activityIds = activities.map((a) => a.id).toSet();
-  
+
   return tasks.where((t) {
     if (t.startMinute == null || t.endMinute == null) return false;
     if (t.activityId != null) {
       return activityIds.contains(t.activityId);
     }
-    return t.date != null && 
-           t.date!.year == date.year &&
-           t.date!.month == date.month &&
-           t.date!.day == date.day;
+    return t.date != null &&
+        t.date!.year == date.year &&
+        t.date!.month == date.month &&
+        t.date!.day == date.day;
   }).toList();
 });
 
