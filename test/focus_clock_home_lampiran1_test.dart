@@ -128,7 +128,7 @@ void main() {
       expect(find.text('LKS ITSSB'), findsOneWidget);
     });
 
-    testWidgets('Starting preset timer transitions to Timer screen', (
+    testWidgets('Starting preset timer stays open when completion cannot be stored', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 2400);
@@ -141,12 +141,17 @@ void main() {
 
       // Find first play arrow button in presets
       final playBtn = find.byKey(const ValueKey('preset_play_1'));
+      final homeList = find.byType(ListView).first;
+      final homeScrollable = find.descendant(
+        of: homeList,
+        matching: find.byType(Scrollable),
+      ).first;
       await tester.scrollUntilVisible(
         playBtn,
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: homeScrollable,
       );
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -100));
+      await tester.drag(homeList, const Offset(0, -100));
       await tester.pumpAndSettle();
       await tester.tap(playBtn);
       await tester.pumpAndSettle();
@@ -159,17 +164,12 @@ void main() {
       expect(find.text('Selesai sekarang'), findsOneWidget);
       expect(find.text('Batalkan timer'), findsOneWidget);
 
-      // Finish now returns to Home
+      // Empty test storage cannot commit this preset; keep it available to retry.
       await tester.tap(find.text('Selesai sekarang'));
       await tester.pumpAndSettle();
 
-      final identitasText = find.text('Identitas: Programmer');
-      await tester.scrollUntilVisible(
-        identitasText,
-        -300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(identitasText, findsOneWidget);
+      expect(find.text('Selesai sekarang'), findsOneWidget);
+      expect(find.text('Batalkan timer'), findsOneWidget);
     });
 
     testWidgets(

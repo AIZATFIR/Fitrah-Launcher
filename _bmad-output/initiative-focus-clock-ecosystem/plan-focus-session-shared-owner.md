@@ -38,6 +38,6 @@ context:
 - [x] `flutter build apk --debug --no-pub --split-per-abi` -- all three Android debug ABIs build; arm64 SHA-256 `db0abf74bc398419a20aeeb81422d467033bbb51ba51f1f103648e3560aacddd`.
 - [x] `git diff --check` -- clean.
 
-**Full-suite finding:** `flutter test --no-pub` ran 101 tests and reported 1 failure (100 passed) in `focus_clock_home_lampiran1_test.dart`, “Starting preset timer transitions to Timer screen”, at line 167: its `scrollUntilVisible` could not find a `Scrollable`. The same test fails in isolation. The new FocusSessionView test and related timer suites pass; this legacy sample-Home test remains an open follow-up.
+**Full suite:** `flutter test --no-pub` -- 102 tests pass. The legacy sample-Home timer test now asserts that a failed durable completion keeps the timer screen available for retry instead of assuming that empty test storage committed the Activity.
 
 **Manual gate:** No Android device is attached. Process-death/reboot behavior is not claimed as verified.
