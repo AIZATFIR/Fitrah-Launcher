@@ -11,6 +11,11 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
   static const _storageKey = 'fitrah_launcher_settings_v1';
   Future<void>? _loadFuture;
 
+  Future<void> reload() async {
+    _loadFuture = _readSettings();
+    await _loadFuture;
+  }
+
   Future<void> _loadSettings() async {
     _loadFuture = _readSettings();
     await _loadFuture;

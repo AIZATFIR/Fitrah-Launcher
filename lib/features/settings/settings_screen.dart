@@ -2,8 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../core/theme.dart';
+import '../../data/focus_clock_backup.dart';
+import '../../data/focus_clock_backup_service.dart';
+import '../../features/launcher/providers/launcher_settings_provider.dart';
 import '../../models/app_settings.dart';
 import '../../providers/providers.dart';
 import '../../services/secure_storage_service.dart';
@@ -800,6 +804,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
 
+              const Divider(),
+              const _Section(title: 'Backup & Restore'),
+              const _BackupRestoreSection(),
+
               // ── About ───────────────────────────────────────────────────────
               const Divider(),
               const _Section(title: 'About'),
@@ -1279,6 +1287,149 @@ class _AiConfigTileState extends State<_AiConfigTile> {
 }
 
 // ── Google Calendar tile ──────────────────────────────────────────────────────
+
+class _BackupRestoreSection extends ConsumerStatefulWidget {
+  const _BackupRestoreSection();
+
+  @override
+  ConsumerState<_BackupRestoreSection> createState() => _BackupRestoreSectionState();
+}
+
+class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
+  bool _busy = false;
+
+  FocusClockBackupService get _service => FocusClockBackupService(
+        isar: ref.read(isarProvider),
+        secureStorage: ref.read(secureStorageServiceProvider),
+      );
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Ekspor jadwal, habit, riwayat, refleksi, tujuan, dan preferensi. '
+              'File berisi data pribadi dan tidak dienkripsi. API key tidak ikut.',
+              style: TextStyle(color: AppPalette.textDim, fontSize: 13),
+            ),
+          ),
+          ListTile(
+            leading: _busy
+                ? const SizedBox.square(
+                    dimension: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.upload_file_outlined),
+            title: const Text('Export backup'),
+            subtitle: const Text('Simpan file JSON ke perangkat'),
+            enabled: !_busy,
+            onTap: _busy ? null : _export,
+          ),
+          ListTile(
+            leading: const Icon(Icons.restore_page_outlined),
+            title: const Text('Restore backup'),
+            subtitle: const Text('Periksa isi file sebelum mengganti data'),
+            enabled: !_busy,
+            onTap: _busy ? null : _import,
+          ),
+        ],
+      );
+
+  Future<void> _export() async {
+    setState(() => _busy = true);
+    try {
+      final bytes = await _service.exportBytes();
+      final stamp = DateTime.now().toIso8601String().substring(0, 10);
+      final saved = await FilePicker.platform.saveFile(
+        dialogTitle: 'Simpan backup Focus Clock',
+        fileName: 'focus-clock-backup-$stamp.json',
+        type: FileType.custom,
+        allowedExtensions: const ['json'],
+        bytes: bytes,
+      );
+      if (saved != null && mounted) {
+        _message('Backup berhasil disimpan. Simpan file ini secara pribadi.');
+      }
+    } catch (error) {
+      if (mounted) _message('Backup gagal: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _import() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        dialogTitle: 'Pilih backup Focus Clock',
+        type: FileType.custom,
+        allowedExtensions: const ['json'],
+        allowMultiple: false,
+        withData: false,
+      );
+      if (result == null || result.files.isEmpty || !mounted) return;
+      final file = result.files.single;
+      if (file.size > 20 * 1024 * 1024) {
+        _message('File terlalu besar. Batas ukuran backup 20 MB.');
+        return;
+      }
+      setState(() => _busy = true);
+      final backup = FocusClockBackupCodec.decode(await file.xFile.readAsBytes());
+      if (!mounted) return;
+      final shouldRestore = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Isi backup'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Format backup: ${backup.formatVersion}'),
+              Text('Dibuat ${backup.exportedAtUtc.toLocal()}'),
+              const SizedBox(height: 12),
+              ...backup.data.counts.entries.map((entry) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Text('${entry.key}: ${entry.value}'),
+                  )),
+              const SizedBox(height: 12),
+              const Text(
+                'Restore akan mengganti data Focus Clock saat ini. '
+                'Refleksi dan tujuan termasuk data pribadi. API key di perangkat ini dipertahankan. '
+                'Salinan pemulihan lokal dibuat sebelum perubahan.',
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Ganti data'),
+            ),
+          ],
+        ),
+      );
+      if (shouldRestore != true || !mounted) return;
+      final recoveryPath = await _service.restore(backup);
+      await ref.read(launcherSettingsProvider.notifier).reload();
+      if (mounted) _message('Restore berhasil. Salinan pemulihan: $recoveryPath');
+    } on UnsupportedError catch (error) {
+      if (mounted) _message(error.message ?? 'Versi backup belum didukung.');
+    } catch (error) {
+      if (mounted) _message('Restore gagal: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(text), duration: const Duration(seconds: 6)),
+    );
+  }
+}
 
 class _GCalTile extends ConsumerStatefulWidget {
   @override
