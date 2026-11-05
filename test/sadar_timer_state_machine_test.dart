@@ -95,6 +95,33 @@ void main() {
       expect(await repo.getActiveTimerSession(), isNotNull);
     });
 
+    test('restores overdue YPT session as running overtime', () async {
+      engine.dispose();
+      final startedAt = DateTime.now().subtract(const Duration(minutes: 3));
+      await repo.saveTimerSession(
+        TimerSession()
+          ..habitId = habit.id
+          ..habitName = habit.name
+          ..sourceKind = TimerSessionSourceKind.yptHabit
+          ..targetSeconds = 60
+          ..startedAt = startedAt
+          ..runningSince = startedAt
+          ..status = TimerStateStatus.running
+          ..updatedAt = DateTime.now(),
+      );
+      engine = SadarTimerEngine(repo);
+
+      await engine.waitUntilRestored();
+
+      expect(engine.state.isRunning, isTrue);
+      expect(engine.state.isOverdue, isTrue);
+      expect(engine.state.actualDurationSeconds, greaterThanOrEqualTo(180));
+      expect(
+        (await repo.getActiveTimerSession())?.sourceKind,
+        TimerSessionSourceKind.yptHabit,
+      );
+    });
+
     test('start attaches to an active session for the same habit', () async {
       await engine.start(habit);
 

@@ -4,7 +4,8 @@ part 'timer_session.g.dart';
 
 enum TimerStateStatus { idle, running, paused, completed }
 
-enum TimerSessionSourceKind { habit, free, preset, activity }
+// Append new values to keep persisted integer indexes stable.
+enum TimerSessionSourceKind { habit, free, preset, activity, yptHabit }
 
 @collection
 class TimerSession {

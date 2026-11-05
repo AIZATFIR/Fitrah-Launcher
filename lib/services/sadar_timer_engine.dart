@@ -45,6 +45,11 @@ class TimerState {
   bool get isPaused => status == TimerStateStatus.paused;
   bool get isCompleted => status == TimerStateStatus.completed;
   bool get isActive => isRunning || isPaused;
+  bool get isOverdue =>
+      sourceKind == TimerSessionSourceKind.yptHabit &&
+      remainingSeconds == 0 &&
+      actualDurationSeconds >= targetSeconds &&
+      isActive;
 
   double get progress => targetSeconds > 0
       ? ((targetSeconds - remainingSeconds) / targetSeconds).clamp(0.0, 1.0)
@@ -115,6 +120,21 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       );
 
       if (remaining <= 0) {
+        if (sourceKind == TimerSessionSourceKind.yptHabit) {
+          _startedAt = runningSince;
+          state = TimerState(
+            habitId: saved.habitId,
+            habitName: saved.habitName,
+            sourceKind: sourceKind,
+            activityId: saved.activityId,
+            targetSeconds: saved.targetSeconds,
+            remainingSeconds: 0,
+            actualDurationSeconds: totalElapsed,
+            status: TimerStateStatus.running,
+          );
+          _startTicker();
+          return;
+        }
         // Completed while app was closed
         state = TimerState(
           habitId: saved.habitId,
@@ -197,9 +217,20 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
   Future<void> waitUntilRestored() => _restoreFuture;
 
-  Future<bool> start(Habit habit) async {
+  Future<bool> start(Habit habit) =>
+      _startHabit(habit, TimerSessionSourceKind.habit);
+
+  Future<bool> startYpt(Habit habit) =>
+      _startHabit(habit, TimerSessionSourceKind.yptHabit);
+
+  Future<bool> _startHabit(
+    Habit habit,
+    TimerSessionSourceKind sourceKind,
+  ) async {
     await _restoreFuture;
-    if (state.isActive) return state.habitId == habit.id;
+    if (state.isActive) {
+      return state.habitId == habit.id && state.sourceKind == sourceKind;
+    }
     if (state.isSavePending || _isCompleting) return false;
 
     final previousState = state;
@@ -213,7 +244,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     state = TimerState(
       habitId: habit.id,
       habitName: habit.name,
-      sourceKind: TimerSessionSourceKind.habit,
+      sourceKind: sourceKind,
       targetSeconds: targetSec,
       remainingSeconds: targetSec,
       status: TimerStateStatus.running,
@@ -308,7 +339,19 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           state.targetSeconds,
         );
 
-        if (remaining <= 0) {
+        if (remaining <= 0 &&
+            state.sourceKind == TimerSessionSourceKind.yptHabit) {
+          state = TimerState(
+            habitId: state.habitId,
+            habitName: state.habitName,
+            sourceKind: state.sourceKind,
+            targetSeconds: state.targetSeconds,
+            remainingSeconds: 0,
+            actualDurationSeconds: elapsed,
+            status: TimerStateStatus.running,
+            isFloating: state.isFloating,
+          );
+        } else if (remaining <= 0) {
           _ticker?.cancel();
           state = TimerState(
             habitId: state.habitId,
