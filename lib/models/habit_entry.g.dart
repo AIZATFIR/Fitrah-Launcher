@@ -22,42 +22,47 @@ const HabitEntrySchema = CollectionSchema(
       name: r'actualDurationMinutes',
       type: IsarType.long,
     ),
-    r'completedAt': PropertySchema(
+    r'actualDurationSeconds': PropertySchema(
       id: 1,
+      name: r'actualDurationSeconds',
+      type: IsarType.long,
+    ),
+    r'completedAt': PropertySchema(
+      id: 2,
       name: r'completedAt',
       type: IsarType.dateTime,
     ),
     r'createdAt': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
     r'dateString': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'dateString',
       type: IsarType.string,
     ),
-    r'habitId': PropertySchema(id: 4, name: r'habitId', type: IsarType.long),
-    r'note': PropertySchema(id: 5, name: r'note', type: IsarType.string),
-    r'source': PropertySchema(id: 6, name: r'source', type: IsarType.string),
+    r'habitId': PropertySchema(id: 5, name: r'habitId', type: IsarType.long),
+    r'note': PropertySchema(id: 6, name: r'note', type: IsarType.string),
+    r'source': PropertySchema(id: 7, name: r'source', type: IsarType.string),
     r'status': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'status',
       type: IsarType.byte,
       enumMap: _HabitEntrystatusEnumValueMap,
     ),
     r'targetSnapshot': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'targetSnapshot',
       type: IsarType.long,
     ),
     r'updatedAt': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'valueCompleted': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'valueCompleted',
       type: IsarType.long,
     ),
@@ -129,16 +134,17 @@ void _habitEntrySerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeLong(offsets[0], object.actualDurationMinutes);
-  writer.writeDateTime(offsets[1], object.completedAt);
-  writer.writeDateTime(offsets[2], object.createdAt);
-  writer.writeString(offsets[3], object.dateString);
-  writer.writeLong(offsets[4], object.habitId);
-  writer.writeString(offsets[5], object.note);
-  writer.writeString(offsets[6], object.source);
-  writer.writeByte(offsets[7], object.status.index);
-  writer.writeLong(offsets[8], object.targetSnapshot);
-  writer.writeDateTime(offsets[9], object.updatedAt);
-  writer.writeLong(offsets[10], object.valueCompleted);
+  writer.writeLong(offsets[1], object.actualDurationSeconds);
+  writer.writeDateTime(offsets[2], object.completedAt);
+  writer.writeDateTime(offsets[3], object.createdAt);
+  writer.writeString(offsets[4], object.dateString);
+  writer.writeLong(offsets[5], object.habitId);
+  writer.writeString(offsets[6], object.note);
+  writer.writeString(offsets[7], object.source);
+  writer.writeByte(offsets[8], object.status.index);
+  writer.writeLong(offsets[9], object.targetSnapshot);
+  writer.writeDateTime(offsets[10], object.updatedAt);
+  writer.writeLong(offsets[11], object.valueCompleted);
 }
 
 HabitEntry _habitEntryDeserialize(
@@ -149,19 +155,20 @@ HabitEntry _habitEntryDeserialize(
 ) {
   final object = HabitEntry();
   object.actualDurationMinutes = reader.readLong(offsets[0]);
-  object.completedAt = reader.readDateTimeOrNull(offsets[1]);
-  object.createdAt = reader.readDateTimeOrNull(offsets[2]);
-  object.dateString = reader.readString(offsets[3]);
-  object.habitId = reader.readLong(offsets[4]);
+  object.actualDurationSeconds = reader.readLong(offsets[1]);
+  object.completedAt = reader.readDateTimeOrNull(offsets[2]);
+  object.createdAt = reader.readDateTimeOrNull(offsets[3]);
+  object.dateString = reader.readString(offsets[4]);
+  object.habitId = reader.readLong(offsets[5]);
   object.id = id;
-  object.note = reader.readStringOrNull(offsets[5]);
-  object.source = reader.readString(offsets[6]);
+  object.note = reader.readStringOrNull(offsets[6]);
+  object.source = reader.readString(offsets[7]);
   object.status =
-      _HabitEntrystatusValueEnumMap[reader.readByteOrNull(offsets[7])] ??
+      _HabitEntrystatusValueEnumMap[reader.readByteOrNull(offsets[8])] ??
       HabitStatus.unmarked;
-  object.targetSnapshot = reader.readLong(offsets[8]);
-  object.updatedAt = reader.readDateTime(offsets[9]);
-  object.valueCompleted = reader.readLong(offsets[10]);
+  object.targetSnapshot = reader.readLong(offsets[9]);
+  object.updatedAt = reader.readDateTime(offsets[10]);
+  object.valueCompleted = reader.readLong(offsets[11]);
   return object;
 }
 
@@ -175,26 +182,28 @@ P _habitEntryDeserializeProp<P>(
     case 0:
       return (reader.readLong(offset)) as P;
     case 1:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 2:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 3:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
-      return (reader.readLong(offset)) as P;
-    case 5:
-      return (reader.readStringOrNull(offset)) as P;
-    case 6:
       return (reader.readString(offset)) as P;
+    case 5:
+      return (reader.readLong(offset)) as P;
+    case 6:
+      return (reader.readStringOrNull(offset)) as P;
     case 7:
+      return (reader.readString(offset)) as P;
+    case 8:
       return (_HabitEntrystatusValueEnumMap[reader.readByteOrNull(offset)] ??
               HabitStatus.unmarked)
           as P;
-    case 8:
-      return (reader.readLong(offset)) as P;
     case 9:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 10:
+      return (reader.readDateTime(offset)) as P;
+    case 11:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -524,6 +533,64 @@ extension HabitEntryQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'actualDurationMinutes',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  actualDurationSecondsEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'actualDurationSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  actualDurationSecondsGreaterThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'actualDurationSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  actualDurationSecondsLessThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'actualDurationSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  actualDurationSecondsBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'actualDurationSeconds',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -1499,6 +1566,20 @@ extension HabitEntryQuerySortBy
     });
   }
 
+  QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy>
+  sortByActualDurationSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'actualDurationSeconds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy>
+  sortByActualDurationSecondsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'actualDurationSeconds', Sort.desc);
+    });
+  }
+
   QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy> sortByCompletedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedAt', Sort.asc);
@@ -1635,6 +1716,20 @@ extension HabitEntryQuerySortThenBy
   thenByActualDurationMinutesDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'actualDurationMinutes', Sort.desc);
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy>
+  thenByActualDurationSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'actualDurationSeconds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy>
+  thenByActualDurationSecondsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'actualDurationSeconds', Sort.desc);
     });
   }
 
@@ -1782,6 +1877,13 @@ extension HabitEntryQueryWhereDistinct
     });
   }
 
+  QueryBuilder<HabitEntry, HabitEntry, QDistinct>
+  distinctByActualDurationSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'actualDurationSeconds');
+    });
+  }
+
   QueryBuilder<HabitEntry, HabitEntry, QDistinct> distinctByCompletedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'completedAt');
@@ -1861,6 +1963,13 @@ extension HabitEntryQueryProperty
   actualDurationMinutesProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'actualDurationMinutes');
+    });
+  }
+
+  QueryBuilder<HabitEntry, int, QQueryOperations>
+  actualDurationSecondsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'actualDurationSeconds');
     });
   }
 

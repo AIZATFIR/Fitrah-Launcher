@@ -2,12 +2,7 @@ import 'package:isar_community/isar.dart';
 
 part 'habit_entry.g.dart';
 
-enum HabitStatus {
-  unmarked,
-  yes,
-  no,
-  skip,
-}
+enum HabitStatus { unmarked, yes, no, skip }
 
 @collection
 class HabitEntry {
@@ -30,6 +25,9 @@ class HabitEntry {
 
   /// Actual duration in minutes spent on this habit
   int actualDurationMinutes = 0;
+
+  /// Exact measured seconds contributed by completed timer sessions.
+  int actualDurationSeconds = 0;
 
   /// Exact timestamp when this entry was marked completed
   DateTime? completedAt;

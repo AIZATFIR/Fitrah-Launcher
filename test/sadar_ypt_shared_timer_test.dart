@@ -135,6 +135,7 @@ class _FailOnceCompletionRepository extends SadarRepository {
     required int habitId,
     required String dateString,
     required int actualDurationMinutes,
+    int? actualDurationSeconds,
     required int targetSnapshot,
     required DateTime completedAt,
   }) async {
@@ -144,6 +145,7 @@ class _FailOnceCompletionRepository extends SadarRepository {
       habitId: habitId,
       dateString: dateString,
       actualDurationMinutes: actualDurationMinutes,
+      actualDurationSeconds: actualDurationSeconds,
       targetSnapshot: targetSnapshot,
       completedAt: completedAt,
     );

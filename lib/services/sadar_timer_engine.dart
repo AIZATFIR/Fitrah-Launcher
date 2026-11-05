@@ -577,6 +577,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           habitId: state.habitId,
           dateString: dateStr,
           actualDurationMinutes: actualMinutes,
+          actualDurationSeconds: actualDurationSeconds,
           targetSnapshot: targetMinutes,
           completedAt: now,
         );

@@ -136,6 +136,7 @@ void main() {
           .dateStringEqualTo('2026-11-04')
           .findFirst();
       expect(restoredEntry?.actualDurationMinutes, 18);
+      expect(restoredEntry?.actualDurationSeconds, 18 * 60);
       expect(restoredEntry?.valueCompleted, 18);
       expect(restoredEntry?.targetSnapshot, 20);
       final restoredSession = await secondOpen.isar!.timerSessions.get(1);

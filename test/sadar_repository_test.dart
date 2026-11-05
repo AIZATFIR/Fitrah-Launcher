@@ -53,35 +53,111 @@ void main() {
       },
     );
 
-    test('Completing two timers adds their actual duration for the day', () async {
-      for (final minutes in [10, 8]) {
+    test(
+      'Completing two timers adds their actual duration for the day',
+      () async {
+        for (final minutes in [10, 8]) {
+          await repo.saveTimerSession(
+            TimerSession()
+              ..habitId = 42
+              ..habitName = 'LKS'
+              ..targetSeconds = 1200
+              ..accumulatedDurationSeconds = minutes * 60
+              ..status = TimerStateStatus.completed
+              ..updatedAt = DateTime.now(),
+          );
+          await repo.completeTimerSession(
+            habitId: 42,
+            dateString: '2026-11-04',
+            actualDurationMinutes: minutes,
+            targetSnapshot: 20,
+            completedAt: DateTime(2026, 11, 4, 17),
+          );
+        }
+
+        final entries = await repo.getEntriesForDateRange(
+          '2026-11-04',
+          '2026-11-04',
+        );
+        expect(entries, hasLength(1));
+        expect(entries.single.actualDurationMinutes, 18);
+        expect(entries.single.actualDurationSeconds, 18 * 60);
+        expect(entries.single.valueCompleted, 18);
+        expect(entries.single.targetSnapshot, 20);
+      },
+    );
+
+    test(
+      'legacy timer minutes continue from their recoverable duration',
+      () async {
+        await repo.recordEntryStatus(
+          habitId: 42,
+          dateString: '2026-11-04',
+          status: HabitStatus.yes,
+          valueCompleted: 10,
+          actualDurationMinutes: 10,
+          source: 'timer',
+        );
         await repo.saveTimerSession(
           TimerSession()
             ..habitId = 42
             ..habitName = 'LKS'
             ..targetSeconds = 1200
-            ..accumulatedDurationSeconds = minutes * 60
             ..status = TimerStateStatus.completed
             ..updatedAt = DateTime.now(),
         );
+
         await repo.completeTimerSession(
           habitId: 42,
           dateString: '2026-11-04',
-          actualDurationMinutes: minutes,
+          actualDurationMinutes: 2,
+          actualDurationSeconds: 90,
           targetSnapshot: 20,
           completedAt: DateTime(2026, 11, 4, 17),
         );
-      }
 
-      final entries = await repo.getEntriesForDateRange(
-        '2026-11-04',
-        '2026-11-04',
-      );
-      expect(entries, hasLength(1));
-      expect(entries.single.actualDurationMinutes, 18);
-      expect(entries.single.valueCompleted, 18);
-      expect(entries.single.targetSnapshot, 20);
-    });
+        final entry = (await repo.getEntriesForDateRange(
+          '2026-11-04',
+          '2026-11-04',
+        )).single;
+        expect(entry.actualDurationSeconds, 690);
+        expect(entry.actualDurationMinutes, 11);
+        expect(entry.valueCompleted, 11);
+      },
+    );
+
+    test(
+      'timer completions retain exact seconds across short sessions',
+      () async {
+        for (final seconds in [40, 50]) {
+          await repo.saveTimerSession(
+            TimerSession()
+              ..habitId = 42
+              ..habitName = 'LKS'
+              ..targetSeconds = 1200
+              ..accumulatedDurationSeconds = seconds
+              ..status = TimerStateStatus.completed
+              ..updatedAt = DateTime.now(),
+          );
+          await repo.completeTimerSession(
+            habitId: 42,
+            dateString: '2026-11-04',
+            actualDurationMinutes: seconds ~/ 60,
+            actualDurationSeconds: seconds,
+            targetSnapshot: 20,
+            completedAt: DateTime(2026, 11, 4, 17),
+          );
+        }
+
+        final entry = (await repo.getEntriesForDateRange(
+          '2026-11-04',
+          '2026-11-04',
+        )).single;
+        expect(entry.actualDurationSeconds, 90);
+        expect(entry.actualDurationMinutes, 1);
+        expect(entry.valueCompleted, 1);
+      },
+    );
 
     test('Can upsert a new habit and retrieve it', () async {
       final habit = Habit()

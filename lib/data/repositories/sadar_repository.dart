@@ -551,10 +551,12 @@ class SadarRepository {
     required int habitId,
     required String dateString,
     required int actualDurationMinutes,
+    int? actualDurationSeconds,
     required int targetSnapshot,
     required DateTime completedAt,
   }) async {
     final now = DateTime.now();
+    final secondsToAdd = actualDurationSeconds ?? actualDurationMinutes * 60;
     if (_isar == null) {
       final key = '$habitId-$dateString';
       final existing = _memEntries[key];
@@ -565,12 +567,24 @@ class SadarRepository {
             ..habitId = habitId
             ..dateString = dateString
             ..createdAt = now);
+      final previousTimerSeconds = entry.source == 'timer'
+          ? (entry.actualDurationSeconds > 0
+                ? entry.actualDurationSeconds
+                : entry.actualDurationMinutes * 60)
+          : 0;
+      final totalTimerSeconds = previousTimerSeconds + secondsToAdd;
+      if (entry.valueCompleted < previousTimerSeconds ~/ 60) {
+        entry.valueCompleted = previousTimerSeconds ~/ 60;
+      }
+      final wholeMinuteDelta =
+          totalTimerSeconds ~/ 60 - previousTimerSeconds ~/ 60;
       entry.status = HabitStatus.yes;
-      entry.valueCompleted += actualDurationMinutes;
+      entry.valueCompleted += wholeMinuteDelta;
       if (entry.targetSnapshot <= 0) {
         entry.targetSnapshot = targetSnapshot;
       }
-      entry.actualDurationMinutes += actualDurationMinutes;
+      entry.actualDurationSeconds = totalTimerSeconds;
+      entry.actualDurationMinutes = totalTimerSeconds ~/ 60;
       entry.completedAt = completedAt;
       entry.source = 'timer';
       entry.updatedAt = now;
@@ -593,12 +607,24 @@ class SadarRepository {
             ..habitId = habitId
             ..dateString = dateString
             ..createdAt = now);
+      final previousTimerSeconds = entry.source == 'timer'
+          ? (entry.actualDurationSeconds > 0
+                ? entry.actualDurationSeconds
+                : entry.actualDurationMinutes * 60)
+          : 0;
+      final totalTimerSeconds = previousTimerSeconds + secondsToAdd;
+      if (entry.valueCompleted < previousTimerSeconds ~/ 60) {
+        entry.valueCompleted = previousTimerSeconds ~/ 60;
+      }
+      final wholeMinuteDelta =
+          totalTimerSeconds ~/ 60 - previousTimerSeconds ~/ 60;
       entry.status = HabitStatus.yes;
-      entry.valueCompleted += actualDurationMinutes;
+      entry.valueCompleted += wholeMinuteDelta;
       if (entry.targetSnapshot <= 0) {
         entry.targetSnapshot = targetSnapshot;
       }
-      entry.actualDurationMinutes += actualDurationMinutes;
+      entry.actualDurationSeconds = totalTimerSeconds;
+      entry.actualDurationMinutes = totalTimerSeconds ~/ 60;
       entry.completedAt = completedAt;
       entry.source = 'timer';
       entry.updatedAt = now;
