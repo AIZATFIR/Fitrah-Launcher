@@ -70,6 +70,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
   DateTime? _startedAt;
   DateTime? _sessionStartedAt;
+  String? _attributionLocalDate;
   int _accumulatedSeconds = 0;
   Size? _savedWindowSize;
   int? _pendingActualDurationSeconds;
@@ -108,9 +109,12 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _sourceIdentity = saved.sourceIdentity;
     _sourceColorValue = saved.sourceColorValue;
     _accumulatedSeconds = saved.accumulatedDurationSeconds;
+    _sessionStartedAt = saved.startedAt;
+    _attributionLocalDate =
+        saved.attributionLocalDate ??
+        _formatLocalDate(saved.startedAt ?? DateTime.now());
 
     if (saved.status == TimerStateStatus.running && saved.startedAt != null) {
-      _sessionStartedAt = saved.startedAt;
       final runningSince = saved.runningSince ?? saved.startedAt!;
       final elapsedSinceStart = now.difference(runningSince).inSeconds;
       final totalElapsed = _accumulatedSeconds + elapsedSinceStart;
@@ -172,7 +176,6 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         _startTicker();
       }
     } else if (saved.status == TimerStateStatus.paused) {
-      _sessionStartedAt = saved.startedAt;
       final remaining = (saved.targetSeconds - _accumulatedSeconds).clamp(
         0,
         saved.targetSeconds,
@@ -188,7 +191,6 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         status: TimerStateStatus.paused,
       );
     } else if (saved.status == TimerStateStatus.completed) {
-      _sessionStartedAt = saved.startedAt;
       state = TimerState(
         habitId: saved.habitId,
         habitName: saved.habitName,
@@ -237,6 +239,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     final targetSec = (habit.target > 0 ? habit.target : 20) * 60;
     _startedAt = DateTime.now();
     _sessionStartedAt = _startedAt;
+    _attributionLocalDate = _formatLocalDate(_startedAt!);
     _accumulatedSeconds = 0;
     _sourceIdentity = null;
     _sourceColorValue = null;
@@ -255,6 +258,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     } catch (_) {
       _startedAt = null;
       _sessionStartedAt = null;
+      _attributionLocalDate = null;
       _accumulatedSeconds = 0;
       state = previousState;
       rethrow;
@@ -285,6 +289,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     final previousColorValue = _sourceColorValue;
     _startedAt = DateTime.now();
     _sessionStartedAt = _startedAt;
+    _attributionLocalDate = _formatLocalDate(_startedAt!);
     _accumulatedSeconds = 0;
     _sourceIdentity = sourceIdentity;
     _sourceColorValue = sourceColorValue;
@@ -317,6 +322,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     } catch (_) {
       _startedAt = null;
       _sessionStartedAt = null;
+      _attributionLocalDate = null;
       _accumulatedSeconds = 0;
       _sourceIdentity = previousIdentity;
       _sourceColorValue = previousColorValue;
@@ -436,6 +442,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     final previousState = state;
     _startedAt = DateTime.now();
     _sessionStartedAt ??= _startedAt;
+    _attributionLocalDate ??= _formatLocalDate(_sessionStartedAt!);
     state = TimerState(
       habitId: state.habitId,
       habitName: state.habitName,
@@ -535,6 +542,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
     _startedAt = null;
     _sessionStartedAt = null;
+    _attributionLocalDate = null;
     _accumulatedSeconds = 0;
     _sourceIdentity = null;
     _sourceColorValue = null;
@@ -560,9 +568,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       if (autoRecord && state.habitId > 0) {
         final now = DateTime.now();
         // Attribute the session to the date it was started, including pauses.
-        final sessionStartDate = _sessionStartedAt ?? _startedAt ?? now;
-        final dateStr =
-            '${sessionStartDate.year.toString().padLeft(4, '0')}-${sessionStartDate.month.toString().padLeft(2, '0')}-${sessionStartDate.day.toString().padLeft(2, '0')}';
+        final dateStr = _attributionLocalDate ?? _formatLocalDate(now);
         final actualMinutes = actualDurationSeconds == null
             ? (state.targetSeconds / 60).ceil()
             : (actualDurationSeconds / 60).floor();
@@ -609,6 +615,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         isSavePending: false,
       );
       _sessionStartedAt = null;
+      _attributionLocalDate = null;
       _pendingActualDurationSeconds = null;
       _sourceIdentity = null;
       _sourceColorValue = null;
@@ -644,9 +651,13 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     ..sourceColorValue = _sourceColorValue
     ..targetSeconds = state.targetSeconds
     ..startedAt = _sessionStartedAt ?? _startedAt
+    ..attributionLocalDate = _attributionLocalDate
     ..runningSince = state.isRunning ? _startedAt : null
     ..accumulatedDurationSeconds = _accumulatedSeconds
     ..status = state.status;
+
+  String _formatLocalDate(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
   // ──────────────────────────────────────────────────────────────────────────
   // Desktop Floating Always-on-Top Timer (Windows / Desktop)

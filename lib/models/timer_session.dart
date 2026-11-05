@@ -36,6 +36,7 @@ class TimerSession {
   int? sourceColorValue;
   int targetSeconds = 0;
   DateTime? startedAt;
+  String? attributionLocalDate;
   DateTime? runningSince;
   DateTime? pausedAt;
   int accumulatedDurationSeconds = 0;

@@ -107,6 +107,16 @@ void main() {
         targetSnapshot: 20,
         completedAt: now.add(const Duration(hours: 1)),
       );
+      await repository.saveTimerSession(
+        TimerSession()
+          ..habitId = 42
+          ..habitName = 'Latihan LKS'
+          ..targetSeconds = 1200
+          ..startedAt = now
+          ..attributionLocalDate = '2026-11-04'
+          ..status = TimerStateStatus.paused
+          ..updatedAt = now,
+      );
 
       await firstDb.close();
 
@@ -128,7 +138,8 @@ void main() {
       expect(restoredEntry?.actualDurationMinutes, 18);
       expect(restoredEntry?.valueCompleted, 18);
       expect(restoredEntry?.targetSnapshot, 20);
-      expect(await secondOpen.isar!.timerSessions.count(), 0);
+      final restoredSession = await secondOpen.isar!.timerSessions.get(1);
+      expect(restoredSession?.attributionLocalDate, '2026-11-04');
     },
   );
 

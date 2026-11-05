@@ -122,6 +122,45 @@ void main() {
       );
     });
 
+    test(
+      'habit completion keeps the local date captured when the session began',
+      () async {
+        engine.dispose();
+        final attributionDate = DateTime.now();
+        final dateString = _dateString(attributionDate);
+        final previousDate = attributionDate.subtract(const Duration(days: 1));
+        await repo.saveTimerSession(
+          TimerSession()
+            ..habitId = habit.id
+            ..habitName = habit.name
+            ..sourceKind = TimerSessionSourceKind.habit
+            ..targetSeconds = 20 * 60
+            ..startedAt = previousDate
+            ..attributionLocalDate = dateString
+            ..accumulatedDurationSeconds = 5 * 60
+            ..status = TimerStateStatus.paused
+            ..updatedAt = DateTime.now(),
+        );
+        engine = SadarTimerEngine(repo);
+
+        await engine.waitUntilRestored();
+        await engine.finishEarly();
+
+        expect(
+          await repo.getEntriesForDateRange(dateString, dateString),
+          hasLength(1),
+        );
+        final previousDateString = _dateString(previousDate);
+        expect(
+          await repo.getEntriesForDateRange(
+            previousDateString,
+            previousDateString,
+          ),
+          isEmpty,
+        );
+      },
+    );
+
     test('start attaches to an active session for the same habit', () async {
       await engine.start(habit);
 
@@ -381,6 +420,9 @@ void main() {
     );
   });
 }
+
+String _dateString(DateTime date) =>
+    '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
 class _FailingTimerSessionRepository extends SadarRepository {
   _FailingTimerSessionRepository() : super(null);
