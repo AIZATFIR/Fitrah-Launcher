@@ -1,0 +1,4 @@
+# Keep the isolated package independent of the Flutter app's lints.
+analyzer:
+  errors:
+    unused_import: warning

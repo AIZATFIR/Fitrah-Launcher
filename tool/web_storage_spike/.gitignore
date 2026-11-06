@@ -1,0 +1,6 @@
+.dart_tool/
+lib/*.g.dart
+web/*.wasm
+web/*.js
+web/*.map
+web/*.deps
