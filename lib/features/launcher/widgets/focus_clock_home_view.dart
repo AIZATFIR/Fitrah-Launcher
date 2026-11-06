@@ -12,6 +12,7 @@ import '../../../models/habit.dart';
 import '../../../providers/providers.dart';
 import '../../focusclock/analog_clock_face.dart';
 import '../../sadar/widgets/sadar_timer_view.dart';
+import '../../settings/settings_screen.dart';
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
 import 'fitrah_settings_screen.dart';
@@ -6280,6 +6281,16 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   Navigator.pop(ctx);
                   widget.onOpenAppDrawer();
                 }),
+                _buildMenuRow(
+                  Icons.settings_suggest_outlined,
+                  'Pengaturan Focus Clock',
+                  () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
+                ),
                 _buildMenuRow(
                   Icons.settings_outlined,
                   'Pengaturan Launcher',

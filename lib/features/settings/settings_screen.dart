@@ -1459,7 +1459,7 @@ class _GCalTileState extends ConsumerState<_GCalTile> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authStateChangesProvider).valueOrNull ?? ref.watch(firebaseSyncServiceProvider).currentUser;
+    final user = ref.watch(authStateChangesProvider).valueOrNull;
     final signedIn = user != null && (user.email?.isNotEmpty ?? false);
     final userEmail = user?.email ?? '';
 

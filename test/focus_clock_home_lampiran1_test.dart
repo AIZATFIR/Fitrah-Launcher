@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
+import 'package:fitrah_launcher/features/settings/settings_screen.dart';
 
 void main() {
   group('FocusClockHomeView Lampiran 1 & Future Self Sadar System Tests', () {
@@ -44,6 +45,30 @@ void main() {
         expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
       },
     );
+
+    testWidgets('Focus Clock menu exposes settings route', (tester) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.menu_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pengaturan Focus Clock'), findsOneWidget);
+    });
+
+    testWidgets('SettingsScreen shows backup controls', (tester) async {
+      tester.view.physicalSize = const Size(800, 6000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        const ProviderScope(child: MaterialApp(home: SettingsScreen())),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('BACKUP & RESTORE'), findsOneWidget);
+      expect(find.text('Export backup'), findsOneWidget);
+      expect(find.text('Restore backup'), findsOneWidget);
+    });
 
     testWidgets('Renders Obsidian Daily Note Card with scratchpad', (
       tester,
