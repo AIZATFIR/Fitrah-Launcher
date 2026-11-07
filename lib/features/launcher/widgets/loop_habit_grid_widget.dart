@@ -371,7 +371,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                               ),
                               icon: const Icon(Icons.add_rounded, size: 18),
                               label: const Text(
-                                'New Journal',
+                                'Tambah habit',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -1174,12 +1174,15 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   // ── New Journal / Edit Journal Screen (Pixel-faithful to Screenshot 3) ──
   void _openNewJournalSheet(BuildContext context, [Habit? habitToEdit]) {
     final nameCtrl = TextEditingController(text: habitToEdit?.name ?? '');
-    final descCtrl = TextEditingController();
     int target = habitToEdit?.target ?? 20;
+    bool saving = false;
+    String? saveError;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       backgroundColor: const Color(0xFF121713),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -1187,188 +1190,192 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 18,
-                right: 18,
-                top: 10,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header Row: ← New Journal, SAVE
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.arrow_back,
-                              color: Colors.white,
+            return PopScope(
+              canPop: !saving,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 18,
+                  right: 18,
+                  top: 10,
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Row: ← New Journal, SAVE
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Colors.white,
+                              ),
+                              onPressed: saving
+                                  ? null
+                                  : () => Navigator.pop(ctx),
                             ),
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            habitToEdit == null
-                                ? 'New Journal'
-                                : 'Edit Journal',
+                            const SizedBox(width: 8),
+                            Text(
+                              habitToEdit == null ? 'Habit baru' : 'Edit habit',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                        TextButton(
+                          onPressed: saving
+                              ? null
+                              : () async {
+                                  final name = nameCtrl.text.trim();
+                                  if (name.isEmpty) return;
+                                  setModalState(() {
+                                    saving = true;
+                                    saveError = null;
+                                  });
+                                  final previousName = habitToEdit?.name;
+                                  final previousTarget = habitToEdit?.target;
+                                  final previousUpdatedAt =
+                                      habitToEdit?.updatedAt;
+                                  try {
+                                    final habit =
+                                        habitToEdit ??
+                                        (Habit()
+                                          ..name = name
+                                          ..iconKey = ''
+                                          ..target = target
+                                          ..unit = HabitUnit.min
+                                          ..colorValue = 0xFF48C774
+                                          ..timerEnabled = true
+                                          ..createdAt = DateTime.now());
+                                    habit
+                                      ..name = name
+                                      ..target = target;
+                                    await ref
+                                        .read(sadarRepoProvider)
+                                        .upsertHabit(habit);
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                  } catch (_) {
+                                    if (habitToEdit != null) {
+                                      habitToEdit
+                                        ..name = previousName!
+                                        ..target = previousTarget!
+                                        ..updatedAt = previousUpdatedAt;
+                                    }
+                                    if (ctx.mounted) {
+                                      setModalState(() {
+                                        saving = false;
+                                        saveError =
+                                            'Belum tersimpan. Coba lagi.';
+                                      });
+                                    }
+                                  }
+                                },
+                          child: Text(
+                            saving ? 'Menyimpan…' : 'Simpan',
                             style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                              color: const Color(0xFF48C774),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    if (saveError != null)
+                      Text(
+                        saveError!,
+                        style: const TextStyle(color: Colors.redAccent),
+                      ),
+
+                    const SizedBox(height: 14),
+
+                    // Name Row with IDEAS Button
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: nameCtrl,
+                            enabled: !saving,
+                            autofocus: habitToEdit == null,
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
                               color: Colors.white,
                             ),
-                          ),
-                        ],
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          final name = nameCtrl.text.trim();
-                          if (name.isEmpty) return;
-
-                          if (habitToEdit != null) {
-                            habitToEdit.name = name;
-                            habitToEdit.target = target;
-                            ref
-                                .read(sadarRepoProvider)
-                                .upsertHabit(habitToEdit);
-                          } else {
-                            final newHabit = Habit()
-                              ..name = name
-                              ..iconKey = ''
-                              ..target = target
-                              ..unit = HabitUnit.min
-                              ..colorValue = 0xFF48C774
-                              ..timerEnabled = true
-                              ..createdAt = DateTime.now();
-                            ref.read(sadarRepoProvider).upsertHabit(newHabit);
-                          }
-                          Navigator.pop(ctx);
-                        },
-                        child: Text(
-                          'SAVE',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
-                            color: const Color(0xFF48C774),
+                            decoration: InputDecoration(
+                              labelText: 'Name',
+                              labelStyle: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 14,
+                              ),
+                              hintText: 'e.g. 1 ayat Al quran',
+                              hintStyle: const TextStyle(
+                                color: Colors.white24,
+                                fontSize: 13,
+                              ),
+                              border: UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: Colors.white.withOpacity(0.2),
+                                ),
+                              ),
+                              focusedBorder: const UnderlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: Color(0xFF48C774),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Name Row with IDEAS Button
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: nameCtrl,
-                          autofocus: habitToEdit == null,
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            color: Colors.white,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: 'Name',
-                            labelStyle: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 14,
+                        const SizedBox(width: 12),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                              color: Color(0xFF38BDF8),
+                              width: 1.4,
                             ),
-                            hintText: 'e.g. 1 ayat Al quran',
-                            hintStyle: const TextStyle(
-                              color: Colors.white24,
+                            foregroundColor: const Color(0xFF38BDF8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          onPressed: saving
+                              ? null
+                              : () {
+                                  _showIdeasPicker(context, (chosenIdea) {
+                                    setModalState(() {
+                                      nameCtrl.text = chosenIdea;
+                                    });
+                                  });
+                                },
+                          child: Text(
+                            'IDEAS',
+                            style: GoogleFonts.inter(
                               fontSize: 13,
-                            ),
-                            border: UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Colors.white.withOpacity(0.2),
-                              ),
-                            ),
-                            focusedBorder: const UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Color(0xFF48C774),
-                                width: 2,
-                              ),
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                            color: Color(0xFF38BDF8),
-                            width: 1.4,
-                          ),
-                          foregroundColor: const Color(0xFF38BDF8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        onPressed: () {
-                          _showIdeasPicker(context, (chosenIdea) {
-                            setModalState(() {
-                              nameCtrl.text = chosenIdea;
-                            });
-                          });
-                        },
-                        child: Text(
-                          'IDEAS',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  // Description TextField
-                  TextField(
-                    controller: descCtrl,
-                    maxLines: 3,
-                    style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      labelStyle: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 14,
-                      ),
-                      hintText: 'Optional purpose or notes',
-                      hintStyle: const TextStyle(
-                        color: Colors.white24,
-                        fontSize: 13,
-                      ),
-                      border: UnderlineInputBorder(
-                        borderSide: BorderSide(
-                          color: Colors.white.withOpacity(0.2),
-                        ),
-                      ),
-                      focusedBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(
-                          color: Color(0xFF48C774),
-                          width: 2,
-                        ),
-                      ),
+                      ],
                     ),
-                  ),
 
-                  const SizedBox(height: 16),
-                ],
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             );
           },

@@ -30,6 +30,7 @@ void main() {
       expect(find.text('Belum ada jadwal'), findsOneWidget);
       expect(find.textContaining('Programmer'), findsNothing);
       expect(find.textContaining('Tidur'), findsNothing);
+      expect(find.text('Kebiasaan & Rutinitas'), findsNothing);
     },
   );
 

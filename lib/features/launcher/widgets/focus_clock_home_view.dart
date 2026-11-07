@@ -1114,9 +1114,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 _buildUnifiedPresetSection(tc),
                 const SizedBox(height: 14),
 
-                // ── Unified Habit Section (Lampiran 1 & Sadar Prototype) ──
-                _buildUnifiedHabitSection(tc),
-                const SizedBox(height: 14),
+                if (widget.useSampleData) ...[
+                  _buildUnifiedHabitSection(tc),
+                  const SizedBox(height: 14),
+                ],
 
                 // ── (+) Tambah Blok Identitas Baru Button ──
                 _buildAddIdentityButton(tc),
