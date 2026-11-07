@@ -7,7 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/theme.dart';
-import 'data/isar_service.dart';
+import 'data/store/focus_store.dart';
+import 'data/store/store_factory.dart';
 import 'data/storage_unavailable_app.dart';
 import 'features/launcher/fitrah_launcher_shell.dart';
 import 'firebase_options.dart';
@@ -40,11 +41,11 @@ Future<void> main() async {
     });
   }
 
-  late final IsarService isarService;
+  late final FocusStore store;
   try {
-    isarService = await IsarService.open();
+    store = await openFocusStore();
   } catch (e) {
-    debugPrint('IsarService open failed: $e');
+    debugPrint('Storage open failed: $e');
     runApp(StorageUnavailableApp(onRetry: main));
     return;
   }
@@ -59,7 +60,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [
-        isarProvider.overrideWithValue(isarService.isar),
+        focusStoreProvider.overrideWithValue(store),
         notificationServiceProvider.overrideWithValue(notifier),
       ],
       child: const FitrahLauncherApp(),

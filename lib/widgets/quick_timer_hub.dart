@@ -77,7 +77,7 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
     var durableStart = false;
     try {
       final bool started;
-      if (ref.read(isarProvider) == null) {
+      if (ref.read(focusStoreProvider)?.isDurable != true) {
         activityId = await repo.upsert(activity);
         started = await engine.startNonHabit(
           title: title,
@@ -93,7 +93,7 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
           activityToCreate: activity,
         );
       }
-      durableStart = ref.read(isarProvider) != null && started;
+      durableStart = ref.read(focusStoreProvider)?.isDurable == true && started;
       activityId = durableStart ? engine.currentState.activityId : activityId;
       if (!started) {
         if (activityId != null) await repo.delete(activityId);

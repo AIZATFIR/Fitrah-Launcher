@@ -4,26 +4,22 @@ import 'package:flutter/foundation.dart';
 import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../models/activity.dart';
-import '../models/app_settings.dart';
-import '../models/daily_reflection.dart';
-import '../models/habit.dart';
-import '../models/habit_entry.dart';
-import '../models/preset.dart';
-import '../models/task.dart';
-import '../models/timer_session.dart';
 import '../features/launcher/models/launcher_settings.dart';
 import '../services/secure_storage_service.dart';
 import 'focus_clock_backup.dart';
+import 'store/focus_store.dart';
+import 'store/native_focus_store.dart';
 
 class FocusClockBackupService {
   FocusClockBackupService({
-    required this.isar,
+    this.isar,
+    this.store,
     required this.secureStorage,
     Future<Directory> Function()? supportDirectory,
   }) : _supportDirectory = supportDirectory ?? getApplicationSupportDirectory;
 
   final Isar? isar;
+  final FocusStore? store;
   final SecureStorageService secureStorage;
   final Future<Directory> Function() _supportDirectory;
 
@@ -38,14 +34,14 @@ class FocusClockBackupService {
         : LauncherSettings.fromJson(rawSettings);
     final snapshot = await db.txn(
       () async => (
-        presets: await db.presets.where().findAll(),
-        activities: await db.activitys.where().findAll(),
-        appSettings: await db.appSettings.where().findAll(),
-        tasks: await db.tasks.where().findAll(),
-        habits: await db.habits.where().findAll(),
-        habitEntries: await db.habitEntrys.where().findAll(),
-        dailyReflections: await db.dailyReflections.where().findAll(),
-        timerSessions: await db.timerSessions.where().findAll(),
+        presets: await db.presets.all(),
+        activities: await db.activitys.all(),
+        appSettings: await db.appSettings.all(),
+        tasks: await db.tasks.all(),
+        habits: await db.habits.all(),
+        habitEntries: await db.habitEntrys.all(),
+        dailyReflections: await db.dailyReflections.all(),
+        timerSessions: await db.timerSessions.all(),
       ),
     );
     return FocusClockBackupData(
@@ -68,13 +64,12 @@ class FocusClockBackupService {
   /// store changes, and a normal storage failure triggers compensation.
   Future<String> restore(DecodedFocusClockBackup backup) async {
     final db = _requireDatabase();
-    if (kIsWeb) {
-      throw UnsupportedError('Restore lokal belum tersedia di versi web.');
-    }
 
     final oldData = await readCurrentData();
     final oldBytes = FocusClockBackupCodec.encode(oldData);
-    final recoveryFile = await _writeRecoveryFile(oldBytes);
+    final recoveryPath = db is RecoveryJournal
+        ? await (db as RecoveryJournal).saveRecovery(oldBytes)
+        : (await _writeRecoveryFile(oldBytes)).path;
     final oldLauncherRaw = await secureStorage.readCustomKey(
       launcherSettingsKey,
     );
@@ -108,7 +103,7 @@ class FocusClockBackupService {
         launcherSettingsKey,
         incoming.launcherSettings.toJson(),
       );
-      return recoveryFile.path;
+      return recoveryPath;
     } catch (error) {
       Object? rollbackError;
       try {
@@ -141,7 +136,7 @@ class FocusClockBackupService {
       if (rollbackError != null) {
         throw StateError(
           'Restore gagal ($error) dan pemulihan otomatis gagal ($rollbackError). '
-          'Salinan lokal tersedia di ${recoveryFile.path}.',
+          'Salinan lokal tersedia di $recoveryPath.',
         );
       }
       Error.throwWithStackTrace(
@@ -149,6 +144,23 @@ class FocusClockBackupService {
         StackTrace.current,
       );
     }
+  }
+
+  Future<Uint8List?> latestRecoveryBytes() async {
+    final db = _requireDatabase();
+    if (db is RecoveryJournal) return (db as RecoveryJournal).latestRecovery();
+    final directory = await _supportDirectory();
+    final recovery = Directory(
+      '${directory.path}${Platform.pathSeparator}$recoveryDirectoryName',
+    );
+    if (!await recovery.exists()) return null;
+    final files = await recovery
+        .list()
+        .where((item) => item is File && item.path.endsWith('.json'))
+        .cast<File>()
+        .toList();
+    files.sort((a, b) => b.path.compareTo(a.path));
+    return files.isEmpty ? null : files.first.readAsBytes();
   }
 
   Future<File> _writeRecoveryFile(Uint8List bytes) async {
@@ -165,8 +177,8 @@ class FocusClockBackupService {
     return file;
   }
 
-  Isar _requireDatabase() {
-    final db = isar;
+  FocusStore _requireDatabase() {
+    final db = store ?? (isar == null ? null : NativeFocusStore(isar!));
     if (db == null) {
       throw StateError('Penyimpanan belum siap. Coba lagi setelah app pulih.');
     }
@@ -174,7 +186,7 @@ class FocusClockBackupService {
   }
 
   static Future<void> _replaceDatabase(
-    Isar db, {
+    FocusStore db, {
     required List<dynamic> presets,
     required List<dynamic> activities,
     required List<dynamic> appSettings,

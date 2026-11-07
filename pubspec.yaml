@@ -13,6 +13,7 @@ dependencies:
 
   flutter_riverpod: ^2.5.1
 
+  drift: 2.35.3
   isar_community: 3.4.1
   isar_community_flutter_libs: 3.4.1
   path_provider: ^2.1.4

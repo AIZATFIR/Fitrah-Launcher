@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar_community/isar.dart';
 
 import '../core/time_math.dart';
+import '../data/store/focus_store.dart';
+import '../data/store/native_focus_store.dart';
 import '../data/repositories/activity_repository.dart';
 import '../data/repositories/blueprint_repository.dart';
 import '../data/repositories/preset_repository.dart';
@@ -21,12 +23,16 @@ import '../services/secure_storage_service.dart';
 
 /// Overridden in main().
 final isarProvider = Provider<Isar?>((_) => null);
+final focusStoreProvider = Provider<FocusStore?>((ref) {
+  final isar = ref.watch(isarProvider);
+  return isar == null ? null : NativeFocusStore(isar);
+});
 final notificationServiceProvider = Provider<NotificationService>(
   (_) => throw UnimplementedError(),
 );
 
 final presetRepoProvider = Provider<PresetRepository>(
-  (ref) => PresetRepository(ref.watch(isarProvider)),
+  (ref) => PresetRepository.store(ref.watch(focusStoreProvider)),
 );
 
 final blueprintRepoProvider = Provider<BlueprintRepository>(
@@ -44,18 +50,18 @@ final blueprintApplierServiceProvider = Provider<BlueprintApplierService>((
 });
 
 final activityRepoProvider = Provider<ActivityRepository>(
-  (ref) => ActivityRepository(
-    ref.watch(isarProvider),
+  (ref) => ActivityRepository.store(
+    ref.watch(focusStoreProvider),
     ref.watch(notificationServiceProvider),
   ),
 );
 
 final taskRepoProvider = Provider<TaskRepository>(
-  (ref) => TaskRepository(ref.watch(isarProvider)),
+  (ref) => TaskRepository.store(ref.watch(focusStoreProvider)),
 );
 
 final settingsRepoProvider = Provider<SettingsRepository>(
-  (ref) => SettingsRepository(ref.watch(isarProvider)),
+  (ref) => SettingsRepository.store(ref.watch(focusStoreProvider)),
 );
 
 final settingsProvider = StreamProvider<AppSettings>(

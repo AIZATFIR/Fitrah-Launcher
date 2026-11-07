@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1292,58 +1293,87 @@ class _BackupRestoreSection extends ConsumerStatefulWidget {
   const _BackupRestoreSection();
 
   @override
-  ConsumerState<_BackupRestoreSection> createState() => _BackupRestoreSectionState();
+  ConsumerState<_BackupRestoreSection> createState() =>
+      _BackupRestoreSectionState();
 }
 
 class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
   bool _busy = false;
 
   FocusClockBackupService get _service => FocusClockBackupService(
-        isar: ref.read(isarProvider),
-        secureStorage: ref.read(secureStorageServiceProvider),
-      );
+    store: ref.read(focusStoreProvider),
+    secureStorage: ref.read(secureStorageServiceProvider),
+  );
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Ekspor jadwal, habit, riwayat, refleksi, tujuan, dan preferensi. '
-              'File berisi data pribadi dan tidak dienkripsi. API key tidak ikut.',
-              style: TextStyle(color: AppPalette.textDim, fontSize: 13),
-            ),
-          ),
-          ListTile(
-            leading: _busy
-                ? const SizedBox.square(
-                    dimension: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.upload_file_outlined),
-            title: const Text('Export backup'),
-            subtitle: const Text('Simpan file JSON ke perangkat'),
-            enabled: !_busy,
-            onTap: _busy ? null : _export,
-          ),
-          ListTile(
-            leading: const Icon(Icons.restore_page_outlined),
-            title: const Text('Restore backup'),
-            subtitle: const Text('Periksa isi file sebelum mengganti data'),
-            enabled: !_busy,
-            onTap: _busy ? null : _import,
-          ),
-        ],
-      );
+    children: [
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Text(
+          'Ekspor jadwal, habit, riwayat, refleksi, tujuan, dan preferensi. '
+          'File berisi data pribadi dan tidak dienkripsi. API key tidak ikut.',
+          style: TextStyle(color: AppPalette.textDim, fontSize: 13),
+        ),
+      ),
+      ListTile(
+        leading: _busy
+            ? const SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.upload_file_outlined),
+        title: const Text('Export backup'),
+        subtitle: const Text('Simpan file JSON ke perangkat'),
+        enabled: !_busy,
+        onTap: _busy ? null : () => _export(),
+      ),
+      ListTile(
+        leading: const Icon(Icons.restore_page_outlined),
+        title: const Text('Restore backup'),
+        subtitle: const Text('Periksa isi file sebelum mengganti data'),
+        enabled: !_busy,
+        onTap: _busy ? null : _import,
+      ),
+      ListTile(
+        leading: const Icon(Icons.download_outlined),
+        title: const Text('Export salinan pemulihan'),
+        subtitle: const Text('Data sebelum restore terakhir'),
+        enabled: !_busy,
+        onTap: _busy ? null : () => _export(recovery: true),
+      ),
+    ],
+  );
 
-  Future<void> _export() async {
+  Future<List<int>> _readBrowserBackup(PlatformFile file) async {
+    final stream = file.readStream;
+    if (stream == null) {
+      throw StateError('File tidak dapat dibaca. Pilih ulang file.');
+    }
+    final bytes = <int>[];
+    await for (final chunk in stream) {
+      if (bytes.length + chunk.length > 20 * 1024 * 1024) {
+        throw const FormatException('Batas ukuran backup 20 MB.');
+      }
+      bytes.addAll(chunk);
+    }
+    return bytes;
+  }
+
+  Future<void> _export({bool recovery = false}) async {
     setState(() => _busy = true);
     try {
-      final bytes = await _service.exportBytes();
+      final bytes = recovery
+          ? await _service.latestRecoveryBytes()
+          : await _service.exportBytes();
+      if (bytes == null) {
+        if (mounted) _message('Belum ada salinan pemulihan.');
+        return;
+      }
       final stamp = DateTime.now().toIso8601String().substring(0, 10);
       final saved = await FilePicker.platform.saveFile(
         dialogTitle: 'Simpan backup Focus Clock',
-        fileName: 'focus-clock-backup-$stamp.json',
+        fileName: 'focus-clock-${recovery ? 'recovery' : 'backup'}-$stamp.json',
         type: FileType.custom,
         allowedExtensions: const ['json'],
         bytes: bytes,
@@ -1366,6 +1396,7 @@ class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
         allowedExtensions: const ['json'],
         allowMultiple: false,
         withData: false,
+        withReadStream: kIsWeb,
       );
       if (result == null || result.files.isEmpty || !mounted) return;
       final file = result.files.single;
@@ -1374,7 +1405,10 @@ class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
         return;
       }
       setState(() => _busy = true);
-      final backup = FocusClockBackupCodec.decode(await file.xFile.readAsBytes());
+      final bytes = kIsWeb
+          ? await _readBrowserBackup(file)
+          : await file.xFile.readAsBytes();
+      final backup = FocusClockBackupCodec.decode(bytes);
       if (!mounted) return;
       final shouldRestore = await showDialog<bool>(
         context: context,
@@ -1387,10 +1421,12 @@ class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
               Text('Format backup: ${backup.formatVersion}'),
               Text('Dibuat ${backup.exportedAtUtc.toLocal()}'),
               const SizedBox(height: 12),
-              ...backup.data.counts.entries.map((entry) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text('${entry.key}: ${entry.value}'),
-                  )),
+              ...backup.data.counts.entries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text('${entry.key}: ${entry.value}'),
+                ),
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Restore akan mengganti data Focus Clock saat ini. '
@@ -1414,7 +1450,9 @@ class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
       if (shouldRestore != true || !mounted) return;
       final recoveryPath = await _service.restore(backup);
       await ref.read(launcherSettingsProvider.notifier).reload();
-      if (mounted) _message('Restore berhasil. Salinan pemulihan: $recoveryPath');
+      if (mounted) {
+        _message('Restore berhasil. Salinan pemulihan: $recoveryPath');
+      }
     } on UnsupportedError catch (error) {
       if (mounted) _message(error.message ?? 'Versi backup belum didukung.');
     } catch (error) {

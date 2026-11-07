@@ -1,6 +1,6 @@
 # ADR E1 — Penyimpanan native dan web
 
-**Status:** native Isar dipertahankan; Drift WASM dipilih sebagai kandidat adapter browser setelah spike, integrasi produksi masih terbuka
+**Status:** native Isar dipertahankan; Drift WASM menjadi adapter web produksi, gate E1 lintas perangkat/deploy tetap terbuka
 **Tanggal:** 4 November 2026
 
 ## Konteks
@@ -32,8 +32,16 @@ Paket terisolasi [`tool/web_storage_spike`](../../../../tool/web_storage_spike/R
 
 Tanpa header isolasi, backend terukur `sharedIndexedDb`; dengan COOP `same-origin` dan COEP `require-corp`, backend `opfsLocks`. Keduanya melewati journey dua tab. Mode `unsafeIndexedDb` dan `inMemory` ditolak sebelum penulisan. Dokumentasi resmi menjelaskan [pilihan mode dan kebutuhan hosting](https://drift.simonbinder.eu/platforms/web/); hasil lokal ini melengkapi, bukan menggantikan, pengujian target deploy.
 
-**Keputusan lanjutan:** lanjutkan adapter browser berbasis Drift WASM sambil mempertahankan Isar native. Repository memakai kontrak transaksi dan notifikasi commit yang sama; logika recurrence, ukuran habit dan completion tidak disalin ke implementasi browser. Kontrak minimal menyediakan read snapshot, typed get/all/put/delete, write transaction, committed-change stream dan capability durable. `all()` dengan filtering bersama cukup untuk tahap awal; histori besar memerlukan query terindeks yang diukur sebelum menjadi masalah pemakaian.
+**Keputusan lanjutan:** adapter browser Drift WASM telah diintegrasikan sambil mempertahankan Isar native. Repository memakai kontrak transaksi dan notifikasi commit yang sama; logika recurrence, ukuran habit dan completion tidak disalin ke implementasi browser. `all()` dengan filtering bersama cukup untuk tahap awal; histori besar memerlukan query terindeks yang diukur sebelum menjadi masalah pemakaian.
 
 AppSettings ID 0, TimerSession ID 1, detik tepat, tanggal lokal dan field live harus terjaga. Alokasi ID tidak boleh memakai panjang list; hasil query berupa salinan terpisah. Codec backup memiliki redaksi kredensial dan normalisasi timer yang tidak cocok untuk live storage. Launcher preferences masih store terpisah sampai perubahan dengan kompensasi diputuskan.
 
-Belum teruji: integrasi Flutter dan delapan model lengkap, schema upgrade, backup/import/recovery, quota/eviction, offline page startup dari cache, Safari/Firefox/mobile, auth dengan header isolasi, serta deployment. Spike tidak menutup E1 atau mengizinkan migrasi data Android. Implementasi adapter menjadi langkah berikutnya; release menunggu bukti gate tersebut.
+Belum teruji: schema upgrade browser, quota/eviction, offline page startup dari cache, Safari/Firefox/mobile, auth dengan header isolasi, serta deployment. Bukti desktop Chromium tidak mengizinkan migrasi data Android atau klaim rilis web stabil.
+
+## Integrasi browser produksi — 7 November 2026
+
+Implementasi menghubungkan delapan model, lima repository, tiga entry point dan backup/recovery melalui `FocusStore`. Android tetap memakai Isar dan database path yang sama. Browser memakai records/counters/recovery SQLite Drift WASM dengan mode durable saja; codec live terpisah menjaga kredensial lokal, status timer berjalan, ID dan tanggal. Build source menyiapkan worker/WASM resmi Drift 2.35.3 dengan checksum tetap.
+
+Bukti: journey Chromium 150 dari build web memakai model dan repository produksi. Dua tab memverifikasi satu pemenang saat memulai timer Habit dan Activity, kontribusi tepat 67 detik satu kali, start ulang sesudah completion, Activity tidak yatim, reload semua delapan model plus goal, recurrence/exclusion, rollback dan watcher, restore, kegagalan preferences dan recovery JSON yang dapat dibaca setelah reload. Mode terukur `sharedIndexedDb`. Suite native: 124 tes lulus; tes layar storage gagal/coba lagi lulus; analyzer bersih; Home JS release compile berhasil. APK arm64 release `build/app/outputs/flutter-apk/app-release.apk`, SHA-256 `329954a9300e810233e531ba9dd4d842b15939aae4d121094ac1041a5c8fcd47`; segmen LOAD `libisar.so` aligned 16 KB. Gate offline dari cache, eviction/quota, Safari/mobile, deploy dan perangkat fisik belum diuji; E1 belum ditutup.
+
+Perintah journey: build target `tool/browser_storage/main.dart` ke direktori sementara, lalu `node tool/browser_storage/browser_journeys.mjs <direktori-build>`. Fixture hanya berisi data sintetis.

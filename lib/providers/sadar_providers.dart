@@ -8,7 +8,7 @@ import '../models/timer_session.dart';
 import 'providers.dart';
 
 final sadarRepoProvider = Provider<SadarRepository>((ref) {
-  return SadarRepository(ref.watch(isarProvider));
+  return SadarRepository.store(ref.watch(focusStoreProvider));
 });
 
 final habitsStreamProvider = StreamProvider<List<Habit>>((ref) {

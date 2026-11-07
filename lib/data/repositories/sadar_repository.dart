@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../store/focus_store.dart';
+import '../store/native_focus_store.dart';
 import 'package:isar_community/isar.dart';
 
 import '../../core/time_math.dart';
@@ -51,7 +53,9 @@ class AwarenessStats {
 }
 
 class SadarRepository {
-  SadarRepository(this._isar) {
+  SadarRepository(Isar? isar)
+    : this.store(isar == null ? null : NativeFocusStore(isar));
+  SadarRepository.store(this._isar) {
     if (_isar == null) {
       for (final h in _defaultHabits()) {
         _memHabits[h.id] = h;
@@ -59,7 +63,7 @@ class SadarRepository {
     }
   }
 
-  final Isar? _isar;
+  final FocusStore? _isar;
 
   // In-Memory storage for tests / fallback
   final Map<int, Habit> _memHabits = {};
@@ -82,10 +86,14 @@ class SadarRepository {
       return _watchMemHabits();
     }
     return _isar.habits
-        .filter()
-        .isArchivedEqualTo(false)
-        .sortByOrderIndex()
-        .thenByCreatedAt()
+        .select(
+          where: (x) => x.isArchived == false,
+          compare: (a, b) {
+            final c0 = a.orderIndex.compareTo(b.orderIndex);
+            if (c0 != 0) return c0;
+            return a.createdAt.compareTo(b.createdAt);
+          },
+        )
         .watch(fireImmediately: true);
   }
 
@@ -111,10 +119,14 @@ class SadarRepository {
       return _getMemHabitsList();
     }
     return _isar.habits
-        .filter()
-        .isArchivedEqualTo(false)
-        .sortByOrderIndex()
-        .thenByCreatedAt()
+        .select(
+          where: (x) => x.isArchived == false,
+          compare: (a, b) {
+            final c0 = a.orderIndex.compareTo(b.orderIndex);
+            if (c0 != 0) return c0;
+            return a.createdAt.compareTo(b.createdAt);
+          },
+        )
         .findAll();
   }
 
@@ -128,9 +140,14 @@ class SadarRepository {
       return list;
     }
     return _isar.habits
-        .filter()
-        .isArchivedEqualTo(true)
-        .sortByUpdatedAtDesc()
+        .select(
+          where: (x) => x.isArchived == true,
+          compare: (a, b) {
+            return (b.updatedAt ?? b.createdAt).compareTo(
+              a.updatedAt ?? a.createdAt,
+            );
+          },
+        )
         .findAll();
   }
 
@@ -207,8 +224,11 @@ class SadarRepository {
       return _watchMemEntries(startDate, endDate);
     }
     return _isar.habitEntrys
-        .filter()
-        .dateStringBetween(startDate, endDate)
+        .select(
+          where: (x) =>
+              x.dateString.compareTo(startDate) >= 0 &&
+              x.dateString.compareTo(endDate) <= 0,
+        )
         .watch(fireImmediately: true);
   }
 
@@ -240,8 +260,11 @@ class SadarRepository {
       return _getMemEntriesList(startDate, endDate);
     }
     return _isar.habitEntrys
-        .filter()
-        .dateStringBetween(startDate, endDate)
+        .select(
+          where: (x) =>
+              x.dateString.compareTo(startDate) >= 0 &&
+              x.dateString.compareTo(endDate) <= 0,
+        )
         .findAll();
   }
 
@@ -301,9 +324,9 @@ class SadarRepository {
 
     return _isar.writeTxn(() async {
       final existing = await _isar.habitEntrys
-          .filter()
-          .habitIdEqualTo(habitId)
-          .dateStringEqualTo(dateString)
+          .select(
+            where: (x) => x.habitId == habitId && x.dateString == dateString,
+          )
           .findFirst();
 
       final entry =
@@ -382,9 +405,10 @@ class SadarRepository {
       }
     } else {
       final entries = await _isar.habitEntrys
-          .filter()
-          .dateStringEqualTo(dateString)
-          .statusEqualTo(HabitStatus.yes)
+          .select(
+            where: (x) =>
+                x.dateString == dateString && x.status == HabitStatus.yes,
+          )
           .findAll();
       completed = entries.length;
     }
@@ -401,8 +425,7 @@ class SadarRepository {
       return _memReflections[dateString];
     }
     return _isar.dailyReflections
-        .filter()
-        .dateStringEqualTo(dateString)
+        .select(where: (x) => x.dateString == dateString)
         .findFirst();
   }
 
@@ -433,9 +456,9 @@ class SadarRepository {
         }
       } else {
         final entries = await _isar.habitEntrys
-            .filter()
-            .habitIdEqualTo(h.id)
-            .statusEqualTo(HabitStatus.yes)
+            .select(
+              where: (x) => x.habitId == h.id && x.status == HabitStatus.yes,
+            )
             .findAll();
         days = entries.length;
         for (final e in entries) {
@@ -494,12 +517,26 @@ class SadarRepository {
   }
 
   TimerSession? _memTimerSession;
+  TimerSession? _observedSession;
+  bool _sameSession(TimerSession a, TimerSession b) =>
+      a.startedAt == b.startedAt &&
+      a.habitId == b.habitId &&
+      a.sourceKindIndex == b.sourceKindIndex &&
+      a.activityId == b.activityId;
+  void _requireObservedSession(TimerSession? current) {
+    if (current == null ||
+        _observedSession == null ||
+        !_sameSession(current, _observedSession!)) {
+      throw StateError('The active session changed. Reopen the timer.');
+    }
+  }
 
   Future<TimerSession?> getActiveTimerSession() async {
     if (_isar == null) {
       return _memTimerSession;
     }
-    return _isar.timerSessions.get(1);
+    _observedSession = await _isar.timerSessions.get(1);
+    return _observedSession;
   }
 
   Future<void> saveTimerSession(TimerSession session) async {
@@ -509,7 +546,19 @@ class SadarRepository {
       _memTimerSession = session;
       return;
     }
-    await _isar.writeTxn(() => _isar.timerSessions.put(session));
+    await _isar.writeTxn(() async {
+      final current = await _isar.timerSessions.get(1);
+      if (current != null) {
+        _requireObservedSession(current);
+        if (!_sameSession(current, session)) {
+          throw StateError('An active timer session already exists.');
+        }
+      } else if (_observedSession != null) {
+        throw StateError('This timer session already ended.');
+      }
+      await putTimerSessionInTxn(session);
+    });
+    _observedSession = await _isar.timerSessions.get(1);
   }
 
   /// Creates the QuickTimer Activity and active session as one durable write.
@@ -529,6 +578,7 @@ class SadarRepository {
       final activityId = await _isar.activitys.put(activity);
       session.activityId = activityId;
       await putTimerSessionInTxn(session);
+      _observedSession = session;
       return activityId;
     });
   }
@@ -542,7 +592,13 @@ class SadarRepository {
       _memTimerSession = null;
       return;
     }
-    await _isar.writeTxn(() => _isar.timerSessions.delete(1));
+    await _isar.writeTxn(() async {
+      final current = await _isar.timerSessions.get(1);
+      if (current == null) return;
+      _requireObservedSession(current);
+      await _isar.timerSessions.delete(1);
+    });
+    _observedSession = null;
   }
 
   /// Commits a completed focus session and removes its active record together.
@@ -595,12 +651,21 @@ class SadarRepository {
     }
 
     return _isar.writeTxn(() async {
+      final current = await _isar.timerSessions.get(1);
       final existing = await _isar.habitEntrys
-          .filter()
-          .habitIdEqualTo(habitId)
-          .dateStringEqualTo(dateString)
+          .select(
+            where: (x) => x.habitId == habitId && x.dateString == dateString,
+          )
           .findFirst();
 
+      if (current == null) {
+        if (existing != null) {
+          _observedSession = null;
+          return existing;
+        }
+        throw StateError('This timer session already ended.');
+      }
+      _requireObservedSession(current);
       final entry =
           existing ??
           (HabitEntry()
@@ -631,6 +696,7 @@ class SadarRepository {
 
       await _isar.habitEntrys.put(entry);
       await _isar.timerSessions.delete(1);
+      _observedSession = null;
       return entry;
     });
   }
@@ -647,6 +713,7 @@ class SadarRepository {
     await _isar.writeTxn(() async {
       final session = await _isar.timerSessions.get(1);
       if (session == null) return;
+      _requireObservedSession(session);
       final activity = await _isar.activitys.get(activityId);
       if (activity == null) {
         throw StateError('The linked Activity no longer exists.');
@@ -689,6 +756,7 @@ class SadarRepository {
       }
       await _isar.timerSessions.delete(1);
     });
+    _observedSession = null;
   }
 
   /// Creates the Home preset's completed Activity and clears its session atomically.
@@ -706,6 +774,7 @@ class SadarRepository {
     await _isar.writeTxn(() async {
       final session = await _isar.timerSessions.get(1);
       if (session == null) return;
+      _requireObservedSession(session);
       if (session.sourceKind != TimerSessionSourceKind.preset) {
         throw StateError('The active timer is not a Home preset session.');
       }
@@ -737,6 +806,7 @@ class SadarRepository {
       }
       await _isar.timerSessions.delete(1);
     });
+    _observedSession = null;
   }
 
   String _formatDate(DateTime dt) {

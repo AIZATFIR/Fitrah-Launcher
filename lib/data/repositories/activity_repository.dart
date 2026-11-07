@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../store/focus_store.dart';
+import '../store/native_focus_store.dart';
 
 import 'package:isar_community/isar.dart';
 
@@ -7,14 +9,17 @@ import '../../models/activity.dart';
 import '../../services/notification_service.dart';
 
 class ActivityRepository {
-  ActivityRepository(this._isar, this._notifier);
-  final Isar? _isar;
+  ActivityRepository(Isar? isar, this._notifier)
+    : _isar = isar == null ? null : NativeFocusStore(isar);
+  ActivityRepository.store(this._isar, this._notifier);
+  final FocusStore? _isar;
   final NotificationService _notifier;
 
   // In-Memory Fallback when Isar is unavailable (Web without IndexedDB/WASM or test runner)
   final Map<int, Activity> _memStore = {};
   int _memIdCounter = 1;
-  final StreamController<void> _memController = StreamController<void>.broadcast();
+  final StreamController<void> _memController =
+      StreamController<void>.broadcast();
 
   Stream<List<Activity>> watchByDateAndHalf(DateTime date, AmPmHalf half) {
     final d = dateOnly(date);
@@ -23,10 +28,12 @@ class ActivityRepository {
     }
     // Direct activities for this date+half
     final direct = _isar.activitys
-        .filter()
-        .dateEqualTo(d)
-        .ampmHalfEqualTo(half)
-        .sortByStartMinute()
+        .select(
+          where: (x) => x.date == d && x.ampmHalf == half,
+          compare: (a, b) {
+            return a.startMinute.compareTo(b.startMinute);
+          },
+        )
         .watch(fireImmediately: true);
 
     // Merge with recurring activities
@@ -39,16 +46,23 @@ class ActivityRepository {
       return _watchMemoryByDate(d);
     }
     final direct = _isar.activitys
-        .filter()
-        .dateEqualTo(d)
-        .sortByAmpmHalf()
-        .thenByStartMinute()
+        .select(
+          where: (x) => x.date == d,
+          compare: (a, b) {
+            final c0 = a.ampmHalf.index.compareTo(b.ampmHalf.index);
+            if (c0 != 0) return c0;
+            return a.startMinute.compareTo(b.startMinute);
+          },
+        )
         .watch(fireImmediately: true);
 
     return _mergeWithRecurring(direct, d);
   }
 
-  Stream<List<Activity>> _watchMemoryByDate(DateTime targetDate, {AmPmHalf? half}) async* {
+  Stream<List<Activity>> _watchMemoryByDate(
+    DateTime targetDate, {
+    AmPmHalf? half,
+  }) async* {
     List<Activity> query() {
       final list = _memStore.values.where((a) {
         if (dateOnly(a.date) != targetDate) return false;
@@ -77,9 +91,12 @@ class ActivityRepository {
     return direct.asyncMap((list) async {
       final recurring = await _getRecurring(targetDate, half: half);
       // Only add recurring entries not already covered by an explicit entry
-      final existingTitles = list.map((a) => '${a.title}_${a.startMinute}').toSet();
-      final projected = recurring.where((r) =>
-          !existingTitles.contains('${r.title}_${r.startMinute}'));
+      final existingTitles = list
+          .map((a) => '${a.title}_${a.startMinute}')
+          .toSet();
+      final projected = recurring.where(
+        (r) => !existingTitles.contains('${r.title}_${r.startMinute}'),
+      );
       final all = [...list, ...projected];
       all.sort((a, b) {
         final halfCmp = a.ampmHalf.index.compareTo(b.ampmHalf.index);
@@ -90,52 +107,58 @@ class ActivityRepository {
     });
   }
 
-  Future<List<Activity>> _getRecurring(DateTime targetDate,
-      {AmPmHalf? half}) async {
+  Future<List<Activity>> _getRecurring(
+    DateTime targetDate, {
+    AmPmHalf? half,
+  }) async {
     if (_isar == null) return [];
     // Fetch all recurring activities
     final all = await _isar.activitys
-        .filter()
-        .not()
-        .recurrenceEqualTo('none')
+        .select(where: (x) => !(x.recurrence == 'none'))
         .findAll();
 
-    return all.where((a) {
-      // Skip same-date originals (already included directly)
-      if (dateOnly(a.date) == targetDate) return false;
-      if (half != null && a.ampmHalf != half) return false;
+    return all
+        .where((a) {
+          // Skip same-date originals (already included directly)
+          if (dateOnly(a.date) == targetDate) return false;
+          if (half != null && a.ampmHalf != half) return false;
 
-      // Skip excluded dates (single-day deletions)
-      if (a.excludedDates.any((d) => dateOnly(d) == targetDate)) return false;
+          // Skip excluded dates (single-day deletions)
+          if (a.excludedDates.any((d) => dateOnly(d) == targetDate)) {
+            return false;
+          }
 
-      if (a.recurrence == 'daily') return true;
-      if (a.recurrence == 'weekday') {
-        return targetDate.weekday >= 1 && targetDate.weekday <= 5;
-      }
-      if (a.recurrence == 'weekly') {
-        return a.date.weekday == targetDate.weekday;
-      }
-      return false;
-    }).map((a) {
-      // Project to target date (keep same time/half)
-      final projected = Activity()
-        ..id = a.id // same id = tap opens original
-        ..presetId = a.presetId
-        ..iconKey = a.iconKey
-        ..title = a.title
-        ..startMinute = a.startMinute
-        ..endMinute = a.endMinute
-        ..ampmHalf = a.ampmHalf
-        ..date = targetDate
-        ..description = a.description
-        ..colorValue = a.colorValue
-        ..recurrence = a.recurrence
-        ..isLocked = a.isLocked
-        ..excludedDates = a.excludedDates
-        ..createdAt = a.createdAt
-        ..updatedAt = a.updatedAt;
-      return projected;
-    }).toList();
+          if (a.recurrence == 'daily') return true;
+          if (a.recurrence == 'weekday') {
+            return targetDate.weekday >= 1 && targetDate.weekday <= 5;
+          }
+          if (a.recurrence == 'weekly') {
+            return a.date.weekday == targetDate.weekday;
+          }
+          return false;
+        })
+        .map((a) {
+          // Project to target date (keep same time/half)
+          final projected = Activity()
+            ..id = a
+                .id // same id = tap opens original
+            ..presetId = a.presetId
+            ..iconKey = a.iconKey
+            ..title = a.title
+            ..startMinute = a.startMinute
+            ..endMinute = a.endMinute
+            ..ampmHalf = a.ampmHalf
+            ..date = targetDate
+            ..description = a.description
+            ..colorValue = a.colorValue
+            ..recurrence = a.recurrence
+            ..isLocked = a.isLocked
+            ..excludedDates = a.excludedDates
+            ..createdAt = a.createdAt
+            ..updatedAt = a.updatedAt;
+          return projected;
+        })
+        .toList();
   }
 
   Future<int> upsert(Activity a, {int notifLeadMinutes = 1}) async {
@@ -220,7 +243,14 @@ class ActivityRepository {
     if (_isar == null) {
       return _memStore.values.where((a) => a.groupId == groupId).toList();
     }
-    return _isar.activitys.filter().groupIdEqualTo(groupId).sortByDate().findAll();
+    return _isar.activitys
+        .select(
+          where: (x) => x.groupId == groupId,
+          compare: (a, b) {
+            return a.date.compareTo(b.date);
+          },
+        )
+        .findAll();
   }
 
   /// Replace [original] (and its whole group, if any) with [segments]
@@ -254,8 +284,7 @@ class ActivityRepository {
     await _isar.writeTxn(() async {
       if (original.groupId != null) {
         final olds = await _isar.activitys
-            .filter()
-            .groupIdEqualTo(original.groupId)
+            .select(where: (x) => x.groupId == original.groupId)
             .findAll();
         oldIds.addAll(olds.map((o) => o.id));
         await _isar.activitys.deleteAll(oldIds);
@@ -269,8 +298,10 @@ class ActivityRepository {
       await _notifier.cancelForActivity(id);
     }
     // One reminder at the block's true start (first segment)
-    await _notifier.scheduleForActivity(segments.first,
-        leadMinutes: notifLeadMinutes);
+    await _notifier.scheduleForActivity(
+      segments.first,
+      leadMinutes: notifLeadMinutes,
+    );
   }
 
   /// Delete activity; if it belongs to a group, delete every segment.
@@ -319,17 +350,25 @@ class ActivityRepository {
     final monday = d.subtract(Duration(days: d.weekday - 1));
     final sunday = monday.add(const Duration(days: 6));
     if (_isar == null) {
-      return Stream.value(_memStore.values.where((a) {
-        final ad = dateOnly(a.date);
-        return !ad.isBefore(monday) && !ad.isAfter(sunday);
-      }).toList());
+      return Stream.value(
+        _memStore.values.where((a) {
+          final ad = dateOnly(a.date);
+          return !ad.isBefore(monday) && !ad.isAfter(sunday);
+        }).toList(),
+      );
     }
     return _isar.activitys
-        .filter()
-        .dateBetween(monday, sunday)
-        .sortByDate()
-        .thenByAmpmHalf()
-        .thenByStartMinute()
+        .select(
+          where: (x) =>
+              x.date.compareTo(monday) >= 0 && x.date.compareTo(sunday) <= 0,
+          compare: (a, b) {
+            final c0 = a.date.compareTo(b.date);
+            if (c0 != 0) return c0;
+            final c1 = a.ampmHalf.index.compareTo(b.ampmHalf.index);
+            if (c1 != 0) return c1;
+            return a.startMinute.compareTo(b.startMinute);
+          },
+        )
         .watch(fireImmediately: true);
   }
 
@@ -338,17 +377,25 @@ class ActivityRepository {
     final today = dateOnly(DateTime.now());
     final end = today.add(Duration(days: days));
     if (_isar == null) {
-      return Stream.value(_memStore.values.where((a) {
-        final ad = dateOnly(a.date);
-        return !ad.isBefore(today) && !ad.isAfter(end);
-      }).toList());
+      return Stream.value(
+        _memStore.values.where((a) {
+          final ad = dateOnly(a.date);
+          return !ad.isBefore(today) && !ad.isAfter(end);
+        }).toList(),
+      );
     }
     return _isar.activitys
-        .filter()
-        .dateBetween(today, end)
-        .sortByDate()
-        .thenByAmpmHalf()
-        .thenByStartMinute()
+        .select(
+          where: (x) =>
+              x.date.compareTo(today) >= 0 && x.date.compareTo(end) <= 0,
+          compare: (a, b) {
+            final c0 = a.date.compareTo(b.date);
+            if (c0 != 0) return c0;
+            final c1 = a.ampmHalf.index.compareTo(b.ampmHalf.index);
+            if (c1 != 0) return c1;
+            return a.startMinute.compareTo(b.startMinute);
+          },
+        )
         .watch(fireImmediately: true);
   }
 
@@ -363,9 +410,11 @@ class ActivityRepository {
     }
     final dbActivity = await _isar.activitys.get(activity.id);
     if (dbActivity == null) return;
-    
-    if (dbActivity.recurrence != 'none' && dateOnly(dbActivity.date) != dateOnly(activity.date)) {
-      final clone = _cloneForSpecificDate(dbActivity, activity.date)..isCompleted = done;
+
+    if (dbActivity.recurrence != 'none' &&
+        dateOnly(dbActivity.date) != dateOnly(activity.date)) {
+      final clone = _cloneForSpecificDate(dbActivity, activity.date)
+        ..isCompleted = done;
       await _isar.writeTxn(() => _isar.activitys.put(clone));
     } else {
       dbActivity.isCompleted = done;
@@ -386,8 +435,10 @@ class ActivityRepository {
     final dbActivity = await _isar.activitys.get(activity.id);
     if (dbActivity == null) return;
 
-    if (dbActivity.recurrence != 'none' && dateOnly(dbActivity.date) != dateOnly(activity.date)) {
-      final clone = _cloneForSpecificDate(dbActivity, activity.date)..importance = importance;
+    if (dbActivity.recurrence != 'none' &&
+        dateOnly(dbActivity.date) != dateOnly(activity.date)) {
+      final clone = _cloneForSpecificDate(dbActivity, activity.date)
+        ..importance = importance;
       await _isar.writeTxn(() => _isar.activitys.put(clone));
     } else {
       dbActivity.importance = importance;
@@ -408,8 +459,10 @@ class ActivityRepository {
     final dbActivity = await _isar.activitys.get(activity.id);
     if (dbActivity == null) return;
 
-    if (dbActivity.recurrence != 'none' && dateOnly(dbActivity.date) != dateOnly(activity.date)) {
-      final clone = _cloneForSpecificDate(dbActivity, activity.date)..deadline = deadline;
+    if (dbActivity.recurrence != 'none' &&
+        dateOnly(dbActivity.date) != dateOnly(activity.date)) {
+      final clone = _cloneForSpecificDate(dbActivity, activity.date)
+        ..deadline = deadline;
       await _isar.writeTxn(() => _isar.activitys.put(clone));
     } else {
       dbActivity.deadline = deadline;
@@ -440,7 +493,9 @@ class ActivityRepository {
   Future<List<Activity>> getByDate(DateTime date) async {
     final d = dateOnly(date);
     if (_isar == null) {
-      final list = _memStore.values.where((a) => dateOnly(a.date) == d).toList();
+      final list = _memStore.values
+          .where((a) => dateOnly(a.date) == d)
+          .toList();
       list.sort((a, b) {
         final hc = a.ampmHalf.index.compareTo(b.ampmHalf.index);
         return hc != 0 ? hc : a.startMinute.compareTo(b.startMinute);
@@ -448,16 +503,22 @@ class ActivityRepository {
       return list;
     }
     final direct = await _isar.activitys
-        .filter()
-        .dateEqualTo(d)
-        .sortByAmpmHalf()
-        .thenByStartMinute()
+        .select(
+          where: (x) => x.date == d,
+          compare: (a, b) {
+            final c0 = a.ampmHalf.index.compareTo(b.ampmHalf.index);
+            if (c0 != 0) return c0;
+            return a.startMinute.compareTo(b.startMinute);
+          },
+        )
         .findAll();
     final recurring = await _getRecurring(d);
-    final existingTitles =
-        direct.map((a) => '${a.title}_${a.startMinute}').toSet();
-    final projected = recurring
-        .where((r) => !existingTitles.contains('${r.title}_${r.startMinute}'));
+    final existingTitles = direct
+        .map((a) => '${a.title}_${a.startMinute}')
+        .toSet();
+    final projected = recurring.where(
+      (r) => !existingTitles.contains('${r.title}_${r.startMinute}'),
+    );
     final all = [...direct, ...projected];
     all.sort((a, b) {
       final hc = a.ampmHalf.index.compareTo(b.ampmHalf.index);
