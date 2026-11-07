@@ -75,7 +75,7 @@ class DecodedFocusClockBackup {
 class FocusClockBackupCodec {
   FocusClockBackupCodec._();
 
-  static const currentFormatVersion = 1;
+  static const currentFormatVersion = 2;
   static const sourceApp = 'focus-clock';
 
   /// Copy an app-owned Isar model before applying installation-only values.
@@ -113,7 +113,7 @@ class FocusClockBackupCodec {
           'Backup versi $version lebih baru dari versi aplikasi ini.',
         );
       }
-      if (version != currentFormatVersion) {
+      if (version < 1) {
         throw FormatException('Versi backup $version tidak didukung.');
       }
       if (root['sourceApp'] != sourceApp) {
@@ -129,6 +129,12 @@ class FocusClockBackupCodec {
         throw const FormatException(
           'Checksum tidak cocok; file mungkin rusak.',
         );
+      }
+      if (version == 2) {
+        final launcher = _map(payload['launcherSettings'], 'launcherSettings');
+        if (launcher['dailyNotes'] is! Map) {
+          throw const FormatException('Invalid daily notes');
+        }
       }
       final data = _fromJson(payload);
       _validate(data);
@@ -614,6 +620,7 @@ class FocusClockBackupCodec {
   }
 
   static void _validate(FocusClockBackupData d) {
+    LauncherSettings.decodeDailyNotes(d.launcherSettings.dailyNotes);
     _unique(d.presets.map((x) => x.id), 'presets');
     _unique(d.activities.map((x) => x.id), 'activities');
     _unique(d.tasks.map((x) => x.id), 'tasks');

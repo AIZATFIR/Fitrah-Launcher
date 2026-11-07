@@ -63,6 +63,6 @@ FocusClockBackupData browserFixture() {
     habitEntries: [entry],
     dailyReflections: [reflection],
     timerSessions: [timer],
-    launcherSettings: const LauncherSettings(focusGoal: 'Menang LKS nasional'),
+    launcherSettings: LauncherSettings(focusGoal: 'Menang LKS nasional'),
   );
 }

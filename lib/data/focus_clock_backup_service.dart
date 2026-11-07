@@ -30,7 +30,7 @@ class FocusClockBackupService {
     final db = _requireDatabase();
     final rawSettings = await secureStorage.readCustomKey(launcherSettingsKey);
     final launcherSettings = rawSettings == null || rawSettings.isEmpty
-        ? const LauncherSettings()
+        ? LauncherSettings()
         : LauncherSettings.fromJson(rawSettings);
     final snapshot = await db.txn(
       () async => (

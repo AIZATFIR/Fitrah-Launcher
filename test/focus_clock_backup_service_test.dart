@@ -43,7 +43,7 @@ void main() {
     store = await IsarService.openAt(dbDirectory.path);
     secureStorage = _MemorySecureStorage();
     secureStorage.values[FocusClockBackupService.launcherSettingsKey] =
-        const LauncherSettings(focusGoal: 'Current goal').toJson();
+        LauncherSettings(focusGoal: 'Current goal').toJson();
   });
 
   tearDown(() async {
@@ -88,7 +88,10 @@ void main() {
       habitEntries: [],
       dailyReflections: [],
       timerSessions: [],
-      launcherSettings: const LauncherSettings(focusGoal: 'Menang LKS'),
+      launcherSettings: LauncherSettings(
+        focusGoal: 'Menang LKS',
+        dailyNotes: {'2026-11-07': 'first\nline', '2026-11-08': 'second'},
+      ),
     );
     final parsed = FocusClockBackupCodec.decode(
       FocusClockBackupCodec.encode(backupData),
@@ -111,6 +114,13 @@ void main() {
         secureStorage.values[FocusClockBackupService.launcherSettingsKey]!,
       ).focusGoal,
       'Menang LKS',
+    );
+    expect(parsed.formatVersion, 2);
+    expect(
+      LauncherSettings.fromJson(
+        secureStorage.values[FocusClockBackupService.launcherSettingsKey]!,
+      ).dailyNotes,
+      {'2026-11-07': 'first\nline', '2026-11-08': 'second'},
     );
     await settingsNotifier.reload();
     expect(settingsNotifier.state.focusGoal, 'Menang LKS');
@@ -171,7 +181,7 @@ void main() {
             habitEntries: [],
             dailyReflections: [],
             timerSessions: [],
-            launcherSettings: const LauncherSettings(focusGoal: 'New goal'),
+            launcherSettings: LauncherSettings(focusGoal: 'New goal'),
           ),
         ),
       );

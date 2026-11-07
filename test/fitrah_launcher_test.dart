@@ -80,7 +80,7 @@ void main() {
     });
 
     test('LauncherSettings serialization, defaults, and copyWith', () {
-      const settings = LauncherSettings();
+      final settings = LauncherSettings();
       expect(settings.wallpaperType, 'system');
       expect(settings.is24h, true);
       expect(settings.showSeconds, false);

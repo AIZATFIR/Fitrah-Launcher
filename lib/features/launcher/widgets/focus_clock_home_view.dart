@@ -230,11 +230,13 @@ class FocusClockHomeView extends ConsumerStatefulWidget {
     required this.onOpenFocusClock,
     required this.onOpenAppDrawer,
     this.useSampleData = false,
+    this.now,
   });
 
   final VoidCallback onOpenFocusClock;
   final VoidCallback onOpenAppDrawer;
   final bool useSampleData;
+  final DateTime Function()? now;
 
   @override
   ConsumerState<FocusClockHomeView> createState() => _FocusClockHomeViewState();
@@ -253,6 +255,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   // Single Daily Scratchpad (Obsidian Mobile Philosophy)
   late final TextEditingController _dailyNoteController;
   String _dailyNote = '';
+  late String _dailyNoteDate;
+  String _dailyNoteStatus = '';
+  int _dailyNoteRevision = 0;
 
   // Header Toggle: false = Focus Clock Agenda Carousel, true = Prayer Schedule Bar
   bool _showPrayerSchedule = false;
@@ -297,9 +302,43 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   @override
   void initState() {
     super.initState();
-    _currentTime = DateTime.now();
+    _currentTime = widget.now?.call() ?? DateTime.now();
     _selectedNoteDate = _dateKey(0);
+    final notifier = ref.read(launcherSettingsProvider.notifier);
+    final pendingDates = notifier.noteDrafts.keys.toList()..sort();
+    _dailyNoteDate = pendingDates.isEmpty ? _dateKey(0) : pendingDates.first;
+    final initialDraft = notifier.noteDrafts[_dailyNoteDate];
+    _dailyNote = initialDraft ?? '';
+    if (initialDraft != null) {
+      _dailyNoteStatus = notifier.noteSaving[_dailyNoteDate] == true
+          ? 'Menyimpan…'
+          : 'Gagal menyimpan';
+    }
     _dailyNoteController = TextEditingController(text: _dailyNote);
+    ref.listenManual(launcherSettingsProvider, (_, settings) {
+      final notifier = ref.read(launcherSettingsProvider.notifier);
+      final hasDraft = notifier.noteDrafts.containsKey(_dailyNoteDate);
+      if (hasDraft) {
+        _dailyNoteStatus = notifier.noteSaving[_dailyNoteDate] == true
+            ? 'Menyimpan…'
+            : 'Gagal menyimpan';
+      } else if (notifier.loadFailed) {
+        _dailyNoteStatus = 'Gagal memuat';
+      } else if (_dailyNoteStatus == 'Gagal memuat') {
+        _dailyNoteStatus = '';
+      } else if (_dailyNoteStatus == 'Menyimpan…' ||
+          _dailyNoteStatus == 'Gagal menyimpan') {
+        _dailyNoteStatus = 'Tersimpan';
+      }
+      final text =
+          notifier.noteDrafts[_dailyNoteDate] ??
+          settings.dailyNotes[_dailyNoteDate] ??
+          '';
+      if (_dailyNoteController.text != text && !hasDraft) {
+        _dailyNoteController.text = text;
+        _dailyNote = text;
+      }
+    }, fireImmediately: true);
 
     if (widget.useSampleData) {
       // Seed data for tests
@@ -512,8 +551,26 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     // One-second presentation clock; the shared engine owns session time.
     _periodicTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
+      final today = _dateKey(0);
+      final notifier = ref.read(launcherSettingsProvider.notifier);
+      if (today != _dailyNoteDate &&
+          !notifier.noteDrafts.containsKey(_dailyNoteDate)) {
+        final pendingDates = notifier.noteDrafts.keys.toList()..sort();
+        _dailyNoteDate = pendingDates.isEmpty ? today : pendingDates.first;
+        _dailyNote =
+            notifier.noteDrafts[_dailyNoteDate] ??
+            ref.read(launcherSettingsProvider).dailyNotes[_dailyNoteDate] ??
+            '';
+        _dailyNoteController.text = _dailyNote;
+        _dailyNoteStatus = notifier.noteDrafts.containsKey(_dailyNoteDate)
+            ? (notifier.noteSaving[_dailyNoteDate] == true
+                  ? 'Menyimpan…'
+                  : 'Gagal menyimpan')
+            : '';
+        _dailyNoteRevision++;
+      }
       setState(() {
-        _currentTime = DateTime.now();
+        _currentTime = widget.now?.call() ?? DateTime.now();
 
         // Tick any running habit timer
         for (final h in _habits) {
@@ -549,7 +606,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   String _dateKey(int offsetDays) {
-    final d = DateTime.now().add(Duration(days: offsetDays));
+    final d = (widget.now?.call() ?? DateTime.now()).add(
+      Duration(days: offsetDays),
+    );
     final y = d.year.toString();
     final m = d.month.toString().padLeft(2, '0');
     final day = d.day.toString().padLeft(2, '0');
@@ -1805,7 +1864,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
               Flexible(
                 child: Text(
-                  DateFormat('EEEE, d MMM').format(DateTime.now()),
+                  DateFormat(
+                    'EEEE, d MMM',
+                  ).format(DateTime.parse(_dailyNoteDate)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
@@ -1820,6 +1881,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           ),
           const SizedBox(height: 10),
           TextField(
+            enabled: ref.read(launcherSettingsProvider.notifier).isLoaded,
             controller: _dailyNoteController,
             maxLines: 4,
             minLines: 2,
@@ -1840,11 +1902,46 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             ),
             onChanged: (val) {
               _dailyNote = val;
+              _saveDailyNote();
             },
           ),
+          if (_dailyNoteStatus.isNotEmpty)
+            Row(
+              children: [
+                Text(
+                  _dailyNoteStatus,
+                  style: TextStyle(fontSize: 11, color: tc.textSecondary),
+                ),
+                if (_dailyNoteStatus == 'Gagal menyimpan' ||
+                    _dailyNoteStatus == 'Gagal memuat')
+                  TextButton(
+                    onPressed: _dailyNoteStatus == 'Gagal memuat'
+                        ? () => ref
+                              .read(launcherSettingsProvider.notifier)
+                              .reload()
+                        : _saveDailyNote,
+                    child: const Text('Coba lagi'),
+                  ),
+              ],
+            ),
         ],
       ),
     );
+  }
+
+  Future<void> _saveDailyNote() async {
+    final revision = ++_dailyNoteRevision;
+    final date = _dailyNoteDate;
+    final value = _dailyNote;
+    setState(() => _dailyNoteStatus = 'Menyimpan…');
+    final saved = await ref
+        .read(launcherSettingsProvider.notifier)
+        .setDailyNote(date, value);
+    if (mounted && revision == _dailyNoteRevision && date == _dailyNoteDate) {
+      setState(
+        () => _dailyNoteStatus = saved ? 'Tersimpan' : 'Gagal menyimpan',
+      );
+    }
   }
 
   // ── Chronological List View Fallback ──────────────────────────────────────

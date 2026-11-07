@@ -37,6 +37,38 @@ void main() {
       },
     );
 
+    test('v1 imports without notes and v2 preserves and validates notes', () {
+      final root =
+          jsonDecode(utf8.decode(FocusClockBackupCodec.encode(_sampleData())))
+              as Map<String, dynamic>;
+      root['data']['launcherSettings']['dailyNotes'] = {
+        '2026-11-07': 'Exact\ntext',
+      };
+      _refreshChecksum(root);
+      final decoded = FocusClockBackupCodec.decode(
+        utf8.encode(jsonEncode(root)),
+      );
+      expect(
+        decoded.data.launcherSettings.dailyNotes['2026-11-07'],
+        'Exact\ntext',
+      );
+      root['data']['launcherSettings']['dailyNotes'] = {'2026-02-30': 'bad'};
+      _refreshChecksum(root);
+      expect(
+        () => FocusClockBackupCodec.decode(utf8.encode(jsonEncode(root))),
+        throwsFormatException,
+      );
+      root['formatVersion'] = 1;
+      root['data']['launcherSettings'].remove('dailyNotes');
+      _refreshChecksum(root);
+      expect(
+        FocusClockBackupCodec.decode(
+          utf8.encode(jsonEncode(root)),
+        ).data.launcherSettings.dailyNotes,
+        isEmpty,
+      );
+    });
+
     test('backup collection lists cannot be structurally mutated', () {
       final data = _sampleData();
       expect(() => data.habits.add(Habit()), throwsA(isA<UnsupportedError>()));
@@ -235,6 +267,6 @@ FocusClockBackupData _sampleData() {
     habitEntries: [entry],
     dailyReflections: [reflection],
     timerSessions: [timer],
-    launcherSettings: const LauncherSettings(focusGoal: 'Menang LKS nasional'),
+    launcherSettings: LauncherSettings(focusGoal: 'Menang LKS nasional'),
   );
 }

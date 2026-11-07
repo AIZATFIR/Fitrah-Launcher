@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 class LauncherSettings {
-  final String wallpaperType; // 'amoled_black', 'midnight_slate', 'forest_night', 'deep_obsidian', 'warm_charcoal', 'custom_image'
+  final String
+  wallpaperType; // 'amoled_black', 'midnight_slate', 'forest_night', 'deep_obsidian', 'warm_charcoal', 'custom_image'
   final String customImageUrl;
   final double wallpaperDimming; // 0.0 to 0.9
   final double wallpaperBlur; // 0.0 to 20.0
@@ -31,8 +32,11 @@ class LauncherSettings {
   /// Dynamic Theme Palette: 'fino_green', 'sky_blue', 'ocean_blue'
   final String themePalette;
   final String focusGoal;
+  // Stored with preferences; move to a database if note volume grows large.
+  final Map<String, String> _dailyNotes;
+  Map<String, String> get dailyNotes => Map.unmodifiable(_dailyNotes);
 
-  const LauncherSettings({
+  LauncherSettings({
     this.wallpaperType = 'system',
     this.customImageUrl = '',
     this.wallpaperDimming = 0.0,
@@ -60,7 +64,8 @@ class LauncherSettings {
     this.autoFocusSearch = false,
     this.themePalette = 'ocean_blue',
     this.focusGoal = '',
-  });
+    Map<String, String> dailyNotes = const {},
+  }) : _dailyNotes = Map.unmodifiable(dailyNotes);
 
   LauncherSettings copyWith({
     String? wallpaperType,
@@ -85,6 +90,7 @@ class LauncherSettings {
     bool? autoFocusSearch,
     String? themePalette,
     String? focusGoal,
+    Map<String, String>? dailyNotes,
   }) {
     return LauncherSettings(
       wallpaperType: wallpaperType ?? this.wallpaperType,
@@ -109,6 +115,7 @@ class LauncherSettings {
       autoFocusSearch: autoFocusSearch ?? this.autoFocusSearch,
       themePalette: themePalette ?? this.themePalette,
       focusGoal: focusGoal ?? this.focusGoal,
+      dailyNotes: Map.unmodifiable(dailyNotes ?? this.dailyNotes),
     );
   }
 
@@ -136,6 +143,7 @@ class LauncherSettings {
       'autoFocusSearch': autoFocusSearch,
       'themePalette': themePalette,
       'focusGoal': focusGoal,
+      'dailyNotes': dailyNotes,
     };
   }
 
@@ -151,7 +159,10 @@ class LauncherSettings {
       showHeroEvent: map['showHeroEvent'] as bool? ?? true,
       showAgendaWidget: map['showAgendaWidget'] as bool? ?? true,
       showHabitsWidget: map['showHabitsWidget'] as bool? ?? true,
-      dockPackages: (map['dockPackages'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+      dockPackages:
+          (map['dockPackages'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
           const [
             'com.android.dialer',
             'com.android.mms',
@@ -169,7 +180,28 @@ class LauncherSettings {
       autoFocusSearch: map['autoFocusSearch'] as bool? ?? false,
       themePalette: map['themePalette'] as String? ?? 'ocean_blue',
       focusGoal: map['focusGoal'] as String? ?? '',
+      dailyNotes: decodeDailyNotes(map['dailyNotes']),
     );
+  }
+
+  static Map<String, String> decodeDailyNotes(Object? value) {
+    if (value == null) return const {};
+    if (value is! Map) throw const FormatException('Invalid daily notes');
+    final result = <String, String>{};
+    for (final entry in value.entries) {
+      if (entry.key is! String || entry.value is! String) {
+        throw const FormatException('Invalid daily note');
+      }
+      final key = entry.key as String;
+      final date = DateTime.tryParse(key);
+      if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(key) ||
+          date == null ||
+          date.toIso8601String().substring(0, 10) != key) {
+        throw const FormatException('Invalid daily note date');
+      }
+      result[key] = entry.value as String;
+    }
+    return Map.unmodifiable(result);
   }
 
   String toJson() => json.encode(toMap());

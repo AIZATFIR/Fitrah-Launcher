@@ -1365,7 +1365,8 @@ class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
     try {
       final bytes = recovery
           ? await _service.latestRecoveryBytes()
-          : await _service.exportBytes();
+          : await ref.read(launcherSettingsProvider.notifier)
+              .exportAfterWrites(_service.exportBytes);
       if (bytes == null) {
         if (mounted) _message('Belum ada salinan pemulihan.');
         return;
@@ -1448,8 +1449,9 @@ class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
         ),
       );
       if (shouldRestore != true || !mounted) return;
-      final recoveryPath = await _service.restore(backup);
-      await ref.read(launcherSettingsProvider.notifier).reload();
+      final recoveryPath = await ref
+          .read(launcherSettingsProvider.notifier)
+          .restoreWithReload(() => _service.restore(backup));
       if (mounted) {
         _message('Restore berhasil. Salinan pemulihan: $recoveryPath');
       }
