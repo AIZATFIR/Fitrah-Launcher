@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme.dart';
 import '../../../core/time_math.dart';
 import '../../../models/activity.dart';
+import '../../../models/task.dart';
 import '../../../models/habit.dart';
 import '../../../providers/providers.dart';
 import '../../focusclock/analog_clock_face.dart';
@@ -21,6 +22,7 @@ import '../../../models/habit_entry.dart';
 import '../../../models/timer_session.dart';
 import '../../../providers/sadar_providers.dart';
 import '../../../services/sadar_timer_engine.dart';
+import '../../../services/home_schedule_service.dart';
 
 // ── Natural Theme Palettes for Focus Clock Home (Sadar Way of Life M3) ─────────
 class _HomeThemeColors {
@@ -297,7 +299,19 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   late List<PresetItem> _presets;
   late List<HabitModel> _habits;
   late List<NoteItem> _notes;
-  late List<String> _dumpedTasks;
+  late List<Task> _dumpedTasks;
+  final Set<int> _inboxBusy = {};
+  List<Task> get _inboxTasks => widget.useSampleData
+      ? _dumpedTasks
+      : (ref.read(eisenhowerTasksProvider).valueOrNull ?? [])
+            .where(
+              (t) =>
+                  !t.isCompleted &&
+                  t.activityId == null &&
+                  t.startMinute == null &&
+                  t.endMinute == null,
+            )
+            .toList();
 
   @override
   void initState() {
@@ -498,11 +512,21 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         ),
       ];
 
-      _dumpedTasks = [
-        'Selesaikan modul UI Focus Clock',
-        'Submit LKS ITSSB draft',
-        'Beli suplemen gym & air galon',
-      ];
+      _dumpedTasks =
+          [
+                'Selesaikan modul UI Focus Clock',
+                'Submit LKS ITSSB draft',
+                'Beli suplemen gym & air galon',
+              ]
+              .asMap()
+              .entries
+              .map(
+                (e) => Task()
+                  ..id = e.key + 1
+                  ..title = e.value
+                  ..createdAt = DateTime.now(),
+              )
+              .toList();
     } else {
       // Production starts with no assumed identity, schedule, preset or habit.
       _identities = [];
@@ -823,6 +847,62 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       } catch (_) {
         return 'Jadwal belum tersimpan. Coba lagi.';
       }
+    }
+    return null;
+  }
+
+  Future<String?> _scheduleInboxTask(
+    Task? task,
+    double startHour,
+    int duration,
+    String identity, {
+    String? title,
+  }) async {
+    final now = widget.now?.call() ?? DateTime.now();
+    final start = dateOnly(
+      now,
+    ).add(Duration(minutes: (startHour * 60).round()));
+    if (start.isBefore(now)) return 'Waktu mulai sudah lewat.';
+    if (duration <= 0) return 'Durasi tidak valid.';
+    if (widget.useSampleData) {
+      if (startHour >= 24 || startHour + duration / 60 > 24) {
+        return 'Pratinjau belum mendukung jadwal melewati tengah malam.';
+      }
+      final error = await _addBlock(
+        startHour,
+        startHour + duration / 60,
+        task?.title ?? title ?? '',
+        identity,
+      );
+      if (error == null && task != null) {
+        setState(() => _dumpedTasks.removeWhere((t) => t.id == task.id));
+      }
+      return error;
+    }
+    final store = ref.read(taskRepoProvider).isar;
+    if (store == null || !store.isDurable) return 'Penyimpanan tidak tersedia.';
+    late final List<Activity> created;
+    try {
+      created = await HomeScheduleService(store).schedule(
+        taskId: task?.id,
+        title: task?.title ?? title ?? '',
+        start: start,
+        durationMinutes: duration,
+        now: now,
+        colorValue: _colorForIdentity(identity).value,
+        identity: identity,
+      );
+    } on StateError catch (e) {
+      return e.message.toString();
+    } catch (_) {
+      return 'Jadwal belum tersimpan. Coba lagi.';
+    }
+    try {
+      await ref
+          .read(notificationServiceProvider)
+          .scheduleForActivity(created.first, leadMinutes: 1);
+    } catch (_) {
+      // The transaction is committed; notification errors must not trigger a retry.
     }
     return null;
   }
@@ -4609,15 +4689,20 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     int initialDurationMinutes = 60,
     String identity = '',
     Color? identityColor,
+    Task? inboxTask,
   }) {
     final settings = ref.read(launcherSettingsProvider);
     final tc = _HomeThemeColors.fromPalette(settings.themePalette);
 
     bool isCustomInput = false;
+    bool isSaving = false;
+    final inboxTasks = _inboxTasks;
+    Task? selectedTask = inboxTask;
     String selectedTitle = title.trim();
     if (selectedTitle.isEmpty) {
-      if (_dumpedTasks.isNotEmpty) {
-        selectedTitle = _dumpedTasks.first;
+      if (inboxTasks.isNotEmpty) {
+        selectedTask = inboxTasks.first;
+        selectedTitle = selectedTask.title;
       } else if (_habits.isNotEmpty) {
         selectedTitle = _habits.first.title;
       } else if (_presets.isNotEmpty) {
@@ -4628,13 +4713,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     }
     final titleCtrl = TextEditingController(text: selectedTitle);
 
-    var startH = (_hourNow() * 2).ceil() / 2.0;
+    final now = widget.now?.call() ?? DateTime.now();
+    var startH = ((now.hour * 60 + now.minute) ~/ 30 + 1) / 2.0;
     while (_findConflict(startH, startH + initialDurationMinutes / 60.0) !=
             null &&
         startH < 23.5) {
       startH += 0.5;
     }
-    if (startH >= 23.5) startH = _hourNow();
 
     int duration = initialDurationMinutes;
     String selectedIdentity = identity;
@@ -4643,6 +4728,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       backgroundColor: tc.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
@@ -4653,236 +4740,160 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             final activeColor = _colorForIdentity(selectedIdentity);
             final endH = math.min(24.0, startH + duration / 60.0);
 
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                18,
-                16,
-                18,
-                MediaQuery.of(ctx).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Top drag handle
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: tc.stroke,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Title Header with Toggle Button
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return PopScope(
+              canPop: !isSaving,
+              child: AbsorbPointer(
+                absorbing: isSaving,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    18,
+                    16,
+                    18,
+                    MediaQuery.of(ctx).viewInsets.bottom + 24,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: activeColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Pasang ke Focus Clock',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: tc.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Button to toggle custom mode
-                        InkWell(
-                          onTap: () => setSheetState(
-                            () => isCustomInput = !isCustomInput,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
+                        // Top drag handle
+                        Center(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
+                            width: 36,
+                            height: 4,
                             decoration: BoxDecoration(
-                              color: isCustomInput
-                                  ? tc.accent.withOpacity(0.2)
-                                  : tc.cardElevated,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isCustomInput ? tc.accent : tc.stroke,
-                              ),
+                              color: tc.stroke,
+                              borderRadius: BorderRadius.circular(2),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Title Header with Toggle Button
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
                               children: [
-                                Icon(
-                                  isCustomInput
-                                      ? Icons.list_alt_rounded
-                                      : Icons.edit_note_rounded,
-                                  size: 14,
-                                  color: isCustomInput
-                                      ? tc.accent
-                                      : tc.textSecondary,
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: activeColor,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 8),
                                 Text(
-                                  isCustomInput ? 'Pilih yang Ada' : '+ Kustom',
+                                  'Pasang ke Focus Clock',
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: isCustomInput
-                                        ? tc.accent
-                                        : tc.textSecondary,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    color: tc.textPrimary,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      isCustomInput
-                          ? 'Ketik manual kegiatan baru dan atur jamnya'
-                          : 'Pilih cepat dari kegiatan yang ada atau ketuk + Kustom',
-                      style: TextStyle(fontSize: 12, color: tc.textSecondary),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // ── EXISTING ITEMS FIRST (When not in custom mode) ──
-                    if (!isCustomInput) ...[
-                      // 1. Dari Dump Inbox
-                      if (_dumpedTasks.isNotEmpty) ...[
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.inbox_rounded,
-                              size: 14,
-                              color: tc.accent,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Dari Dump Inbox:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: tc.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: _dumpedTasks.map((task) {
-                            final isSel = selectedTitle == task;
-                            return InkWell(
-                              onTap: () {
-                                setSheetState(() {
-                                  selectedTitle = task;
-                                  titleCtrl.text = task;
-                                  errorMessage = null;
-                                });
-                              },
+                            // Button to toggle custom mode
+                            InkWell(
+                              onTap: () => setSheetState(() {
+                                isCustomInput = !isCustomInput;
+                                selectedTask = null;
+                              }),
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
-                                  vertical: 6,
+                                  vertical: 5,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isSel
+                                  color: isCustomInput
                                       ? tc.accent.withOpacity(0.2)
                                       : tc.cardElevated,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: isSel ? tc.accent : tc.stroke,
-                                    width: isSel ? 1.5 : 1.0,
+                                    color: isCustomInput
+                                        ? tc.accent
+                                        : tc.stroke,
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (isSel) ...[
-                                      Icon(
-                                        Icons.check_rounded,
-                                        size: 13,
-                                        color: tc.accent,
-                                      ),
-                                      const SizedBox(width: 4),
-                                    ],
+                                    Icon(
+                                      isCustomInput
+                                          ? Icons.list_alt_rounded
+                                          : Icons.edit_note_rounded,
+                                      size: 14,
+                                      color: isCustomInput
+                                          ? tc.accent
+                                          : tc.textSecondary,
+                                    ),
+                                    const SizedBox(width: 4),
                                     Text(
-                                      task,
+                                      isCustomInput
+                                          ? 'Pilih yang Ada'
+                                          : '+ Kustom',
                                       style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: isSel
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
-                                        color: isSel
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: isCustomInput
                                             ? tc.accent
-                                            : tc.textPrimary,
+                                            : tc.textSecondary,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      // 2. Dari Kebiasaan & Rutinitas
-                      if (_habits.isNotEmpty) ...[
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.repeat_rounded,
-                              size: 14,
-                              color: tc.textSecondary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Dari Kebiasaan & Rutinitas:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: tc.textSecondary,
-                              ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: _habits.take(6).map((h) {
-                              final isSel = selectedTitle == h.title;
-                              final hColor = _colorForIdentity(h.identity);
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: InkWell(
+                        const SizedBox(height: 4),
+                        Text(
+                          isCustomInput
+                              ? 'Ketik manual kegiatan baru dan atur jamnya'
+                              : 'Pilih cepat dari kegiatan yang ada atau ketuk + Kustom',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: tc.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // ── EXISTING ITEMS FIRST (When not in custom mode) ──
+                        if (!isCustomInput) ...[
+                          // 1. Dari Dump Inbox
+                          if (inboxTasks.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.inbox_rounded,
+                                  size: 14,
+                                  color: tc.accent,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Dari Dump Inbox:',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: tc.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: inboxTasks.map((task) {
+                                final isSel = selectedTask?.id == task.id;
+                                return InkWell(
                                   onTap: () {
                                     setSheetState(() {
-                                      selectedTitle = h.title;
-                                      titleCtrl.text = h.title;
-                                      selectedIdentity = h.identity;
-                                      if (h.minutes != null && h.minutes! > 0) {
-                                        duration = h.minutes!;
-                                      }
+                                      selectedTask = task;
+                                      selectedTitle = task.title;
+                                      titleCtrl.text = task.title;
                                       errorMessage = null;
                                     });
                                   },
@@ -4894,12 +4905,338 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: isSel
-                                          ? hColor.withOpacity(0.2)
+                                          ? tc.accent.withOpacity(0.2)
                                           : tc.cardElevated,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: isSel ? hColor : tc.stroke,
+                                        color: isSel ? tc.accent : tc.stroke,
                                         width: isSel ? 1.5 : 1.0,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isSel) ...[
+                                          Icon(
+                                            Icons.check_rounded,
+                                            size: 13,
+                                            color: tc.accent,
+                                          ),
+                                          const SizedBox(width: 4),
+                                        ],
+                                        Text(
+                                          task.title,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: isSel
+                                                ? FontWeight.w700
+                                                : FontWeight.w500,
+                                            color: isSel
+                                                ? tc.accent
+                                                : tc.textPrimary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // 2. Dari Kebiasaan & Rutinitas
+                          if (_habits.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.repeat_rounded,
+                                  size: 14,
+                                  color: tc.textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Dari Kebiasaan & Rutinitas:',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: tc.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: _habits.take(6).map((h) {
+                                  final isSel = selectedTitle == h.title;
+                                  final hColor = _colorForIdentity(h.identity);
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: InkWell(
+                                      onTap: () {
+                                        setSheetState(() {
+                                          selectedTask = null;
+                                          selectedTitle = h.title;
+                                          titleCtrl.text = h.title;
+                                          selectedIdentity = h.identity;
+                                          if (h.minutes != null &&
+                                              h.minutes! > 0) {
+                                            duration = h.minutes!;
+                                          }
+                                          errorMessage = null;
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isSel
+                                              ? hColor.withOpacity(0.2)
+                                              : tc.cardElevated,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: isSel ? hColor : tc.stroke,
+                                            width: isSel ? 1.5 : 1.0,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 6,
+                                              height: 6,
+                                              decoration: BoxDecoration(
+                                                color: hColor,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              h.title,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: isSel
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w500,
+                                                color: isSel
+                                                    ? hColor
+                                                    : tc.textPrimary,
+                                              ),
+                                            ),
+                                            if (h.minutes != null) ...[
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '(${h.minutes}m)',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: tc.textMuted,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // 3. Dari Preset Blok Waktu
+                          if (_presets.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.layers_outlined,
+                                  size: 14,
+                                  color: tc.textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Dari Preset Waktu:',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: tc.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: _presets.map((p) {
+                                  final isSel = selectedTitle == p.name;
+                                  final pColor = _colorForIdentity(p.identity);
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: InkWell(
+                                      onTap: () {
+                                        setSheetState(() {
+                                          selectedTask = null;
+                                          selectedTitle = p.name;
+                                          titleCtrl.text = p.name;
+                                          selectedIdentity = p.identity;
+                                          duration = p.minutes;
+                                          errorMessage = null;
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isSel
+                                              ? pColor.withOpacity(0.2)
+                                              : tc.cardElevated,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: isSel ? pColor : tc.stroke,
+                                            width: isSel ? 1.5 : 1.0,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${p.name} (${p.minutes}m)',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: isSel
+                                                ? FontWeight.w700
+                                                : FontWeight.w500,
+                                            color: isSel
+                                                ? pColor
+                                                : tc.textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+
+                          // Button to switch to manual input if user prefers
+                          InkWell(
+                            onTap: () =>
+                                setSheetState(() => isCustomInput = true),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: tc.cardElevated,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: tc.stroke),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_rounded,
+                                    size: 16,
+                                    color: tc.accent,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '+ Tulis Kegiatan Kustom Manual',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: tc.accent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          // ── MANUAL / CUSTOM INPUT ──
+                          TextField(
+                            controller: titleCtrl,
+                            autofocus: true,
+                            style: TextStyle(
+                              color: tc.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            onChanged: (v) => setSheetState(() {
+                              selectedTask = null;
+                              selectedTitle = v;
+                            }),
+                            decoration: InputDecoration(
+                              labelText: 'Nama Kegiatan Kustom',
+                              labelStyle: TextStyle(
+                                color: tc.textSecondary,
+                                fontSize: 13,
+                              ),
+                              filled: true,
+                              fillColor: tc.bg,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: tc.stroke),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: activeColor),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Identity Selector
+                          Text(
+                            'Pilih Identitas:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: tc.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            height: 34,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _identities.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (context, i) {
+                                final id = _identities[i];
+                                final isSel =
+                                    id.name.toLowerCase() ==
+                                    selectedIdentity.toLowerCase();
+                                return InkWell(
+                                  onTap: () => setSheetState(
+                                    () => selectedIdentity = id.name,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSel
+                                          ? id.color.withOpacity(0.2)
+                                          : tc.bg,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSel ? id.color : tc.stroke,
+                                        width: isSel ? 1.5 : 1,
                                       ),
                                     ),
                                     child: Row(
@@ -4909,83 +5246,183 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                           width: 6,
                                           height: 6,
                                           decoration: BoxDecoration(
-                                            color: hColor,
+                                            color: id.color,
                                             shape: BoxShape.circle,
                                           ),
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          h.title,
+                                          id.name,
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: isSel
                                                 ? FontWeight.w700
                                                 : FontWeight.w500,
                                             color: isSel
-                                                ? hColor
+                                                ? id.color
                                                 : tc.textPrimary,
                                           ),
                                         ),
-                                        if (h.minutes != null) ...[
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '(${h.minutes}m)',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: tc.textMuted,
-                                            ),
-                                          ),
-                                        ],
                                       ],
                                     ),
                                   ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 14),
+
+                        // ── TIME BADGE & RANGE SLIDER ──
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: activeColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: activeColor.withOpacity(0.4),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.schedule_rounded,
+                                    color: activeColor,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${_formatHour(startH)} — ${_formatHour(startH + duration / 60.0)}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color: activeColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                '$duration menit',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: tc.textPrimary,
                                 ),
-                              );
-                            }).toList(),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 12),
-                      ],
 
-                      // 3. Dari Preset Blok Waktu
-                      if (_presets.isNotEmpty) ...[
+                        // Dual-thumb Range Slider
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(
-                              Icons.layers_outlined,
-                              size: 14,
-                              color: tc.textSecondary,
-                            ),
-                            const SizedBox(width: 6),
                             Text(
-                              'Dari Preset Waktu:',
+                              'Geser Jam (00:00 - 24:00):',
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700,
                                 color: tc.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '${_formatHour(startH)} sd ${_formatHour(startH + duration / 60.0)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: activeColor,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
+                        ),
+                        RangeSlider(
+                          values: RangeValues(startH, endH),
+                          min: 0.0,
+                          max: 24.0,
+                          divisions: 96,
+                          activeColor: activeColor,
+                          inactiveColor: tc.stroke,
+                          labels: RangeLabels(
+                            _formatHour(startH),
+                            _formatHour(startH + duration / 60.0),
+                          ),
+                          onChanged: (newVals) {
+                            setSheetState(() {
+                              startH = newVals.start;
+                              var newDur = ((newVals.end - newVals.start) * 60)
+                                  .round();
+                              if (newDur < 15) newDur = 15;
+                              duration = newDur;
+                              errorMessage = null;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Mulai Cepat Chips
+                        Text(
+                          'Mulai Cepat:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: tc.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
-                            children: _presets.map((p) {
-                              final isSel = selectedTitle == p.name;
-                              final pColor = _colorForIdentity(p.identity);
+                            children: [
+                              _buildTimeChip(
+                                label: 'Sekarang (${_formatHour(_hourNow())})',
+                                isSelected: (startH - _hourNow()).abs() < 0.25,
+                                onTap: () => setSheetState(
+                                  () => startH = (_hourNow() * 60).ceil() / 60,
+                                ),
+                              ),
+                              ...[9.0, 13.0, 16.0, 19.5, 21.0].map((h) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(left: 6),
+                                  child: _buildTimeChip(
+                                    label: _formatHour(h),
+                                    isSelected: (startH - h).abs() < 0.1,
+                                    onTap: () =>
+                                        setSheetState(() => startH = h),
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Pilihan Durasi Chips
+                        Text(
+                          'Pilihan Durasi:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: tc.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [15, 30, 45, 60, 90, 120].map((d) {
+                              final isSel = duration == d;
                               return Padding(
                                 padding: const EdgeInsets.only(right: 6),
                                 child: InkWell(
-                                  onTap: () {
-                                    setSheetState(() {
-                                      selectedTitle = p.name;
-                                      titleCtrl.text = p.name;
-                                      selectedIdentity = p.identity;
-                                      duration = p.minutes;
-                                      errorMessage = null;
-                                    });
-                                  },
+                                  onTap: () =>
+                                      setSheetState(() => duration = d),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
@@ -4993,23 +5430,18 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: isSel
-                                          ? pColor.withOpacity(0.2)
-                                          : tc.cardElevated,
+                                      color: isSel ? activeColor : tc.bg,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: isSel ? pColor : tc.stroke,
-                                        width: isSel ? 1.5 : 1.0,
+                                        color: isSel ? activeColor : tc.stroke,
                                       ),
                                     ),
                                     child: Text(
-                                      '${p.name} (${p.minutes}m)',
+                                      '$d m',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        fontWeight: isSel
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
-                                        color: isSel ? pColor : tc.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                        color: isSel ? tc.bg : tc.textPrimary,
                                       ),
                                     ),
                                   ),
@@ -5018,391 +5450,87 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             }).toList(),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                      ],
 
-                      // Button to switch to manual input if user prefers
-                      InkWell(
-                        onTap: () => setSheetState(() => isCustomInput = true),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: tc.cardElevated,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: tc.stroke),
+                        if (errorMessage != null) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            errorMessage!,
+                            style: const TextStyle(
+                              color: Color(0xFFE88F7D),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+
+                        // Submit Button
+                        ElevatedButton(
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                                  setSheetState(() {
+                                    isSaving = true;
+                                    errorMessage = null;
+                                  });
+                                  final actName =
+                                      selectedTitle.trim().isNotEmpty
+                                      ? selectedTitle.trim()
+                                      : (titleCtrl.text.trim().isNotEmpty
+                                            ? titleCtrl.text.trim()
+                                            : 'Kegiatan Baru');
+                                  final en = startH + duration / 60.0;
+                                  final res = await _scheduleInboxTask(
+                                    selectedTask,
+                                    startH,
+                                    duration,
+                                    selectedIdentity,
+                                    title: actName,
+                                  );
+                                  if (!ctx.mounted || !mounted) return;
+                                  if (res != null) {
+                                    setSheetState(() {
+                                      isSaving = false;
+                                      errorMessage = res;
+                                    });
+                                  } else {
+                                    setSheetState(() => isSaving = false);
+                                    Navigator.pop(ctx);
+                                    _showToast(
+                                      '$actName berhasil dipasang di jam ${_formatHour(startH)}-${_formatHour(en)}',
+                                    );
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: tc.accent,
+                            foregroundColor: tc.bg,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.add_rounded,
-                                size: 16,
-                                color: tc.accent,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '+ Tulis Kegiatan Kustom Manual',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: tc.accent,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ] else ...[
-                      // ── MANUAL / CUSTOM INPUT ──
-                      TextField(
-                        controller: titleCtrl,
-                        autofocus: true,
-                        style: TextStyle(
-                          color: tc.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        onChanged: (v) =>
-                            setSheetState(() => selectedTitle = v),
-                        decoration: InputDecoration(
-                          labelText: 'Nama Kegiatan Kustom',
-                          labelStyle: TextStyle(
-                            color: tc.textSecondary,
-                            fontSize: 13,
-                          ),
-                          filled: true,
-                          fillColor: tc.bg,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: tc.stroke),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: activeColor),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Identity Selector
-                      Text(
-                        'Pilih Identitas:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: tc.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        height: 34,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _identities.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 8),
-                          itemBuilder: (context, i) {
-                            final id = _identities[i];
-                            final isSel =
-                                id.name.toLowerCase() ==
-                                selectedIdentity.toLowerCase();
-                            return InkWell(
-                              onTap: () => setSheetState(
-                                () => selectedIdentity = id.name,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSel
-                                      ? id.color.withOpacity(0.2)
-                                      : tc.bg,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: isSel ? id.color : tc.stroke,
-                                    width: isSel ? 1.5 : 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: id.color,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      id.name,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: isSel
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
-                                        color: isSel
-                                            ? id.color
-                                            : tc.textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-
-                    // ── TIME BADGE & RANGE SLIDER ──
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: activeColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: activeColor.withOpacity(0.4)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.schedule_rounded,
-                                color: activeColor,
+                              const Icon(
+                                Icons.check_circle_outline_rounded,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '${_formatHour(startH)} — ${_formatHour(endH)}',
+                                'Pasang ke Focus Clock',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: activeColor,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: tc.bg,
                                 ),
                               ),
                             ],
                           ),
-                          Text(
-                            '$duration menit',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: tc.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Dual-thumb Range Slider
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Geser Jam (00:00 - 24:00):',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: tc.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          '${_formatHour(startH)} sd ${_formatHour(endH)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: activeColor,
-                            fontWeight: FontWeight.w700,
-                          ),
                         ),
                       ],
                     ),
-                    RangeSlider(
-                      values: RangeValues(startH, endH),
-                      min: 0.0,
-                      max: 24.0,
-                      divisions: 96,
-                      activeColor: activeColor,
-                      inactiveColor: tc.stroke,
-                      labels: RangeLabels(
-                        _formatHour(startH),
-                        _formatHour(endH),
-                      ),
-                      onChanged: (newVals) {
-                        setSheetState(() {
-                          startH = newVals.start;
-                          var newDur = ((newVals.end - newVals.start) * 60)
-                              .round();
-                          if (newDur < 15) newDur = 15;
-                          duration = newDur;
-                          errorMessage = null;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Mulai Cepat Chips
-                    Text(
-                      'Mulai Cepat:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: tc.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildTimeChip(
-                            label: 'Sekarang (${_formatHour(_hourNow())})',
-                            isSelected: (startH - _hourNow()).abs() < 0.25,
-                            onTap: () =>
-                                setSheetState(() => startH = _hourNow()),
-                          ),
-                          ...[9.0, 13.0, 16.0, 19.5, 21.0].map((h) {
-                            return Padding(
-                              padding: const EdgeInsets.only(left: 6),
-                              child: _buildTimeChip(
-                                label: _formatHour(h),
-                                isSelected: (startH - h).abs() < 0.1,
-                                onTap: () => setSheetState(() => startH = h),
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Pilihan Durasi Chips
-                    Text(
-                      'Pilihan Durasi:',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: tc.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [15, 30, 45, 60, 90, 120].map((d) {
-                          final isSel = duration == d;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: InkWell(
-                              onTap: () => setSheetState(() => duration = d),
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSel ? activeColor : tc.bg,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isSel ? activeColor : tc.stroke,
-                                  ),
-                                ),
-                                child: Text(
-                                  '$d m',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: isSel ? tc.bg : tc.textPrimary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-
-                    if (errorMessage != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        errorMessage!,
-                        style: const TextStyle(
-                          color: Color(0xFFE88F7D),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-
-                    // Submit Button
-                    ElevatedButton(
-                      onPressed: () async {
-                        final actName = selectedTitle.trim().isNotEmpty
-                            ? selectedTitle.trim()
-                            : (titleCtrl.text.trim().isNotEmpty
-                                  ? titleCtrl.text.trim()
-                                  : 'Kegiatan Baru');
-                        final en = math.min(24.0, startH + duration / 60.0);
-                        final res = await _addBlock(
-                          startH,
-                          en,
-                          actName,
-                          selectedIdentity,
-                        );
-                        if (!ctx.mounted || !mounted) return;
-                        if (res != null) {
-                          setSheetState(() => errorMessage = res);
-                        } else {
-                          // Remove from dump if scheduled
-                          if (_dumpedTasks.contains(actName)) {
-                            setState(() => _dumpedTasks.remove(actName));
-                          }
-                          Navigator.pop(ctx);
-                          _showToast(
-                            '$actName berhasil dipasang di jam ${_formatHour(startH)}-${_formatHour(en)}',
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: tc.accent,
-                        foregroundColor: tc.bg,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.check_circle_outline_rounded,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Pasang ke Focus Clock',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: tc.bg,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             );
@@ -5456,6 +5584,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // ── Task & Habit Dump Section ─────────────────────────────────────────────
   Widget _buildTaskDumpSection(_HomeThemeColors tc) {
+    final state = widget.useSampleData
+        ? null
+        : ref.watch(eisenhowerTasksProvider);
+    final tasks = _inboxTasks;
+    final store = widget.useSampleData ? null : ref.read(taskRepoProvider).isar;
+    final unavailable =
+        !widget.useSampleData && (store == null || !store.isDurable);
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
@@ -5488,7 +5623,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '${_dumpedTasks.length} tugas',
+                  '${tasks.length} tugas',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -5569,7 +5704,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             style: TextStyle(fontSize: 11, color: tc.textSecondary),
           ),
           const SizedBox(height: 10),
-          if (_dumpedTasks.isEmpty)
+          if (unavailable)
+            const Text('Penyimpanan tugas tidak tersedia.')
+          else if (state?.isLoading == true)
+            const Text('Memuat tugas…')
+          else if (state?.hasError == true)
+            const Text('Gagal memuat tugas. Coba lagi.')
+          else if (tasks.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
@@ -5578,13 +5719,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
             )
           else
-            ..._dumpedTasks.map((task) => _buildDumpedTaskRow(task, tc)),
+            ...tasks.map((task) => _buildDumpedTaskRow(task, tc)),
         ],
       ),
     );
   }
 
-  Widget _buildDumpedTaskRow(String task, _HomeThemeColors tc) {
+  Widget _buildDumpedTaskRow(Task task, _HomeThemeColors tc) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -5599,7 +5740,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              task,
+              task.title,
               style: TextStyle(
                 fontSize: 13,
                 color: tc.textPrimary,
@@ -5610,26 +5751,21 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           const SizedBox(width: 6),
           // 1-Tap Quick Schedule Sekarang
           InkWell(
-            onTap: () async {
-              var nowHr = (_hourNow() * 2).floor() / 2.0;
-              var endHr = nowHr + 1.0;
-              if (endHr > 24.0) endHr = 24.0;
-              final err = await _addBlock(nowHr, endHr, task, null);
-              if (err != null) {
-                _showToast(err);
-                _openScheduleToClockSheet(
-                  title: task,
-                  initialDurationMinutes: 60,
-                );
-              } else {
-                setState(() {
-                  _dumpedTasks.remove(task);
-                });
-                _showToast(
-                  '"$task" dijadwalkan ${_formatHour(nowHr)} - ${_formatHour(endHr)}',
-                );
-              }
-            },
+            onTap: _inboxBusy.contains(task.id)
+                ? null
+                : () async {
+                    setState(() => _inboxBusy.add(task.id));
+                    final now = widget.now?.call() ?? DateTime.now();
+                    final start =
+                        (now.hour * 60 +
+                            now.minute +
+                            (now.second > 0 || now.millisecond > 0 ? 1 : 0)) /
+                        60.0;
+                    final err = await _scheduleInboxTask(task, start, 60, '');
+                    if (!mounted) return;
+                    setState(() => _inboxBusy.remove(task.id));
+                    _showToast(err ?? '"${task.title}" dijadwalkan');
+                  },
             borderRadius: BorderRadius.circular(8),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -5659,7 +5795,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           // Buka Popup Jadwal dengan task terpasang
           InkWell(
             onTap: () => _openScheduleToClockSheet(
-              title: task,
+              title: task.title,
+              inboxTask: task,
               initialDurationMinutes: 60,
               identity: '',
             ),
@@ -5695,10 +5832,29 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             icon: Icon(Icons.close_rounded, size: 16, color: tc.textSecondary),
             padding: const EdgeInsets.only(left: 4),
             constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-            onPressed: () {
-              setState(() => _dumpedTasks.remove(task));
-              _showToast('Tugas dihapus dari dump');
-            },
+            onPressed: _inboxBusy.contains(task.id)
+                ? null
+                : () async {
+                    setState(() => _inboxBusy.add(task.id));
+                    try {
+                      if (widget.useSampleData) {
+                        _dumpedTasks.removeWhere((t) => t.id == task.id);
+                      } else {
+                        final store = ref.read(taskRepoProvider).isar;
+                        if (store == null || !store.isDurable) {
+                          throw StateError('storage unavailable');
+                        }
+                        await ref.read(taskRepoProvider).delete(task.id);
+                      }
+                      if (mounted) _showToast('Tugas dihapus dari dump');
+                    } catch (_) {
+                      if (mounted) {
+                        _showToast('Gagal menghapus tugas. Coba lagi.');
+                      }
+                    } finally {
+                      if (mounted) setState(() => _inboxBusy.remove(task.id));
+                    }
+                  },
           ),
         ],
       ),
@@ -5707,58 +5863,104 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   void _openQuickDumpTaskDialog(_HomeThemeColors tc) {
     final ctrl = TextEditingController();
+    bool saving = false;
+    String? error;
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: tc.card,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: tc.stroke),
-        ),
-        title: Text(
-          'Catat Cepat ke Dump Inbox',
-          style: TextStyle(
-            color: tc.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          style: TextStyle(color: tc.textPrimary),
-          decoration: InputDecoration(
-            hintText: 'Nama kegiatan / habit / tugas...',
-            hintStyle: TextStyle(color: tc.textSecondary),
-            filled: true,
-            fillColor: tc.cardAlt,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: tc.stroke),
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => PopScope(
+          canPop: !saving,
+          child: AlertDialog(
+            backgroundColor: tc.card,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(color: tc.stroke),
             ),
+            title: Text(
+              'Catat Cepat ke Dump Inbox',
+              style: TextStyle(
+                color: tc.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            content: TextField(
+              controller: ctrl,
+              enabled: !saving,
+              autofocus: true,
+              style: TextStyle(color: tc.textPrimary),
+              decoration: InputDecoration(
+                errorText: error,
+                hintText: 'Nama kegiatan / habit / tugas...',
+                hintStyle: TextStyle(color: tc.textSecondary),
+                filled: true,
+                fillColor: tc.cardAlt,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: tc.stroke),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: saving ? null : () => Navigator.pop(ctx),
+                child: Text('Batal', style: TextStyle(color: tc.textSecondary)),
+              ),
+              ElevatedButton(
+                onPressed: saving
+                    ? null
+                    : () async {
+                        final t = ctrl.text.trim();
+                        if (t.isEmpty) return;
+                        setDialogState(() {
+                          saving = true;
+                          error = null;
+                        });
+                        try {
+                          if (widget.useSampleData) {
+                            setState(
+                              () => _dumpedTasks.insert(
+                                0,
+                                Task()
+                                  ..id = _nextId++
+                                  ..title = t
+                                  ..createdAt = DateTime.now(),
+                              ),
+                            );
+                          } else {
+                            final repo = ref.read(taskRepoProvider);
+                            if (repo.isar == null || !repo.isar!.isDurable) {
+                              throw StateError('storage unavailable');
+                            }
+                            await repo.add(
+                              Task()
+                                ..title = t
+                                ..createdAt = DateTime.now(),
+                            );
+                          }
+                          if (!ctx.mounted || !mounted) return;
+                          setDialogState(() => saving = false);
+                          Navigator.pop(ctx);
+                          _showToast('Tugas ditambahkan ke dump');
+                        } catch (_) {
+                          if (ctx.mounted) {
+                            setDialogState(() {
+                              saving = false;
+                              error = 'Gagal menyimpan. Coba lagi.';
+                            });
+                          }
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tc.accent,
+                  foregroundColor: tc.background,
+                ),
+                child: const Text('Simpan'),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Batal', style: TextStyle(color: tc.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final t = ctrl.text.trim();
-              if (t.isNotEmpty) {
-                setState(() => _dumpedTasks.insert(0, t));
-                Navigator.pop(ctx);
-                _showToast('Tugas ditambahkan ke dump');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: tc.accent,
-              foregroundColor: tc.background,
-            ),
-            child: const Text('Simpan'),
-          ),
-        ],
       ),
     );
   }

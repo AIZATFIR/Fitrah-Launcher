@@ -12,6 +12,7 @@ class TaskRepository {
   final FocusStore? isar;
 
   final List<Task> _memoryTasks = [];
+  int _nextMemoryId = 1;
   final StreamController<void> _memController =
       StreamController<void>.broadcast();
 
@@ -67,7 +68,7 @@ class TaskRepository {
   Future<int> add(Task task) async {
     if (isar == null) {
       task.createdAt = DateTime.now();
-      task.id = _memoryTasks.length + 1;
+      task.id = _nextMemoryId++;
       _memoryTasks.add(task);
       _memController.add(null);
       return task.id;
