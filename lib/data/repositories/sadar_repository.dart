@@ -280,6 +280,7 @@ class SadarRepository {
     int? valueCompleted,
     int? targetSnapshot,
     int? actualDurationMinutes,
+    bool preserveDuration = false,
     String? source,
     DateTime? completedAt,
     String? note,
@@ -311,7 +312,9 @@ class SadarRepository {
       entry.targetSnapshot = entry.targetSnapshot > 0
           ? entry.targetSnapshot
           : resolvedTargetSnapshot;
-      entry.actualDurationMinutes = resolvedActualDuration;
+      if (!preserveDuration || existing == null) {
+        entry.actualDurationMinutes = resolvedActualDuration;
+      }
       entry.completedAt = resolvedCompletedAt;
       entry.source = resolvedSource;
       if (note != null) entry.note = note;
@@ -341,7 +344,9 @@ class SadarRepository {
       entry.targetSnapshot = entry.targetSnapshot > 0
           ? entry.targetSnapshot
           : resolvedTargetSnapshot;
-      entry.actualDurationMinutes = resolvedActualDuration;
+      if (!preserveDuration || existing == null) {
+        entry.actualDurationMinutes = resolvedActualDuration;
+      }
       entry.completedAt = resolvedCompletedAt;
       entry.source = resolvedSource;
       if (note != null) entry.note = note;

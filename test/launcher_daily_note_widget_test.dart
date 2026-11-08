@@ -124,10 +124,20 @@ void main() {
     await tester.pumpWidget(home(const ValueKey('first')));
     await tester.pumpAndSettle();
     storage.writeGate = Completer<void>();
+    await tester.scrollUntilVisible(
+      note,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.enterText(note, 'saving');
     await tester.pump();
     await tester.pumpWidget(home(const ValueKey('second')));
     await tester.pump();
+    await tester.scrollUntilVisible(
+      note,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('saving'), findsOneWidget);
     expect(find.text('Menyimpan…'), findsOneWidget);
     expect(find.text('Gagal menyimpan'), findsNothing);
@@ -166,6 +176,11 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.scrollUntilVisible(
+      note,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(tester.widget<TextField>(note).enabled, isFalse);
     storage.readGate!.complete();
     await tester.pumpAndSettle();

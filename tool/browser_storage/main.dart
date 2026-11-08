@@ -88,6 +88,7 @@ Future<void> main() async {
           ...data.habitEntries.map(LiveModelCodec.encode),
           ...data.dailyReflections.map(LiveModelCodec.encode),
           ...data.timerSessions.map(LiveModelCodec.encode),
+          ...data.intentDocuments.map(LiveModelCodec.encode),
         ],
       };
     }
@@ -121,6 +122,7 @@ Future<void> main() async {
               await store.habitEntrys.putAll(data.habitEntries);
               await store.dailyReflections.putAll(data.dailyReflections);
               await store.timerSessions.putAll(data.timerSessions);
+              await store.focusIntentDocuments.putAll(data.intentDocuments);
             });
             await preferences.writeCustomKey(
               FocusClockBackupService.launcherSettingsKey,

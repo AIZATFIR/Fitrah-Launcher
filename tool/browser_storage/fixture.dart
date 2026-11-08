@@ -1,3 +1,5 @@
+import 'package:fitrah_launcher/domain/focus_intent.dart';
+import 'package:fitrah_launcher/models/focus_intent_document.dart';
 import 'package:fitrah_launcher/data/focus_clock_backup.dart';
 import 'package:fitrah_launcher/core/time_math.dart';
 import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
@@ -55,6 +57,20 @@ FocusClockBackupData browserFixture() {
   final timer = TimerSession()..updatedAt = DateTime.utc(2026, 11, 5);
 
   return FocusClockBackupData(
+    intentDocuments: [
+      FocusIntentDocument()
+        ..payload = IntentState(
+          sourceStoreId: '11111111-1111-4111-8111-111111111111',
+          legacyImported: true,
+          goals: [
+            const IntentGoal(
+              id: '22222222-2222-4222-8222-222222222222',
+              title: 'Durable browser goal',
+              pinned: true,
+            ),
+          ],
+        ).encode(),
+    ],
     presets: [preset],
     activities: [activity],
     appSettings: [settings],

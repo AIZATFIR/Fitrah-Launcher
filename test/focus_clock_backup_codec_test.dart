@@ -1,3 +1,5 @@
+import 'package:fitrah_launcher/domain/focus_intent.dart';
+import 'package:fitrah_launcher/models/focus_intent_document.dart';
 import 'dart:convert';
 
 import 'package:fitrah_launcher/data/focus_clock_backup.dart';
@@ -23,6 +25,16 @@ void main() {
           FocusClockBackupCodec.encode(data),
         );
 
+        final intent = IntentState.decode(
+          decoded.data.intentDocuments.single.payload,
+        );
+        expect(intent.sourceStoreId, '11111111-1111-4111-8111-111111111111');
+        expect(intent.pinnedGoal!.title, 'Long direction');
+        expect(
+          intent.selectionFor('2026-11-05')!.sourceId,
+          intent.sources.single.id,
+        );
+        expect(decoded.data.counts['Tujuan dan pilihan'], 1);
         expect(decoded.data.activities.single.id, 17);
         expect(decoded.data.habits.single.id, 23);
         expect(decoded.data.habitEntries.single.actualDurationSeconds, 91);
@@ -68,6 +80,43 @@ void main() {
         isEmpty,
       );
     });
+
+    test(
+      'v1/v2 without intent remain readable; v3 requires validated intent',
+      () {
+        final root =
+            jsonDecode(utf8.decode(FocusClockBackupCodec.encode(_sampleData())))
+                as Map<String, dynamic>;
+        root['data'].remove('intentDocuments');
+        for (final version in [1, 2]) {
+          root['formatVersion'] = version;
+          _refreshChecksum(root);
+          expect(
+            FocusClockBackupCodec.decode(
+              utf8.encode(jsonEncode(root)),
+            ).data.intentDocuments,
+            isEmpty,
+          );
+        }
+        root['formatVersion'] = 3;
+        _refreshChecksum(root);
+        expect(
+          () => FocusClockBackupCodec.decode(utf8.encode(jsonEncode(root))),
+          throwsFormatException,
+        );
+        root['data']['intentDocuments'] = [
+          {
+            'id': 1,
+            'state': {'version': 999},
+          },
+        ];
+        _refreshChecksum(root);
+        expect(
+          () => FocusClockBackupCodec.decode(utf8.encode(jsonEncode(root))),
+          throwsFormatException,
+        );
+      },
+    );
 
     test('backup collection lists cannot be structurally mutated', () {
       final data = _sampleData();
@@ -259,6 +308,41 @@ FocusClockBackupData _sampleData() {
   final timer = TimerSession()..updatedAt = DateTime.utc(2026, 11, 5);
 
   return FocusClockBackupData(
+    intentDocuments: [
+      FocusIntentDocument()
+        ..payload = IntentState(
+          sourceStoreId: '11111111-1111-4111-8111-111111111111',
+          legacyImported: true,
+          goals: [
+            const IntentGoal(
+              id: '22222222-2222-4222-8222-222222222222',
+              title: 'Long direction',
+              pinned: true,
+            ),
+          ],
+          sources: [
+            const IntentSource(
+              id: '33333333-3333-4333-8333-333333333333',
+              sourceStoreId: '11111111-1111-4111-8111-111111111111',
+              type: IntentSourceType.habit,
+              legacyId: 23,
+            ),
+          ],
+          links: [
+            const IntentLink(
+              sourceId: '33333333-3333-4333-8333-333333333333',
+              goalId: '22222222-2222-4222-8222-222222222222',
+            ),
+          ],
+          selections: [
+            TodaySelection(
+              localDate: '2026-11-05',
+              sourceId: '33333333-3333-4333-8333-333333333333',
+              chosenAtUtc: DateTime.utc(2026, 11, 5),
+            ),
+          ],
+        ).encode(),
+    ],
     presets: [preset],
     activities: [activity],
     appSettings: [settings],

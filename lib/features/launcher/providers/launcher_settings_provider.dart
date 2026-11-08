@@ -4,9 +4,10 @@ import '../models/launcher_settings.dart';
 
 class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
   LauncherSettingsNotifier(this._storage) : super(LauncherSettings()) {
-    _loadSettings();
+    hydration = _loadSettings();
   }
 
+  late final Future<void> hydration;
   final SecureStorageService _storage;
   static const _storageKey = 'fitrah_launcher_settings_v1';
   Future<void> _queue = Future.value();

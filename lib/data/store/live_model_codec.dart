@@ -1,3 +1,5 @@
+import '../../domain/focus_intent.dart';
+import '../../models/focus_intent_document.dart';
 // ignore_for_file: type_literal_in_constant_pattern
 import 'package:isar_community/isar.dart';
 import '../../core/time_math.dart';
@@ -21,6 +23,7 @@ class LiveModelCodec {
   }
 
   static String collectionFor<T>() => switch (T) {
+    FocusIntentDocument => 'FocusIntentDocument',
     Preset => 'Preset',
     Activity => 'Activity',
     AppSettings => 'AppSettings',
@@ -32,6 +35,7 @@ class LiveModelCodec {
     _ => throw ArgumentError('Unknown model $T'),
   };
   static int id(Object row) => switch (row) {
+    FocusIntentDocument x => x.id,
     Preset x => x.id,
     Activity x => x.id,
     AppSettings x => x.id,
@@ -45,6 +49,8 @@ class LiveModelCodec {
   static void setId(Object row, int id) {
     if (id != Isar.autoIncrement) validateId(id);
     switch (row) {
+      case FocusIntentDocument x:
+        x.id = id;
       case Preset x:
         x.id = id;
       case Activity x:
@@ -68,6 +74,10 @@ class LiveModelCodec {
 
   static Map<String, Object?> encode(Object row) {
     final data = switch (row) {
+      FocusIntentDocument x => <String, Object?>{
+        'id': x.id,
+        'payload': IntentState.decode(x.payload).encode(),
+      },
       Preset x => <String, Object?>{
         'id': x.id,
         'name': x.name,
@@ -228,6 +238,10 @@ class LiveModelCodec {
     }
     final m = envelope['data'] as Map<String, dynamic>;
     final Object result = switch (T) {
+      FocusIntentDocument =>
+        FocusIntentDocument()
+          ..id = _readInt(m['id'])
+          ..payload = IntentState.decode(m['payload'] as String).encode(),
       Preset =>
         Preset()
           ..id = _readInt(m['id'])

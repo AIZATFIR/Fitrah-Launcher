@@ -15,7 +15,7 @@ void roundtrip<T>(T value) {
 }
 
 void main() {
-  test('all eight live model types preserve every writable field', () {
+  test('all nine live model types preserve every writable field', () {
     final fixture = browserFixture();
     roundtrip(fixture.presets.single);
     roundtrip(fixture.activities.single);
@@ -25,6 +25,7 @@ void main() {
     roundtrip(fixture.habitEntries.single);
     roundtrip(fixture.dailyReflections.single);
     roundtrip(fixture.timerSessions.single);
+    roundtrip(fixture.intentDocuments.single);
     expect(
       (LiveModelCodec.encode(fixture.appSettings.single)['data'] as Map).length,
       27,

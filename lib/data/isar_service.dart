@@ -1,3 +1,4 @@
+import '../models/focus_intent_document.dart';
 import 'package:flutter/foundation.dart';
 import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
@@ -17,6 +18,7 @@ class IsarService {
   final Isar? isar;
 
   static List<CollectionSchema<dynamic>> get schemas => [
+    FocusIntentDocumentSchema,
     PresetSchema,
     ActivitySchema,
     AppSettingsSchema,

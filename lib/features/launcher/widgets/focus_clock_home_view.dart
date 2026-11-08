@@ -1,3 +1,4 @@
+import 'home_intent_cue.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -1091,6 +1092,33 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     _isFinishingTimer = false;
   }
 
+  Future<void> _openIntentTask(Task task) async {
+    if (task.activityId != null) {
+      final activity = await ref
+          .read(activityRepoProvider)
+          .get(task.activityId!);
+      if (activity == null) {
+        throw StateError(
+          'Jadwal tugas tidak tersedia. Buka Jadwal untuk memperbaikinya.',
+        );
+      }
+      if (!mounted) return;
+      _openBlockDetailSheet(_blocksFromActivities([activity]).single);
+      return;
+    }
+    if (task.startMinute != null && task.endMinute != null) {
+      final date = task.date;
+      if (date == null) {
+        throw StateError('Tanggal jadwal tugas tidak tersedia.');
+      }
+      ref.read(currentDateProvider.notifier).state = dateOnly(date);
+      ref.read(ampmHalfProvider.notifier).state = task.ampmHalf;
+      widget.onOpenFocusClock();
+      return;
+    }
+    _openScheduleToClockSheet(inboxTask: task, title: task.title);
+  }
+
   void _openHabitFocusTimer(Habit habit) {
     unawaited(
       Navigator.of(context).push<void>(
@@ -1207,7 +1235,18 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
               children: [
-                _buildFocusGoalCue(settings.focusGoal, tc),
+                widget.useSampleData
+                    ? _buildFocusGoalCue(settings.focusGoal, tc)
+                    : HomeIntentCue(
+                        foreground: tc.textPrimary,
+                        secondary: tc.textSecondary,
+                        accent: tc.accent,
+                        surface: tc.card,
+                        onHabitTimer: _openHabitFocusTimer,
+                        onTaskSchedule: _openIntentTask,
+                        onSession: () =>
+                            setState(() => _currentScreen = 'timer'),
+                      ),
                 const SizedBox(height: 18),
                 // ── Top Header Bar (Now/Next Carousel or Prayer Timeline) ──
                 _buildTopHeaderBar(prayers, nextPrayer, tc, activitiesState),

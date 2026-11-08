@@ -1,3 +1,6 @@
+import 'package:uuid/uuid.dart';
+import '../domain/focus_intent.dart';
+import '../models/focus_intent_document.dart';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -42,6 +45,7 @@ class FocusClockBackupService {
         habitEntries: await db.habitEntrys.all(),
         dailyReflections: await db.dailyReflections.all(),
         timerSessions: await db.timerSessions.all(),
+        intentDocuments: await db.focusIntentDocuments.all(),
       ),
     );
     return FocusClockBackupData(
@@ -53,6 +57,7 @@ class FocusClockBackupService {
       habitEntries: snapshot.habitEntries,
       dailyReflections: snapshot.dailyReflections,
       timerSessions: snapshot.timerSessions,
+      intentDocuments: snapshot.intentDocuments,
       launcherSettings: launcherSettings,
     );
   }
@@ -75,6 +80,42 @@ class FocusClockBackupService {
     );
     final currentSettings = oldData.appSettings.single;
     final incoming = backup.data;
+    // Old backups predate the aggregate. Import their own cue atomically so an
+    // already mounted Home cannot import the pre-restore preference value.
+    final legacyTitle = incoming.launcherSettings.focusGoal.trim();
+    final legacyStoreId = const Uuid().v5(
+      Namespace.url.value,
+      'focus-clock/legacy-backup/${backup.exportedAtUtc.toIso8601String()}/${backup.payloadChecksum}',
+    );
+    final legacyGoalId = const Uuid().v5(legacyStoreId, 'goal/focusGoal');
+    final restoredIntents = incoming.intentDocuments.isNotEmpty
+        ? incoming.intentDocuments
+        : [
+            FocusIntentDocument()
+              ..payload = IntentState(
+                sourceStoreId: legacyStoreId,
+                legacyImported: true,
+                goals: legacyTitle.isEmpty
+                    ? []
+                    : [
+                        IntentGoal(
+                          id: legacyGoalId,
+                          title: legacyTitle,
+                          pinned: true,
+                        ),
+                      ],
+                legacyMappings: legacyTitle.isEmpty
+                    ? []
+                    : [
+                        IntentLegacyMapping(
+                          sourceStoreId: legacyStoreId,
+                          entityType: 'goal',
+                          legacyId: 'focusGoal',
+                          stableId: legacyGoalId,
+                        ),
+                      ],
+              ).encode(),
+          ];
 
     // Credentials are local configuration and are intentionally excluded from
     // the file. Keep the current install's values when restoring preferences.
@@ -96,6 +137,7 @@ class FocusClockBackupService {
           habitEntries: incoming.habitEntries,
           dailyReflections: incoming.dailyReflections,
           timerSessions: incoming.timerSessions,
+          intentDocuments: restoredIntents,
         );
       });
       databaseCommitted = true;
@@ -119,6 +161,7 @@ class FocusClockBackupService {
               habitEntries: oldData.habitEntries,
               dailyReflections: oldData.dailyReflections,
               timerSessions: oldData.timerSessions,
+              intentDocuments: oldData.intentDocuments,
             );
           });
         }
@@ -195,6 +238,7 @@ class FocusClockBackupService {
     required List<dynamic> habitEntries,
     required List<dynamic> dailyReflections,
     required List<dynamic> timerSessions,
+    required List<dynamic> intentDocuments,
   }) async {
     await db.clear();
     await db.presets.putAll(presets.cast());
@@ -205,5 +249,6 @@ class FocusClockBackupService {
     await db.habitEntrys.putAll(habitEntries.cast());
     await db.dailyReflections.putAll(dailyReflections.cast());
     await db.timerSessions.putAll(timerSessions.cast());
+    await db.focusIntentDocuments.putAll(intentDocuments.cast());
   }
 }

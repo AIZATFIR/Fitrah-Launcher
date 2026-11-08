@@ -1,3 +1,4 @@
+import '../../models/focus_intent_document.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -24,6 +25,7 @@ abstract class FocusStore {
   Future<void> close();
 
   FocusCollection<T> collection<T>() => FocusCollection<T>(this);
+  FocusCollection<FocusIntentDocument> get focusIntentDocuments => collection();
   FocusCollection<Preset> get presets => collection();
   FocusCollection<Activity> get activitys => collection();
   FocusCollection<AppSettings> get appSettings => collection();

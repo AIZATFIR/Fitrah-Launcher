@@ -1,3 +1,4 @@
+import '../../models/focus_intent_document.dart';
 import 'dart:async';
 import 'package:isar_community/isar.dart';
 import 'focus_store.dart';
@@ -34,6 +35,7 @@ class NativeFocusStore extends FocusStore {
   Stream<void> watch() async* {
     final controller = StreamController<void>();
     final subscriptions = <StreamSubscription<void>>[
+      isar.focusIntentDocuments.watchLazy().listen((_) => controller.add(null)),
       isar.presets.watchLazy().listen((_) => controller.add(null)),
       isar.activitys.watchLazy().listen((_) => controller.add(null)),
       isar.appSettings.watchLazy().listen((_) => controller.add(null)),

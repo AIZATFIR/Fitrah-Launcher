@@ -1,3 +1,4 @@
+import 'package:fitrah_launcher/providers/intent_providers.dart';
 import 'dart:async';
 
 import 'package:fitrah_launcher/data/store/focus_store.dart';
@@ -25,6 +26,7 @@ void main() {
       ProviderScope(
         overrides: [
           focusStoreProvider.overrideWithValue(store),
+          intentInitializationProvider.overrideWith((ref) async {}),
           if (tasks != null)
             eisenhowerTasksProvider.overrideWith((ref) => tasks),
           if (notifications != null)

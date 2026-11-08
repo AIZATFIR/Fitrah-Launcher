@@ -1,3 +1,7 @@
+import 'package:fitrah_launcher/data/repositories/intent_repository.dart';
+import 'package:fitrah_launcher/data/store/native_focus_store.dart';
+import 'package:fitrah_launcher/domain/focus_intent.dart';
+import 'package:fitrah_launcher/models/focus_intent_document.dart';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'dart:io';
@@ -70,10 +74,16 @@ void main() {
       await db.habits.put(oldHabit);
     });
 
+    final intentRow = FocusIntentDocument()
+      ..payload = IntentState(
+        sourceStoreId: '11111111-1111-4111-8111-111111111111',
+        legacyImported: true,
+      ).encode();
     final incomingSettings = AppSettings()
       ..aiApiKey = 'should-not-import'
       ..aiBaseUrl = 'https://remote-provider.example';
     final backupData = FocusClockBackupData(
+      intentDocuments: [intentRow],
       presets: [],
       activities: [],
       appSettings: [incomingSettings],
@@ -115,7 +125,8 @@ void main() {
       ).focusGoal,
       'Menang LKS',
     );
-    expect(parsed.formatVersion, 2);
+    expect((await db.focusIntentDocuments.get(1))!.payload, intentRow.payload);
+    expect(parsed.formatVersion, 3);
     expect(
       LauncherSettings.fromJson(
         secureStorage.values[FocusClockBackupService.launcherSettingsKey]!,
@@ -126,6 +137,54 @@ void main() {
     expect(settingsNotifier.state.focusGoal, 'Menang LKS');
     settingsNotifier.dispose();
   });
+
+  test(
+    'restoring v1/v2 refreshes mounted intent stream with restored legacy cue exactly once',
+    () async {
+      final db = store.isar!;
+      final repo = IntentRepository(NativeFocusStore(db));
+      await repo.importLegacy('Before restore');
+      final incoming = FocusClockBackupData(
+        presets: [],
+        activities: [],
+        appSettings: [AppSettings()],
+        tasks: [],
+        habits: [],
+        habitEntries: [],
+        dailyReflections: [],
+        timerSessions: [],
+        launcherSettings: LauncherSettings(focusGoal: 'Restored legacy'),
+      );
+      final rootMap =
+          jsonDecode(utf8.decode(FocusClockBackupCodec.encode(incoming)))
+              as Map<String, dynamic>;
+      rootMap['formatVersion'] = 2;
+      rootMap['data'].remove('intentDocuments');
+      rootMap['checksum'] = FocusClockBackupCodec.checksumFor(rootMap['data']);
+      final backup = FocusClockBackupCodec.decode(
+        utf8.encode(jsonEncode(rootMap)),
+      );
+      final observed = repo.watch().firstWhere(
+        (s) => s.pinnedGoal?.title == 'Restored legacy',
+      );
+      final service = FocusClockBackupService(
+        isar: db,
+        secureStorage: secureStorage,
+        supportDirectory: () async => root,
+      );
+      await service.restore(backup);
+      final visible = await observed.timeout(const Duration(seconds: 5));
+      expect(visible.legacyImported, true);
+      expect(visible.legacyMappings.single.stableId, visible.goals.single.id);
+      final reopened = await repo.importLegacy('Before restore');
+      expect(reopened.goals.single.id, visible.goals.single.id);
+      expect(reopened.goals.single.title, 'Restored legacy');
+      await service.restore(backup);
+      final repeated = await repo.read();
+      expect(repeated.sourceStoreId, visible.sourceStoreId);
+      expect(repeated.goals.single.id, visible.goals.single.id);
+    },
+  );
 
   test('Isar rolls back a failed multi-collection write transaction', () async {
     final db = store.isar!;
@@ -160,6 +219,12 @@ void main() {
         ..colorValue = 0xff123456
         ..createdAt = DateTime.utc(2026);
       await db.writeTxn(() => db.habits.put(oldHabit));
+      final oldIntent = FocusIntentDocument()
+        ..payload = IntentState(
+          sourceStoreId: '22222222-2222-4222-8222-222222222222',
+          legacyImported: true,
+        ).encode();
+      await db.writeTxn(() => db.focusIntentDocuments.put(oldIntent));
       final oldSettings =
           secureStorage.values[FocusClockBackupService.launcherSettingsKey];
       secureStorage.failNextLauncherWrite = true;
@@ -193,6 +258,14 @@ void main() {
 
       await expectLater(service.restore(parsed), throwsA(isA<StateError>()));
 
+      expect(
+        (await db.focusIntentDocuments.get(1))!.payload,
+        oldIntent.payload,
+      );
+      final recovery = FocusClockBackupCodec.decode(
+        (await service.latestRecoveryBytes())!,
+      );
+      expect(recovery.data.intentDocuments.single.payload, oldIntent.payload);
       expect((await db.habits.where().findAll()).map((x) => x.id), [12]);
       expect(
         secureStorage.values[FocusClockBackupService.launcherSettingsKey],

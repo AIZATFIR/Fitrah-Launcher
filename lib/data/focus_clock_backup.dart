@@ -1,3 +1,5 @@
+import '../models/focus_intent_document.dart';
+import '../domain/focus_intent.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -27,6 +29,7 @@ class FocusClockBackupData {
     required List<DailyReflection> dailyReflections,
     required List<TimerSession> timerSessions,
     required this.launcherSettings,
+    List<FocusIntentDocument> intentDocuments = const [],
   }) : presets = List.unmodifiable(presets),
        activities = List.unmodifiable(activities),
        appSettings = List.unmodifiable(appSettings),
@@ -34,7 +37,8 @@ class FocusClockBackupData {
        habits = List.unmodifiable(habits),
        habitEntries = List.unmodifiable(habitEntries),
        dailyReflections = List.unmodifiable(dailyReflections),
-       timerSessions = List.unmodifiable(timerSessions);
+       timerSessions = List.unmodifiable(timerSessions),
+       intentDocuments = List.unmodifiable(intentDocuments);
 
   final List<Preset> presets;
   final List<Activity> activities;
@@ -45,6 +49,7 @@ class FocusClockBackupData {
   final List<DailyReflection> dailyReflections;
   final List<TimerSession> timerSessions;
   final LauncherSettings launcherSettings;
+  final List<FocusIntentDocument> intentDocuments;
 
   Map<String, int> get counts => {
     'Presets': presets.length,
@@ -55,6 +60,7 @@ class FocusClockBackupData {
     'Refleksi': dailyReflections.length,
     'Preferensi': appSettings.length,
     'Sesi timer': timerSessions.length,
+    'Tujuan dan pilihan': intentDocuments.length,
   };
 }
 
@@ -63,11 +69,13 @@ class DecodedFocusClockBackup {
     required this.data,
     required this.exportedAtUtc,
     required this.formatVersion,
+    required this.payloadChecksum,
   });
 
   final FocusClockBackupData data;
   final DateTime exportedAtUtc;
   final int formatVersion;
+  final String payloadChecksum;
 }
 
 /// Portable, explicit JSON format. Never use Isar generated serializers here:
@@ -75,7 +83,7 @@ class DecodedFocusClockBackup {
 class FocusClockBackupCodec {
   FocusClockBackupCodec._();
 
-  static const currentFormatVersion = 2;
+  static const currentFormatVersion = 3;
   static const sourceApp = 'focus-clock';
 
   /// Copy an app-owned Isar model before applying installation-only values.
@@ -130,11 +138,14 @@ class FocusClockBackupCodec {
           'Checksum tidak cocok; file mungkin rusak.',
         );
       }
-      if (version == 2) {
+      if (version >= 2) {
         final launcher = _map(payload['launcherSettings'], 'launcherSettings');
         if (launcher['dailyNotes'] is! Map) {
           throw const FormatException('Invalid daily notes');
         }
+      }
+      if (version >= 3 && payload['intentDocuments'] is! List) {
+        throw const FormatException('Missing intent documents');
       }
       final data = _fromJson(payload);
       _validate(data);
@@ -142,6 +153,7 @@ class FocusClockBackupCodec {
         data: data,
         exportedAtUtc: exportedAtUtc,
         formatVersion: version,
+        payloadChecksum: expected,
       );
     } on UnsupportedError {
       rethrow;
@@ -156,6 +168,11 @@ class FocusClockBackupCodec {
       sha256.convert(utf8.encode(jsonEncode(_canonical(value)))).toString();
 
   static Map<String, dynamic> _toJson(FocusClockBackupData d) => {
+    'intentDocuments': d.intentDocuments
+        .map(
+          (x) => {'id': x.id, 'state': IntentState.decode(x.payload).toJson()},
+        )
+        .toList(),
     'presets': d.presets
         .map(
           (x) => {
@@ -338,6 +355,17 @@ class FocusClockBackupCodec {
 
   static FocusClockBackupData _fromJson(Map<String, dynamic> map) {
     return FocusClockBackupData(
+      intentDocuments: map.containsKey('intentDocuments')
+          ? _list(
+              map,
+              'intentDocuments',
+              (m) => FocusIntentDocument()
+                ..id = _int(m['id'], 'intentDocuments.id')
+                ..payload = IntentState.fromJson(
+                  _map(m['state'], 'intent state'),
+                ).encode(),
+            )
+          : const [],
       presets: _list(
         map,
         'presets',
@@ -620,6 +648,13 @@ class FocusClockBackupCodec {
   }
 
   static void _validate(FocusClockBackupData d) {
+    if (d.intentDocuments.length > 1 ||
+        d.intentDocuments.any((x) => x.id != 1)) {
+      throw const FormatException('Invalid intent singleton');
+    }
+    for (final row in d.intentDocuments) {
+      IntentState.decode(row.payload);
+    }
     LauncherSettings.decodeDailyNotes(d.launcherSettings.dailyNotes);
     _unique(d.presets.map((x) => x.id), 'presets');
     _unique(d.activities.map((x) => x.id), 'activities');

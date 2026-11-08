@@ -1,3 +1,6 @@
+import '../../core/time_math.dart';
+import '../../providers/providers.dart';
+import '../../providers/intent_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,20 +10,19 @@ import 'widgets/focus_clock_home_view.dart';
 import 'widgets/minimalist_app_drawer.dart';
 
 class FitrahLauncherShell extends ConsumerStatefulWidget {
-  const FitrahLauncherShell({
-    super.key,
-    this.onExitLauncher,
-  });
+  const FitrahLauncherShell({super.key, this.onExitLauncher});
 
   final VoidCallback? onExitLauncher;
 
   @override
-  ConsumerState<FitrahLauncherShell> createState() => _FitrahLauncherShellState();
+  ConsumerState<FitrahLauncherShell> createState() =>
+      _FitrahLauncherShellState();
 }
 
 class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
   late final PageController _pageCtrl;
-  int _currentPage = 1; // 0 = Focus Clock Face, 1 = Home (Center), 2 = Minimalist App Drawer
+  int _currentPage =
+      1; // 0 = Focus Clock Face, 1 = Home (Center), 2 = Minimalist App Drawer
 
   @override
   void initState() {
@@ -65,16 +67,22 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0x00000000),
-                Color(0x1A000000),
-              ],
+              colors: [Color(0x00000000), Color(0x1A000000)],
             ),
           ),
           child: PageView(
             controller: _pageCtrl,
-            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-            onPageChanged: (page) => setState(() => _currentPage = page),
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
+            onPageChanged: (page) {
+              if (page == 1) {
+                final now = ref.read(intentNowProvider);
+                ref.read(currentDateProvider.notifier).state = dateOnly(now);
+                ref.read(ampmHalfProvider.notifier).state = halfOfNow(now);
+              }
+              setState(() => _currentPage = page);
+            },
             children: [
               // Page 0 (Slide Left): Full Focus Clock Face
               Center(
