@@ -153,49 +153,49 @@ void main() {
       expect(find.text('LKS ITSSB'), findsOneWidget);
     });
 
-    testWidgets('Starting preset timer stays open when completion cannot be stored', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'Starting preset timer stays open when completion cannot be stored',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pump();
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
 
-      // Find first play arrow button in presets
-      final playBtn = find.byKey(const ValueKey('preset_play_1'));
-      final homeList = find.byType(ListView).first;
-      final homeScrollable = find.descendant(
-        of: homeList,
-        matching: find.byType(Scrollable),
-      ).first;
-      await tester.scrollUntilVisible(
-        playBtn,
-        300,
-        scrollable: homeScrollable,
-      );
-      await tester.drag(homeList, const Offset(0, -100));
-      await tester.pumpAndSettle();
-      await tester.tap(playBtn);
-      await tester.pumpAndSettle();
+        // Find first play arrow button in presets
+        final playBtn = find.byKey(const ValueKey('preset_play_1'));
+        final homeList = find.byType(ListView).first;
+        final homeScrollable = find
+            .descendant(of: homeList, matching: find.byType(Scrollable))
+            .first;
+        await tester.scrollUntilVisible(
+          playBtn,
+          300,
+          scrollable: homeScrollable,
+        );
+        await tester.drag(homeList, const Offset(0, -100));
+        await tester.pumpAndSettle();
+        await tester.tap(playBtn);
+        await tester.pumpAndSettle();
 
-      // Should be on Timer screen
-      expect(
-        find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'),
-        findsOneWidget,
-      );
-      expect(find.text('Selesai sekarang'), findsOneWidget);
-      expect(find.text('Batalkan timer'), findsOneWidget);
+        // Should be on Timer screen
+        expect(
+          find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'),
+          findsOneWidget,
+        );
+        expect(find.text('Selesai sekarang'), findsOneWidget);
+        expect(find.text('Batalkan timer'), findsOneWidget);
 
-      // Empty test storage cannot commit this preset; keep it available to retry.
-      await tester.tap(find.text('Selesai sekarang'));
-      await tester.pumpAndSettle();
+        // Empty test storage cannot commit this preset; keep it available to retry.
+        await tester.tap(find.text('Selesai sekarang'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Selesai sekarang'), findsOneWidget);
-      expect(find.text('Batalkan timer'), findsOneWidget);
-    });
+        expect(find.text('Selesai sekarang'), findsOneWidget);
+        expect(find.text('Batalkan timer'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'Renders Habits section with done toggle and 5-action popover',
@@ -209,7 +209,10 @@ void main() {
         await tester.pump();
 
         for (int i = 0; i < 6; i++) {
-          if (find.text('Deep Coding & Refactoring 30m').evaluate().isNotEmpty) {
+          if (find
+              .text('Deep Coding & Refactoring 30m')
+              .evaluate()
+              .isNotEmpty) {
             break;
           }
           await tester.drag(find.byType(ListView).first, const Offset(0, -400));
@@ -309,6 +312,55 @@ void main() {
 
         // New identity card block should be rendered
         expect(find.text('Identitas: Penulis'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'late preview defaults to tomorrow and retains unsupported task',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: FocusClockHomeView(
+                onOpenFocusClock: () {},
+                onOpenAppDrawer: () {},
+                useSampleData: true,
+                now: () => DateTime(2026, 11, 7, 23, 59, 30),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        for (
+          var i = 0;
+          i < 6 && find.text('Task & Habit Dump (Inbox)').evaluate().isEmpty;
+          i++
+        ) {
+          await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.text('Pasang').first);
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<RangeSlider>(find.byType(RangeSlider)).values.start,
+          24,
+        );
+        await tester.ensureVisible(
+          find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'),
+        );
+        await tester.tap(
+          find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Pratinjau belum mendukung jadwal melewati tengah malam.'),
+          findsOneWidget,
+        );
+        expect(find.text('Selesaikan modul UI Focus Clock'), findsWidgets);
       },
     );
 
