@@ -20,7 +20,9 @@ class FitrahLauncherShell extends ConsumerStatefulWidget {
 }
 
 class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
+  static const _homeChannel = MethodChannel('fitrah_launcher/home');
   late final PageController _pageCtrl;
+  bool _returningHome = false;
   int _currentPage =
       1; // 0 = Focus Clock Face, 1 = Home (Center), 2 = Minimalist App Drawer
 
@@ -28,12 +30,55 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
   void initState() {
     super.initState();
     _pageCtrl = PageController(initialPage: 1);
+    _homeChannel.setMethodCallHandler((call) async {
+      if (call.method == 'home') await _returnHome();
+    });
   }
 
   @override
   void dispose() {
+    _homeChannel.setMethodCallHandler(null);
     _pageCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _returnHome() async {
+    if (!mounted || _returningHome) return;
+    _returningHome = true;
+    try {
+      FocusManager.instance.primaryFocus?.unfocus();
+      final navigator = Navigator.of(context);
+      final shellRoute = ModalRoute.of(context);
+      Route<dynamic>? topRoute() {
+        Route<dynamic>? top;
+        navigator.popUntil((route) {
+          top = route;
+          return true;
+        });
+        return top;
+      }
+
+      var top = topRoute();
+      while (mounted && navigator.mounted && top != shellRoute) {
+        if (top == null || !await navigator.maybePop()) return;
+        if (!mounted || !navigator.mounted) return;
+        final next = topRoute();
+        // A PopScope guard (or local history) kept this route: stop here.
+        if (next == top) return;
+        top = next;
+      }
+      if (!mounted) return;
+      _refreshHomeDate();
+      if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(1);
+    } finally {
+      _returningHome = false;
+    }
+  }
+
+  void _refreshHomeDate() {
+    final now = ref.read(intentNowProvider);
+    ref.read(currentDateProvider.notifier).state = dateOnly(now);
+    ref.read(ampmHalfProvider.notifier).state = halfOfNow(now);
   }
 
   void _goToPage(int page) {
@@ -76,11 +121,8 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             onPageChanged: (page) {
-              if (page == 1) {
-                final now = ref.read(intentNowProvider);
-                ref.read(currentDateProvider.notifier).state = dateOnly(now);
-                ref.read(ampmHalfProvider.notifier).state = halfOfNow(now);
-              }
+              if (!mounted) return;
+              if (page == 1) _refreshHomeDate();
               setState(() => _currentPage = page);
             },
             children: [
