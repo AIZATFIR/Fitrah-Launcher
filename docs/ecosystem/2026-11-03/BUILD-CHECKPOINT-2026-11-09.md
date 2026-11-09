@@ -30,3 +30,18 @@ The directory also contains `BUILD-MANIFEST.json`, `SHA256SUMS`, and `CHECKPOINT
 Browser runtime, physical Android installation, TalkBack and daily-device upgrade were not verified. Native schema compatibility was exercised with a synthetic previous-schema database, not the owner's daily data. Android retains debug signing; this is a personal preview, not a stable public signing arrangement. Web is JavaScript, not Wasm, and must be served through a web server.
 
 Terminal session history, complete progression/hybrid execution, launcher capability handling, cross-device handoff, AI planning, WhatsApp, MCP and public release remain open. Refer to [BUILD-ROADMAP](BUILD-ROADMAP.md); these artifacts do not prove completion of those requirements.
+
+## Subsequent Home-actions checkpoint — c8b1087
+
+The newer local preview uses source `c8b10871348b54d85e179b6c41b3160af8834b62`, including the Home habit-action fixes and both review corrections. A note no longer completes a habit; count totals retain the stored target and measured time. Failed editors keep input; all Play buttons check today's selected date. Unknown types receive generic details without invented hybrid sets.
+
+Evidence: 76 affected tests passed after review, with a final expanded 9-test grid rerun. Analyzer clean (74.6 seconds); web JavaScript release compiled (75.7 seconds); arm64 Android release compiled (145.6 seconds) from the isolated exact archive. This revision's full suite was not rerun; the 193-test full result above belongs to `76c0c9c`. Package inspection confirms versionCode **9**, versionName **0.5.3**, the same application ID/SDKs and signing certificate, unchanged dependency lock, arm64 application binary and `libisar.so` LOAD alignment `0x4000`.
+
+Latest local artifacts are under `release_dist/2026-11-09-c8b1087/`, with manifest, checksum list and checkpoint notes:
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `Focus-Clock-c8b1087-Android-arm64-preview.apk` | 28,808,737 | `aa5e2e87b73b8c4b4032195cb4f74609c44dc5b70ff9f903daa3b1fd42bceebc` |
+| `Focus-Clock-c8b1087-Web-preview.zip` | 13,902,649 | `9ec9a4e5ed97887b47b87782127581355f1a7a6ff76381ecd9a18c8be4450272` |
+
+Local preview server serves `/tmp/focus-clock-home-actions-final-web` at `127.0.0.1:4174`; the listener was verified. This does not prove rendered browser behavior. No GitHub release or production deployment was made. The runtime/device/TalkBack and wider ecosystem limits above still apply.
