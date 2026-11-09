@@ -66,11 +66,10 @@ class _QuickActionSheetState extends ConsumerState<QuickActionSheet> {
   Future<void> _saveNote() async {
     HapticFeedback.lightImpact();
     final text = _noteCtrl.text.trim();
-    await ref.read(sadarRepoProvider).recordEntryStatus(
+    await ref.read(sadarRepoProvider).updateHabitEntryNote(
       habitId: widget.habit.id,
       dateString: _dateStr,
-      status: widget.existingEntry?.status ?? HabitStatus.unmarked,
-      note: text.isEmpty ? null : text,
+      note: text,
     );
     setState(() => _isEditingNote = false);
   }

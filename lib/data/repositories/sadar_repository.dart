@@ -285,77 +285,117 @@ class SadarRepository {
     DateTime? completedAt,
     String? note,
   }) async {
-    final now = DateTime.now();
-    final habit = await getHabitById(habitId);
-    final resolvedTargetSnapshot = targetSnapshot ?? habit?.target ?? 0;
-    final resolvedActualDuration =
-        actualDurationMinutes ??
-        valueCompleted ??
-        (status == HabitStatus.yes ? resolvedTargetSnapshot : 0);
-    final resolvedSource = source ?? 'manual';
-    final resolvedCompletedAt =
-        completedAt ?? (status == HabitStatus.yes ? now : null);
+    if (actualDurationMinutes != null && actualDurationMinutes < 0) {
+      throw ArgumentError('Negative duration');
+    }
+    return _mutateHabitEntry(habitId, dateString, (entry, habit, isNew) {
+      _retainLegacyTimerSeconds(entry);
+      entry.status = status;
+      if (valueCompleted != null) entry.valueCompleted = valueCompleted;
+      if (entry.targetSnapshot <= 0) {
+        entry.targetSnapshot = targetSnapshot ?? habit?.target ?? 0;
+      }
+      if ((!preserveDuration || isNew) && actualDurationMinutes != null) {
+        entry.actualDurationMinutes = actualDurationMinutes;
+      }
+      entry.completedAt =
+          completedAt ?? (status == HabitStatus.yes ? DateTime.now() : null);
+      entry.source = source ?? 'manual';
+      if (note != null) entry.note = note;
+    });
+  }
 
-    if (_isar == null) {
+  void _retainLegacyTimerSeconds(HabitEntry entry) {
+    // Retain recoverable timer evidence before a manual edit changes its source.
+    if (entry.source == 'timer' &&
+        entry.actualDurationSeconds == 0 &&
+        entry.actualDurationMinutes > 0) {
+      entry.actualDurationSeconds = entry.actualDurationMinutes * 60;
+    }
+  }
+
+  Future<HabitEntry> _mutateHabitEntry(
+    int habitId,
+    String dateString,
+    void Function(HabitEntry entry, Habit? habit, bool isNew) mutate,
+  ) async {
+    Future<HabitEntry> write() async {
+      final habit = await getHabitById(habitId);
       final key = '$habitId-$dateString';
-      final existing = _memEntries[key];
+      final existing = _isar == null
+          ? _memEntries[key]
+          : await _isar.habitEntrys
+                .select(
+                  where: (x) =>
+                      x.habitId == habitId && x.dateString == dateString,
+                )
+                .findFirst();
+      final now = DateTime.now();
       final entry =
           existing ??
           (HabitEntry()
-            ..id = _memEntryIdCounter++
             ..habitId = habitId
             ..dateString = dateString
             ..createdAt = now);
-
-      entry.status = status;
-      if (valueCompleted != null) entry.valueCompleted = valueCompleted;
-      entry.targetSnapshot = entry.targetSnapshot > 0
-          ? entry.targetSnapshot
-          : resolvedTargetSnapshot;
-      if (!preserveDuration || existing == null) {
-        entry.actualDurationMinutes = resolvedActualDuration;
-      }
-      entry.completedAt = resolvedCompletedAt;
-      entry.source = resolvedSource;
-      if (note != null) entry.note = note;
+      mutate(entry, habit, existing == null);
       entry.updatedAt = now;
-
-      _memEntries[key] = entry;
-      _entriesStreamCtrl.add(null);
+      if (_isar == null) {
+        if (existing == null) entry.id = _memEntryIdCounter++;
+        _memEntries[key] = entry;
+        _entriesStreamCtrl.add(null);
+      } else {
+        await _isar.habitEntrys.put(entry);
+      }
       return entry;
     }
 
-    return _isar.writeTxn(() async {
-      final existing = await _isar.habitEntrys
-          .select(
-            where: (x) => x.habitId == habitId && x.dateString == dateString,
-          )
-          .findFirst();
-
-      final entry =
-          existing ??
-          (HabitEntry()
-            ..habitId = habitId
-            ..dateString = dateString
-            ..createdAt = now);
-
-      entry.status = status;
-      if (valueCompleted != null) entry.valueCompleted = valueCompleted;
-      entry.targetSnapshot = entry.targetSnapshot > 0
-          ? entry.targetSnapshot
-          : resolvedTargetSnapshot;
-      if (!preserveDuration || existing == null) {
-        entry.actualDurationMinutes = resolvedActualDuration;
-      }
-      entry.completedAt = resolvedCompletedAt;
-      entry.source = resolvedSource;
-      if (note != null) entry.note = note;
-      entry.updatedAt = now;
-
-      await _isar.habitEntrys.put(entry);
-      return entry;
-    });
+    return _isar == null ? write() : _isar.writeTxn(write);
   }
+
+  Future<HabitEntry> updateHabitEntryNote({
+    required int habitId,
+    required String dateString,
+    required String note,
+  }) => _mutateHabitEntry(habitId, dateString, (entry, habit, isNew) {
+    if (isNew && habit == null) throw StateError('Habit tidak tersedia.');
+    entry.note = note;
+  });
+
+  Future<HabitEntry> setHabitCount({
+    required int habitId,
+    required String dateString,
+    required int value,
+  }) async {
+    if (value < 0 || value > 9999) {
+      throw ArgumentError('Masukkan jumlah 0–9999.');
+    }
+    return _writeHabitCount(habitId, dateString, (_) => value);
+  }
+
+  Future<HabitEntry> _writeHabitCount(
+    int habitId,
+    String dateString,
+    int Function(int) nextValue,
+  ) => _mutateHabitEntry(habitId, dateString, (entry, habit, isNew) {
+    if (habit == null ||
+        habit.isArchived ||
+        habit.habitType == 'progression' ||
+        habit.habitType == 'hybrid' ||
+        habit.habitType == 'binary' ||
+        (habit.habitType != 'count' && habit.unit != HabitUnit.count) ||
+        habit.unit == HabitUnit.binary) {
+      throw StateError('Habit jumlah tidak tersedia.');
+    }
+    final value = nextValue(entry.valueCompleted);
+    _retainLegacyTimerSeconds(entry);
+    if (entry.targetSnapshot <= 0) entry.targetSnapshot = habit.target;
+    entry.valueCompleted = value;
+    entry.status = entry.targetSnapshot > 0 && value >= entry.targetSnapshot
+        ? HabitStatus.yes
+        : HabitStatus.unmarked;
+    entry.completedAt = entry.status == HabitStatus.yes ? DateTime.now() : null;
+    entry.source = 'manual';
+  });
 
   Future<void> advanceProgression(int habitId) async {
     final habit = await getHabitById(habitId);
@@ -372,23 +412,10 @@ class SadarRepository {
     required String dateString,
     required int delta,
   }) async {
-    final habit = await getHabitById(habitId);
-    final target = habit?.target ?? 1;
-    final currentEntries = await getEntriesForDateRange(dateString, dateString);
-    final existing = currentEntries
-        .where((e) => e.habitId == habitId)
-        .firstOrNull;
-    final currentVal = existing?.valueCompleted ?? 0;
-    final newVal = (currentVal + delta).clamp(0, 9999);
-    final newStatus = newVal >= target
-        ? HabitStatus.yes
-        : (newVal > 0 ? HabitStatus.unmarked : HabitStatus.unmarked);
-
-    return recordEntryStatus(
-      habitId: habitId,
-      dateString: dateString,
-      status: newStatus,
-      valueCompleted: newVal,
+    return _writeHabitCount(
+      habitId,
+      dateString,
+      (current) => (current + delta).clamp(0, 9999),
     );
   }
 

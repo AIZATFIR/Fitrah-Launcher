@@ -1,3 +1,4 @@
+import 'habit_action_save_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/repositories/intent_repository.dart';
@@ -319,9 +320,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
             context: context,
             builder: (c) => AlertDialog(
               title: Text(choice.title),
-              content: const Text(
-                'Mode progression/hybrid memerlukan rincian langkah atau set. Buka Habits untuk mencatatnya; pilihan ini tidak menandai selesai.',
-              ),
+              content: Text(habitExecutionLimit(choice.habit!)),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(c),
@@ -351,7 +350,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     controller.text = '${old?.valueCompleted ?? 0}';
     await _showIntentDialog(
       context: context,
-      builder: (c) => _IntentSaveDialog(
+      builder: (c) => HabitActionSaveDialog(
         title: 'Jumlah ${habit.name}',
         body: TextField(
           controller: controller,
@@ -365,20 +364,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
           }
           await ref
               .read(sadarRepoProvider)
-              .recordEntryStatus(
-                habitId: habit.id,
-                dateString: date,
-                status:
-                    value >=
-                        ((old?.targetSnapshot ?? 0) > 0
-                            ? old!.targetSnapshot
-                            : habit.target)
-                    ? HabitStatus.yes
-                    : HabitStatus.unmarked,
-                valueCompleted: value,
-                actualDurationMinutes: 0,
-                preserveDuration: true,
-              );
+              .setHabitCount(habitId: habit.id, dateString: date, value: value);
         },
       ),
     );
@@ -421,7 +407,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     await _showIntentDialog(
       context: context,
       builder: (c) => StatefulBuilder(
-        builder: (c, update) => _IntentSaveDialog(
+        builder: (c, update) => HabitActionSaveDialog(
           title: 'Tindakan hari ini',
           body: Column(
             mainAxisSize: MainAxisSize.min,
@@ -501,76 +487,6 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
   }
 }
 
-class _IntentSaveDialog extends StatefulWidget {
-  const _IntentSaveDialog({
-    required this.title,
-    required this.body,
-    required this.onSave,
-  });
-  final String title;
-  final Widget body;
-  final Future<void> Function() onSave;
-  @override
-  State<_IntentSaveDialog> createState() => _IntentSaveDialogState();
-}
-
-class _IntentSaveDialogState extends State<_IntentSaveDialog> {
-  bool busy = false;
-  String? error;
-  @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !busy,
-    child: AlertDialog(
-      title: Text(widget.title),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ExcludeFocus(
-              excluding: busy,
-              child: AbsorbPointer(absorbing: busy, child: widget.body),
-            ),
-            if (busy) const LinearProgressIndicator(),
-            if (error != null)
-              Text(
-                error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: busy ? null : () => Navigator.pop(context),
-          child: const Text('Batal'),
-        ),
-        FilledButton(
-          onPressed: busy
-              ? null
-              : () async {
-                  setState(() {
-                    busy = true;
-                    error = null;
-                  });
-                  try {
-                    await widget.onSave();
-                    if (context.mounted) Navigator.pop(context);
-                  } catch (e) {
-                    if (mounted) {
-                      setState(() {
-                        busy = false;
-                        error = '$e';
-                      });
-                    }
-                  }
-                },
-          child: const Text('Simpan'),
-        ),
-      ],
-    ),
-  );
-}
-
 class _GoalEditor extends ConsumerWidget {
   const _GoalEditor({required this.foreground});
   final Color foreground;
@@ -645,7 +561,7 @@ class _GoalEditor extends ConsumerWidget {
     await _showIntentDialog(
       context: context,
       builder: (c) => StatefulBuilder(
-        builder: (c, update) => _IntentSaveDialog(
+        builder: (c, update) => HabitActionSaveDialog(
           title: goal == null ? 'Tambah tujuan' : 'Ubah tujuan',
           body: Column(
             mainAxisSize: MainAxisSize.min,

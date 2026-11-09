@@ -157,15 +157,11 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
   }) async {
     HapticFeedback.lightImpact();
     final dateStr = _formatDate(_selectedDate);
-    final key = '${habit.id}-$dateStr';
-    final currentEntry = entriesMap[key];
     final text = _noteCtrl.text.trim();
-
-    await ref.read(sadarRepoProvider).recordEntryStatus(
+    await ref.read(sadarRepoProvider).updateHabitEntryNote(
       habitId: habit.id,
       dateString: dateStr,
-      status: currentEntry?.status ?? HabitStatus.unmarked,
-      note: text.isEmpty ? null : text,
+      note: text,
     );
 
     setState(() => _isNoteExpanded = false);

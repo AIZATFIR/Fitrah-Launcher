@@ -1,3 +1,4 @@
+import 'habit_action_save_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,6 +80,8 @@ class LoopHabitGridWidget extends ConsumerStatefulWidget {
 
 class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   int? _expandedHabitId;
+  bool _actionBusy = false;
+  String? _actionError;
   int _selectedDayIndex = 0; // 0..6 (Mon..Sun)
   late DateTime _referenceDate;
 
@@ -130,6 +133,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   }
 
   void _previousWeek() {
+    if (_actionBusy) return;
     HapticFeedback.selectionClick();
     setState(() {
       _referenceDate = _referenceDate.subtract(const Duration(days: 7));
@@ -138,6 +142,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   }
 
   void _nextWeek() {
+    if (_actionBusy) return;
     HapticFeedback.selectionClick();
     setState(() {
       _referenceDate = _referenceDate.add(const Duration(days: 7));
@@ -146,6 +151,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   }
 
   void _goToToday() {
+    if (_actionBusy) return;
     HapticFeedback.selectionClick();
     final now = DateTime.now();
     setState(() {
@@ -295,6 +301,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () {
+                          if (_actionBusy) return;
                           HapticFeedback.selectionClick();
                           setState(() => _selectedDayIndex = idx);
                         },
@@ -444,24 +451,32 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                       ),
                                     ),
                                     // Direct Play in Clock button
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.play_circle_outline_rounded,
-                                        size: 20,
-                                        color: Color(0xFF48C774),
+                                    if (_canTime(habit) &&
+                                        _isCurrentWeek &&
+                                        selectedDateStr ==
+                                            _formatDate(DateTime.now()))
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.play_circle_outline_rounded,
+                                          size: 20,
+                                          color: Color(0xFF48C774),
+                                        ),
+                                        tooltip: 'Mulai di Focus Clock',
+                                        splashRadius: 16,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 48,
+                                          minHeight: 48,
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        onPressed: _actionBusy
+                                            ? null
+                                            : () {
+                                                HapticFeedback.lightImpact();
+                                                widget.onStartTimer?.call(
+                                                  habit,
+                                                );
+                                              },
                                       ),
-                                      tooltip: 'Mulai di Focus Clock',
-                                      splashRadius: 16,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 30,
-                                        minHeight: 30,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      onPressed: () {
-                                        HapticFeedback.lightImpact();
-                                        widget.onStartTimer?.call(habit);
-                                      },
-                                    ),
                                     // More options
                                     IconButton(
                                       icon: const Icon(
@@ -508,6 +523,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                       child: GestureDetector(
                                         behavior: HitTestBehavior.opaque,
                                         onTap: () {
+                                          if (_actionBusy) return;
                                           HapticFeedback.selectionClick();
                                           setState(() {
                                             if (_expandedHabitId == habit.id &&
@@ -643,21 +659,33 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text(
-                                              DateFormat(
-                                                'EEEE, d MMMM',
-                                              ).format(selectedDate),
-                                              style: GoogleFonts.inter(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFF38BDF8),
+                                            Expanded(
+                                              child: Text(
+                                                DateFormat(
+                                                  'EEEE, d MMMM',
+                                                ).format(selectedDate),
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(
+                                                    0xFF38BDF8,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                            GestureDetector(
-                                              onTap: () => setState(
-                                                () => _expandedHabitId = null,
+                                            IconButton(
+                                              tooltip: 'Tutup tindakan',
+                                              constraints: const BoxConstraints(
+                                                minWidth: 48,
+                                                minHeight: 48,
                                               ),
-                                              child: const Icon(
+                                              onPressed: _actionBusy
+                                                  ? null
+                                                  : () => setState(
+                                                      () => _expandedHabitId =
+                                                          null,
+                                                    ),
+                                              icon: const Icon(
                                                 Icons.close,
                                                 size: 14,
                                                 color: AppPalette.textDim,
@@ -668,111 +696,10 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                       ),
                                       const SizedBox(height: 8),
 
-                                      // Squircle Action Buttons: [Note] [Yes] [No] [Skip] [Timer]
-                                      Row(
-                                        children: [
-                                          _buildActionButton(
-                                            icon: Icons.edit_note_rounded,
-                                            label: 'Note',
-                                            color: Colors.white,
-                                            isActive:
-                                                (currentEntry
-                                                    ?.note
-                                                    ?.isNotEmpty ??
-                                                false),
-                                            onTap: () => _showNoteDialog(
-                                              context,
-                                              habit,
-                                              selectedDateStr,
-                                              currentEntry?.note,
-                                            ),
-                                          ),
-                                          _buildActionButton(
-                                            icon: Icons.check_circle_rounded,
-                                            label: 'Yes',
-                                            color: const Color(0xFF48C774),
-                                            isActive:
-                                                currentEntry?.status ==
-                                                HabitStatus.yes,
-                                            onTap: () {
-                                              HapticFeedback.lightImpact();
-                                              final target =
-                                                  currentEntry?.status ==
-                                                      HabitStatus.yes
-                                                  ? HabitStatus.unmarked
-                                                  : HabitStatus.yes;
-                                              ref
-                                                  .read(sadarRepoProvider)
-                                                  .recordEntryStatus(
-                                                    habitId: habit.id,
-                                                    dateString: selectedDateStr,
-                                                    status: target,
-                                                    note: currentEntry?.note,
-                                                  );
-                                            },
-                                          ),
-                                          _buildActionButton(
-                                            icon: Icons.cancel_rounded,
-                                            label: 'No',
-                                            color: const Color(0xFFEF5350),
-                                            isActive:
-                                                currentEntry?.status ==
-                                                HabitStatus.no,
-                                            onTap: () {
-                                              HapticFeedback.lightImpact();
-                                              final target =
-                                                  currentEntry?.status ==
-                                                      HabitStatus.no
-                                                  ? HabitStatus.unmarked
-                                                  : HabitStatus.no;
-                                              ref
-                                                  .read(sadarRepoProvider)
-                                                  .recordEntryStatus(
-                                                    habitId: habit.id,
-                                                    dateString: selectedDateStr,
-                                                    status: target,
-                                                    note: currentEntry?.note,
-                                                  );
-                                            },
-                                          ),
-                                          _buildActionButton(
-                                            icon: Icons.redo_rounded,
-                                            label: 'Skip',
-                                            color: const Color(0xFF94A3B8),
-                                            isActive:
-                                                currentEntry?.status ==
-                                                HabitStatus.skip,
-                                            onTap: () {
-                                              HapticFeedback.lightImpact();
-                                              final target =
-                                                  currentEntry?.status ==
-                                                      HabitStatus.skip
-                                                  ? HabitStatus.unmarked
-                                                  : HabitStatus.skip;
-                                              ref
-                                                  .read(sadarRepoProvider)
-                                                  .recordEntryStatus(
-                                                    habitId: habit.id,
-                                                    dateString: selectedDateStr,
-                                                    status: target,
-                                                    note: currentEntry?.note,
-                                                  );
-                                            },
-                                          ),
-                                          _buildActionButton(
-                                            icon: Icons.timer_outlined,
-                                            label: 'Clock',
-                                            color: AppPalette.accent,
-                                            isActive: false,
-                                            onTap: () {
-                                              HapticFeedback.mediumImpact();
-                                              setState(
-                                                () => _expandedHabitId = null,
-                                              );
-                                              widget.onStartTimer?.call(habit);
-                                            },
-                                          ),
-                                        ],
+                                      _habitActions(
+                                        habit,
+                                        selectedDateStr,
+                                        currentEntry,
                                       ),
                                     ],
                                   ),
@@ -829,131 +756,184 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
     }
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 2.5),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isActive
-                ? color.withOpacity(0.25)
-                : Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isActive ? color : Colors.white.withOpacity(0.12),
-              width: isActive ? 1.5 : 0.8,
+  bool _canTime(Habit habit) =>
+      habit.habitType == 'timed' &&
+      habit.unit == HabitUnit.min &&
+      habit.target > 0 &&
+      widget.onStartTimer != null;
+
+  Widget _habitActions(Habit habit, String date, HabitEntry? entry) {
+    final unsupported =
+        habit.habitType == 'progression' || habit.habitType == 'hybrid';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (unsupported) Text(habitExecutionLimit(habit)),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            TextButton.icon(
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              onPressed: _actionBusy
+                  ? null
+                  : () => _showNoteDialog(context, habit, date, entry?.note),
+              icon: const Icon(Icons.edit_note_rounded),
+              label: const Text('Catatan'),
             ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 20, color: isActive ? color : Colors.white),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-                  color: isActive ? color : Colors.white70,
+            if (!unsupported &&
+                (habit.unit == HabitUnit.binary || habit.habitType == 'binary'))
+              TextButton.icon(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: _actionBusy
+                    ? null
+                    : () => _saveStatus(
+                        habit,
+                        date,
+                        entry?.status == HabitStatus.yes
+                            ? HabitStatus.unmarked
+                            : HabitStatus.yes,
+                      ),
+                icon: const Icon(Icons.check_circle_outline),
+                label: Text(
+                  entry?.status == HabitStatus.yes
+                      ? 'Batalkan selesai'
+                      : 'Tandai dilakukan',
                 ),
               ),
+            if (!unsupported &&
+                habit.unit != HabitUnit.binary &&
+                habit.habitType != 'binary' &&
+                (habit.habitType == 'count' || habit.unit == HabitUnit.count))
+              TextButton.icon(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: _actionBusy
+                    ? null
+                    : () => _showCountDialog(habit, date, entry),
+                icon: const Icon(Icons.add),
+                label: const Text('Catat jumlah'),
+              ),
+            if (_canTime(habit) && date == _formatDate(DateTime.now()))
+              TextButton.icon(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: _actionBusy
+                    ? null
+                    : () => widget.onStartTimer!(habit),
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('Mulai fokus'),
+              ),
+            if (!unsupported) ...[
+              for (final status in [HabitStatus.no, HabitStatus.skip])
+                TextButton(
+                  style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                  onPressed: _actionBusy
+                      ? null
+                      : () => _saveStatus(
+                          habit,
+                          date,
+                          entry?.status == status
+                              ? HabitStatus.unmarked
+                              : status,
+                        ),
+                  child: Text(
+                    status == HabitStatus.no ? 'Tidak dilakukan' : 'Lewati',
+                  ),
+                ),
             ],
-          ),
+          ],
         ),
-      ),
+        if (_actionBusy) const LinearProgressIndicator(),
+        if (_actionError != null)
+          Text(_actionError!, style: const TextStyle(color: Colors.redAccent)),
+      ],
     );
   }
 
-  // ── Note Dialog ──
-  void _showNoteDialog(
+  Future<void> _saveStatus(Habit habit, String date, HabitStatus status) async {
+    if (_actionBusy) return;
+    setState(() {
+      _actionBusy = true;
+      _actionError = null;
+    });
+    try {
+      await ref
+          .read(sadarRepoProvider)
+          .recordEntryStatus(
+            habitId: habit.id,
+            dateString: date,
+            status: status,
+          );
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => _actionError =
+              '${habit.name} ($date): Belum tersimpan. Coba lagi. $e',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _actionBusy = false);
+    }
+  }
+
+  Future<void> _showCountDialog(
+    Habit habit,
+    String date,
+    HabitEntry? entry,
+  ) async {
+    final controller = TextEditingController(
+      text: '${entry?.valueCompleted ?? 0}',
+    );
+    await showHabitActionDialog(
+      context: context,
+      builder: (_) => HabitActionSaveDialog(
+        title: 'Jumlah ${habit.name}',
+        body: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: 'Jumlah total $date'),
+        ),
+        onSave: () async {
+          final value = int.tryParse(controller.text);
+          if (value == null || value < 0 || value > 9999) {
+            throw StateError('Masukkan jumlah 0–9999.');
+          }
+          await ref
+              .read(sadarRepoProvider)
+              .setHabitCount(habitId: habit.id, dateString: date, value: value);
+        },
+      ),
+    );
+    controller.dispose();
+  }
+
+  Future<void> _showNoteDialog(
     BuildContext context,
     Habit habit,
     String dateString,
     String? existingNote,
-  ) {
-    final noteCtrl = TextEditingController(text: existingNote ?? '');
-
-    showDialog(
+  ) async {
+    final controller = TextEditingController(text: existingNote ?? '');
+    await showHabitActionDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF171F19),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Color(0xFF28362B)),
+      builder: (_) => HabitActionSaveDialog(
+        title: 'Catatan: ${habit.name}',
+        body: TextField(
+          controller: controller,
+          maxLines: 4,
+          decoration: InputDecoration(labelText: 'Catatan $dateString'),
         ),
-        title: Text(
-          'Catatan: ${habit.name}',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Tanggal: $dateString',
-              style: const TextStyle(fontSize: 11, color: Colors.white54),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: noteCtrl,
-              maxLines: 4,
-              style: const TextStyle(fontSize: 13, color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Tulis catatan harian...',
-                hintStyle: const TextStyle(fontSize: 12, color: Colors.white38),
-                filled: true,
-                fillColor: const Color(0xFF0F1511),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF28362B)),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF48C774),
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () {
-              ref
-                  .read(sadarRepoProvider)
-                  .recordEntryStatus(
-                    habitId: habit.id,
-                    dateString: dateString,
-                    status: habit.isArchived
-                        ? HabitStatus.unmarked
-                        : HabitStatus.yes,
-                    note: noteCtrl.text.trim(),
-                  );
-              Navigator.pop(ctx);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
+        onSave: () async {
+          await ref
+              .read(sadarRepoProvider)
+              .updateHabitEntryNote(
+                habitId: habit.id,
+                dateString: dateString,
+                note: controller.text.trim(),
+              );
+        },
       ),
     );
+    controller.dispose();
   }
 
   // ── Organize Screen (Pixel-faithful to Screenshot 2) ──

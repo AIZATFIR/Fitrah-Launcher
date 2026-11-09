@@ -555,8 +555,12 @@ void main() {
       await tester.tap(find.text('Atur waktu'));
       await tester.pumpAndSettle();
       expect(find.text('Dari Kebiasaan & Rutinitas:'), findsOneWidget);
-      await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'));
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'));
+      await tester.ensureVisible(
+        find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'),
+      );
+      await tester.tap(
+        find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'),
+      );
       await tester.pumpAndSettle();
       final blocks = await store.all<Activity>();
       expect(blocks, isNotEmpty);
@@ -732,6 +736,35 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Lanjutkan sesi'), findsOneWidget);
+    },
+  );
+  testWidgets(
+    'unknown legacy habit offers generic detail without invented sets',
+    (tester) async {
+      await store.put(
+        Habit()
+          ..id = 7
+          ..name = 'Legacy type'
+          ..habitType = 'legacy-custom'
+          ..hybridSets = 99
+          ..hybridDurationSeconds = 999
+          ..colorValue = 0xff123456
+          ..createdAt = now,
+      );
+      await show(
+        tester,
+        state: selected(IntentSourceType.habit),
+        habitAction: (_) => fail('unknown type started timer'),
+      );
+      await tester.tap(find.text('Lihat rincian'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Jenis habit ini belum didukung'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('99 set'), findsNothing);
+      expect(find.textContaining('999 detik'), findsNothing);
+      expect(await store.all<HabitEntry>(), isEmpty);
     },
   );
   testWidgets(
