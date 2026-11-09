@@ -561,6 +561,7 @@ class SadarRepository {
       } else if (_observedSession != null) {
         throw StateError('This timer session already ended.');
       }
+      if (current == null) await _bindScheduledHabit(session);
       await putTimerSessionInTxn(session);
     });
     _observedSession = await _isar.timerSessions.get(1);
@@ -582,10 +583,61 @@ class SadarRepository {
       }
       final activityId = await _isar.activitys.put(activity);
       session.activityId = activityId;
+      await _bindScheduledHabit(session);
       await putTimerSessionInTxn(session);
       _observedSession = session;
       return activityId;
     });
+  }
+
+  Future<void> _bindScheduledHabit(TimerSession session) async {
+    if (session.activityId == null) return;
+    final activity = await _isar!.activitys.get(session.activityId!);
+    if (activity == null) {
+      throw StateError('The scheduled Activity no longer exists.');
+    }
+    final id = activity.habitId;
+    if (id == null) return;
+    final habit = await _isar.habits.get(id);
+    if (habit == null ||
+        habit.isArchived ||
+        habit.habitType != 'timed' ||
+        habit.unit != HabitUnit.min ||
+        habit.target <= 0) {
+      throw StateError('The scheduled timed habit is unavailable.');
+    }
+    session.habitId = id;
+    session.habitTargetSnapshot = habit.target;
+  }
+
+  void _applyTimerContribution(
+    HabitEntry entry,
+    int seconds,
+    int target,
+    DateTime at, {
+    bool timed = true,
+  }) {
+    final previous = entry.actualDurationSeconds > 0
+        ? entry.actualDurationSeconds
+        : entry.source == 'timer'
+        ? entry.actualDurationMinutes * 60
+        : 0;
+    final total = previous + seconds;
+    if (entry.targetSnapshot <= 0) entry.targetSnapshot = target;
+    final manual =
+        entry.source != 'timer' && entry.status != HabitStatus.unmarked;
+    if (timed && !manual) {
+      entry.status =
+          total >= entry.targetSnapshot * 60 && entry.targetSnapshot > 0
+          ? HabitStatus.yes
+          : HabitStatus.unmarked;
+      entry.valueCompleted = total ~/ 60;
+    }
+    entry.actualDurationSeconds = total;
+    entry.actualDurationMinutes = total ~/ 60;
+    entry.completedAt = at;
+    if (timed && !manual) entry.source = 'timer';
+    entry.updatedAt = at;
   }
 
   Future<void> putTimerSessionInTxn(TimerSession session) async {
@@ -618,6 +670,12 @@ class SadarRepository {
   }) async {
     final now = DateTime.now();
     final secondsToAdd = actualDurationSeconds ?? actualDurationMinutes * 60;
+    if (secondsToAdd < 0) throw ArgumentError("Negative duration");
+    final habit = await getHabitById(habitId);
+    final timed =
+        habit == null ||
+        (habit.habitType == 'timed' && habit.unit == HabitUnit.min);
+
     if (_isar == null) {
       final key = '$habitId-$dateString';
       final existing = _memEntries[key];
@@ -628,27 +686,13 @@ class SadarRepository {
             ..habitId = habitId
             ..dateString = dateString
             ..createdAt = now);
-      final previousTimerSeconds = entry.source == 'timer'
-          ? (entry.actualDurationSeconds > 0
-                ? entry.actualDurationSeconds
-                : entry.actualDurationMinutes * 60)
-          : 0;
-      final totalTimerSeconds = previousTimerSeconds + secondsToAdd;
-      if (entry.valueCompleted < previousTimerSeconds ~/ 60) {
-        entry.valueCompleted = previousTimerSeconds ~/ 60;
-      }
-      final wholeMinuteDelta =
-          totalTimerSeconds ~/ 60 - previousTimerSeconds ~/ 60;
-      entry.status = HabitStatus.yes;
-      entry.valueCompleted += wholeMinuteDelta;
-      if (entry.targetSnapshot <= 0) {
-        entry.targetSnapshot = targetSnapshot;
-      }
-      entry.actualDurationSeconds = totalTimerSeconds;
-      entry.actualDurationMinutes = totalTimerSeconds ~/ 60;
-      entry.completedAt = completedAt;
-      entry.source = 'timer';
-      entry.updatedAt = now;
+      _applyTimerContribution(
+        entry,
+        secondsToAdd,
+        targetSnapshot,
+        completedAt,
+        timed: timed,
+      );
       _memEntries[key] = entry;
       _memTimerSession = null;
       _entriesStreamCtrl.add(null);
@@ -677,27 +721,13 @@ class SadarRepository {
             ..habitId = habitId
             ..dateString = dateString
             ..createdAt = now);
-      final previousTimerSeconds = entry.source == 'timer'
-          ? (entry.actualDurationSeconds > 0
-                ? entry.actualDurationSeconds
-                : entry.actualDurationMinutes * 60)
-          : 0;
-      final totalTimerSeconds = previousTimerSeconds + secondsToAdd;
-      if (entry.valueCompleted < previousTimerSeconds ~/ 60) {
-        entry.valueCompleted = previousTimerSeconds ~/ 60;
-      }
-      final wholeMinuteDelta =
-          totalTimerSeconds ~/ 60 - previousTimerSeconds ~/ 60;
-      entry.status = HabitStatus.yes;
-      entry.valueCompleted += wholeMinuteDelta;
-      if (entry.targetSnapshot <= 0) {
-        entry.targetSnapshot = targetSnapshot;
-      }
-      entry.actualDurationSeconds = totalTimerSeconds;
-      entry.actualDurationMinutes = totalTimerSeconds ~/ 60;
-      entry.completedAt = completedAt;
-      entry.source = 'timer';
-      entry.updatedAt = now;
+      _applyTimerContribution(
+        entry,
+        secondsToAdd,
+        targetSnapshot,
+        completedAt,
+        timed: timed,
+      );
 
       await _isar.habitEntrys.put(entry);
       await _isar.timerSessions.delete(1);
@@ -723,15 +753,55 @@ class SadarRepository {
       if (activity == null) {
         throw StateError('The linked Activity no longer exists.');
       }
+      if (session.activityId != activityId) {
+        throw StateError('The Activity does not match the active session.');
+      }
+      if (actualDurationSeconds < 0) throw ArgumentError('Negative duration');
+      if (session.habitId > 0) {
+        final date =
+            session.attributionLocalDate ??
+            (session.startedAt ?? completedAt).toIso8601String().substring(
+              0,
+              10,
+            );
+        final existing = await _isar.habitEntrys
+            .select(
+              where: (e) =>
+                  e.habitId == session.habitId && e.dateString == date,
+            )
+            .findFirst();
+        final entry =
+            existing ??
+            (HabitEntry()
+              ..habitId = session.habitId
+              ..dateString = date
+              ..createdAt = completedAt);
+        final target =
+            session.habitTargetSnapshot ?? existing?.targetSnapshot ?? 0;
+        if (target <= 0) {
+          throw StateError('The habit target snapshot is missing.');
+        }
+        _applyTimerContribution(
+          entry,
+          actualDurationSeconds,
+          target,
+          completedAt,
+        );
+        await _isar.habitEntrys.put(entry);
+      }
       final startedAt = session.startedAt ?? completedAt;
-      if (activity.recurrence != 'none' &&
-          DateTime(
-                activity.date.year,
-                activity.date.month,
-                activity.date.day,
-              ) !=
-              DateTime(startedAt.year, startedAt.month, startedAt.day)) {
+      final originalHabitId = session.habitId > 0 ? session.habitId : null;
+      final sourceChanged = activity.habitId != originalHabitId;
+      if (sourceChanged ||
+          (activity.recurrence != 'none' &&
+              DateTime(
+                    activity.date.year,
+                    activity.date.month,
+                    activity.date.day,
+                  ) !=
+                  DateTime(startedAt.year, startedAt.month, startedAt.day))) {
         final occurrence = Activity()
+          ..habitId = originalHabitId
           ..presetId = activity.presetId
           ..iconKey = activity.iconKey
           ..title = activity.title
@@ -755,7 +825,8 @@ class SadarRepository {
       } else {
         activity
           ..isCompleted = true
-          ..actualDurationSeconds = actualDurationSeconds
+          ..actualDurationSeconds =
+              activity.actualDurationSeconds + actualDurationSeconds
           ..updatedAt = completedAt;
         await _isar.activitys.put(activity);
       }

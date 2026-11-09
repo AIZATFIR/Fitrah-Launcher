@@ -65,33 +65,34 @@ const ActivitySchema = CollectionSchema(
       type: IsarType.dateTimeList,
     ),
     r'groupId': PropertySchema(id: 10, name: r'groupId', type: IsarType.string),
-    r'iconKey': PropertySchema(id: 11, name: r'iconKey', type: IsarType.string),
+    r'habitId': PropertySchema(id: 11, name: r'habitId', type: IsarType.long),
+    r'iconKey': PropertySchema(id: 12, name: r'iconKey', type: IsarType.string),
     r'importance': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'importance',
       type: IsarType.long,
     ),
     r'isCompleted': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'isCompleted',
       type: IsarType.bool,
     ),
-    r'isLocked': PropertySchema(id: 14, name: r'isLocked', type: IsarType.bool),
-    r'isUrgent': PropertySchema(id: 15, name: r'isUrgent', type: IsarType.bool),
-    r'presetId': PropertySchema(id: 16, name: r'presetId', type: IsarType.long),
+    r'isLocked': PropertySchema(id: 15, name: r'isLocked', type: IsarType.bool),
+    r'isUrgent': PropertySchema(id: 16, name: r'isUrgent', type: IsarType.bool),
+    r'presetId': PropertySchema(id: 17, name: r'presetId', type: IsarType.long),
     r'recurrence': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'recurrence',
       type: IsarType.string,
     ),
     r'startMinute': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'startMinute',
       type: IsarType.long,
     ),
-    r'title': PropertySchema(id: 19, name: r'title', type: IsarType.string),
+    r'title': PropertySchema(id: 20, name: r'title', type: IsarType.string),
     r'updatedAt': PropertySchema(
-      id: 20,
+      id: 21,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
@@ -181,16 +182,17 @@ void _activitySerialize(
   writer.writeLong(offsets[8], object.endMinute);
   writer.writeDateTimeList(offsets[9], object.excludedDates);
   writer.writeString(offsets[10], object.groupId);
-  writer.writeString(offsets[11], object.iconKey);
-  writer.writeLong(offsets[12], object.importance);
-  writer.writeBool(offsets[13], object.isCompleted);
-  writer.writeBool(offsets[14], object.isLocked);
-  writer.writeBool(offsets[15], object.isUrgent);
-  writer.writeLong(offsets[16], object.presetId);
-  writer.writeString(offsets[17], object.recurrence);
-  writer.writeLong(offsets[18], object.startMinute);
-  writer.writeString(offsets[19], object.title);
-  writer.writeDateTime(offsets[20], object.updatedAt);
+  writer.writeLong(offsets[11], object.habitId);
+  writer.writeString(offsets[12], object.iconKey);
+  writer.writeLong(offsets[13], object.importance);
+  writer.writeBool(offsets[14], object.isCompleted);
+  writer.writeBool(offsets[15], object.isLocked);
+  writer.writeBool(offsets[16], object.isUrgent);
+  writer.writeLong(offsets[17], object.presetId);
+  writer.writeString(offsets[18], object.recurrence);
+  writer.writeLong(offsets[19], object.startMinute);
+  writer.writeString(offsets[20], object.title);
+  writer.writeDateTime(offsets[21], object.updatedAt);
 }
 
 Activity _activityDeserialize(
@@ -212,16 +214,17 @@ Activity _activityDeserialize(
   object.endMinute = reader.readLong(offsets[8]);
   object.excludedDates = reader.readDateTimeList(offsets[9]) ?? [];
   object.groupId = reader.readStringOrNull(offsets[10]);
-  object.iconKey = reader.readStringOrNull(offsets[11]);
+  object.habitId = reader.readLongOrNull(offsets[11]);
+  object.iconKey = reader.readStringOrNull(offsets[12]);
   object.id = id;
-  object.importance = reader.readLong(offsets[12]);
-  object.isCompleted = reader.readBool(offsets[13]);
-  object.isLocked = reader.readBool(offsets[14]);
-  object.presetId = reader.readLongOrNull(offsets[16]);
-  object.recurrence = reader.readString(offsets[17]);
-  object.startMinute = reader.readLong(offsets[18]);
-  object.title = reader.readString(offsets[19]);
-  object.updatedAt = reader.readDateTime(offsets[20]);
+  object.importance = reader.readLong(offsets[13]);
+  object.isCompleted = reader.readBool(offsets[14]);
+  object.isLocked = reader.readBool(offsets[15]);
+  object.presetId = reader.readLongOrNull(offsets[17]);
+  object.recurrence = reader.readString(offsets[18]);
+  object.startMinute = reader.readLong(offsets[19]);
+  object.title = reader.readString(offsets[20]);
+  object.updatedAt = reader.readDateTime(offsets[21]);
   return object;
 }
 
@@ -257,24 +260,26 @@ P _activityDeserializeProp<P>(
     case 10:
       return (reader.readStringOrNull(offset)) as P;
     case 11:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 12:
-      return (reader.readLong(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 13:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 14:
       return (reader.readBool(offset)) as P;
     case 15:
       return (reader.readBool(offset)) as P;
     case 16:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 17:
-      return (reader.readString(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 18:
-      return (reader.readLong(offset)) as P;
-    case 19:
       return (reader.readString(offset)) as P;
+    case 19:
+      return (reader.readLong(offset)) as P;
     case 20:
+      return (reader.readString(offset)) as P;
+    case 21:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1465,6 +1470,81 @@ extension ActivityQueryFilter
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> habitIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'habitId'),
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> habitIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'habitId'),
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> habitIdEqualTo(
+    int? value,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'habitId', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> habitIdGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'habitId',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> habitIdLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'habitId',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> habitIdBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'habitId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterFilterCondition> iconKeyIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -2387,6 +2467,18 @@ extension ActivityQuerySortBy on QueryBuilder<Activity, Activity, QSortBy> {
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByHabitId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'habitId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByHabitIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'habitId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> sortByIconKey() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'iconKey', Sort.asc);
@@ -2632,6 +2724,18 @@ extension ActivityQuerySortThenBy
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByHabitId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'habitId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByHabitIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'habitId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> thenByIconKey() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'iconKey', Sort.asc);
@@ -2838,6 +2942,12 @@ extension ActivityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Activity, Activity, QDistinct> distinctByHabitId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'habitId');
+    });
+  }
+
   QueryBuilder<Activity, Activity, QDistinct> distinctByIconKey({
     bool caseSensitive = true,
   }) {
@@ -2978,6 +3088,12 @@ extension ActivityQueryProperty
   QueryBuilder<Activity, String?, QQueryOperations> groupIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'groupId');
+    });
+  }
+
+  QueryBuilder<Activity, int?, QQueryOperations> habitIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'habitId');
     });
   }
 

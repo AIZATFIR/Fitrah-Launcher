@@ -590,6 +590,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   Activity _segmentActivity(SpanSegment seg, String? groupId) {
     final src = widget.initial;
     return Activity()
+      ..habitId = src.habitId
       ..presetId = src.presetId
       ..iconKey = _iconKey
       ..title = _titleCtrl.text.trim()

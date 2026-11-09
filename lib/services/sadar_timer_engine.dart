@@ -16,6 +16,7 @@ import 'notification_service.dart';
 
 class TimerState {
   final int habitId;
+  final int? habitTargetSnapshot;
   final String habitName;
   final TimerSessionSourceKind? sourceKind;
   final int? activityId;
@@ -29,6 +30,7 @@ class TimerState {
 
   const TimerState({
     this.habitId = 0,
+    this.habitTargetSnapshot,
     this.habitName = '',
     this.sourceKind,
     this.activityId,
@@ -84,6 +86,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     if (!saved.hasValidSourceKind) {
       state = TimerState(
         habitId: saved.habitId,
+        habitTargetSnapshot: saved.habitTargetSnapshot,
         habitName: saved.habitName,
         targetSeconds: saved.targetSeconds,
         remainingSeconds:
@@ -128,6 +131,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           _startedAt = runningSince;
           state = TimerState(
             habitId: saved.habitId,
+            habitTargetSnapshot: saved.habitTargetSnapshot,
             habitName: saved.habitName,
             sourceKind: sourceKind,
             activityId: saved.activityId,
@@ -142,6 +146,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         // Completed while app was closed
         state = TimerState(
           habitId: saved.habitId,
+          habitTargetSnapshot: saved.habitTargetSnapshot,
           habitName: saved.habitName,
           sourceKind: sourceKind,
           activityId: saved.activityId,
@@ -165,6 +170,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         _startedAt = runningSince;
         state = TimerState(
           habitId: saved.habitId,
+          habitTargetSnapshot: saved.habitTargetSnapshot,
           habitName: saved.habitName,
           sourceKind: sourceKind,
           activityId: saved.activityId,
@@ -182,6 +188,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       );
       state = TimerState(
         habitId: saved.habitId,
+        habitTargetSnapshot: saved.habitTargetSnapshot,
         habitName: saved.habitName,
         sourceKind: sourceKind,
         activityId: saved.activityId,
@@ -193,6 +200,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     } else if (saved.status == TimerStateStatus.completed) {
       state = TimerState(
         habitId: saved.habitId,
+        habitTargetSnapshot: saved.habitTargetSnapshot,
         habitName: saved.habitName,
         sourceKind: sourceKind,
         activityId: saved.activityId,
@@ -246,6 +254,10 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
     state = TimerState(
       habitId: habit.id,
+      habitTargetSnapshot:
+          habit.habitType == 'timed' && habit.unit == HabitUnit.min
+          ? habit.target
+          : null,
       habitName: habit.name,
       sourceKind: sourceKind,
       targetSeconds: targetSec,
@@ -303,7 +315,18 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     );
     try {
       if (activityToCreate == null) {
-        await _persistState();
+        final session = _buildSession();
+        await _repo.saveTimerSession(session);
+        state = TimerState(
+          habitId: session.habitId,
+          habitTargetSnapshot: session.habitTargetSnapshot,
+          habitName: title,
+          targetSeconds: targetSeconds,
+          remainingSeconds: targetSeconds,
+          status: TimerStateStatus.running,
+          sourceKind: sourceKind,
+          activityId: activityId,
+        );
       } else {
         final session = _buildSession();
         final activityId = await _repo.createActivityAndStartTimerSession(
@@ -311,6 +334,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           session,
         );
         state = TimerState(
+          habitId: session.habitId,
+          habitTargetSnapshot: session.habitTargetSnapshot,
           habitName: title,
           targetSeconds: targetSeconds,
           remainingSeconds: targetSeconds,
@@ -349,6 +374,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             state.sourceKind == TimerSessionSourceKind.yptHabit) {
           state = TimerState(
             habitId: state.habitId,
+            habitTargetSnapshot: state.habitTargetSnapshot,
             habitName: state.habitName,
             sourceKind: state.sourceKind,
             targetSeconds: state.targetSeconds,
@@ -361,6 +387,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           _ticker?.cancel();
           state = TimerState(
             habitId: state.habitId,
+            habitTargetSnapshot: state.habitTargetSnapshot,
             habitName: state.habitName,
             sourceKind: state.sourceKind,
             activityId: state.activityId,
@@ -383,6 +410,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         } else {
           state = TimerState(
             habitId: state.habitId,
+            habitTargetSnapshot: state.habitTargetSnapshot,
             habitName: state.habitName,
             sourceKind: state.sourceKind,
             activityId: state.activityId,
@@ -411,6 +439,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _ticker?.cancel();
     state = TimerState(
       habitId: state.habitId,
+      habitTargetSnapshot: state.habitTargetSnapshot,
       habitName: state.habitName,
       sourceKind: state.sourceKind,
       activityId: state.activityId,
@@ -445,6 +474,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _attributionLocalDate ??= _formatLocalDate(_sessionStartedAt!);
     state = TimerState(
       habitId: state.habitId,
+      habitTargetSnapshot: state.habitTargetSnapshot,
       habitName: state.habitName,
       sourceKind: state.sourceKind,
       activityId: state.activityId,
@@ -471,6 +501,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     final previousState = state;
     state = TimerState(
       habitId: state.habitId,
+      habitTargetSnapshot: state.habitTargetSnapshot,
       habitName: state.habitName,
       sourceKind: state.sourceKind,
       activityId: state.activityId,
@@ -498,6 +529,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _ticker?.cancel();
     state = TimerState(
       habitId: state.habitId,
+      habitTargetSnapshot: state.habitTargetSnapshot,
       habitName: state.habitName,
       sourceKind: state.sourceKind,
       activityId: state.activityId,
@@ -565,7 +597,14 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     try {
       _ticker?.cancel();
 
-      if (autoRecord && state.habitId > 0) {
+      if (autoRecord && state.activityId != null) {
+        await _repo.completeActivityTimerSession(
+          activityId: state.activityId!,
+          actualDurationSeconds:
+              actualDurationSeconds ?? state.actualDurationSeconds,
+          completedAt: DateTime.now(),
+        );
+      } else if (autoRecord && state.habitId > 0) {
         final now = DateTime.now();
         // Attribute the session to the date it was started, including pauses.
         final dateStr = _attributionLocalDate ?? _formatLocalDate(now);
@@ -578,15 +617,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           dateString: dateStr,
           actualDurationMinutes: actualMinutes,
           actualDurationSeconds: actualDurationSeconds,
-          targetSnapshot: targetMinutes,
+          targetSnapshot: state.habitTargetSnapshot ?? targetMinutes,
           completedAt: now,
-        );
-      } else if (autoRecord && state.activityId != null) {
-        await _repo.completeActivityTimerSession(
-          activityId: state.activityId!,
-          actualDurationSeconds:
-              actualDurationSeconds ?? state.actualDurationSeconds,
-          completedAt: DateTime.now(),
         );
       } else if (autoRecord &&
           state.sourceKind == TimerSessionSourceKind.preset) {
@@ -605,6 +637,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
       state = TimerState(
         habitId: state.habitId,
+        habitTargetSnapshot: state.habitTargetSnapshot,
         habitName: state.habitName,
         sourceKind: state.sourceKind,
         activityId: state.activityId,
@@ -630,8 +663,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         _notifier.showNotification(
           id: 8888,
           title: 'Selesai: ${state.habitName}',
-          body:
-              'Waktu fokus selesai. Satu tindakan bermakna telah terpenuhi hari ini.',
+          body: 'Waktu fokus telah dicatat.',
         );
       }
     } finally {
@@ -645,6 +677,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
   TimerSession _buildSession() => TimerSession()
     ..habitId = state.habitId
+    ..habitTargetSnapshot = state.habitTargetSnapshot
     ..habitName = state.habitName
     ..sourceKind = state.sourceKind
     ..activityId = state.activityId
@@ -690,7 +723,13 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       await windowManager.setResizable(false);
       state = TimerState(
         habitId: state.habitId,
+        habitTargetSnapshot: state.habitTargetSnapshot,
         habitName: state.habitName,
+        sourceKind: state.sourceKind,
+        activityId: state.activityId,
+        actualDurationSeconds: state.actualDurationSeconds,
+        restoreError: state.restoreError,
+        isSavePending: state.isSavePending,
         targetSeconds: state.targetSeconds,
         remainingSeconds: state.remainingSeconds,
         status: state.status,
@@ -713,7 +752,13 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       await windowManager.setResizable(true);
       state = TimerState(
         habitId: state.habitId,
+        habitTargetSnapshot: state.habitTargetSnapshot,
         habitName: state.habitName,
+        sourceKind: state.sourceKind,
+        activityId: state.activityId,
+        actualDurationSeconds: state.actualDurationSeconds,
+        restoreError: state.restoreError,
+        isSavePending: state.isSavePending,
         targetSeconds: state.targetSeconds,
         remainingSeconds: state.remainingSeconds,
         status: state.status,

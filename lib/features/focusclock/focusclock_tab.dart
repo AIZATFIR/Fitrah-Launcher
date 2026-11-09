@@ -1339,6 +1339,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       }
       for (final sa in sourceActivities) {
         final cloned = Activity()
+          ..habitId = sa.habitId
           ..presetId = sa.presetId
           ..iconKey = sa.iconKey
           ..title = sa.title

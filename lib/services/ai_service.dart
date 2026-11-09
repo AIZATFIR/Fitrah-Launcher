@@ -637,6 +637,7 @@ PANGGILAN TOOL AUTOMATION:
         for (final s in segments)
           Activity()
             ..title = existing.title
+            ..habitId = existing.habitId
             ..presetId = existing.presetId
             ..iconKey = existing.iconKey
             ..startMinute = s.start

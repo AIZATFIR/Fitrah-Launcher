@@ -1,3 +1,7 @@
+import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
+import 'package:fitrah_launcher/models/timer_session.dart';
+import 'package:fitrah_launcher/models/activity.dart';
+import 'package:fitrah_launcher/core/time_math.dart';
 import 'package:fitrah_launcher/data/repositories/intent_repository.dart';
 import 'package:fitrah_launcher/data/store/native_focus_store.dart';
 import 'package:fitrah_launcher/domain/focus_intent.dart';
@@ -55,6 +59,81 @@ void main() {
     await root.delete(recursive: true);
   });
 
+  test(
+    'export and restore preserve unavailable habit references after hard deletion',
+    () async {
+      final db = store.isar!;
+      final now = DateTime(2026, 11, 8, 10);
+      final repo = SadarRepository(db);
+      final habit = Habit()
+        ..id = 7
+        ..name = 'LKS'
+        ..target = 45
+        ..createdAt = now
+        ..colorValue = 0;
+      final activity = Activity()
+        ..id = 19
+        ..habitId = 7
+        ..title = 'LKS schedule'
+        ..date = now
+        ..ampmHalf = AmPmHalf.am
+        ..startMinute = 600
+        ..endMinute = 645
+        ..colorValue = 0
+        ..createdAt = now
+        ..updatedAt = now;
+      final unlinked = Activity()
+        ..id = 20
+        ..title = 'Unlinked'
+        ..date = now
+        ..ampmHalf = AmPmHalf.am
+        ..startMinute = 650
+        ..endMinute = 660
+        ..colorValue = 0
+        ..createdAt = now
+        ..updatedAt = now;
+      await db.writeTxn(() async {
+        await db.habits.put(habit);
+        await db.activitys.put(activity);
+        await db.activitys.put(unlinked);
+      });
+      await repo.saveTimerSession(
+        TimerSession()
+          ..activityId = 19
+          ..sourceKind = TimerSessionSourceKind.activity
+          ..habitName = 'LKS'
+          ..targetSeconds = 2700
+          ..startedAt = now
+          ..attributionLocalDate = '2026-11-08'
+          ..status = TimerStateStatus.paused
+          ..accumulatedDurationSeconds = 480
+          ..updatedAt = now,
+      );
+      await repo.deleteHabit(7, hardDelete: true);
+      final service = FocusClockBackupService(
+        isar: db,
+        secureStorage: secureStorage,
+        supportDirectory: () async => root,
+      );
+      final decoded = FocusClockBackupCodec.decode(await service.exportBytes());
+      expect(decoded.data.habits, isEmpty);
+      expect(decoded.data.activities.firstWhere((a) => a.id == 19).habitId, 7);
+      expect(decoded.data.timerSessions.single.habitId, 7);
+      expect(decoded.data.timerSessions.single.habitTargetSnapshot, 45);
+      // Restore itself exports recovery before replacing data, exercising both paths.
+      final recovery = await service.restore(decoded);
+      expect(File(recovery).existsSync(), isTrue);
+      expect(await db.habits.count(), 0);
+      expect((await db.activitys.get(19))!.habitId, 7);
+      expect((await db.activitys.get(20))!.habitId, isNull);
+      final saved = (await db.timerSessions.get(1))!;
+      expect(saved.habitId, 7);
+      expect(saved.habitTargetSnapshot, 45);
+      expect(saved.activityId, 19);
+      expect(saved.accumulatedDurationSeconds, 480);
+    },
+  );
+
   test('replaces durable records and retains local credentials', () async {
     final settingsNotifier = LauncherSettingsNotifier(secureStorage);
     await settingsNotifier.reload();
@@ -85,7 +164,19 @@ void main() {
     final backupData = FocusClockBackupData(
       intentDocuments: [intentRow],
       presets: [],
-      activities: [],
+      activities: [
+        Activity()
+          ..id = 19
+          ..habitId = 8
+          ..title = 'Scheduled restored habit'
+          ..date = DateTime(2026, 11, 8)
+          ..ampmHalf = AmPmHalf.am
+          ..startMinute = 600
+          ..endMinute = 645
+          ..colorValue = 0xffabcdef
+          ..createdAt = DateTime.utc(2026)
+          ..updatedAt = DateTime.utc(2026),
+      ],
       appSettings: [incomingSettings],
       tasks: [],
       habits: [
@@ -126,7 +217,8 @@ void main() {
       'Menang LKS',
     );
     expect((await db.focusIntentDocuments.get(1))!.payload, intentRow.payload);
-    expect(parsed.formatVersion, 3);
+    expect(parsed.formatVersion, 4);
+    expect((await db.activitys.get(19))!.habitId, 8);
     expect(
       LauncherSettings.fromJson(
         secureStorage.values[FocusClockBackupService.launcherSettingsKey]!,

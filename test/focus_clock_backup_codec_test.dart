@@ -1,6 +1,7 @@
 import 'package:fitrah_launcher/domain/focus_intent.dart';
 import 'package:fitrah_launcher/models/focus_intent_document.dart';
 import 'dart:convert';
+import 'package:fitrah_launcher/data/store/live_model_codec.dart';
 
 import 'package:fitrah_launcher/data/focus_clock_backup.dart';
 import 'package:fitrah_launcher/core/time_math.dart';
@@ -17,6 +18,72 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('FocusClockBackupCodec', () {
+    test(
+      'live records preserve links and decode absent legacy fields as null',
+      () {
+        final data = _sampleData();
+        final activity = data.activities.single
+          ..habitId = data.habits.single.id;
+        final session = data.timerSessions.single..habitTargetSnapshot = 45;
+        final activityRow = Map<String, dynamic>.from(
+          LiveModelCodec.encode(activity),
+        );
+        final sessionRow = Map<String, dynamic>.from(
+          LiveModelCodec.encode(session),
+        );
+        expect(
+          LiveModelCodec.decode<Activity>(activityRow).habitId,
+          activity.habitId,
+        );
+        expect(
+          LiveModelCodec.decode<TimerSession>(sessionRow).habitTargetSnapshot,
+          45,
+        );
+        (activityRow['data'] as Map).remove('habitId');
+        (sessionRow['data'] as Map).remove('habitTargetSnapshot');
+        expect(LiveModelCodec.decode<Activity>(activityRow).habitId, isNull);
+        expect(
+          LiveModelCodec.decode<TimerSession>(sessionRow).habitTargetSnapshot,
+          isNull,
+        );
+      },
+    );
+
+    test(
+      'v4 keeps habit links and frozen target; v1-v3 absent fields stay null',
+      () {
+        final data = _sampleData();
+        data.activities.single.habitId = data.habits.single.id;
+        data.timerSessions.single.habitId = data.habits.single.id;
+        data.timerSessions.single.habitTargetSnapshot = 45;
+        final bytes = FocusClockBackupCodec.encode(data);
+        final decoded = FocusClockBackupCodec.decode(bytes);
+        expect(decoded.formatVersion, 4);
+        expect(decoded.data.activities.single.habitId, data.habits.single.id);
+        expect(decoded.data.timerSessions.single.habitTargetSnapshot, 45);
+        for (final version in [1, 2, 3]) {
+          final root = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+          root['formatVersion'] = version;
+          root['data']['activities'][0].remove('habitId');
+          root['data']['timerSessions'][0].remove('habitTargetSnapshot');
+          _refreshChecksum(root);
+          final old = FocusClockBackupCodec.decode(
+            utf8.encode(jsonEncode(root)),
+          );
+          expect(old.data.activities.single.habitId, isNull);
+          expect(old.data.timerSessions.single.habitTargetSnapshot, isNull);
+        }
+        data.activities.single.habitId = -1;
+        expect(() => FocusClockBackupCodec.encode(data), throwsFormatException);
+        data.activities.single.habitId = 999999;
+        data.timerSessions.single.habitTargetSnapshot = 0;
+        expect(() => FocusClockBackupCodec.encode(data), throwsFormatException);
+        data.timerSessions.single.habitTargetSnapshot = 45;
+        data.timerSessions.single.habitId = 0;
+        expect(() => FocusClockBackupCodec.encode(data), throwsFormatException);
+      },
+    );
+
     test(
       'round-trips supported records and preserves IDs and exact seconds',
       () {

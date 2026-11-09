@@ -8,6 +8,9 @@ part 'activity.g.dart';
 class Activity {
   Id id = Isar.autoIncrement;
 
+  /// Explicit source habit; never inferred from the title.
+  int? habitId;
+
   int? presetId;
   String? iconKey; // emoji from preset
 

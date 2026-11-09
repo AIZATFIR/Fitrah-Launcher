@@ -112,6 +112,7 @@ class FirebaseSyncService {
 
       await docRef.set({
         'id': activity.id,
+        'habitId': activity.habitId,
         'title': activity.title,
         'description': activity.description,
         'startMinute': activity.startMinute,

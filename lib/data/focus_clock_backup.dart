@@ -83,7 +83,7 @@ class DecodedFocusClockBackup {
 class FocusClockBackupCodec {
   FocusClockBackupCodec._();
 
-  static const currentFormatVersion = 3;
+  static const currentFormatVersion = 4;
   static const sourceApp = 'focus-clock';
 
   /// Copy an app-owned Isar model before applying installation-only values.
@@ -188,6 +188,7 @@ class FocusClockBackupCodec {
         .map(
           (x) => {
             'id': x.id,
+            'habitId': x.habitId,
             'presetId': x.presetId,
             'iconKey': x.iconKey,
             'title': x.title,
@@ -302,6 +303,7 @@ class FocusClockBackupCodec {
             'activityId': x.activityId,
             'sourceIdentity': x.sourceIdentity,
             'sourceColorValue': x.sourceColorValue,
+            'habitTargetSnapshot': x.habitTargetSnapshot,
             'targetSeconds': x.targetSeconds,
             'startedAt': _dateString(x.startedAt),
             'attributionLocalDate': x.attributionLocalDate,
@@ -391,6 +393,7 @@ class FocusClockBackupCodec {
 
   static Activity _activityFromJson(Map<String, dynamic> m) => Activity()
     ..id = _int(m['id'], 'activities.id')
+    ..habitId = _nullableInt(m['habitId'], 'activities.habitId')
     ..presetId = _nullableInt(m['presetId'], 'activities.presetId')
     ..iconKey = _nullableString(m['iconKey'], 'activities.iconKey')
     ..title = _string(m['title'], 'activities.title')
@@ -600,6 +603,10 @@ class FocusClockBackupCodec {
         m['sourceColorValue'],
         'timerSessions.sourceColorValue',
       )
+      ..habitTargetSnapshot = _nullableInt(
+        m['habitTargetSnapshot'],
+        'timerSessions.habitTargetSnapshot',
+      )
       ..targetSeconds = _int(m['targetSeconds'], 'timerSessions.targetSeconds')
       ..startedAt = _nullableDate(m['startedAt'], 'timerSessions.startedAt')
       ..attributionLocalDate = _nullableString(
@@ -671,6 +678,9 @@ class FocusClockBackupCodec {
       throw const FormatException('TimerSession hanya boleh memakai ID 1.');
     }
     for (final x in d.activities) {
+      if (x.habitId != null && x.habitId! <= 0) {
+        throw FormatException('Activity ${x.id} has an invalid habit ID.');
+      }
       if (x.title.trim().isEmpty ||
           (x.presetId != null && x.presetId! <= 0) ||
           x.startMinute < 0 ||
@@ -724,6 +734,10 @@ class FocusClockBackupCodec {
       }
     }
     for (final x in d.timerSessions) {
+      if (x.habitTargetSnapshot != null &&
+          (x.habitTargetSnapshot! <= 0 || x.habitId <= 0)) {
+        throw const FormatException('Invalid saved habit target.');
+      }
       if (x.habitId < 0) {
         throw const FormatException(
           'Sesi timer memiliki ID habit yang tidak valid.',

@@ -142,6 +142,7 @@ class ActivityRepository {
           final projected = Activity()
             ..id = a
                 .id // same id = tap opens original
+            ..habitId = a.habitId
             ..presetId = a.presetId
             ..iconKey = a.iconKey
             ..title = a.title
@@ -202,6 +203,7 @@ class ActivityRepository {
   Future<int> duplicateActivity(Activity a, DateTime targetDate) async {
     final now = DateTime.now();
     final copy = Activity()
+      ..habitId = a.habitId
       ..presetId = a.presetId
       ..iconKey = a.iconKey
       ..title = '${a.title} (Copy)'
@@ -473,6 +475,7 @@ class ActivityRepository {
 
   Activity _cloneForSpecificDate(Activity dbActivity, DateTime targetDate) {
     return Activity()
+      ..habitId = dbActivity.habitId
       ..presetId = dbActivity.presetId
       ..iconKey = dbActivity.iconKey
       ..title = dbActivity.title

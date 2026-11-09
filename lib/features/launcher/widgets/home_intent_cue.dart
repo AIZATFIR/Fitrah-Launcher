@@ -18,11 +18,13 @@ class HomeIntentCue extends ConsumerStatefulWidget {
     required this.accent,
     required this.surface,
     required this.onHabitTimer,
+    this.onHabitSchedule,
     required this.onTaskSchedule,
     required this.onSession,
   });
   final Color foreground, secondary, accent, surface;
   final void Function(Habit) onHabitTimer;
+  final void Function(Habit)? onHabitSchedule;
   final Future<void> Function(Task) onTaskSchedule;
   final VoidCallback onSession;
   @override
@@ -251,6 +253,16 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Pilihan hari ini', style: TextStyle(color: widget.secondary)),
+        if (choice.habit case final habit?)
+          if (!habit.isArchived &&
+              habit.habitType == 'timed' &&
+              habit.unit == HabitUnit.min &&
+              habit.target > 0 &&
+              widget.onHabitSchedule != null)
+            TextButton(
+              onPressed: _busy ? null : () => widget.onHabitSchedule!(habit),
+              child: const Text('Atur waktu'),
+            ),
         Text(choice.title, style: const TextStyle(fontSize: 16)),
         if (state.links
                 .where((l) => l.sourceId == state.selectionFor(date)?.sourceId)

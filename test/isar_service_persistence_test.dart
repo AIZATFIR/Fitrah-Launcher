@@ -244,15 +244,18 @@ void main() {
       final opened = await IsarService.openAt(directory.path);
       addTearDown(() => opened.isar!.close());
       final repository = SadarRepository(opened.isar!);
-      await repository.saveTimerSession(
-        TimerSession()
-          ..activityId = 9876
-          ..sourceKind = TimerSessionSourceKind.activity
-          ..habitName = 'Missing'
-          ..targetSeconds = 900
-          ..status = TimerStateStatus.completed
-          ..updatedAt = DateTime.now(),
+      await opened.isar!.writeTxn(
+        () => opened.isar!.timerSessions.put(
+          TimerSession()
+            ..activityId = 9876
+            ..sourceKind = TimerSessionSourceKind.activity
+            ..habitName = 'Missing'
+            ..targetSeconds = 900
+            ..status = TimerStateStatus.completed
+            ..updatedAt = DateTime.now(),
+        ),
       );
+      await repository.getActiveTimerSession();
 
       await expectLater(
         repository.completeActivityTimerSession(
@@ -273,17 +276,18 @@ void main() {
     addTearDown(() => directory.delete(recursive: true));
     final firstOpen = await IsarService.openAt(directory.path);
     final now = DateTime(2026, 11, 4, 9);
-    final repository = SadarRepository(firstOpen.isar!);
-    await repository.saveTimerSession(
-      TimerSession()
-        ..sourceKind = TimerSessionSourceKind.activity
-        ..activityId = 456
-        ..habitName = 'Read exact activity'
-        ..targetSeconds = 1800
-        ..startedAt = now
-        ..accumulatedDurationSeconds = 321
-        ..status = TimerStateStatus.paused
-        ..updatedAt = now,
+    await firstOpen.isar!.writeTxn(
+      () => firstOpen.isar!.timerSessions.put(
+        TimerSession()
+          ..sourceKind = TimerSessionSourceKind.activity
+          ..activityId = 456
+          ..habitName = 'Read exact activity'
+          ..targetSeconds = 1800
+          ..startedAt = now
+          ..accumulatedDurationSeconds = 321
+          ..status = TimerStateStatus.paused
+          ..updatedAt = now,
+      ),
     );
     await firstOpen.isar!.close();
 

@@ -56,8 +56,10 @@ void main() {
 
     final engine = container.read(timerEngineProvider.notifier);
     expect(container.read(timerEngineProvider).isRunning, isTrue);
-    expect(container.read(timerEngineProvider).sourceKind,
-        TimerSessionSourceKind.activity);
+    expect(
+      container.read(timerEngineProvider).sourceKind,
+      TimerSessionSourceKind.activity,
+    );
     expect(container.read(timerEngineProvider).activityId, activity.id);
     expect((await repository.getActiveTimerSession())?.activityId, activity.id);
 
@@ -65,10 +67,62 @@ void main() {
     await tester.pump();
 
     expect(container.read(timerEngineProvider).isPaused, isTrue);
-    expect((await repository.getActiveTimerSession())?.status,
-        TimerStateStatus.paused);
+    expect(
+      (await repository.getActiveTimerSession())?.status,
+      TimerStateStatus.paused,
+    );
     await engine.cancel();
   });
+
+  for (final dayOffset in [-1, 1]) {
+    testWidgets('block on another date retains full duration $dayOffset', (
+      tester,
+    ) async {
+      final repo = SadarRepository(null);
+      final container = ProviderContainer(
+        overrides: [
+          isarProvider.overrideWithValue(null),
+          sadarRepoProvider.overrideWithValue(repo),
+          notificationServiceProvider.overrideWithValue(NotificationService()),
+        ],
+      );
+      addTearDown(() async {
+        await container.read(timerEngineProvider.notifier).cancel();
+        container.dispose();
+      });
+      final now = DateTime.now();
+      final minute = (now.hour % 12) * 60 + now.minute;
+      final start = minute > 0 ? minute - 1 : 0;
+      final end = (minute + 15).clamp(start + 1, 720);
+      final a = Activity()
+        ..id = 99
+        ..title = 'Other date'
+        ..startMinute = start
+        ..endMinute = end
+        ..ampmHalf = halfOfNow(now)
+        ..date = DateTime(now.year, now.month, now.day + dayOffset)
+        ..colorValue = 0xff123456
+        ..createdAt = now
+        ..updatedAt = now;
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: Scaffold(
+              body: FocusSessionView(activity: a, onClose: () {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(
+        container.read(timerEngineProvider).targetSeconds,
+        (end - start) * 60,
+      );
+      await container.read(timerEngineProvider.notifier).cancel();
+    });
+  }
 
   testWidgets('FocusSessionView shows a storage error when start fails', (
     tester,

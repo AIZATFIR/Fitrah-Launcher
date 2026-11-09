@@ -12,6 +12,7 @@ class TimerSession {
   Id id = 1; // Singleton active session ID
 
   int habitId = 0;
+  int? habitTargetSnapshot;
   String habitName = '';
   int? sourceKindIndex;
   int? activityId;

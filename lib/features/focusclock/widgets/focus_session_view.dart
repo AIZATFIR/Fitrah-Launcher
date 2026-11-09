@@ -63,6 +63,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
     final now = DateTime.now();
     final minuteNow = minuteOfHalf(now);
     final elapsedSeconds =
+        dateOnly(widget.activity.date) == dateOnly(now) &&
         widget.activity.ampmHalf == halfOfNow(now) &&
             minuteNow >= widget.activity.startMinute &&
             minuteNow < widget.activity.endMinute

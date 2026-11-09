@@ -33,6 +33,7 @@ void main() {
     WidgetTester tester, {
     IntentState? state,
     void Function(Habit)? habitAction,
+    void Function(Habit)? habitSchedule,
     Future<void> Function(Task)? taskAction,
     Stream<IntentState>? intentStream,
     double width = 800,
@@ -78,6 +79,7 @@ void main() {
                 accent: Colors.green,
                 surface: Colors.white,
                 onHabitTimer: habitAction ?? (_) {},
+                onHabitSchedule: habitSchedule,
                 onTaskSchedule: taskAction ?? (_) async {},
                 onSession: () {},
               ),
@@ -282,11 +284,15 @@ void main() {
           ..createdAt = now,
       );
       int? habitId;
+      int? scheduledId;
       await show(
         tester,
         state: selected(IntentSourceType.habit),
         habitAction: (h) => habitId = h.id,
+        habitSchedule: (h) => scheduledId = h.id,
       );
+      await tester.tap(find.text('Atur waktu'));
+      expect(scheduledId, 7);
       await tester.tap(find.text('Mulai fokus'));
       await tester.pumpAndSettle();
       expect(habitId, 7);
@@ -500,6 +506,66 @@ void main() {
         scrollable: find.byType(Scrollable).last,
       );
       expect(find.text('Tambah tujuan'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'selected persisted same-name habit schedules exact source from Home',
+    (tester) async {
+      for (final id in [7, 8]) {
+        await store.put(
+          Habit()
+            ..id = id
+            ..name = 'LKS same'
+            ..target = 45
+            ..colorValue = 0xff123456
+            ..createdAt = now,
+        );
+      }
+      await store.put(
+        FocusIntentDocument()
+          ..payload = selected(IntentSourceType.habit).encode(),
+      );
+      tester.view.physicalSize = const Size(900, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            focusStoreProvider.overrideWithValue(store),
+            notificationServiceProvider.overrideWithValue(
+              NotificationService(),
+            ),
+            intentRepositoryProvider.overrideWithValue(repo),
+            intentInitializationProvider.overrideWith((ref) async {}),
+            intentNowProvider.overrideWithValue(now),
+          ],
+          child: MaterialApp(
+            home: FocusClockHomeView(
+              onOpenFocusClock: () {},
+              onOpenAppDrawer: () {},
+              now: () => now,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Atur waktu'));
+      await tester.pumpAndSettle();
+      expect(find.text('Dari Kebiasaan & Rutinitas:'), findsOneWidget);
+      await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'));
+      await tester.pumpAndSettle();
+      final blocks = await store.all<Activity>();
+      expect(blocks, isNotEmpty);
+      expect(blocks.every((a) => a.habitId == 7), isTrue);
+      expect(
+        blocks.map((a) => a.endMinute - a.startMinute).reduce((a, b) => a + b),
+        45,
+      );
+      expect(await store.all<Task>(), isEmpty);
       expect(tester.takeException(), isNull);
     },
   );

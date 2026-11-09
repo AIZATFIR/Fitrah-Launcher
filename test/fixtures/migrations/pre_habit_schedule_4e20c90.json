@@ -1,0 +1,21 @@
+{
+  "sourceRevision": "4e20c9024c349af8779c292536f50caf949edcda",
+  "fixture": "synthetic; no personal data",
+  "nativeLibrary": "isar_community 3.4.1 Linux x64",
+  "uncompressedSha256": "a794c06ea7fe3f0a55f2143f6d1c99f6f26c94d5c0ccc8f53b6567a873185bc6",
+  "schemas": {
+    "activity": "fc945271f38125b5c845a79d888d565280aa38a7b87c196c37d506df9db4f449",
+    "timer_session": "677dc6989616720ee462d0045371e0a92124d44824fd0d969e0bc914ac93c184"
+  },
+  "expected": {
+    "habitId": 17,
+    "habitName": "Fixture LKS",
+    "habitTarget": 45,
+    "activityId": 23,
+    "activityActualSeconds": 42,
+    "entryId": 31,
+    "entrySeconds": 480,
+    "timerSeconds": 480,
+    "timerStatus": "paused"
+  }
+}

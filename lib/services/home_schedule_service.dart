@@ -1,6 +1,7 @@
 import '../core/time_math.dart';
 import '../data/store/focus_store.dart';
 import '../models/activity.dart';
+import '../models/habit.dart';
 
 /// Persists a Home schedule and its existing task as one atomic change.
 class HomeScheduleService {
@@ -9,6 +10,7 @@ class HomeScheduleService {
 
   Future<List<Activity>> schedule({
     int? taskId,
+    int? habitId,
     required String title,
     required DateTime start,
     required int durationMinutes,
@@ -16,6 +18,9 @@ class HomeScheduleService {
     required int colorValue,
     String identity = '',
   }) async {
+    if (taskId != null && habitId != null) {
+      throw ArgumentError('Choose one source.');
+    }
     if (!store.isDurable) throw StateError('Penyimpanan tidak tersedia.');
     if (start.isBefore(now)) throw StateError('Waktu mulai sudah lewat.');
     if (durationMinutes <= 0) throw StateError('Durasi tidak valid.');
@@ -24,6 +29,15 @@ class HomeScheduleService {
       start.add(Duration(minutes: durationMinutes)),
     );
     return store.writeTxn(() async {
+      final habit = habitId == null ? null : await store.habits.get(habitId);
+      if (habitId != null &&
+          (habit == null ||
+              habit.isArchived ||
+              habit.habitType != 'timed' ||
+              habit.unit != HabitUnit.min ||
+              habit.target <= 0)) {
+        throw StateError('Kebiasaan waktu tidak tersedia.');
+      }
       final current = taskId == null ? null : await store.tasks.get(taskId);
       if (taskId != null &&
           (current == null ||
@@ -59,7 +73,8 @@ class HomeScheduleService {
       final created = <Activity>[];
       for (final segment in segments) {
         final a = Activity()
-          ..title = current?.title ?? title
+          ..habitId = habitId
+          ..title = habit?.name ?? current?.title ?? title
           ..date = segment.date
           ..ampmHalf = segment.half
           ..startMinute = segment.start

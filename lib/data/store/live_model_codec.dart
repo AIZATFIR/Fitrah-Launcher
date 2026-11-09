@@ -87,6 +87,7 @@ class LiveModelCodec {
       },
       Activity x => <String, Object?>{
         'id': x.id,
+        'habitId': x.habitId == null ? null : _integer(x.habitId!),
         'presetId': x.presetId == null ? null : _integer(x.presetId!),
         'iconKey': x.iconKey,
         'title': x.title,
@@ -215,6 +216,9 @@ class LiveModelCodec {
         'sourceColorValue': x.sourceColorValue == null
             ? null
             : _integer(x.sourceColorValue!),
+        'habitTargetSnapshot': x.habitTargetSnapshot == null
+            ? null
+            : _integer(x.habitTargetSnapshot!),
         'targetSeconds': _integer(x.targetSeconds),
         'startedAt': x.startedAt == null ? null : _date(x.startedAt!, false),
         'attributionLocalDate': x.attributionLocalDate,
@@ -252,6 +256,7 @@ class LiveModelCodec {
       Activity =>
         Activity()
           ..id = _readInt(m['id'])
+          ..habitId = m['habitId'] == null ? null : _readInt(m['habitId'])
           ..presetId = m['presetId'] == null ? null : _readInt(m['presetId'])
           ..iconKey = m['iconKey'] == null ? null : m['iconKey'] as String
           ..title = m['title'] as String
@@ -408,6 +413,9 @@ class LiveModelCodec {
           ..sourceColorValue = m['sourceColorValue'] == null
               ? null
               : _readInt(m['sourceColorValue'])
+          ..habitTargetSnapshot = m['habitTargetSnapshot'] == null
+              ? null
+              : _readInt(m['habitTargetSnapshot'])
           ..targetSeconds = _readInt(m['targetSeconds'])
           ..startedAt = m['startedAt'] == null
               ? null

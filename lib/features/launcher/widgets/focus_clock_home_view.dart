@@ -858,6 +858,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     int duration,
     String identity, {
     String? title,
+    int? habitId,
   }) async {
     final now = widget.now?.call() ?? DateTime.now();
     final start = dateOnly(
@@ -886,6 +887,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     try {
       created = await HomeScheduleService(store).schedule(
         taskId: task?.id,
+        habitId: habitId,
         title: task?.title ?? title ?? '',
         start: start,
         durationMinutes: duration,
@@ -1243,6 +1245,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         accent: tc.accent,
                         surface: tc.card,
                         onHabitTimer: _openHabitFocusTimer,
+                        onHabitSchedule: (habit) =>
+                            _openScheduleToClockSheet(initialHabit: habit),
                         onTaskSchedule: _openIntentTask,
                         onSession: () =>
                             setState(() => _currentScreen = 'timer'),
@@ -4723,13 +4727,47 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   // ── 6. Interactive Schedule to Focus Clock Modal (Existing Items First!) ──
-  void _openScheduleToClockSheet({
+  Future<void> _openScheduleToClockSheet({
     String title = '',
     int initialDurationMinutes = 60,
     String identity = '',
     Color? identityColor,
     Task? inboxTask,
-  }) {
+    Habit? initialHabit,
+  }) async {
+    late final List<Habit> persistedHabits;
+    try {
+      persistedHabits = widget.useSampleData
+          ? <Habit>[]
+          : await ref.read(sadarRepoProvider).getHabits();
+    } catch (_) {
+      if (mounted) _showToast('Kebiasaan belum dimuat. Coba lagi.');
+      return;
+    }
+    if (!mounted) return;
+    final eligibleHabits = persistedHabits
+        .where(
+          (h) =>
+              !h.isArchived &&
+              h.habitType == 'timed' &&
+              h.unit == HabitUnit.min &&
+              h.target > 0,
+        )
+        .toList();
+    final scheduleHabits = widget.useSampleData
+        ? _habits
+        : eligibleHabits
+              .map(
+                (h) => HabitModel(
+                  id: h.id,
+                  title: h.name,
+                  identity: '',
+                  minutes: h.target,
+                ),
+              )
+              .toList();
+    int? selectedHabitId = initialHabit?.id;
+
     final settings = ref.read(launcherSettingsProvider);
     final tc = _HomeThemeColors.fromPalette(settings.themePalette);
 
@@ -4737,13 +4775,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     bool isSaving = false;
     final inboxTasks = _inboxTasks;
     Task? selectedTask = inboxTask;
-    String selectedTitle = title.trim();
+    String selectedTitle = initialHabit?.name ?? title.trim();
     if (selectedTitle.isEmpty) {
       if (inboxTasks.isNotEmpty) {
         selectedTask = inboxTasks.first;
         selectedTitle = selectedTask.title;
-      } else if (_habits.isNotEmpty) {
-        selectedTitle = _habits.first.title;
+      } else if (scheduleHabits.isNotEmpty) {
+        selectedTitle = scheduleHabits.first.title;
+        selectedHabitId = widget.useSampleData ? null : scheduleHabits.first.id;
       } else if (_presets.isNotEmpty) {
         selectedTitle = _presets.first.name;
       } else {
@@ -4760,7 +4799,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       startH += 0.5;
     }
 
-    int duration = initialDurationMinutes;
+    int duration = initialHabit?.target ?? initialDurationMinutes;
     String selectedIdentity = identity;
     String? errorMessage;
 
@@ -4838,6 +4877,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                               onTap: () => setSheetState(() {
                                 isCustomInput = !isCustomInput;
                                 selectedTask = null;
+                                selectedHabitId = null;
                               }),
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
@@ -4931,6 +4971,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                   onTap: () {
                                     setSheetState(() {
                                       selectedTask = task;
+                                      selectedHabitId = null;
                                       selectedTitle = task.title;
                                       titleCtrl.text = task.title;
                                       errorMessage = null;
@@ -4985,7 +5026,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           ],
 
                           // 2. Dari Kebiasaan & Rutinitas
-                          if (_habits.isNotEmpty) ...[
+                          if (scheduleHabits.isNotEmpty) ...[
                             Row(
                               children: [
                                 Icon(
@@ -5008,8 +5049,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: Row(
-                                children: _habits.take(6).map((h) {
-                                  final isSel = selectedTitle == h.title;
+                                children: scheduleHabits.map((h) {
+                                  final isSel = widget.useSampleData
+                                      ? selectedTitle == h.title
+                                      : selectedHabitId == h.id;
                                   final hColor = _colorForIdentity(h.identity);
                                   return Padding(
                                     padding: const EdgeInsets.only(right: 6),
@@ -5017,6 +5060,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                       onTap: () {
                                         setSheetState(() {
                                           selectedTask = null;
+                                          selectedHabitId = widget.useSampleData
+                                              ? null
+                                              : h.id;
                                           selectedTitle = h.title;
                                           titleCtrl.text = h.title;
                                           selectedIdentity = h.identity;
@@ -5123,6 +5169,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                       onTap: () {
                                         setSheetState(() {
                                           selectedTask = null;
+                                          selectedHabitId = null;
                                           selectedTitle = p.name;
                                           titleCtrl.text = p.name;
                                           selectedIdentity = p.identity;
@@ -5171,8 +5218,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
                           // Button to switch to manual input if user prefers
                           InkWell(
-                            onTap: () =>
-                                setSheetState(() => isCustomInput = true),
+                            onTap: () => setSheetState(() {
+                              isCustomInput = true;
+                              selectedHabitId = null;
+                              selectedTask = null;
+                            }),
                             borderRadius: BorderRadius.circular(10),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -5214,6 +5264,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             ),
                             onChanged: (v) => setSheetState(() {
                               selectedTask = null;
+                              selectedHabitId = null;
                               selectedTitle = v;
                             }),
                             decoration: InputDecoration(
@@ -5525,6 +5576,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                                     duration,
                                     selectedIdentity,
                                     title: actName,
+                                    habitId: selectedHabitId,
                                   );
                                   if (!ctx.mounted || !mounted) return;
                                   if (res != null) {

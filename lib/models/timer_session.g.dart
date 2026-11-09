@@ -38,49 +38,54 @@ const TimerSessionSchema = CollectionSchema(
       name: r'habitName',
       type: IsarType.string,
     ),
-    r'pausedAt': PropertySchema(
+    r'habitTargetSnapshot': PropertySchema(
       id: 5,
+      name: r'habitTargetSnapshot',
+      type: IsarType.long,
+    ),
+    r'pausedAt': PropertySchema(
+      id: 6,
       name: r'pausedAt',
       type: IsarType.dateTime,
     ),
     r'runningSince': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'runningSince',
       type: IsarType.dateTime,
     ),
     r'sourceColorValue': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'sourceColorValue',
       type: IsarType.long,
     ),
     r'sourceIdentity': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'sourceIdentity',
       type: IsarType.string,
     ),
     r'sourceKindIndex': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'sourceKindIndex',
       type: IsarType.long,
     ),
     r'startedAt': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'startedAt',
       type: IsarType.dateTime,
     ),
     r'status': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'status',
       type: IsarType.byte,
       enumMap: _TimerSessionstatusEnumValueMap,
     ),
     r'targetSeconds': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'targetSeconds',
       type: IsarType.long,
     ),
     r'updatedAt': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
@@ -134,15 +139,16 @@ void _timerSessionSerialize(
   writer.writeString(offsets[2], object.attributionLocalDate);
   writer.writeLong(offsets[3], object.habitId);
   writer.writeString(offsets[4], object.habitName);
-  writer.writeDateTime(offsets[5], object.pausedAt);
-  writer.writeDateTime(offsets[6], object.runningSince);
-  writer.writeLong(offsets[7], object.sourceColorValue);
-  writer.writeString(offsets[8], object.sourceIdentity);
-  writer.writeLong(offsets[9], object.sourceKindIndex);
-  writer.writeDateTime(offsets[10], object.startedAt);
-  writer.writeByte(offsets[11], object.status.index);
-  writer.writeLong(offsets[12], object.targetSeconds);
-  writer.writeDateTime(offsets[13], object.updatedAt);
+  writer.writeLong(offsets[5], object.habitTargetSnapshot);
+  writer.writeDateTime(offsets[6], object.pausedAt);
+  writer.writeDateTime(offsets[7], object.runningSince);
+  writer.writeLong(offsets[8], object.sourceColorValue);
+  writer.writeString(offsets[9], object.sourceIdentity);
+  writer.writeLong(offsets[10], object.sourceKindIndex);
+  writer.writeDateTime(offsets[11], object.startedAt);
+  writer.writeByte(offsets[12], object.status.index);
+  writer.writeLong(offsets[13], object.targetSeconds);
+  writer.writeDateTime(offsets[14], object.updatedAt);
 }
 
 TimerSession _timerSessionDeserialize(
@@ -157,18 +163,19 @@ TimerSession _timerSessionDeserialize(
   object.attributionLocalDate = reader.readStringOrNull(offsets[2]);
   object.habitId = reader.readLong(offsets[3]);
   object.habitName = reader.readString(offsets[4]);
+  object.habitTargetSnapshot = reader.readLongOrNull(offsets[5]);
   object.id = id;
-  object.pausedAt = reader.readDateTimeOrNull(offsets[5]);
-  object.runningSince = reader.readDateTimeOrNull(offsets[6]);
-  object.sourceColorValue = reader.readLongOrNull(offsets[7]);
-  object.sourceIdentity = reader.readStringOrNull(offsets[8]);
-  object.sourceKindIndex = reader.readLongOrNull(offsets[9]);
-  object.startedAt = reader.readDateTimeOrNull(offsets[10]);
+  object.pausedAt = reader.readDateTimeOrNull(offsets[6]);
+  object.runningSince = reader.readDateTimeOrNull(offsets[7]);
+  object.sourceColorValue = reader.readLongOrNull(offsets[8]);
+  object.sourceIdentity = reader.readStringOrNull(offsets[9]);
+  object.sourceKindIndex = reader.readLongOrNull(offsets[10]);
+  object.startedAt = reader.readDateTimeOrNull(offsets[11]);
   object.status =
-      _TimerSessionstatusValueEnumMap[reader.readByteOrNull(offsets[11])] ??
+      _TimerSessionstatusValueEnumMap[reader.readByteOrNull(offsets[12])] ??
       TimerStateStatus.idle;
-  object.targetSeconds = reader.readLong(offsets[12]);
-  object.updatedAt = reader.readDateTime(offsets[13]);
+  object.targetSeconds = reader.readLong(offsets[13]);
+  object.updatedAt = reader.readDateTime(offsets[14]);
   return object;
 }
 
@@ -190,24 +197,26 @@ P _timerSessionDeserializeProp<P>(
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 6:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 7:
-      return (reader.readLongOrNull(offset)) as P;
-    case 8:
-      return (reader.readStringOrNull(offset)) as P;
-    case 9:
-      return (reader.readLongOrNull(offset)) as P;
-    case 10:
       return (reader.readDateTimeOrNull(offset)) as P;
+    case 8:
+      return (reader.readLongOrNull(offset)) as P;
+    case 9:
+      return (reader.readStringOrNull(offset)) as P;
+    case 10:
+      return (reader.readLongOrNull(offset)) as P;
     case 11:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 12:
       return (_TimerSessionstatusValueEnumMap[reader.readByteOrNull(offset)] ??
               TimerStateStatus.idle)
           as P;
-    case 12:
-      return (reader.readLong(offset)) as P;
     case 13:
+      return (reader.readLong(offset)) as P;
+    case 14:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -812,6 +821,79 @@ extension TimerSessionQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'habitName', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  habitTargetSnapshotIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'habitTargetSnapshot'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  habitTargetSnapshotIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'habitTargetSnapshot'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  habitTargetSnapshotEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'habitTargetSnapshot', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  habitTargetSnapshotGreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'habitTargetSnapshot',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  habitTargetSnapshotLessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'habitTargetSnapshot',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  habitTargetSnapshotBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'habitTargetSnapshot',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
       );
     });
   }
@@ -1638,6 +1720,20 @@ extension TimerSessionQuerySortBy
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByHabitTargetSnapshot() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'habitTargetSnapshot', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByHabitTargetSnapshotDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'habitTargetSnapshot', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByPausedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'pausedAt', Sort.asc);
@@ -1822,6 +1918,20 @@ extension TimerSessionQuerySortThenBy
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByHabitTargetSnapshot() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'habitTargetSnapshot', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByHabitTargetSnapshotDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'habitTargetSnapshot', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -1990,6 +2100,13 @@ extension TimerSessionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QDistinct>
+  distinctByHabitTargetSnapshot() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'habitTargetSnapshot');
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByPausedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'pausedAt');
@@ -2090,6 +2207,13 @@ extension TimerSessionQueryProperty
   QueryBuilder<TimerSession, String, QQueryOperations> habitNameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'habitName');
+    });
+  }
+
+  QueryBuilder<TimerSession, int?, QQueryOperations>
+  habitTargetSnapshotProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'habitTargetSnapshot');
     });
   }
 
