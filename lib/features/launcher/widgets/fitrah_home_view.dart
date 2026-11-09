@@ -238,15 +238,17 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
 
     final appsAsync = ref.watch(installedAppsFutureProvider);
     final favoritePackages = ref.watch(favoritePackagesProvider);
+    final hiddenPackages = ref.watch(hiddenPackagesProvider);
     final activitiesAsync = ref.watch(activitiesByDateProvider);
     final activities = activitiesAsync.valueOrNull ?? <Activity>[];
 
     // Identify 2-4 pinned favorite apps to show at bottom-left
     List<InstalledApp> pinnedApps = [];
     appsAsync.whenData((allApps) {
-      pinnedApps = allApps.where((app) => favoritePackages.contains(app.packageName)).take(4).toList();
-      if (pinnedApps.isEmpty && allApps.isNotEmpty) {
-        pinnedApps = allApps.take(2).toList();
+      if (notifier.isLoaded) {
+        pinnedApps = allApps.where((app) =>
+            favoritePackages.contains(app.packageName) &&
+            !hiddenPackages.contains(app.packageName)).take(4).toList();
       }
     });
 

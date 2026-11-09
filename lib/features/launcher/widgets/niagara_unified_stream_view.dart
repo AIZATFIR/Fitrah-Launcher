@@ -1,3 +1,4 @@
+import 'app_preferences_sheet.dart';
 import 'launcher_action_feedback.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -107,143 +108,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
   }
 
   void _showAppOptions(InstalledApp app) {
-    HapticFeedback.mediumImpact();
-    final favorites = ref.read(favoritePackagesProvider);
-    final isFav = favorites.contains(app.packageName);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF18181B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        side: BorderSide(color: Color(0xFF27272A)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  AppIconWidget(
-                    packageName: app.packageName,
-                    appName: app.appName,
-                    size: 48,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          app.appName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          app.packageName,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.white.withOpacity(0.45),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Divider(color: Color(0xFF27272A), height: 1),
-              const SizedBox(height: 12),
-
-              // Favorite Toggle
-              ListTile(
-                leading: Icon(
-                  isFav ? Icons.star_rounded : Icons.star_outline_rounded,
-                  color: isFav ? const Color(0xFFE5A93C) : Colors.white70,
-                ),
-                title: Text(
-                  isFav ? 'Hapus dari Favorit' : 'Tambah ke Favorit',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  final nextFavs = Set<String>.from(favorites);
-                  if (isFav) {
-                    nextFavs.remove(app.packageName);
-                  } else {
-                    nextFavs.add(app.packageName);
-                  }
-                  ref.read(favoritePackagesProvider.notifier).state = nextFavs;
-                  HapticFeedback.selectionClick();
-                },
-              ),
-
-              // App Info
-              ListTile(
-                leading: const Icon(Icons.info_outline_rounded, color: Colors.white70),
-                title: const Text('Info Aplikasi', style: TextStyle(color: Colors.white, fontSize: 14)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openAppDetails(app.packageName));
-                },
-              ),
-
-              // Hide App (Niagara signature feature)
-              ListTile(
-                leading: const Icon(Icons.visibility_off_outlined, color: Colors.white70),
-                title: const Text('Sembunyikan Aplikasi', style: TextStyle(color: Colors.white, fontSize: 14)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  final hidden = ref.read(hiddenPackagesProvider);
-                  final nextHidden = Set<String>.from(hidden)..add(app.packageName);
-                  ref.read(hiddenPackagesProvider.notifier).state = nextHidden;
-                  HapticFeedback.mediumImpact();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${app.appName} disembunyikan'),
-                      backgroundColor: const Color(0xFF222226),
-                      action: SnackBarAction(
-                        label: 'URUNGKAN',
-                        textColor: const Color(0xFFE5A93C),
-                        onPressed: () {
-                          final cur = ref.read(hiddenPackagesProvider);
-                          ref.read(hiddenPackagesProvider.notifier).state = Set<String>.from(cur)..remove(app.packageName);
-                        },
-                      ),
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
-                },
-              ),
-
-              // Uninstall
-              if (!app.isSystem)
-                ListTile(
-                  leading: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444)),
-                  title: const Text('Copot Pemasangan', style: TextStyle(color: Color(0xFFEF4444), fontSize: 14)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.uninstallApp(app.packageName));
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+    showAppPreferences(context, app);
   }
 
   Map<String, dynamic> _calculateNextPrayer(LauncherSettings settings) {
@@ -315,7 +180,8 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
             appsAsync.when(
               data: (allApps) {
                 // Filter out hidden bloatware/apps
-                final visibleApps = allApps
+                final visibleApps = (ref.read(launcherSettingsProvider.notifier).isLoaded
+                        ? allApps : <InstalledApp>[])
                     .where((a) => !hiddenPackages.contains(a.packageName))
                     .toList();
 

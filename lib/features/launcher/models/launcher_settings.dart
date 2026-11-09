@@ -36,6 +36,44 @@ class LauncherSettings {
   final Map<String, String> _dailyNotes;
   Map<String, String> get dailyNotes => Map.unmodifiable(_dailyNotes);
 
+  static const defaultFavorites = {
+    'com.android.dialer',
+    'com.android.mms',
+    'com.android.browser',
+    'com.android.camera',
+  };
+  final Set<String> favoritePackages;
+  final Set<String> hiddenPackages;
+
+  // Android also exposes single-segment system packages such as "android".
+  static bool isValidPackage(String value) => RegExp(
+    r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$',
+  ).hasMatch(value);
+
+  static Set<String> packageSet(Iterable<String> values) {
+    final result = <String>{};
+    for (final value in values) {
+      if (!isValidPackage(value)) {
+        throw const FormatException('Invalid package identifier');
+      }
+      result.add(value);
+    }
+    return Set.unmodifiable(result);
+  }
+
+  static Set<String> decodePackages(
+    Map<String, dynamic> map,
+    String key,
+    Set<String> defaults,
+  ) {
+    if (!map.containsKey(key)) return defaults;
+    final value = map[key];
+    if (value is! List || value.any((item) => item is! String)) {
+      throw FormatException('Invalid $key');
+    }
+    return packageSet(value.cast<String>());
+  }
+
   LauncherSettings({
     this.wallpaperType = 'system',
     this.customImageUrl = '',
@@ -64,8 +102,12 @@ class LauncherSettings {
     this.autoFocusSearch = false,
     this.themePalette = 'ocean_blue',
     this.focusGoal = '',
+    Iterable<String> favoritePackages = defaultFavorites,
+    Iterable<String> hiddenPackages = const {},
     Map<String, String> dailyNotes = const {},
-  }) : _dailyNotes = Map.unmodifiable(dailyNotes);
+  }) : favoritePackages = packageSet(favoritePackages),
+       hiddenPackages = packageSet(hiddenPackages),
+       _dailyNotes = Map.unmodifiable(dailyNotes);
 
   LauncherSettings copyWith({
     String? wallpaperType,
@@ -90,6 +132,8 @@ class LauncherSettings {
     bool? autoFocusSearch,
     String? themePalette,
     String? focusGoal,
+    Iterable<String>? favoritePackages,
+    Iterable<String>? hiddenPackages,
     Map<String, String>? dailyNotes,
   }) {
     return LauncherSettings(
@@ -115,6 +159,8 @@ class LauncherSettings {
       autoFocusSearch: autoFocusSearch ?? this.autoFocusSearch,
       themePalette: themePalette ?? this.themePalette,
       focusGoal: focusGoal ?? this.focusGoal,
+      favoritePackages: favoritePackages ?? this.favoritePackages,
+      hiddenPackages: hiddenPackages ?? this.hiddenPackages,
       dailyNotes: Map.unmodifiable(dailyNotes ?? this.dailyNotes),
     );
   }
@@ -143,6 +189,8 @@ class LauncherSettings {
       'autoFocusSearch': autoFocusSearch,
       'themePalette': themePalette,
       'focusGoal': focusGoal,
+      'favoritePackages': favoritePackages.toList(),
+      'hiddenPackages': hiddenPackages.toList(),
       'dailyNotes': dailyNotes,
     };
   }
@@ -180,6 +228,12 @@ class LauncherSettings {
       autoFocusSearch: map['autoFocusSearch'] as bool? ?? false,
       themePalette: map['themePalette'] as String? ?? 'ocean_blue',
       focusGoal: map['focusGoal'] as String? ?? '',
+      favoritePackages: decodePackages(
+        map,
+        'favoritePackages',
+        defaultFavorites,
+      ),
+      hiddenPackages: decodePackages(map, 'hiddenPackages', const {}),
       dailyNotes: decodeDailyNotes(map['dailyNotes']),
     );
   }

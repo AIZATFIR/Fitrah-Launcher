@@ -1,3 +1,4 @@
+import '../providers/launcher_settings_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -168,18 +169,13 @@ final installedAppsFutureProvider = FutureProvider<List<InstalledApp>>((
   return service.getInstalledApps();
 });
 
-final favoritePackagesProvider = StateProvider<Set<String>>((ref) {
-  return {
-    'com.android.dialer',
-    'com.android.mms',
-    'com.android.browser',
-    'com.android.camera',
-  };
-});
+final favoritePackagesProvider = Provider<Set<String>>(
+  (ref) => ref.watch(launcherSettingsProvider).favoritePackages,
+);
 
-final hiddenPackagesProvider = StateProvider<Set<String>>((ref) {
-  return <String>{};
-});
+final hiddenPackagesProvider = Provider<Set<String>>(
+  (ref) => ref.watch(launcherSettingsProvider).hiddenPackages,
+);
 
 final appIconProvider = FutureProvider.family<Uint8List?, String>((
   ref,

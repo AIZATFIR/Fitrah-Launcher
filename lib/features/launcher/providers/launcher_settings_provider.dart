@@ -201,6 +201,32 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
     await _mutate((s) => s.copyWith(themePalette: palette));
   }
 
+  Future<bool> setFavoritePackage(String package, bool favorite) {
+    if (!LauncherSettings.isValidPackage(package)) return Future.value(false);
+    return _mutate((s) {
+      final packages = {...s.favoritePackages};
+      if (favorite) {
+        packages.add(package);
+      } else {
+        packages.remove(package);
+      }
+      return s.copyWith(favoritePackages: packages);
+    });
+  }
+
+  Future<bool> setHiddenPackage(String package, bool hidden) {
+    if (!LauncherSettings.isValidPackage(package)) return Future.value(false);
+    return _mutate((s) {
+      final packages = {...s.hiddenPackages};
+      if (hidden) {
+        packages.add(package);
+      } else {
+        packages.remove(package);
+      }
+      return s.copyWith(hiddenPackages: packages);
+    });
+  }
+
   Future<bool> setFocusGoal(String goal) =>
       _mutate((s) => s.copyWith(focusGoal: goal.trim()));
 

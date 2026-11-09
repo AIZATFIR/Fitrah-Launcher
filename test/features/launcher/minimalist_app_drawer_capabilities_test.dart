@@ -1,3 +1,5 @@
+import '../../launcher_daily_note_test.dart' show NoteStorage;
+import 'package:fitrah_launcher/services/secure_storage_service.dart';
 import 'dart:async';
 
 import 'package:fitrah_launcher/features/launcher/widgets/minimalist_app_drawer.dart';
@@ -25,6 +27,9 @@ void main() {
   Future<void> showDrawer(WidgetTester tester, {double textScale = 1}) async {
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          secureStorageServiceProvider.overrideWithValue(NoteStorage()),
+        ],
         child: MaterialApp(
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(

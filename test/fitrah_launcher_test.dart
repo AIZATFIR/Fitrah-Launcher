@@ -1,3 +1,5 @@
+import 'launcher_daily_note_test.dart' show NoteStorage;
+import 'package:fitrah_launcher/services/secure_storage_service.dart';
 import 'package:fitrah_launcher/core/time_math.dart';
 import 'package:fitrah_launcher/providers/providers.dart';
 import 'package:fitrah_launcher/providers/intent_providers.dart';
@@ -59,6 +61,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            secureStorageServiceProvider.overrideWithValue(NoteStorage()),
             installedAppsFutureProvider.overrideWith(
               (_) async => const [
                 InstalledApp(appName: 'Test App', packageName: 'test.app'),
