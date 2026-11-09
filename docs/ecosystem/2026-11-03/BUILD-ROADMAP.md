@@ -258,3 +258,13 @@ Sebelum coding, tulis satu task kecil berisi requirement ID, file yang disentuh,
 Selesai slice ketika behavior dan failure path yang relevan diperiksa. Handoff menyebut perubahan, command/check yang dijalankan, hasil, screenshot bila UI berubah, dan batas yang belum diverifikasi. Source-only audit bukan runtime pass. Jangan menambah dependency, route atau tabel untuk kebutuhan yang belum punya slice.
 
 Rencana ini tidak menetapkan jumlah hari kerja palsu. E0 mengukur kapasitas dan toolchain; sesudahnya pecah milestone aktif menjadi satu atau dua vertical slices yang bisa direview. Estimasi kalender diberikan setelah scope slice dan hasil spike diketahui.
+
+## Checkpoint launcher — 9 November, b89991f
+
+Three implemented slices: persisted favorite/hidden preferences with commit-aware retry and restoration; verified Android default Home state/system selection; native HOME intent routing to the central goal screen. Full Flutter suite: **280 passed** (54 seconds), analyzer clean (8.5 seconds). Reviews found one hydration-header availability issue, fixed and tested; subsequent role/navigation reviews had no actionable findings.
+
+API36 x64 upgraded from QA versionCode12 to14 and demonstrated system Home from Android Settings and launched Android Clock returns to central Home with QA-LKS-Nasional. Goal/favorite upgrade and cold-restart persistence, committed hide/restart/restore and actual role cancel/select were verified; prior versionCode12 also retained role/goal/favorite through actual emulator reboot. New navigation build was not separately reboot-tested. Physical Android, pre29 runtime, TalkBack and ordinary daily use remain gates.
+
+Downloadable preview source: `b89991f`. Folder `release_dist/2026-11-09-b89991f/`: arm64 APK0.5.3 with versionCode15 override (same debug signer), JavaScript web ZIP, manifest and checksums. APK compile137.5 seconds; web compile68.7 seconds. APK SHA256 `b37a42c556e54986c4bd052a133dc00ed44d936b1e256d46fcaaf4fe6def3452`; ZIP SHA256 `9ac8a2f9ecac89c212562d1cd6d464bc22ed02c5f8c10812523b219e9db5f7a6`. Both checksum checks passed. Arm64 phone runtime and browser runtime at this checkpoint remain unverified. Local web preview served on127.0.0.1:4174; no GitHub/Vercel publication.
+
+E5/E6 remain open: several legacy Settings controls still have simulated/local-only behavior, permission requests remain overly early, launcher accessibility and vendor/physical-device behavior need work, and broader session/habit compatibility gates remain. Later AI/BYOK, sync, WhatsApp and MCP scope has not been completed by these launcher slices.
