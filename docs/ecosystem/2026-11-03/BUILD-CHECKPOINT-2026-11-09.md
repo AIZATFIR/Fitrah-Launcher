@@ -45,3 +45,20 @@ Latest local artifacts are under `release_dist/2026-11-09-c8b1087/`, with manife
 | `Focus-Clock-c8b1087-Web-preview.zip` | 13,902,649 | `9ec9a4e5ed97887b47b87782127581355f1a7a6ff76381ecd9a18c8be4450272` |
 
 Local preview server serves `/tmp/focus-clock-home-actions-final-web` at `127.0.0.1:4174`; the listener was verified. This does not prove rendered browser behavior. No GitHub release or production deployment was made. The runtime/device/TalkBack and wider ecosystem limits above still apply.
+
+## Launcher capability checkpoint — 3d463ce
+
+Newer source: `3d463ce00e854a8cb68e5f53f566cd49a8843b33`. Production demo app fallback and simulated successful dispatch are removed; listing, retry/resume, icon refresh and app-action failure feedback are connected across their consumers. Review patches make YPT's app-list failure reachable at 320dp/200% and enlarge the changed legacy Sadar targets.
+
+Evidence: 29 affected tests passed; analyzer clean (12.5 seconds); web JavaScript release compiled (51.7 seconds); Android x64 compiled (183.8 seconds) and arm64 compiled (137.2 seconds). The first x64 attempt rejected an HTTP504 page; a fresh download matched the package's exact SQLite hash before generated cache repair. No validation or dependency lock change was made.
+
+Native API36 x64 QA upgraded versionCode9 to10 with the same signature, retained a goal created/pinned through the real UI, displayed the actual app list, opened Android Clock, and returned to Fitrah. This is a disposable emulator with 4096-byte pages, not a physical or arm64 runtime check. See [NATIVE-QA](NATIVE-QA.md). The phone APK uses versionCode11, with application binary arm64, minSDK24/targetSDK35/compileSDK36; signature and all arm64 Isar LOAD alignments (`0x4000`) verified. The existing debug signing identity remains.
+
+Local artifacts under `release_dist/2026-11-09-3d463ce/` include the manifest, checksum list and preview limits. Both artifact checksums were rechecked successfully:
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `Focus-Clock-3d463ce-Android-arm64-preview.apk` | 30,527,801 | `979b73af03751a52c7775e09096514efc662f370a8980885e38bd6aad60935f8` |
+| `Focus-Clock-3d463ce-Web-preview.zip` | 13,903,163 | `03dd0ee7102c250fe4172069f924158a7363dcc24aac84ac32b8a62a94b5b8e8` |
+
+The latest local server serves `/tmp/focus-clock-launcher-capabilities-web` at `127.0.0.1:4174`, with source revision in `BUILD-INFO.json`; listener verified. Browser runtime and physical-device behavior remain unverified. No GitHub release or production deployment was made; default Home, durable favorites/hidden/order and the remaining ecosystem gates are still open.
