@@ -1,3 +1,4 @@
+import '../../launcher/widgets/launcher_action_feedback.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -330,380 +331,441 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 520),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Top Bar: Habit Pill & Emergency Exit Indicator
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Habit badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF141416),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: habitColor.withOpacity(0.4),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  widget.habit.iconKey,
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  widget.habit.name,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // YPT Tag
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF27272A),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(
-                                  Icons.lock_clock_rounded,
-                                  color: Color(0xFFF59E0B),
-                                  size: 14,
-                                ),
-                                SizedBox(width: 5),
-                                Text(
-                                  'YPT LOCK',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFFF59E0B),
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
                       ),
-
-                      // Center: Huge Digital Clock with Pulse
-                      Column(
-                        children: [
-                          Text(
-                            timer.isOverdue
-                                ? '+${_formatTime((timer.actualDurationSeconds - timer.targetSeconds).clamp(0, 999999))}'
-                                : _formatTime(timer.remainingSeconds),
-                            style: TextStyle(
-                              fontSize: 76,
-                              fontWeight: FontWeight.w800,
-                              color: timer.isOverdue
-                                  ? const Color(0xFFF59E0B)
-                                  : Colors.white,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                              letterSpacing: -2.0,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            timer.isCompleted && !timer.isSavePending
-                                ? '🎉 Target Tercapai! Alhamdulillah'
-                                : (timer.isPaused
-                                      ? '⏸️ Sesi Dijeda'
-                                      : (timer.isOverdue
-                                            ? '🔥 Waktu Tambahan Ekstra Fokus'
-                                            : 'Tetap fokus & sadar')),
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: timer.isOverdue
-                                  ? const Color(0xFFFBBF24)
-                                  : Colors.white54,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Whitelisted / Allowed Apps Bar
-                      if (widget.habit.allowedPackages.isNotEmpty) ...[
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Padding(
-                              padding: EdgeInsets.only(left: 4, bottom: 8),
-                              child: Text(
-                                'APLIKASI DIIZINKAN (ALLOWED)',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white38,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ),
-                            installedAppsAsync.when(
-                              data: (apps) {
-                                final allowed = apps
-                                    .where(
-                                      (a) => widget.habit.allowedPackages
-                                          .contains(a.packageName),
-                                    )
-                                    .toList();
-                                if (allowed.isEmpty) {
-                                  return const SizedBox.shrink();
-                                }
-                                return SizedBox(
-                                  height: 48,
-                                  child: ListView.separated(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: allowed.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(width: 10),
-                                    itemBuilder: (ctx, idx) {
-                                      final app = allowed[idx];
-                                      return InkWell(
-                                        onTap: () {
-                                          HapticFeedback.lightImpact();
-                                          ref
-                                              .read(appLauncherServiceProvider)
-                                              .launchApp(app.packageName);
-                                        },
-                                        borderRadius: BorderRadius.circular(14),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 14,
-                                            vertical: 8,
+                            // Top Bar: Habit Pill & Emergency Exit Indicator
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                // Habit badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF141416),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: habitColor.withOpacity(0.4),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        widget.habit.iconKey,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          widget.habit.name,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
                                           ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // YPT Tag
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF27272A),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.lock_clock_rounded,
+                                        color: Color(0xFFF59E0B),
+                                        size: 14,
+                                      ),
+                                      SizedBox(width: 5),
+                                      Text(
+                                        'YPT LOCK',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFFF59E0B),
+                                          letterSpacing: 1.0,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Center: Huge Digital Clock with Pulse
+                            Column(
+                              children: [
+                                Text(
+                                  timer.isOverdue
+                                      ? '+${_formatTime((timer.actualDurationSeconds - timer.targetSeconds).clamp(0, 999999))}'
+                                      : _formatTime(timer.remainingSeconds),
+                                  style: TextStyle(
+                                    fontSize: 76,
+                                    fontWeight: FontWeight.w800,
+                                    color: timer.isOverdue
+                                        ? const Color(0xFFF59E0B)
+                                        : Colors.white,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                    letterSpacing: -2.0,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  timer.isCompleted && !timer.isSavePending
+                                      ? '🎉 Target Tercapai! Alhamdulillah'
+                                      : (timer.isPaused
+                                            ? '⏸️ Sesi Dijeda'
+                                            : (timer.isOverdue
+                                                  ? '🔥 Waktu Tambahan Ekstra Fokus'
+                                                  : 'Tetap fokus & sadar')),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: timer.isOverdue
+                                        ? const Color(0xFFFBBF24)
+                                        : Colors.white54,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Whitelisted / Allowed Apps Bar
+                            if (widget.habit.allowedPackages.isNotEmpty) ...[
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.only(
+                                      left: 4,
+                                      bottom: 8,
+                                    ),
+                                    child: Text(
+                                      'APLIKASI DIIZINKAN (ALLOWED)',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white38,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                  ),
+                                  installedAppsAsync.when(
+                                    skipLoadingOnRefresh: false,
+                                    data: (apps) {
+                                      final allowed = apps
+                                          .where(
+                                            (a) => widget.habit.allowedPackages
+                                                .contains(a.packageName),
+                                          )
+                                          .toList();
+                                      if (allowed.isEmpty) {
+                                        return const Text(
+                                          'Aplikasi yang diizinkan tidak tersedia di perangkat ini. Pilihan tersimpan tetap aman.',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                          ),
+                                        );
+                                      }
+                                      return SizedBox(
+                                        height: 48,
+                                        child: ListView.separated(
+                                          scrollDirection: Axis.horizontal,
+                                          itemCount: allowed.length,
+                                          separatorBuilder: (_, __) =>
+                                              const SizedBox(width: 10),
+                                          itemBuilder: (ctx, idx) {
+                                            final app = allowed[idx];
+                                            return InkWell(
+                                              onTap: () {
+                                                HapticFeedback.lightImpact();
+                                                runLauncherAction(
+                                                  context,
+                                                  ref.read(
+                                                    appLauncherServiceProvider,
+                                                  ),
+                                                  (service) =>
+                                                      service.launchApp(
+                                                        app.packageName,
+                                                      ),
+                                                );
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 8,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFF1C1C20,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(14),
+                                                  border: Border.all(
+                                                    color: Colors.white24,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.open_in_new_rounded,
+                                                      size: 14,
+                                                      color: Colors.white70,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      app.appName,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
+                                    loading: () => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                    error: (e, _) =>
+                                        LauncherAppListFailure(error: e),
+                                  ),
+                                ],
+                              ),
+                            ],
+
+                            // Bottom Controls: Pause, Finish, & 3s Safety Exit
+                            Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    // Pause / Resume
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: _isSaving || timer.isCompleted
+                                            ? null
+                                            : _togglePause,
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Container(
+                                          constraints: const BoxConstraints(
+                                            minHeight: 52,
+                                          ),
+                                          padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF1C1C20),
+                                            color: const Color(0xFF1E1E22),
                                             borderRadius: BorderRadius.circular(
-                                              14,
+                                              16,
                                             ),
                                             border: Border.all(
                                               color: Colors.white24,
                                             ),
                                           ),
+                                          child: Center(
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  timer.isPaused
+                                                      ? Icons.play_arrow_rounded
+                                                      : Icons.pause_rounded,
+                                                  color: Colors.white,
+                                                  size: 22,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Flexible(
+                                                  child: Text(
+                                                    timer.isPaused
+                                                        ? 'Lanjutkan'
+                                                        : 'Jeda',
+                                                    style: const TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+
+                                    // Selesai (Finish)
+                                    Expanded(
+                                      child: InkWell(
+                                        onTap: _isSaving ? null : _finish,
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Container(
+                                          constraints: const BoxConstraints(
+                                            minHeight: 52,
+                                          ),
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                habitColor,
+                                                habitColor.withOpacity(0.8),
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.check_rounded,
+                                                  color: Colors.black,
+                                                  size: 22,
+                                                ),
+                                                SizedBox(width: 8),
+                                                Flexible(
+                                                  child: Text(
+                                                    timer.isSavePending
+                                                        ? 'Coba lagi'
+                                                        : 'Selesai',
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (_actionError != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _actionError!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.orangeAccent,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+
+                                // Emergency Exit (Hold 3 seconds - 100% Anti-Brick/Nyangkut Guarantee)
+                                GestureDetector(
+                                  onTapDown: (_) => _startHoldExit(),
+                                  onTapUp: (_) => _cancelHoldExit(),
+                                  onTapCancel: () => _cancelHoldExit(),
+                                  child: Container(
+                                    constraints: const BoxConstraints(
+                                      minHeight: 48,
+                                    ),
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.red.withOpacity(0.35),
+                                      ),
+                                    ),
+                                    child: Stack(
+                                      children: [
+                                        // Fill progress
+                                        if (_holdProgress > 0)
+                                          Positioned.fill(
+                                            child: FractionallySizedBox(
+                                              widthFactor: _holdProgress,
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red.withOpacity(
+                                                    0.3,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        Center(
                                           child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               const Icon(
-                                                Icons.open_in_new_rounded,
-                                                size: 14,
-                                                color: Colors.white70,
+                                                Icons.shield_outlined,
+                                                size: 16,
+                                                color: Color(0xFFEF4444),
                                               ),
                                               const SizedBox(width: 8),
-                                              Text(
-                                                app.appName,
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.white,
+                                              Flexible(
+                                                child: Text(
+                                                  _holdProgress > 0
+                                                      ? 'Menahan... (${((1.0 - _holdProgress) * 3).toStringAsFixed(1)}s)'
+                                                      : 'Tahan 3 Detik untuk Keluar Darurat',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Color(0xFFEF4444),
+                                                  ),
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                              loading: () => const SizedBox.shrink(),
-                              error: (_, __) => const SizedBox.shrink(),
-                            ),
-                          ],
-                        ),
-                      ],
-
-                      // Bottom Controls: Pause, Finish, & 3s Safety Exit
-                      Column(
-                        children: [
-                          Row(
-                            children: [
-                              // Pause / Resume
-                              Expanded(
-                                child: InkWell(
-                                  onTap: _isSaving || timer.isCompleted
-                                      ? null
-                                      : _togglePause,
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    height: 52,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF1E1E22),
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: Colors.white24),
-                                    ),
-                                    child: Center(
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            timer.isPaused
-                                                ? Icons.play_arrow_rounded
-                                                : Icons.pause_rounded,
-                                            color: Colors.white,
-                                            size: 22,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            timer.isPaused
-                                                ? 'Lanjutkan'
-                                                : 'Jeda',
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-
-                              // Selesai (Finish)
-                              Expanded(
-                                child: InkWell(
-                                  onTap: _isSaving ? null : _finish,
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    height: 52,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          habitColor,
-                                          habitColor.withOpacity(0.8),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Center(
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.check_rounded,
-                                            color: Colors.black,
-                                            size: 22,
-                                          ),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            timer.isSavePending
-                                                ? 'Coba lagi'
-                                                : 'Selesai',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_actionError != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              _actionError!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.orangeAccent,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 16),
-
-                          // Emergency Exit (Hold 3 seconds - 100% Anti-Brick/Nyangkut Guarantee)
-                          GestureDetector(
-                            onTapDown: (_) => _startHoldExit(),
-                            onTapUp: (_) => _cancelHoldExit(),
-                            onTapCancel: () => _cancelHoldExit(),
-                            child: Container(
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.red.withOpacity(0.35),
-                                ),
-                              ),
-                              child: Stack(
-                                children: [
-                                  // Fill progress
-                                  if (_holdProgress > 0)
-                                    FractionallySizedBox(
-                                      widthFactor: _holdProgress,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.withOpacity(0.3),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  Center(
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(
-                                          Icons.shield_outlined,
-                                          size: 16,
-                                          color: Color(0xFFEF4444),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _holdProgress > 0
-                                              ? 'Menahan... (${((1.0 - _holdProgress) * 3).toStringAsFixed(1)}s)'
-                                              : 'Tahan 3 Detik untuk Keluar Darurat',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0xFFEF4444),
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

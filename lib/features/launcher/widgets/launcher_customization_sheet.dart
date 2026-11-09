@@ -1,3 +1,4 @@
+import 'launcher_action_feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -102,7 +103,11 @@ class _LauncherCustomizationSheetState
                   const Divider(color: AppPalette.stroke, height: 1),
                   Expanded(
                     child: appsAsync.when(
+                      skipLoadingOnRefresh: false,
                       data: (apps) {
+                        if (apps.isEmpty) {
+                          return const Center(child: Text('Tidak ada aplikasi terpasang yang dapat dibuka.', style: TextStyle(color: Colors.white70)));
+                        }
                         return ListView.separated(
                           controller: scrollCtrl,
                           itemCount: apps.length,
@@ -159,7 +164,7 @@ class _LauncherCustomizationSheetState
                         );
                       },
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Error: $e')),
+                      error: (e, _) => LauncherAppListFailure(error: e),
                     ),
                   ),
                 ],
@@ -262,7 +267,7 @@ class _LauncherCustomizationSheetState
                         ),
                         onPressed: () {
                           HapticFeedback.mediumImpact();
-                          ref.read(appLauncherServiceProvider).openHomeSettings();
+                          runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openHomeSettings());
                         },
                         icon: const Icon(Icons.launch_rounded, size: 16),
                         label: const Text(

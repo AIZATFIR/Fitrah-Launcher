@@ -57,19 +57,32 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(home: MinimalistAppDrawer())),
+        ProviderScope(
+          overrides: [
+            installedAppsFutureProvider.overrideWith(
+              (_) async => const [
+                InstalledApp(appName: 'Test App', packageName: 'test.app'),
+              ],
+            ),
+          ],
+          child: const MaterialApp(home: MinimalistAppDrawer()),
+        ),
       );
 
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(NiagaraWaveScrubber), findsOneWidget);
+      expect(find.text('Test App'), findsOneWidget);
       final searchFab = find.byIcon(Icons.search_rounded);
       expect(searchFab, findsOneWidget);
       await tester.tap(searchFab);
       await tester.pumpAndSettle();
       expect(find.byType(TextField), findsOneWidget);
       expect(find.text('Search apps'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Test');
+      await tester.pump();
+      expect(find.text('Test App'), findsOneWidget);
     });
 
     testWidgets('FitrahLauncherShell initial page is center Home', (

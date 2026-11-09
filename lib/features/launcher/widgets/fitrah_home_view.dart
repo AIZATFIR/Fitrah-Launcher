@@ -1,3 +1,4 @@
+import 'launcher_action_feedback.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -124,11 +125,11 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
   void _launchDockPackage(String pkg) {
     HapticFeedback.lightImpact();
     if (pkg.contains('dialer') || pkg.contains('phone')) {
-      ref.read(appLauncherServiceProvider).launchDialer();
+      runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchDialer());
     } else if (pkg.contains('camera')) {
-      ref.read(appLauncherServiceProvider).launchCamera();
+      runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchCamera());
     } else {
-      ref.read(appLauncherServiceProvider).launchApp(pkg);
+      runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchApp(pkg));
     }
   }
 
@@ -261,7 +262,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
           if (vel > 280) {
             // Swipe down: expand notification panel
             HapticFeedback.selectionClick();
-            ref.read(appLauncherServiceProvider).expandNotificationsPanel();
+            runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.expandNotificationsPanel());
           } else if (vel < -280) {
             // Swipe up: open app drawer
             HapticFeedback.selectionClick();
@@ -939,7 +940,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
     return InkWell(
       onTap: () {
         HapticFeedback.lightImpact();
-        ref.read(appLauncherServiceProvider).launchApp(app.packageName);
+        runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchApp(app.packageName));
       },
       onLongPress: () {
         HapticFeedback.mediumImpact();

@@ -1,3 +1,4 @@
+import 'launcher_action_feedback.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -102,7 +103,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
 
   void _launchApp(InstalledApp app) {
     HapticFeedback.lightImpact();
-    ref.read(appLauncherServiceProvider).launchApp(app.packageName);
+    runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchApp(app.packageName));
   }
 
   void _showAppOptions(InstalledApp app) {
@@ -194,7 +195,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 onTap: () {
                   Navigator.pop(ctx);
-                  ref.read(appLauncherServiceProvider).openAppDetails(app.packageName);
+                  runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openAppDetails(app.packageName));
                 },
               ),
 
@@ -235,7 +236,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   onTap: () {
                     Navigator.pop(ctx);
-                    ref.read(appLauncherServiceProvider).uninstallApp(app.packageName);
+                    runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.uninstallApp(app.packageName));
                   },
                 ),
             ],
@@ -425,9 +426,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
               loading: () => const Center(
                 child: CircularProgressIndicator(color: Color(0xFFE5A93C)),
               ),
-              error: (e, _) => Center(
-                child: Text('Error: $e', style: const TextStyle(color: Color(0xFFEF4444))),
-              ),
+              error: (e, _) => LauncherAppListFailure(error: e),
             ),
 
             // Niagara Signature Curved Wave Alphabet Scrubber (persists when pulled to screen center)
@@ -459,6 +458,8 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                       widget.onOpenFocusClock();
                     },
                     child: Container(
+                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.08),
@@ -488,9 +489,11 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      ref.read(appLauncherServiceProvider).launchSadar();
+                      runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchSadar());
                     },
                     child: Container(
+                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.08),
@@ -579,7 +582,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              ref.read(appLauncherServiceProvider).launchClock();
+              runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchClock());
             },
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -615,7 +618,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              ref.read(appLauncherServiceProvider).launchCalendar();
+              runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchCalendar());
             },
             child: Row(
               children: [
@@ -892,14 +895,18 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      ref.read(appLauncherServiceProvider).launchSadar();
+                      runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchSadar());
                     },
-                    child: Text(
-                      '$done/$total selesai (${(ratio * 100).toInt()}%)',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF9E9DA6),
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$done/$total selesai (${(ratio * 100).toInt()}%)',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF9E9DA6),
+                        ),
                       ),
                     ),
                   ),
@@ -1037,7 +1044,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                       tooltip: 'Buka Sadar',
                       onPressed: () {
                         HapticFeedback.lightImpact();
-                        ref.read(appLauncherServiceProvider).launchSadar();
+                        runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchSadar());
                       },
                     ),
                   ],
@@ -1062,8 +1069,10 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                           child: Row(
                             children: pendingHabits.skip(1).map((h) {
                               return GestureDetector(
-                                onTap: () => ref.read(appLauncherServiceProvider).launchSadar(),
+                                onTap: () => runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchSadar()),
                                 child: Container(
+                                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                  alignment: Alignment.center,
                                   margin: const EdgeInsets.only(right: 6),
                                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                   decoration: BoxDecoration(

@@ -1,3 +1,4 @@
+import 'launcher_action_feedback.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -127,7 +128,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
 
   void _launchApp(InstalledApp app) {
     HapticFeedback.lightImpact();
-    ref.read(appLauncherServiceProvider).launchApp(app.packageName);
+    runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchApp(app.packageName));
   }
 
   void _showAppOptions(InstalledApp app) {
@@ -206,7 +207,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                   title: 'App info',
                   onTap: () {
                     Navigator.of(ctx).pop();
-                    ref.read(appLauncherServiceProvider).openAppDetails(app.packageName);
+                    runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openAppDetails(app.packageName));
                   },
                 ),
                 _buildSheetTile(
@@ -216,7 +217,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                   title: 'Uninstall app',
                   onTap: () {
                     Navigator.of(ctx).pop();
-                    ref.read(appLauncherServiceProvider).uninstallApp(app.packageName);
+                    runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.uninstallApp(app.packageName));
                   },
                 ),
               ],
@@ -238,7 +239,8 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
-      child: Padding(
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 48),
         padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 6),
         child: Row(
           children: [
@@ -371,15 +373,16 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                       // Main List
                       Expanded(
                         child: appsAsync.when(
+                          skipLoadingOnRefresh: false,
                           data: (allApps) {
                             final filtered = _searchQuery.isEmpty
                                 ? allApps
                                 : allApps.where((a) => a.appName.toLowerCase().contains(_searchQuery)).toList();
 
                             if (filtered.isEmpty) {
-                              return const Center(
+                              return Center(
                                 child: Text(
-                                  'No apps found.',
+                                  _searchQuery.isEmpty ? 'Tidak ada aplikasi terpasang yang dapat dibuka.' : 'Tidak ada aplikasi yang cocok dengan pencarian.',
                                   style: TextStyle(
                                     color: Colors.white54,
                                     fontSize: 14,
@@ -441,7 +444,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                             );
                           },
                           loading: () => const Center(child: CircularProgressIndicator(color: Colors.white54)),
-                          error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Color(0xFFEF4444)))),
+                          error: (e, _) => LauncherAppListFailure(error: e),
                         ),
                       ),
                     ],
@@ -514,7 +517,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => ref.read(appLauncherServiceProvider).launchClock(),
+            onTap: () => runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchClock()),
             onLongPress: () {
               HapticFeedback.mediumImpact();
               Navigator.push(
@@ -538,16 +541,22 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
           ),
           const SizedBox(height: 4),
           GestureDetector(
-            onTap: () => ref.read(appLauncherServiceProvider).launchCalendar(),
-            child: Text(
-              dateStr,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: Colors.white.withOpacity(0.85),
-                shadows: const [
-                  Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 1)),
-                ],
+            onTap: () => runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchCalendar()),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  dateStr,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withOpacity(0.85),
+                    shadows: const [
+                      Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 1)),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

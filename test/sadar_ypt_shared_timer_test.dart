@@ -1,5 +1,6 @@
 import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
 import 'package:fitrah_launcher/features/sadar/widgets/sadar_ypt_focus_view.dart';
+import 'package:fitrah_launcher/features/launcher/services/app_launcher_service.dart';
 import 'package:fitrah_launcher/models/habit.dart';
 import 'package:fitrah_launcher/models/habit_entry.dart';
 import 'package:fitrah_launcher/models/timer_session.dart';
@@ -12,6 +13,57 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('YPT app-list failure is reachable at 320dp and 200% text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = SadarRepository(null);
+    final container = ProviderContainer(
+      overrides: [
+        isarProvider.overrideWithValue(null),
+        sadarRepoProvider.overrideWithValue(repository),
+        notificationServiceProvider.overrideWithValue(NotificationService()),
+        installedAppsFutureProvider.overrideWith(
+          (_) async => throw StateError('temporary listing failure'),
+        ),
+      ],
+    );
+    addTearDown(() async {
+      await container.read(timerEngineProvider.notifier).cancel();
+      container.dispose();
+    });
+    final habit = Habit()
+      ..id = 780
+      ..name = 'Latihan LKS dengan judul yang panjang'
+      ..target = 30
+      ..allowedPackages = ['missing.app']
+      ..colorValue = 0xff8bae9a
+      ..createdAt = DateTime.now();
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: SadarYptFocusView(habit: habit, onClose: () {}),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('Coba lagi'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tester.takeException(), isNull);
+    expect(container.read(timerEngineProvider).isRunning, isTrue);
+    await container.read(timerEngineProvider.notifier).cancel();
+  });
+
   testWidgets('YPT starts and pauses through the shared timer owner', (
     tester,
   ) async {

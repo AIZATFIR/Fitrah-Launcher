@@ -1,3 +1,4 @@
+import '../../launcher/widgets/launcher_action_feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -103,15 +104,16 @@ class _AllowedAppsSelectorDialogState extends ConsumerState<AllowedAppsSelectorD
               // App List
               Expanded(
                 child: installedAppsAsync.when(
+                  skipLoadingOnRefresh: false,
                   data: (apps) {
                     final filtered = _searchQuery.isEmpty
                         ? apps
                         : apps.where((a) => a.appName.toLowerCase().contains(_searchQuery)).toList();
 
                     if (filtered.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
-                          'Tidak ada aplikasi ditemukan.',
+                          _searchQuery.isEmpty ? 'Tidak ada aplikasi terpasang yang dapat dibuka.' : 'Tidak ada aplikasi yang cocok dengan pencarian.',
                           style: TextStyle(color: Colors.white38, fontSize: 13),
                         ),
                       );
@@ -153,7 +155,7 @@ class _AllowedAppsSelectorDialogState extends ConsumerState<AllowedAppsSelectorD
                     );
                   },
                   loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.red))),
+                  error: (e, _) => LauncherAppListFailure(error: e),
                 ),
               ),
 

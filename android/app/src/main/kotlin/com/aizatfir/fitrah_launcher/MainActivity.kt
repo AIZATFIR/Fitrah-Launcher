@@ -81,6 +81,8 @@ class MainActivity : FlutterActivity() {
                 }
                 "getInstalledApps" -> {
                     try {
+                        // A refreshed listing can follow reinstall or an icon update.
+                        iconCache.evictAll()
                         val pm = packageManager
                         val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
                             addCategory(Intent.CATEGORY_LAUNCHER)
