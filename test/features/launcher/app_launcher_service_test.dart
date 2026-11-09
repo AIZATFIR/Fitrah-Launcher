@@ -96,6 +96,7 @@ void main() {
       service.launchFocusClock,
       () => service.openAppDetails('real.a'),
       service.openHomeSettings,
+      service.requestDefaultHome,
       service.openNotificationListenerSettings,
       service.launchClock,
       service.launchCalendar,
@@ -122,6 +123,79 @@ void main() {
     }
   });
 
+  test(
+    'default Home strictly decodes actual status and propagates read errors',
+    () async {
+      for (final value in [true, false, null, 'true', 1]) {
+        binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+          call,
+        ) async {
+          expect(call.method, 'isDefaultHome');
+          return value;
+        });
+        if (value is bool) {
+          expect(await service.isDefaultHome(), value);
+        } else {
+          await expectLater(service.isDefaultHome(), throwsFormatException);
+        }
+      }
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        _,
+      ) async {
+        throw PlatformException(code: 'read-failed');
+      });
+      await expectLater(
+        service.isDefaultHome(),
+        throwsA(isA<PlatformException>()),
+      );
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+      await expectLater(
+        service.isDefaultHome(),
+        throwsA(isA<MissingPluginException>()),
+      );
+      expect(await service.requestDefaultHome(), isFalse);
+    },
+  );
+
+  test('unsupported Home capabilities never invoke native', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (_) async {
+      fail('Native channel invoked on unsupported host');
+    });
+    await expectLater(service.isDefaultHome(), throwsUnsupportedError);
+    expect(await service.requestDefaultHome(), isFalse);
+  });
+
+  test(
+    'Home resume refresh ignores stale results and disposes listener',
+    () async {
+      final old = Completer<bool>();
+      var calls = 0;
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (_) {
+        calls++;
+        return calls == 1 ? old.future : Future.value(true);
+      });
+      final container = ProviderContainer();
+      final sub = container.listen(defaultHomeStatusProvider, (_, _) {});
+      container.read(defaultHomeStatusProvider);
+      await Future<void>.delayed(Duration.zero);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      expect(await container.read(defaultHomeStatusProvider.future), isTrue);
+      old.complete(false);
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(defaultHomeStatusProvider).value, isTrue);
+      expect(calls, 2);
+      sub.close();
+      container.dispose();
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      expect(calls, 2);
+    },
+  );
+
   test('icon errors recover without permanent failure caching', () async {
     var calls = 0;
     binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (_) async {
@@ -134,25 +208,22 @@ void main() {
     expect(calls, 2);
   });
 
-  test(
-    'old icon completion cannot replace a refreshed cache',
-    () async {
-      final old = Completer<Uint8List>();
-      var calls = 0;
-      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (_) {
-        if (++calls == 1) return old.future;
-        return Future.value(Uint8List.fromList([2]));
-      });
-      final pending = service.getAppIcon('real.a');
-      await Future<void>.delayed(Duration.zero);
-      service.clearIconCache();
-      expect(await service.getAppIcon('real.a'), [2]);
-      old.complete(Uint8List.fromList([1]));
-      expect(await pending, [1]);
-      expect(await service.getAppIcon('real.a'), [2]);
-      expect(calls, 2);
-    },
-  );
+  test('old icon completion cannot replace a refreshed cache', () async {
+    final old = Completer<Uint8List>();
+    var calls = 0;
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (_) {
+      if (++calls == 1) return old.future;
+      return Future.value(Uint8List.fromList([2]));
+    });
+    final pending = service.getAppIcon('real.a');
+    await Future<void>.delayed(Duration.zero);
+    service.clearIconCache();
+    expect(await service.getAppIcon('real.a'), [2]);
+    old.complete(Uint8List.fromList([1]));
+    expect(await pending, [1]);
+    expect(await service.getAppIcon('real.a'), [2]);
+    expect(calls, 2);
+  });
 
   test(
     'retry and resume refresh listing and icons without duplicate listeners',

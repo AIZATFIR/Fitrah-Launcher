@@ -106,6 +106,20 @@ class AppLauncherService {
 
   Future<bool> openHomeSettings() => _invokeAction('openHomeSettings');
 
+  Future<bool> isDefaultHome() async {
+    if (!isSupported) {
+      throw UnsupportedError('Default Home is only available on Android');
+    }
+    final result = await _channel.invokeMethod<Object?>('isDefaultHome');
+    if (result is! bool) {
+      throw const FormatException('Invalid default Home status');
+    }
+    return result;
+  }
+
+  // Dispatch is not selection; read isDefaultHome again after returning.
+  Future<bool> requestDefaultHome() => _invokeAction('requestDefaultHome');
+
   Future<bool> openNotificationListenerSettings() =>
       _invokeAction('openNotificationListenerSettings');
 
@@ -167,6 +181,16 @@ final installedAppsFutureProvider = FutureProvider<List<InstalledApp>>((
   ref.onDispose(listener.dispose);
   service.clearIconCache();
   return service.getInstalledApps();
+});
+
+final defaultHomeStatusProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final service = ref.watch(appLauncherServiceProvider);
+  if (!service.isSupported) {
+    throw UnsupportedError('Default Home is only available on Android');
+  }
+  final listener = AppLifecycleListener(onResume: ref.invalidateSelf);
+  ref.onDispose(listener.dispose);
+  return service.isDefaultHome();
 });
 
 final favoritePackagesProvider = Provider<Set<String>>(

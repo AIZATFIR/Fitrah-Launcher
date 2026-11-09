@@ -1,5 +1,6 @@
 package com.aizatfir.fitrah_launcher
 
+import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -43,6 +44,12 @@ class MainActivity : FlutterActivity() {
         override fun sizeOf(key: String, value: ByteArray): Int {
             return value.size / 1024
         }
+    }
+
+    private fun resolvesDefaultHome(): Boolean {
+        val home = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
+        val resolved = packageManager.resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolved?.activityInfo?.packageName == packageName
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -191,6 +198,43 @@ class MainActivity : FlutterActivity() {
                         }
                     } else {
                         result.error("INVALID_PACKAGE", "Package name is null", null)
+                    }
+                }
+                "isDefaultHome" -> {
+                    try {
+                        val held = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            val roles = getSystemService(RoleManager::class.java)
+                            if (roles != null && roles.isRoleAvailable(RoleManager.ROLE_HOME)) {
+                                roles.isRoleHeld(RoleManager.ROLE_HOME)
+                            } else {
+                                resolvesDefaultHome()
+                            }
+                        } else {
+                            resolvesDefaultHome()
+                        }
+                        result.success(held)
+                    } catch (e: Exception) {
+                        result.error("ERROR_READING_DEFAULT_HOME", e.message, null)
+                    }
+                }
+                "requestDefaultHome" -> {
+                    try {
+                        var opened = false
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            val roles = getSystemService(RoleManager::class.java)
+                            if (roles != null && roles.isRoleAvailable(RoleManager.ROLE_HOME)) {
+                                try {
+                                    startActivityForResult(roles.createRequestRoleIntent(RoleManager.ROLE_HOME), 1001)
+                                    opened = true
+                                } catch (_: Exception) {
+                                    // Some devices expose the role but cannot open its request.
+                                }
+                            }
+                        }
+                        if (!opened) startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR_REQUESTING_DEFAULT_HOME", e.message, null)
                     }
                 }
                 "openHomeSettings" -> {

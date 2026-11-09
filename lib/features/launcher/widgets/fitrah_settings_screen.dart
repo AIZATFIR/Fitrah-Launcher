@@ -1,4 +1,5 @@
 import 'launcher_action_feedback.dart';
+import 'default_home_status_control.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -155,13 +156,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                 runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openHomeSettings());
               },
             ),
-            _buildPlainTile(
-              title: 'Change Default Launcher',
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openHomeSettings());
-              },
-            ),
+            const DefaultHomeStatusControl(),
 
             const SizedBox(height: 40),
 
