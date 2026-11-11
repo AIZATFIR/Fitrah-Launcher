@@ -24,6 +24,29 @@ class _MemorySecureStorage extends SecureStorageService {
 }
 
 void main() {
+  test('Active timer preserves start date and elapsed time through restoration', () {
+    final startedAt = DateTime(2026, 11, 11, 23, 59);
+    final timer = ActiveTimer(
+      label: 'Fokus malam',
+      totalSeconds: 45 * 60,
+      leftSeconds: 45 * 60,
+      isRunning: true,
+      startHour: 23.0,
+      hasStarted: true,
+      sessionStartedAt: startedAt,
+      runningSince: startedAt,
+    );
+
+    final restored = ActiveTimer.fromJson(
+      jsonDecode(jsonEncode(timer.toJson())) as Map<String, dynamic>,
+    );
+
+    expect(restored.sessionStartedAt, startedAt);
+    expect(restored.entryDateString(DateTime(2026, 11, 12)), '2026-11-11');
+    expect(restored.elapsedSecondsAt(startedAt.add(const Duration(minutes: 2))), 120);
+    expect(restored.remainingAt(startedAt.add(const Duration(minutes: 2))), 45 * 60 - 120);
+  });
+
   group('FocusClockHomeView Lampiran 1 & Future Self Sadar System Tests', () {
     Widget createWidgetUnderTest({SecureStorageService? storage}) {
       return ProviderScope(

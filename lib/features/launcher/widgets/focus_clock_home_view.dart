@@ -201,6 +201,7 @@ class ActiveTimer {
   String? identity;
   double startHour;
   bool hasStarted;
+  DateTime? sessionStartedAt;
   DateTime? runningSince;
   int elapsedBeforeRun;
 
@@ -214,23 +215,35 @@ class ActiveTimer {
     this.identity,
     required this.startHour,
     this.hasStarted = false,
+    this.sessionStartedAt,
     this.runningSince,
     this.elapsedBeforeRun = 0,
   });
 
   int remainingAt(DateTime now) {
-    final elapsed = elapsedBeforeRun +
-        (isRunning && runningSince != null
-            ? now.difference(runningSince!).inSeconds
-            : 0);
-    return math.max(0, totalSeconds - elapsed);
+    return math.max(0, totalSeconds - elapsedSecondsAt(now));
   }
+
+  int elapsedSecondsAt(DateTime now) => math.min(
+        totalSeconds,
+        math.max(
+          0,
+          elapsedBeforeRun +
+              (isRunning && runningSince != null
+                  ? now.difference(runningSince!).inSeconds
+                  : 0),
+        ),
+      );
+
+  String entryDateString(DateTime fallback) =>
+      DateFormat('yyyy-MM-dd').format(sessionStartedAt ?? fallback);
 
   Map<String, Object?> toJson() => {
         'label': label,
         'totalSeconds': totalSeconds,
         'elapsedBeforeRun': elapsedBeforeRun,
         'isRunning': isRunning,
+        'sessionStartedAt': sessionStartedAt?.toIso8601String(),
         'runningSince': runningSince?.toIso8601String(),
         'source': source,
         'sourceId': sourceId,
@@ -249,6 +262,8 @@ class ActiveTimer {
         identity: json['identity'] as String?,
         startHour: (json['startHour'] as num?)?.toDouble() ?? 0,
         hasStarted: json['hasStarted'] as bool? ?? false,
+        sessionStartedAt: DateTime.tryParse(json['sessionStartedAt'] as String? ?? '') ??
+            DateTime.tryParse(json['runningSince'] as String? ?? ''),
         runningSince: DateTime.tryParse(json['runningSince'] as String? ?? ''),
         elapsedBeforeRun: json['elapsedBeforeRun'] as int? ?? 0,
       );
@@ -485,16 +500,16 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         .invokeMethod('setLockscreenFocus', {'enabled': false})
         .catchError((_) => null);
     if (timer.source == 'habit' && timer.sourceId != null) {
-      final now = DateTime.now();
-      final date = DateFormat('yyyy-MM-dd').format(now);
+      final completedAt = DateTime.now();
+      final date = timer.entryDateString(completedAt);
       ref.read(sadarRepoProvider).recordEntryStatus(
             habitId: timer.sourceId!,
             dateString: date,
             status: HabitStatus.yes,
             targetSnapshot: timer.totalSeconds ~/ 60,
-            actualDurationMinutes: timer.totalSeconds ~/ 60,
+            actualDurationMinutes: timer.elapsedSecondsAt(completedAt) ~/ 60,
             source: 'focus_clock',
-            completedAt: now,
+            completedAt: completedAt,
           );
     }
   }
@@ -513,9 +528,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final now = DateTime.now();
     if (timer.isRunning == running) return;
     if (running) {
+      if (timer.sessionStartedAt == null) {
+        timer.sessionStartedAt = now;
+        timer.startHour = _hourNow();
+      }
       timer.runningSince = now;
       timer.hasStarted = true;
-      if (timer.startHour == 0) timer.startHour = _hourNow();
     } else {
       timer.elapsedBeforeRun += now.difference(timer.runningSince ?? now).inSeconds;
       timer.runningSince = null;
@@ -726,6 +744,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     const MethodChannel('fitrah_launcher/apps')
         .invokeMethod('setLockscreenFocus', {'enabled': true})
         .catchError((_) => null);
+    final startedAt = DateTime.now();
     setState(() {
       _activeTimer = ActiveTimer(
         label: label,
@@ -737,7 +756,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         identity: identity,
         startHour: _hourNow(),
         hasStarted: true,
-        runningSince: DateTime.now(),
+        sessionStartedAt: startedAt,
+        runningSince: startedAt,
       );
       _currentScreen = 'timer';
     });
@@ -760,22 +780,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           h.isDone = true;
           h.isRunning = false;
           h.isSkipped = false;
-          h.elapsedSeconds = h.minutes != null ? h.minutes! * 60 : timer.totalSeconds;
+          h.elapsedSeconds = timer.elapsedSecondsAt(DateTime.now());
           message = 'Kebiasaan ditandai selesai';
           break;
         }
       }
       try {
-        final now = DateTime.now();
-        final todayStr = DateFormat('yyyy-MM-dd').format(now);
+        final completedAt = DateTime.now();
+        final dateString = timer.entryDateString(completedAt);
         ref.read(sadarRepoProvider).recordEntryStatus(
           habitId: timer.sourceId!,
-          dateString: todayStr,
+          dateString: dateString,
           status: HabitStatus.yes,
           targetSnapshot: timer.totalSeconds ~/ 60,
-          actualDurationMinutes: timer.totalSeconds ~/ 60,
+          actualDurationMinutes: timer.elapsedSecondsAt(completedAt) ~/ 60,
           source: 'focus_clock',
-          completedAt: now,
+          completedAt: completedAt,
         );
       } catch (_) {}
     } else if (src == 'preset') {
