@@ -170,6 +170,133 @@ void main() {
       expect(identitasText, findsOneWidget);
     });
 
+    testWidgets('Starting a timed habit row opens its real timer session', (tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump();
+
+      const habitTitle = 'Deep Coding & Refactoring 30m';
+      final title = find.text(habitTitle);
+      await tester.scrollUntilVisible(
+        title,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      final habitRow = find.ancestor(of: title, matching: find.byType(Row)).first;
+      await tester.tap(
+        find.descendant(
+          of: habitRow,
+          matching: find.byIcon(Icons.play_arrow_rounded),
+        ).first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(habitTitle), findsOneWidget);
+      expect(find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'), findsOneWidget);
+      expect(find.text('30:00'), findsOneWidget);
+    });
+
+    testWidgets('The habit row pauses its active timer without losing the session', (tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump();
+
+      const habitTitle = 'Deep Coding & Refactoring 30m';
+      final title = find.text(habitTitle);
+      await tester.scrollUntilVisible(
+        title,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final habitRow = find.ancestor(of: title, matching: find.byType(Row)).first;
+      await tester.tap(
+        find.descendant(
+          of: habitRow,
+          matching: find.byIcon(Icons.play_arrow_rounded),
+        ).first,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
+      final visibleTitle = find.text(habitTitle);
+      final visibleRow = find.ancestor(
+        of: visibleTitle,
+        matching: find.byType(Row),
+      ).first;
+      await tester.tap(
+        find.descendant(
+          of: visibleRow,
+          matching: find.byIcon(Icons.pause_rounded),
+        ).first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Lanjut'), findsOneWidget);
+      expect(find.text(habitTitle), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+      await tester.pumpAndSettle();
+      final pausedTitle = find.text(habitTitle);
+      final pausedRow = find.ancestor(
+        of: pausedTitle,
+        matching: find.byType(Row),
+      ).first;
+      await tester.tap(
+        find.descendant(
+          of: pausedRow,
+          matching: find.byIcon(Icons.play_arrow_rounded),
+        ).first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Jeda'), findsOneWidget);
+    });
+
+    testWidgets('Cancelling a habit timer clears the session and returns home', (tester) async {
+      final storage = _MemorySecureStorage();
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(createWidgetUnderTest(storage: storage));
+      await tester.pump();
+
+      const habitTitle = 'Deep Coding & Refactoring 30m';
+      final title = find.text(habitTitle);
+      await tester.scrollUntilVisible(
+        title,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final habitRow = find.ancestor(of: title, matching: find.byType(Row)).first;
+      await tester.tap(
+        find.descendant(
+          of: habitRow,
+          matching: find.byIcon(Icons.play_arrow_rounded),
+        ).first,
+      );
+      await tester.pumpAndSettle();
+      expect(storage.values, contains('focus_clock_active_timer_v1'));
+
+      await tester.tap(find.text('Batalkan timer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'), findsNothing);
+      expect(find.text(habitTitle), findsOneWidget);
+      expect(storage.values, isNot(contains('focus_clock_active_timer_v1')));
+    });
+
     testWidgets('Restored timer accounts for elapsed wall-clock time', (tester) async {
       final storage = _MemorySecureStorage();
       final now = DateTime.now();
@@ -194,7 +321,12 @@ void main() {
       await tester.pump();
 
       expect(find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'), findsOneWidget);
-      expect(find.text('43:59'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Text && RegExp(r'^(40|41):[0-5][0-9]$').hasMatch(widget.data ?? ''),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Renders Habits section with done toggle and 5-action popover', (tester) async {

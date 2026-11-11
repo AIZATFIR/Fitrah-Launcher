@@ -2026,8 +2026,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   Widget _buildHabitRow(HabitModel h, Color identityColor, _HomeThemeColors tc) {
     final hasTimer = h.minutes != null && h.minutes! > 0;
+    final activeTimerForHabit = _activeTimer?.source == 'habit' &&
+        _activeTimer?.sourceId == h.id;
+    final isTimerRunning = activeTimerForHabit
+        ? _activeTimer!.isRunning
+        : h.isRunning;
     final totalSecs = hasTimer ? h.minutes! * 60 : 0;
-    final elapsedSecs = h.elapsedSeconds;
+    final elapsedSecs = activeTimerForHabit
+        ? _activeTimer!.elapsedSecondsAt(_currentTime)
+        : h.elapsedSeconds;
     final progress = hasTimer ? (elapsedSecs / totalSecs).clamp(0.0, 1.0) : 0.0;
 
     return Padding(
@@ -2050,7 +2057,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ? Icon(Icons.check, color: tc.bg, size: 20)
                   : hasTimer
                       ? Icon(
-                          h.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          isTimerRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
                           color: identityColor,
                           size: 20,
                         )
@@ -2143,10 +2150,33 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   void _toggleHabitTimerOrDone(HabitModel h) {
     HapticFeedback.selectionClick();
     if (h.minutes != null && h.minutes! > 0 && !h.isDone) {
-      setState(() {
-        h.isRunning = !h.isRunning;
-      });
-      _showToast(h.isRunning ? 'Timer ${h.title} berjalan' : 'Timer dijeda');
+      final timer = _activeTimer;
+      if (timer != null) {
+        setState(() {
+          _currentScreen = 'timer';
+          if (timer.source == 'habit' && timer.sourceId == h.id) {
+            _setTimerRunning(timer, !timer.isRunning);
+          }
+        });
+        _persistActiveTimer();
+        return;
+      }
+
+      _startTimer(
+        h.title,
+        h.minutes!,
+        source: 'habit',
+        sourceId: h.id,
+        identity: h.identity,
+      );
+      if (h.elapsedSeconds > 0 && _activeTimer != null) {
+        final startedTimer = _activeTimer!;
+        setState(() {
+          startedTimer.elapsedBeforeRun = h.elapsedSeconds;
+          startedTimer.leftSeconds = startedTimer.remainingAt(DateTime.now());
+        });
+        _persistActiveTimer();
+      }
     } else {
       setState(() {
         h.isDone = !h.isDone;
