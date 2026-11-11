@@ -1,11 +1,11 @@
 {
-    "name": "Sadar — Way of Life & Focus Clock",
-    "short_name": "Sadar",
+    "name": "Fitrah Launcher",
+    "short_name": "Fitrah",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0B0F19",
     "theme_color": "#10B981",
-    "description": "Daily awareness and intentional living companion connected seamlessly with Focus Clock.",
+    "description": "A calm home for your goals, habits, and next action.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
