@@ -1,12 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
+import 'package:fitrah_launcher/services/secure_storage_service.dart';
+import 'dart:convert';
+
+class _MemorySecureStorage extends SecureStorageService {
+  final Map<String, String> values = {};
+
+  @override
+  Future<String?> readCustomKey(String key) async => values[key];
+
+  @override
+  Future<void> writeCustomKey(String key, String value) async {
+    values[key] = value;
+  }
+
+  @override
+  Future<void> deleteCustomKey(String key) async {
+    values.remove(key);
+  }
+}
 
 void main() {
   group('FocusClockHomeView Lampiran 1 & Future Self Sadar System Tests', () {
-    Widget createWidgetUnderTest() {
+    Widget createWidgetUnderTest({SecureStorageService? storage}) {
       return ProviderScope(
+        overrides: [
+          if (storage != null) secureStorageServiceProvider.overrideWithValue(storage),
+        ],
         child: MaterialApp(
           home: FocusClockHomeView(
             onOpenFocusClock: () {},
@@ -122,6 +145,33 @@ void main() {
       final identitasText = find.text('Identitas: Programmer');
       await tester.scrollUntilVisible(identitasText, -300, scrollable: find.byType(Scrollable).first);
       expect(identitasText, findsOneWidget);
+    });
+
+    testWidgets('Restored timer accounts for elapsed wall-clock time', (tester) async {
+      final storage = _MemorySecureStorage();
+      final now = DateTime.now();
+      storage.values['focus_clock_active_timer_v1'] = jsonEncode({
+        'label': 'LKS ITSSB',
+        'totalSeconds': 2700,
+        'elapsedBeforeRun': 0,
+        'isRunning': true,
+        'runningSince': now.subtract(const Duration(minutes: 4)).toIso8601String(),
+        'source': 'preset',
+        'sourceId': 2,
+        'identity': 'Programmer',
+        'startHour': 8.0,
+        'hasStarted': true,
+      });
+      const channel = MethodChannel('fitrah_launcher/apps');
+      final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (_) async => null);
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+      await tester.pumpWidget(createWidgetUnderTest(storage: storage));
+      await tester.pump();
+
+      expect(find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'), findsOneWidget);
+      expect(find.text('43:59'), findsOneWidget);
     });
 
     testWidgets('Renders Habits section with done toggle and 5-action popover', (tester) async {

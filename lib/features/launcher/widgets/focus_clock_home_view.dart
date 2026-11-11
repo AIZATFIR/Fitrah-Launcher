@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -199,6 +200,8 @@ class ActiveTimer {
   String? identity;
   double startHour;
   bool hasStarted;
+  DateTime? runningSince;
+  int elapsedBeforeRun;
 
   ActiveTimer({
     required this.label,
@@ -210,7 +213,44 @@ class ActiveTimer {
     this.identity,
     required this.startHour,
     this.hasStarted = false,
+    this.runningSince,
+    this.elapsedBeforeRun = 0,
   });
+
+  int remainingAt(DateTime now) {
+    final elapsed = elapsedBeforeRun +
+        (isRunning && runningSince != null
+            ? now.difference(runningSince!).inSeconds
+            : 0);
+    return math.max(0, totalSeconds - elapsed);
+  }
+
+  Map<String, Object?> toJson() => {
+        'label': label,
+        'totalSeconds': totalSeconds,
+        'elapsedBeforeRun': elapsedBeforeRun,
+        'isRunning': isRunning,
+        'runningSince': runningSince?.toIso8601String(),
+        'source': source,
+        'sourceId': sourceId,
+        'identity': identity,
+        'startHour': startHour,
+        'hasStarted': hasStarted,
+      };
+
+  factory ActiveTimer.fromJson(Map<String, dynamic> json) => ActiveTimer(
+        label: json['label'] as String,
+        totalSeconds: json['totalSeconds'] as int,
+        leftSeconds: 0,
+        isRunning: json['isRunning'] as bool? ?? false,
+        source: json['source'] as String?,
+        sourceId: json['sourceId'] as int?,
+        identity: json['identity'] as String?,
+        startHour: (json['startHour'] as num?)?.toDouble() ?? 0,
+        hasStarted: json['hasStarted'] as bool? ?? false,
+        runningSince: DateTime.tryParse(json['runningSince'] as String? ?? ''),
+        elapsedBeforeRun: json['elapsedBeforeRun'] as int? ?? 0,
+      );
 }
 
 /// Focus Clock Home View (Page 1 - Center)
@@ -232,6 +272,7 @@ class FocusClockHomeView extends ConsumerStatefulWidget {
 }
 
 class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
+  static const _activeTimerStorageKey = 'focus_clock_active_timer_v1';
   // Navigation State: 'home', 'timer', 'catatan', 'jelas', 'fullscreen_focus'
   String _currentScreen = 'home';
 
@@ -391,9 +432,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
         // Tick Active Timer
         if (_activeTimer != null && _activeTimer!.isRunning) {
-          if (_activeTimer!.leftSeconds > 0) {
-            _activeTimer!.leftSeconds--;
-          } else {
+          _activeTimer!.leftSeconds = _activeTimer!.remainingAt(_currentTime);
+          if (_activeTimer!.leftSeconds <= 0) {
             _finishTimer(autoComplete: true);
           }
         }
@@ -413,8 +453,74 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _restoreActiveTimer();
       _syncInitialActivitiesWithSharedRepo();
     });
+  }
+
+  Future<void> _restoreActiveTimer() async {
+    final storage = ref.read(secureStorageServiceProvider);
+    try {
+      final saved = await storage.readCustomKey(_activeTimerStorageKey);
+      if (!mounted || saved == null) return;
+      final timer = ActiveTimer.fromJson(jsonDecode(saved) as Map<String, dynamic>);
+      timer.leftSeconds = timer.remainingAt(DateTime.now());
+      if (timer.leftSeconds <= 0) {
+        await storage.deleteCustomKey(_activeTimerStorageKey);
+        if (timer.isRunning) _finishRestoredTimer(timer);
+        return;
+      }
+      setState(() {
+        _activeTimer = timer;
+        _currentScreen = 'timer';
+      });
+    } catch (_) {
+      await storage.deleteCustomKey(_activeTimerStorageKey);
+    }
+  }
+
+  void _finishRestoredTimer(ActiveTimer timer) {
+    const MethodChannel('fitrah_launcher/apps')
+        .invokeMethod('setLockscreenFocus', {'enabled': false})
+        .catchError((_) => null);
+    if (timer.source == 'habit' && timer.sourceId != null) {
+      final now = DateTime.now();
+      final date = DateFormat('yyyy-MM-dd').format(now);
+      ref.read(sadarRepoProvider).recordEntryStatus(
+            habitId: timer.sourceId!,
+            dateString: date,
+            status: HabitStatus.yes,
+            targetSnapshot: timer.totalSeconds ~/ 60,
+            actualDurationMinutes: timer.totalSeconds ~/ 60,
+            source: 'focus_clock',
+            completedAt: now,
+          );
+    }
+  }
+
+  Future<void> _persistActiveTimer() async {
+    final storage = ref.read(secureStorageServiceProvider);
+    final timer = _activeTimer;
+    if (timer == null) {
+      await storage.deleteCustomKey(_activeTimerStorageKey);
+    } else {
+      await storage.writeCustomKey(_activeTimerStorageKey, jsonEncode(timer.toJson()));
+    }
+  }
+
+  void _setTimerRunning(ActiveTimer timer, bool running) {
+    final now = DateTime.now();
+    if (timer.isRunning == running) return;
+    if (running) {
+      timer.runningSince = now;
+      timer.hasStarted = true;
+      if (timer.startHour == 0) timer.startHour = _hourNow();
+    } else {
+      timer.elapsedBeforeRun += now.difference(timer.runningSince ?? now).inSeconds;
+      timer.runningSince = null;
+    }
+    timer.isRunning = running;
+    timer.leftSeconds = timer.remainingAt(now);
   }
 
   Future<void> _syncInitialActivitiesWithSharedRepo() async {
@@ -630,9 +736,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         identity: identity,
         startHour: _hourNow(),
         hasStarted: true,
+        runningSince: DateTime.now(),
       );
       _currentScreen = 'timer';
     });
+    _persistActiveTimer();
   }
 
   void _finishTimer({bool autoComplete = false}) {
@@ -663,6 +771,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           habitId: timer.sourceId!,
           dateString: todayStr,
           status: HabitStatus.yes,
+          targetSnapshot: timer.totalSeconds ~/ 60,
+          actualDurationMinutes: timer.totalSeconds ~/ 60,
+          source: 'focus_clock',
+          completedAt: now,
         );
       } catch (_) {}
     } else if (src == 'preset') {
@@ -686,6 +798,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       _activeTimer = null;
       _currentScreen = 'home';
     });
+    _persistActiveTimer();
     _showToast(message);
   }
 
@@ -2139,6 +2252,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           setState(() {
                             timer.totalSeconds = m * 60;
                             timer.leftSeconds = m * 60;
+                            timer.elapsedBeforeRun = 0;
+                            timer.runningSince = null;
                           });
                         },
                         borderRadius: BorderRadius.circular(12),
@@ -2173,15 +2288,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   HapticFeedback.selectionClick();
                   setState(() {
                     if (!timer.isRunning) {
-                      timer.isRunning = true;
                       if (!timer.hasStarted) {
-                        timer.hasStarted = true;
                         timer.startHour = _hourNow();
                       }
-                    } else {
-                      timer.isRunning = false;
                     }
+                    _setTimerRunning(timer, !timer.isRunning);
                   });
+                  _persistActiveTimer();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE8C07D),
@@ -2222,6 +2335,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     _activeTimer = null;
                     _currentScreen = 'home';
                   });
+                  _persistActiveTimer();
                 },
                 child: const Text('Batalkan timer', style: TextStyle(color: Color(0xFF8A93A3))),
               ),
@@ -2287,8 +2401,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     ),
                     onPressed: () {
                       setState(() {
-                        timer.isRunning = !timer.isRunning;
+                        _setTimerRunning(timer, !timer.isRunning);
                       });
+                      _persistActiveTimer();
                     },
                   ),
                   IconButton(
