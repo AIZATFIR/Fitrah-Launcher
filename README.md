@@ -42,23 +42,22 @@ Fitrah Launcher redesigns the primary device interface into a calm, functional i
 
 ## Downloads
 
-Official binary releases are published on GitHub Releases:
+Preview downloads for the current ecosystem build:
 
 | Platform | Target Package | Architecture |
 |---|---|---|
-| **Android** | `Fitrah-Launcher-v0.1-Android.apk` | ARM64 / ARMv7 / x86_64 |
-| **Linux** | `Fitrah-Launcher-v0.1-Linux-x64.tar.gz` | x86_64 |
-| **Windows** | `focus-clock-windows.zip` | x86_64 |
-| **Web** | `Fitrah-Launcher-v0.1-Web.zip` | WebAssembly / HTML5 |
+| **Android** | [Fitrah-Launcher-v0.5.4-Android.apk](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.4/Fitrah-Launcher-v0.5.4-Android.apk) | ARM64 / ARMv7 / x86_64 |
+| **Windows** | [Fitrah-Launcher-v0.5.4-Windows-x64.zip](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.4/Fitrah-Launcher-v0.5.4-Windows-x64.zip) | x86_64 |
+| **Web** | [Fitrah-Launcher-v0.5.4-Web.zip](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.4/Fitrah-Launcher-v0.5.4-Web.zip) | HTML5 |
 
-Releases: [https://github.com/AIZATFIR/Fitrah-Launcher/releases](https://github.com/AIZATFIR/Fitrah-Launcher/releases)
+The Android APK is CI-signed, not signed with a Play Store key. Installing it may require uninstalling another signed build, which can remove local app data. Linux is not included in this preview.
 
 ---
 
 ## Installation & Setup
 
 ### Android Home Launcher Setup
-1. Download and install `Fitrah-Launcher-v0.1-Android.apk` on your device.
+1. Download and install the [v0.5.4 Android preview](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.4/Fitrah-Launcher-v0.5.4-Android.apk) on your device.
 2. Open device **Settings** -> **Apps** -> **Default Apps** -> **Home App**.
 3. Select **Fitrah Launcher** as your default home application.
 4. Swipe left to manage your schedule on the clock dial; swipe right to browse and search installed applications.
@@ -107,7 +106,7 @@ flutter run
 ### Production Compilation
 ```bash
 # Build Android APK
-flutter build apk --release
+flutter build apk --release --android-skip-build-dependency-validation
 
 # Build Windows executable
 flutter build windows --release

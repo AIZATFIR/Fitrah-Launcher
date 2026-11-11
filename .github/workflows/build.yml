@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: focus-clock-android
+          name: fitrah-launcher-android
           path: build/app/outputs/flutter-apk/app-release.apk
 
   windows:
@@ -52,10 +52,10 @@ jobs:
           CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
       - name: Zip Windows build
-        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath focus-clock-windows.zip
+        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath fitrah-launcher-windows.zip
         shell: pwsh
 
       - uses: actions/upload-artifact@v4
         with:
-          name: focus-clock-windows
-          path: focus-clock-windows.zip
+          name: fitrah-launcher-windows
+          path: fitrah-launcher-windows.zip

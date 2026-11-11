@@ -1,4 +1,4 @@
-name: Sadar Multiplatform Release
+name: Fitrah Launcher Multiplatform Release
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sadar-Android-APK
+          name: Fitrah-Launcher-Android-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
   build-linux:
@@ -65,12 +65,12 @@ jobs:
           CMAKE_POLICY_VERSION_MINIMUM: "3.5"
         run: |
           flutter build windows --release
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath Sadar-Windows-x64.zip
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath Fitrah-Launcher-Windows-x64.zip
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sadar-Windows-x64
-          path: Sadar-Windows-x64.zip
+          name: Fitrah-Launcher-Windows-x64
+          path: Fitrah-Launcher-Windows-x64.zip
 
   build-web:
     runs-on: ubuntu-latest
@@ -83,9 +83,9 @@ jobs:
       - name: Build Web
         run: |
           flutter build web --release
-          cd build/web && zip -r ../../Sadar-Web.zip .
+          cd build/web && zip -r ../../Fitrah-Launcher-Web.zip .
       - name: Upload Web Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sadar-Web
-          path: Sadar-Web.zip
+          name: Fitrah-Launcher-Web
+          path: Fitrah-Launcher-Web.zip
