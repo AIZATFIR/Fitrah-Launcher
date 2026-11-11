@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'focus_session_contract.dart';
+
 class TimerLaunchParams {
   final int habitId;
   final String title;
@@ -19,37 +21,32 @@ class TimerLaunchParams {
   });
 
   Uri toUri() {
-    final params = <String, String>{
-      'habitId': habitId.toString(),
-      'title': title,
-      'duration': durationMinutes.toString(),
-    };
+    final uri = FocusSessionContract.buildFocusClockUri(
+      FocusSessionRequest(
+        habitId: habitId,
+        title: title,
+        targetMinutes: durationMinutes,
+        requestedAt: DateTime.now(),
+        callbackUrl: callbackUrl,
+      ),
+    );
+    final params = Map<String, String>.from(uri.queryParameters);
     if (iconKey != null) params['icon'] = iconKey!;
     if (colorValue != null) params['color'] = colorValue!.toString();
-    if (callbackUrl != null) params['callback'] = callbackUrl!;
-
-    return Uri(
-      scheme: 'focusclock',
-      host: 'timer',
-      queryParameters: params,
-    );
+    return uri.replace(queryParameters: params);
   }
 
   static TimerLaunchParams? fromUri(Uri uri) {
-    if (uri.scheme != 'focusclock' || uri.host != 'timer') return null;
+    final request = FocusSessionContract.parseFocusClockUri(uri);
+    if (request == null) return null;
     final params = uri.queryParameters;
-    final id = int.tryParse(params['habitId'] ?? '');
-    final duration = int.tryParse(params['duration'] ?? '');
-    final title = params['title'];
-    if (id == null || duration == null || title == null) return null;
-
     return TimerLaunchParams(
-      habitId: id,
-      title: title,
-      durationMinutes: duration,
+      habitId: request.habitId,
+      title: request.title,
+      durationMinutes: request.targetMinutes,
       iconKey: params['icon'],
       colorValue: int.tryParse(params['color'] ?? ''),
-      callbackUrl: params['callback'],
+      callbackUrl: request.callbackUrl,
     );
   }
 }

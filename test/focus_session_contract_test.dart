@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fitrah_launcher/services/deep_link_service.dart';
 import 'package:fitrah_launcher/services/focus_session_contract.dart';
 
 void main() {
@@ -68,6 +69,30 @@ void main() {
       expect(parsed!.habitId, 55);
       expect(parsed.title, 'French Conversation');
       expect(parsed.targetMinutes, 20);
+    });
+
+    test('launcher timer link matches Focus Clock v1 request contract', () {
+      final uri = TimerLaunchParams(
+        habitId: 55,
+        title: 'Study LKS',
+        durationMinutes: 45,
+        iconKey: '📚',
+        colorValue: 0xff123456,
+        callbackUrl: 'sadar://completed',
+      ).toUri();
+
+      expect(uri.queryParameters['version'], 'v1');
+      expect(uri.queryParameters['minutes'], '45');
+      expect(uri.queryParameters['duration'], isNull);
+      final parsed = FocusSessionContract.parseFocusClockUri(uri);
+      expect(parsed, isNotNull);
+      expect(parsed!.targetMinutes, 45);
+      expect(parsed.callbackUrl, 'sadar://completed');
+
+      final launchParams = TimerLaunchParams.fromUri(uri);
+      expect(launchParams?.durationMinutes, 45);
+      expect(launchParams?.iconKey, '📚');
+      expect(launchParams?.colorValue, 0xff123456);
     });
 
     test('buildSadarCompletedUri and parseSadarCompletedUri roundtrip', () {
