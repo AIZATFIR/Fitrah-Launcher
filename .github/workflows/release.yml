@@ -17,7 +17,7 @@ jobs:
           java-version: 17
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.41.9'
           channel: 'stable'
       - name: Build Android APK
         run: flutter build apk --release --android-skip-build-dependency-validation
@@ -37,18 +37,18 @@ jobs:
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.41.9'
           channel: 'stable'
       - name: Build Linux
         run: |
           flutter build linux --release
           cd build/linux/x64/release/bundle
-          tar -czvf ../../../../../Sadar-Linux-x64.tar.gz .
+          tar -czvf ../../../../../Fitrah-Launcher-Linux-x64.tar.gz .
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sadar-Linux-x64
-          path: Sadar-Linux-x64.tar.gz
+          name: Fitrah-Launcher-Linux-x64
+          path: Fitrah-Launcher-Linux-x64.tar.gz
 
   build-windows:
     runs-on: windows-latest
@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.41.9'
           channel: 'stable'
       - name: Build Windows
         env:
@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          flutter-version: '3.41.9'
           channel: 'stable'
       - name: Build Web
         run: |
