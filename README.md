@@ -46,9 +46,9 @@ Preview downloads for the current ecosystem build:
 
 | Platform | Target Package | Architecture |
 |---|---|---|
-| **Android** | [Fitrah-Launcher-v0.5.4-Android.apk](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.4/Fitrah-Launcher-v0.5.4-Android.apk) | ARM64 / ARMv7 / x86_64 |
-| **Windows** | [Fitrah-Launcher-v0.5.4-Windows-x64.zip](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.4/Fitrah-Launcher-v0.5.4-Windows-x64.zip) | x86_64 |
-| **Web** | [Fitrah-Launcher-v0.5.4-Web.zip](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.4/Fitrah-Launcher-v0.5.4-Web.zip) | HTML5 |
+| **Android** | [Fitrah-Launcher-v0.5.5-Android.apk](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.5/Fitrah-Launcher-v0.5.5-Android.apk) | ARM64 / ARMv7 / x86_64 |
+| **Windows** | [Fitrah-Launcher-v0.5.5-Windows-x64.zip](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.5/Fitrah-Launcher-v0.5.5-Windows-x64.zip) | x86_64 |
+| **Web** | [Fitrah-Launcher-v0.5.5-Web.zip](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.5/Fitrah-Launcher-v0.5.5-Web.zip) | HTML5 |
 
 The Android APK is CI-signed, not signed with a Play Store key. Installing it may require uninstalling another signed build, which can remove local app data. Linux is not included in this preview.
 
@@ -57,7 +57,7 @@ The Android APK is CI-signed, not signed with a Play Store key. Installing it ma
 ## Installation & Setup
 
 ### Android Home Launcher Setup
-1. Download and install the [v0.5.4 Android preview](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.4/Fitrah-Launcher-v0.5.4-Android.apk) on your device.
+1. Download and install the [v0.5.5 Android preview](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.5/Fitrah-Launcher-v0.5.5-Android.apk) on your device.
 2. Open device **Settings** -> **Apps** -> **Default Apps** -> **Home App**.
 3. Select **Fitrah Launcher** as your default home application.
 4. Swipe left to manage your schedule on the clock dial; swipe right to browse and search installed applications.

@@ -89,3 +89,29 @@ jobs:
         with:
           name: Fitrah-Launcher-Web
           path: Fitrah-Launcher-Web.zip
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-android, build-linux, build-windows, build-web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+      - name: Create preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          mv release-assets/Fitrah-Launcher-Android-APK/app-release.apk release-assets/Fitrah-Launcher-Android-APK.apk
+          mv release-assets/Fitrah-Launcher-Linux-x64/Fitrah-Launcher-Linux-x64.tar.gz release-assets/Fitrah-Launcher-Linux-x64.tar.gz
+          mv release-assets/Fitrah-Launcher-Windows-x64/Fitrah-Launcher-Windows-x64.zip release-assets/Fitrah-Launcher-Windows-x64.zip
+          mv release-assets/Fitrah-Launcher-Web/Fitrah-Launcher-Web.zip release-assets/Fitrah-Launcher-Web.zip
+          gh release create "$TAG_NAME" \
+            release-assets/Fitrah-Launcher-Android-APK.apk \
+            release-assets/Fitrah-Launcher-Linux-x64.tar.gz \
+            release-assets/Fitrah-Launcher-Windows-x64.zip \
+            release-assets/Fitrah-Launcher-Web.zip \
+            --verify-tag --title "Fitrah Launcher $TAG_NAME — Ecosystem Preview" --generate-notes --prerelease
