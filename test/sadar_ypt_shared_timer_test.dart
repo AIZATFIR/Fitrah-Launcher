@@ -23,9 +23,15 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = previousPlatform);
     const channel = MethodChannel('fitrah_launcher/apps');
     final calls = <String>[];
+    final lockscreenFlags = <bool>[];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           calls.add(call.method);
+          if (call.method == 'setLockscreenFocus') {
+            lockscreenFlags.add(
+              (call.arguments as Map<Object?, Object?>)['enabled'] as bool,
+            );
+          }
           if (call.method == 'checkUsageStatsPermission') return false;
           return true;
         });
@@ -68,6 +74,7 @@ void main() {
     expect(calls, contains('checkUsageStatsPermission'));
     expect(find.text('Akses penggunaan belum aktif'), findsOneWidget);
     expect(container.read(timerEngineProvider).isActive, isFalse);
+    expect(lockscreenFlags, isNot(contains(true)));
 
     await tester.tap(find.text('Buka pengaturan akses'));
     await tester.pump();
@@ -77,6 +84,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     expect(container.read(timerEngineProvider).isRunning, isTrue);
+    expect(lockscreenFlags, contains(true));
     await tester.pump(const Duration(seconds: 3));
     expect(calls, isNot(contains('getForegroundApp')));
     await container.read(timerEngineProvider.notifier).cancel();

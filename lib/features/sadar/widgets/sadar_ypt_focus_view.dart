@@ -53,12 +53,6 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
   @override
   void initState() {
     super.initState();
-    // Enable sticky immersive fullscreen and lockscreen display
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _channel
-        .invokeMethod('setLockscreenFocus', {'enabled': true})
-        .catchError((_) => null);
-
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -124,7 +118,13 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                 timer.habitName == widget.habit.name);
         _isStarting = false;
       });
-      if (attached) _startAppGuard();
+      if (attached) {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+        _channel
+            .invokeMethod('setLockscreenFocus', {'enabled': true})
+            .catchError((_) => null);
+        _startAppGuard();
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
