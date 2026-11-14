@@ -402,31 +402,6 @@ class MainActivity : FlutterActivity() {
                         result.error("ERROR_OPENING_USAGE_SETTINGS", e.message, null)
                     }
                 }
-                "checkOverlayPermission" -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        result.success(Settings.canDrawOverlays(this))
-                    } else {
-                        result.success(true)
-                    }
-                }
-                "openOverlaySettings" -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        try {
-                            val intent = Intent(
-                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                Uri.parse("package:$packageName")
-                            ).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            startActivity(intent)
-                            result.success(true)
-                        } catch (e: Exception) {
-                            result.error("ERROR_OPENING_OVERLAY_SETTINGS", e.message, null)
-                        }
-                    } else {
-                        result.success(true)
-                    }
-                }
                 "getForegroundApp" -> {
                     try {
                         val usm = getSystemService(android.content.Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
