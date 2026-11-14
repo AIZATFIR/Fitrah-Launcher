@@ -174,6 +174,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
       expect(find.text('Subuh'), findsNothing);
+      expect(find.byKey(const ValueKey('home-date-hijri')), findsOneWidget);
+      expect(find.byKey(const ValueKey('home-current-event')), findsOneWidget);
+      expect(container.read(launcherSettingsProvider).showHabitsWidget, isTrue);
+      expect(
+        find.byKey(const ValueKey('home-agenda-carousel')),
+        findsOneWidget,
+      );
       expect(
         tester
             .getSemantics(
@@ -182,6 +189,18 @@ void main() {
             .label,
         'Tampilkan waktu sholat',
       );
+      final homeList = find.byType(ListView).first;
+      final homeScrollable = find
+          .descendant(of: homeList, matching: find.byType(Scrollable))
+          .first;
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('home-habit-grid')),
+        300,
+        scrollable: homeScrollable,
+      );
+      expect(find.byKey(const ValueKey('home-habit-grid')), findsOneWidget);
+      await tester.drag(homeList, const Offset(0, 1200));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const ValueKey('home-prayer-focus-toggle')));
       await tester.pumpAndSettle();
@@ -220,6 +239,29 @@ void main() {
         find.text('Aktifkan baris waktu sholat di Pengaturan Home.'),
         findsOneWidget,
       );
+
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('home-habit-grid')),
+        300,
+        scrollable: homeScrollable,
+      );
+      expect(find.byKey(const ValueKey('home-habit-grid')), findsOneWidget);
+      final notifier = container.read(launcherSettingsProvider.notifier);
+      await notifier.toggleWidget(
+        showHero: false,
+        showAgenda: false,
+        showHabits: false,
+      );
+      await notifier.setClockFormat(showDate: false);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('home-habit-grid')), findsNothing);
+      await tester.drag(homeList, const Offset(0, 1200));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('home-date-hijri')), findsNothing);
+      expect(find.byKey(const ValueKey('home-current-event')), findsNothing);
+      expect(find.byKey(const ValueKey('home-agenda-carousel')), findsNothing);
+      expect(find.byKey(const ValueKey('home-habit-grid')), findsNothing);
+
       semantics.dispose();
       await tester.pumpWidget(const SizedBox());
     });

@@ -18,6 +18,7 @@ import '../../settings/settings_screen.dart';
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
 import 'fitrah_settings_screen.dart';
+import '../utils/hijri_date.dart';
 import 'loop_habit_grid_widget.dart';
 import '../../../models/habit_entry.dart';
 import '../../../models/timer_session.dart';
@@ -1250,6 +1251,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         onSession: () =>
                             setState(() => _currentScreen = 'timer'),
                       ),
+                if (settings.showDate) ...[
+                  const SizedBox(height: 8),
+                  _buildHomeDateCue(tc),
+                ],
                 const SizedBox(height: 18),
                 // ── Top Header Bar (Now/Next Carousel or Prayer Timeline) ──
                 _buildTopHeaderBar(
@@ -1259,6 +1264,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   activitiesState,
                   showPrayerSchedule: showPrayerSchedule,
                   prayerTimesEnabled: settings.showPrayerTimes,
+                  showAgendaWidget: settings.showAgendaWidget,
                 ),
                 const SizedBox(height: 18),
 
@@ -1270,6 +1276,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         currentAct,
                         activitiesState,
                         tc,
+                        showHeroEvent: settings.showHeroEvent,
                       ),
                 const SizedBox(height: 18),
 
@@ -1278,20 +1285,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 const SizedBox(height: 18),
 
                 // ── Loop Habit Tracker (Pixel-faithful to user screenshot) ──
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.25),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.08),
-                      width: 0.5,
+                if (settings.showHabitsWidget)
+                  Container(
+                    key: const ValueKey('home-habit-grid'),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.08),
+                        width: 0.5,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: LoopHabitGridWidget(
+                      onStartTimer: _openHabitFocusTimer,
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: LoopHabitGridWidget(
-                    onStartTimer: _openHabitFocusTimer,
-                  ),
-                ),
                 const SizedBox(height: 18),
 
                 // ── Task & Habit Dump Section (Dump Inbox -> Direct Clock Schedule) ──
@@ -1302,7 +1311,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 _buildUnifiedPresetSection(tc),
                 const SizedBox(height: 14),
 
-                if (widget.useSampleData) ...[
+                if (widget.useSampleData && settings.showHabitsWidget) ...[
                   _buildUnifiedHabitSection(tc),
                   const SizedBox(height: 14),
                 ],
@@ -1408,6 +1417,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     AsyncValue<List<Activity>> activitiesState, {
     required bool showPrayerSchedule,
     required bool prayerTimesEnabled,
+    required bool showAgendaWidget,
   }) {
     Future<void> togglePrayerSchedule() async {
       HapticFeedback.selectionClick();
@@ -1502,7 +1512,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     );
                   }),
                 )
-              : _buildAgendaCarousel(activitiesState, tc),
+              : showAgendaWidget
+              ? KeyedSubtree(
+                  key: const ValueKey('home-agenda-carousel'),
+                  child: _buildAgendaCarousel(activitiesState, tc),
+                )
+              : const SizedBox.shrink(),
         ),
         const SizedBox(width: 6),
 
@@ -1761,8 +1776,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     double hr,
     Map<String, dynamic> currentAct,
     AsyncValue<List<Activity>> activitiesState,
-    _HomeThemeColors tc,
-  ) {
+    _HomeThemeColors tc, {
+    required bool showHeroEvent,
+  }) {
     final effectiveActivities =
         activitiesState.valueOrNull ?? const <Activity>[];
 
@@ -1886,65 +1902,68 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           const SizedBox(height: 14),
 
           // Instant User Clarity Status Badge (Current Time + What Am I Doing Now)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                _formatHour(hr),
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                  color: tc.textPrimary,
+          if (showHeroEvent) ...[
+            Row(
+              key: const ValueKey('home-current-event'),
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _formatHour(hr),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    color: tc.textPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: (currentAct['color'] as Color).withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: (currentAct['color'] as Color).withOpacity(0.5),
-                      width: 1.0,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: currentAct['color'] as Color,
-                          shape: BoxShape.circle,
-                        ),
+                    decoration: BoxDecoration(
+                      color: (currentAct['color'] as Color).withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: (currentAct['color'] as Color).withOpacity(0.5),
+                        width: 1.0,
                       ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          currentAct['remaining'] != null
-                              ? '${currentAct['name']} (${currentAct['remaining']})'
-                              : currentAct['name'],
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
                             color: currentAct['color'] as Color,
+                            shape: BoxShape.circle,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            currentAct['remaining'] != null
+                                ? '${currentAct['name']} (${currentAct['remaining']})'
+                                : currentAct['name'],
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: currentAct['color'] as Color,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
 
           // Clean Inline Tap Button to Schedule Activity
           InkWell(
@@ -2927,6 +2946,74 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: tc.accent,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeDateCue(_HomeThemeColors tc) {
+    const weekdays = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
+    ];
+    const months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    final date = _currentTime;
+    final gregorian =
+        '${weekdays[date.weekday - 1]}, ${date.day} '
+        '${months[date.month - 1]} ${date.year}';
+    final hijri = HijriCalendarHelper.formatHijri(date);
+
+    return Semantics(
+      key: const ValueKey('home-date-hijri'),
+      label: '$gregorian. Hijriah $hijri.',
+      child: ExcludeSemantics(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.calendar_today_rounded, color: tc.textMuted, size: 13),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    gregorian,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: tc.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    'Hijriah · $hijri',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: tc.textMuted, fontSize: 10),
+                  ),
+                ],
               ),
             ),
           ],

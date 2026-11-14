@@ -82,6 +82,14 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
 
+      final homeList = find.byType(ListView).first;
+      await tester.scrollUntilVisible(
+        find.text('DAILY NOTE'),
+        300,
+        scrollable: find
+            .descendant(of: homeList, matching: find.byType(Scrollable))
+            .first,
+      );
       expect(find.text('DAILY NOTE'), findsOneWidget);
       expect(
         find.text('Tulis pemikiran, niat, atau catatan hari ini...'),
@@ -228,6 +236,10 @@ void main() {
         expect(find.text('Deep Coding & Refactoring 30m'), findsOneWidget);
 
         // Tap habit title to open the 5-action popover
+        await tester.ensureVisible(
+          find.text('Deep Coding & Refactoring 30m'),
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Deep Coding & Refactoring 30m'));
         await tester.pumpAndSettle();
 
