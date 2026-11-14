@@ -1,3 +1,4 @@
+import 'drawer_preferences_controls.dart';
 import 'launcher_action_feedback.dart';
 import 'default_home_status_control.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +20,6 @@ class FitrahSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
-  bool _showAppIcons = false;
   bool _useDeviceWallpaper = false;
 
   @override
@@ -55,16 +55,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               ),
             ),
 
-            // 1. Show App Icons switch
-            _buildSwitchTile(
-              title: 'Show App Icons',
-              value: _showAppIcons,
-              onChanged: (val) {
-                setState(() => _showAppIcons = val);
-              },
-            ),
-
-            const SizedBox(height: 16),
+            const DrawerPreferencesControls(),
 
             // 2. Use device wallpaper ★ switch
             _buildSwitchTile(
@@ -81,15 +72,6 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             ),
 
             const SizedBox(height: 16),
-
-            // 3. Auto open keyboard on Apps switch
-            _buildSwitchTile(
-              title: 'Auto Open Keyboard on Apps',
-              value: settings.autoFocusSearch,
-              onChanged: (val) {
-                notifier.setAutoFocusSearch(val);
-              },
-            ),
 
             const SizedBox(height: 24),
 
@@ -191,12 +173,14 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w400,
-              color: Colors.white,
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w400,
+                color: Colors.white,
+              ),
             ),
           ),
           Switch(
@@ -455,39 +439,28 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Pengaturan App Drawer',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _showAppIcons,
-                  activeColor: Colors.white,
-                  title: const Text('Tampilkan Ikon Aplikasi', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: const Text('Menampilkan ikon warna-warni di samping nama aplikasi', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  onChanged: (val) {
-                    setState(() => _showAppIcons = val);
-                    setLocal(() {});
-                  },
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.swipe_up_rounded, color: Colors.white70),
-                  title: const Text('Cara Akses App Drawer', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: const Text('Geser ke atas dari layar utama atau ketuk tombol search lonjong di tengah layar.', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                ),
-              ],
-            ),
+      isScrollControlled: true,
+      builder: (ctx) => const SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pengaturan App Drawer',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              SizedBox(height: 16),
+              DrawerPreferencesControls(),
+              SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.swipe_left_rounded, color: Colors.white70),
+                title: Text('Cara Akses App Drawer', style: TextStyle(color: Colors.white, fontSize: 14)),
+                subtitle: Text('Geser layar utama ke kiri untuk membuka daftar aplikasi. Gunakan pencarian untuk menemukan aplikasi.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+              ),
+            ],
           ),
         ),
       ),

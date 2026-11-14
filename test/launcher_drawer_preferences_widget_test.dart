@@ -1,3 +1,11 @@
+import 'package:fitrah_launcher/features/launcher/widgets/fitrah_settings_screen.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/launcher_customization_sheet.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/niagara_unified_stream_view.dart';
+import 'package:fitrah_launcher/providers/sadar_providers.dart';
+import 'package:fitrah_launcher/providers/providers.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/drawer_preferences_controls.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/app_icon_widget.dart';
+import 'package:fitrah_launcher/features/launcher/providers/launcher_settings_provider.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/app_preferences_sheet.dart';
 import 'dart:async';
 import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
@@ -13,18 +21,47 @@ import 'launcher_daily_note_widget_test.dart' show Storage;
 const alpha = InstalledApp(appName: 'Alpha', packageName: 'org.alpha');
 const beta = InstalledApp(appName: 'Beta', packageName: 'org.beta');
 
+class RecordingLauncher extends AppLauncherService {
+  final launched = <String>[];
+  final details = <String>[];
+  @override
+  Future<bool> launchApp(String packageName) async {
+    launched.add(packageName);
+    return true;
+  }
+  @override
+  Future<bool> openAppDetails(String packageName) async {
+    details.add(packageName);
+    return true;
+  }
+}
+
 void main() {
   Future<ProviderContainer> show(
     WidgetTester tester,
     Storage storage, {
     List<InstalledApp> apps = const [alpha, beta],
     double scale = 1,
+    bool active = false,
+    Widget? home,
+    void Function(String)? onIcon,
+    AppLauncherService? launcher,
   }) async {
     final container = ProviderContainer(
       overrides: [
         secureStorageServiceProvider.overrideWithValue(storage),
+        if (launcher != null)
+          appLauncherServiceProvider.overrideWithValue(launcher),
+        habitsStreamProvider.overrideWith((ref) => Stream.value([])),
+        habitEntriesStreamProvider.overrideWith(
+          (ref, range) => Stream.value([]),
+        ),
+        eisenhowerTasksProvider.overrideWith((ref) => Stream.value([])),
         installedAppsFutureProvider.overrideWith((ref) async => apps),
-        appIconProvider.overrideWith((ref, package) async => null),
+        appIconProvider.overrideWith((ref, package) async {
+          onIcon?.call(package);
+          return null;
+        }),
       ],
     );
     addTearDown(container.dispose);
@@ -43,13 +80,276 @@ void main() {
             ).copyWith(textScaler: TextScaler.linear(scale)),
             child: child!,
           ),
-          home: const MinimalistAppDrawer(),
+          home: home ?? MinimalistAppDrawer(isActive: active),
         ),
       ),
     );
     await tester.pump();
     return container;
   }
+
+  testWidgets(
+    'icon-free rows still launch apps and expose app details',
+    (tester) async {
+      final launcher = RecordingLauncher();
+      final store = Storage()
+        ..raw = LauncherSettings(showAppIcons: false).toJson();
+      await show(tester, store, launcher: launcher);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Beta'));
+      await tester.pumpAndSettle();
+      expect(launcher.launched, ['org.beta']);
+      await tester.longPress(find.text('Beta'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('App info'));
+      await tester.pumpAndSettle();
+      expect(launcher.details, ['org.beta']);
+      expect(find.byType(AppPreferencesSheet), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'icons hidden in favorite, normal and search rows never request icons',
+    (tester) async {
+      final requests = <String>[];
+      final store = Storage()
+        ..raw = LauncherSettings(
+          showAppIcons: false,
+          favoritePackages: {'org.alpha'},
+        ).toJson();
+      final container = await show(tester, store, onIcon: requests.add);
+      await tester.pumpAndSettle();
+      expect(find.byType(AppIconWidget), findsNothing);
+      expect(requests, isEmpty);
+      final row = find
+          .ancestor(of: find.text('Beta'), matching: find.byType(InkWell))
+          .first;
+      expect(tester.getSize(row).height, greaterThanOrEqualTo(48));
+      await tester.tap(find.byIcon(Icons.search_rounded));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppIconWidget), findsNothing);
+      expect(requests, isEmpty);
+      await container
+          .read(launcherSettingsProvider.notifier)
+          .setShowAppIcons(true);
+      await tester.pumpAndSettle();
+      expect(find.byType(AppIconWidget), findsWidgets);
+      expect(requests, contains('org.alpha'));
+    },
+  );
+
+  testWidgets(
+    'shared controls gate hydration, keep failed requested value and retry at large text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final store = Storage()..readGate = Completer<void>();
+      await show(
+        tester,
+        store,
+        scale: 2,
+        home: const Scaffold(
+          body: SingleChildScrollView(child: DrawerPreferencesControls()),
+        ),
+      );
+      expect(find.byType(SwitchListTile), findsNothing);
+      store.failRead = true;
+      store.readGate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Gagal memuat preferensi.'), findsOneWidget);
+      store.failRead = false;
+      await tester.tap(find.text('Coba lagi'));
+      await tester.pumpAndSettle();
+      store.failWrite = true;
+      await tester.tap(find.text('Show App Icons'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<SwitchListTile>(
+              find.widgetWithText(SwitchListTile, 'Show App Icons'),
+            )
+            .value,
+        isTrue,
+      );
+      expect(
+        find.textContaining('Gagal menyimpan preferensi.'),
+        findsOneWidget,
+      );
+      store.failWrite = false;
+      store.writeGate = Completer<void>();
+      await tester.ensureVisible(find.text('Coba lagi'));
+      await tester.tap(find.text('Coba lagi'));
+      await tester.pump();
+      expect(find.text('Menyimpan…'), findsOneWidget);
+      for (final tile in tester.widgetList<SwitchListTile>(
+        find.byType(SwitchListTile),
+      )) {
+        expect(tile.onChanged, isNull);
+      }
+      store.writeGate!.complete();
+      await tester.pumpAndSettle();
+      expect(LauncherSettings.fromJson(store.raw!).showAppIcons, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('active drawer opens search after delayed hydration', (
+    tester,
+  ) async {
+    final store = Storage()
+      ..raw = LauncherSettings(autoFocusSearch: true).toJson()
+      ..readGate = Completer<void>();
+    await show(tester, store, active: true);
+    expect(find.byType(TextField), findsNothing);
+    store.readGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus,
+      isTrue,
+    );
+  });
+
+  testWidgets(
+    'inactive or disposed drawer does not steal focus after hydration',
+    (tester) async {
+      final store = Storage()
+        ..raw = LauncherSettings(autoFocusSearch: true).toJson()
+        ..readGate = Completer<void>();
+      final container = await show(tester, store, active: true);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: MinimalistAppDrawer(isActive: false)),
+        ),
+      );
+      store.readGate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('settings and App Drawer sheet share committed values', (
+    tester,
+  ) async {
+    final store = Storage();
+    final container = await show(
+      tester,
+      store,
+      home: const FitrahSettingsScreen(),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Show App Icons'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('App Drawer'));
+    await tester.tap(find.text('App Drawer'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Geser layar utama ke kiri'), findsOneWidget);
+    final tiles = tester.widgetList<SwitchListTile>(
+      find.widgetWithText(SwitchListTile, 'Show App Icons'),
+    );
+    expect(tiles.every((tile) => !tile.value), isTrue);
+    await tester.tap(find.text('Show App Icons').last);
+    await tester.pumpAndSettle();
+    expect(container.read(launcherSettingsProvider).showAppIcons, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('customization drawer controls scroll at 320dp and 200 percent', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await show(
+      tester,
+      Storage(),
+      scale: 2,
+      home: const Scaffold(body: LauncherCustomizationSheet()),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Show App Icons'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      tester
+          .getSize(find.widgetWithText(SwitchListTile, 'Show App Icons'))
+          .height,
+      greaterThanOrEqualTo(48),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('legacy icon rows and keyboard wait for hydrated preferences', (
+    tester,
+  ) async {
+    final requests = <String>[];
+    final store = Storage()
+      ..raw = LauncherSettings(
+        showAppIcons: false,
+        autoFocusSearch: true,
+        favoritePackages: {'org.alpha'},
+      ).toJson()
+      ..readGate = Completer<void>();
+    await show(
+      tester,
+      store,
+      onIcon: requests.add,
+      home: NiagaraUnifiedStreamView(onOpenFocusClock: () {}),
+    );
+    expect(find.text('Alpha'), findsNothing);
+    expect(find.text('Memuat preferensi…'), findsOneWidget);
+    store.readGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(AppIconWidget), findsNothing);
+    expect(requests, isEmpty);
+    final field = find.byWidgetPredicate(
+      (w) => w is TextField && w.decoration?.hintText == 'Cari aplikasi...',
+    );
+    expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
+    await tester.enterText(field, 'Alpha');
+    await tester.pumpAndSettle();
+    expect(find.byType(AppIconWidget), findsNothing);
+    expect(requests, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'preference off cancels pending automatic focus and disposal is safe',
+    (tester) async {
+      final store = Storage()
+        ..raw = LauncherSettings(autoFocusSearch: true).toJson()
+        ..readGate = Completer<void>();
+      final container = await show(tester, store, active: true);
+      final off = container
+          .read(launcherSettingsProvider.notifier)
+          .setAutoFocusSearch(false);
+      store.readGate!.complete();
+      await off;
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('disposing before hydration completes never schedules focus', (
+    tester,
+  ) async {
+    final store = Storage()
+      ..raw = LauncherSettings(autoFocusSearch: true).toJson()
+      ..readGate = Completer<void>();
+    await show(tester, store, active: true);
+    await tester.pumpWidget(const SizedBox());
+    store.readGate!.complete();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'saved hidden apps never flash during pending or failed hydration',

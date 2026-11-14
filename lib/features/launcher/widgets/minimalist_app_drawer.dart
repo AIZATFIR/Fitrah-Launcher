@@ -37,6 +37,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
   String _searchQuery = '';
   bool _isSearchOpen = false;
   Timer? _clockTicker;
+  int _focusRevision = 0;
 
   static const List<String> _alphabet = [
     '☆',
@@ -92,24 +93,47 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     if (!oldWidget.isActive && widget.isActive) {
       _checkAutoFocus();
     } else if (oldWidget.isActive && !widget.isActive) {
+      _focusRevision++;
       _searchFocusNode.unfocus();
     }
   }
 
-  void _checkAutoFocus() {
-    final settings = ref.read(launcherSettingsProvider);
-    if (settings.autoFocusSearch) {
-      Future.delayed(const Duration(milliseconds: 180), () {
-        if (mounted && widget.isActive) {
-          setState(() => _isSearchOpen = true);
+  Future<void> _checkAutoFocus() async {
+    final revision = ++_focusRevision;
+    final notifier = ref.read(launcherSettingsProvider.notifier);
+    await notifier.hydration;
+    if (!mounted ||
+        revision != _focusRevision ||
+        !widget.isActive ||
+        !notifier.isLoaded ||
+        !ref.read(launcherSettingsProvider).autoFocusSearch ||
+        !(ModalRoute.of(context)?.isCurrent ?? true)) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          revision != _focusRevision ||
+          !widget.isActive ||
+          !ref.read(launcherSettingsProvider).autoFocusSearch ||
+          !(ModalRoute.of(context)?.isCurrent ?? true)) {
+        return;
+      }
+      setState(() => _isSearchOpen = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            revision == _focusRevision &&
+            widget.isActive &&
+            ref.read(launcherSettingsProvider).autoFocusSearch &&
+            (ModalRoute.of(context)?.isCurrent ?? true)) {
           _searchFocusNode.requestFocus();
         }
       });
-    }
+    });
   }
 
   @override
   void dispose() {
+    _focusRevision++;
     _clockTicker?.cancel();
     _searchCtrl.dispose();
     _searchFocusNode.dispose();
@@ -207,6 +231,12 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     final favorites = ref.watch(favoritePackagesProvider);
     final hidden = ref.watch(hiddenPackagesProvider);
     ref.watch(launcherSettingsProvider);
+    ref.listen(launcherSettingsProvider, (previous, next) {
+      if (previous?.autoFocusSearch != next.autoFocusSearch) {
+        _focusRevision++;
+        if (next.autoFocusSearch && widget.isActive) _checkAutoFocus();
+      }
+    });
     final preferences = ref.read(launcherSettingsProvider.notifier);
 
     return PopScope(
@@ -657,54 +687,59 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          child: Row(
-            children: [
-              AppIconWidget(
-                packageName: app.packageName,
-                appName: app.appName,
-                size: 44,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      app.appName,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white,
-                        letterSpacing: 0.2,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black87,
-                            blurRadius: 8,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_isSearchOpen) ...[
-                      const SizedBox(height: 1),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 34),
+            child: Row(
+              children: [
+                if (ref.read(launcherSettingsProvider).showAppIcons) ...[
+                  AppIconWidget(
+                    packageName: app.packageName,
+                    appName: app.appName,
+                    size: 44,
+                  ),
+                  const SizedBox(width: 16),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        isFav ? 'Favorit' : app.packageName,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withOpacity(0.55),
-                          shadows: const [
-                            Shadow(color: Colors.black87, blurRadius: 6),
+                        app.appName,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white,
+                          letterSpacing: 0.2,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black87,
+                              blurRadius: 8,
+                              offset: Offset(0, 1),
+                            ),
                           ],
                         ),
                       ),
+                      if (_isSearchOpen) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          isFav ? 'Favorit' : app.packageName,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white.withOpacity(0.55),
+                            shadows: const [
+                              Shadow(color: Colors.black87, blurRadius: 6),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

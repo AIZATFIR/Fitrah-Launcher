@@ -6,6 +6,96 @@ import 'package:flutter_test/flutter_test.dart';
 import 'launcher_daily_note_test.dart' show NoteStorage;
 
 void main() {
+  test(
+    'icon preference defaults true and exact boolean survives copies and JSON',
+    () {
+      expect(LauncherSettings.fromMap({}).showAppIcons, isTrue);
+      for (final value in [false, true]) {
+        final settings = LauncherSettings(
+          showAppIcons: value,
+        ).copyWith(focusGoal: 'keep');
+        expect(settings.showAppIcons, value);
+        expect(
+          LauncherSettings.fromJson(settings.toJson()).showAppIcons,
+          value,
+        );
+      }
+    },
+  );
+  for (final invalid in [null, 'false', 0, []]) {
+    test('invalid icon preference $invalid fails without overwrite', () async {
+      final raw = jsonEncode({'showAppIcons': invalid});
+      final store = NoteStorage()..raw = raw;
+      final notifier = LauncherSettingsNotifier(store);
+      await notifier.hydration;
+      expect(notifier.loadFailed, isTrue);
+      expect(await notifier.setShowAppIcons(false), isFalse);
+      expect(await notifier.setAutoFocusSearch(true), isFalse);
+      expect(store.raw, raw);
+      notifier.dispose();
+    });
+  }
+  test(
+    'drawer saves commit before publish and retain independent queued mutations',
+    () async {
+      final store = NoteStorage();
+      final notifier = LauncherSettingsNotifier(store);
+      await notifier.hydration;
+      final gate = Completer<void>();
+      store.gate = gate;
+      final icons = notifier.setShowAppIcons(false);
+      final keyboard = notifier.setAutoFocusSearch(true);
+      final note = notifier.setDailyNote('2026-11-09', 'keep');
+      final favorite = notifier.setFavoritePackage('org.alpha', true);
+      await Future<void>.delayed(Duration.zero);
+      expect(notifier.drawerSaving, isTrue);
+      expect(notifier.state.showAppIcons, isTrue);
+      expect(notifier.state.autoFocusSearch, isFalse);
+      gate.complete();
+      expect(await icons, isTrue);
+      expect(await keyboard, isTrue);
+      expect(await note, isTrue);
+      expect(await favorite, isTrue);
+      final reopened = LauncherSettingsNotifier(store);
+      await reopened.hydration;
+      expect(reopened.state.showAppIcons, isFalse);
+      expect(reopened.state.autoFocusSearch, isTrue);
+      expect(reopened.state.dailyNotes['2026-11-09'], 'keep');
+      expect(reopened.state.favoritePackages, contains('org.alpha'));
+      store.failWrite = true;
+      expect(await notifier.setShowAppIcons(true), isFalse);
+      expect(notifier.state.showAppIcons, isFalse);
+      expect(notifier.drawerFailedValues['icons'], isTrue);
+      store.failWrite = false;
+      expect(await notifier.setShowAppIcons(true), isTrue);
+      expect(notifier.drawerFailedValues, isEmpty);
+      reopened.dispose();
+      notifier.dispose();
+    },
+  );
+
+  test(
+    'keyboard failure preserves committed value and a later success clears retry',
+    () async {
+      final store = NoteStorage();
+      final notifier = LauncherSettingsNotifier(store);
+      await notifier.hydration;
+      store.failWrite = true;
+      expect(await notifier.setAutoFocusSearch(true), isFalse);
+      expect(notifier.state.autoFocusSearch, isFalse);
+      expect(notifier.drawerFailedValues['keyboard'], isTrue);
+      store.failWrite = false;
+      expect(await notifier.setAutoFocusSearch(true), isTrue);
+      expect(notifier.state.autoFocusSearch, isTrue);
+      expect(notifier.drawerFailedValues, isEmpty);
+      final reopened = LauncherSettingsNotifier(store);
+      await reopened.hydration;
+      expect(reopened.state.autoFocusSearch, isTrue);
+      reopened.dispose();
+      notifier.dispose();
+    },
+  );
+
   test('legacy JSON retains fields and explicit default policy', () {
     final legacy = LauncherSettings.fromMap({
       'focusGoal': 'keep',

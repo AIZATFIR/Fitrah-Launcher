@@ -193,9 +193,34 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
     await _mutate((s) => s.copyWith(widgetDisplayMode: mode));
   }
 
-  Future<void> setAutoFocusSearch(bool enabled) async {
-    await _mutate((s) => s.copyWith(autoFocusSearch: enabled));
+  int _drawerWrites = 0;
+  bool get drawerSaving => _drawerWrites > 0;
+  final Map<String, bool> drawerFailedValues = {};
+
+  Future<bool> _saveDrawerPreference(String key, bool value) async {
+    _drawerWrites++;
+    drawerFailedValues.remove(key);
+    state = state.copyWith();
+    final saved = await _mutate(
+      (s) => key == 'icons'
+          ? s.copyWith(showAppIcons: value)
+          : s.copyWith(autoFocusSearch: value),
+    );
+    _drawerWrites--;
+    if (saved) {
+      drawerFailedValues.remove(key);
+    } else {
+      drawerFailedValues[key] = value;
+    }
+    state = state.copyWith();
+    return saved;
   }
+
+  Future<bool> setAutoFocusSearch(bool enabled) =>
+      _saveDrawerPreference('keyboard', enabled);
+
+  Future<bool> setShowAppIcons(bool enabled) =>
+      _saveDrawerPreference('icons', enabled);
 
   Future<void> setThemePalette(String palette) async {
     await _mutate((s) => s.copyWith(themePalette: palette));

@@ -1,3 +1,4 @@
+import 'drawer_preferences_controls.dart';
 import 'app_preferences_sheet.dart';
 import 'launcher_action_feedback.dart';
 import 'dart:async';
@@ -25,9 +26,11 @@ class NiagaraUnifiedStreamView extends ConsumerStatefulWidget {
   const NiagaraUnifiedStreamView({
     super.key,
     required this.onOpenFocusClock,
+    this.isActive = true,
   });
 
   final VoidCallback onOpenFocusClock;
+  final bool isActive;
 
   @override
   ConsumerState<NiagaraUnifiedStreamView> createState() => _NiagaraUnifiedStreamViewState();
@@ -44,6 +47,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
   String _selectedLetter = '★';
   String _searchQuery = '';
   bool _isScrubbing = false;
+  int _focusRevision = 0;
 
   static const List<String> _alphabet = [
     '★', '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -62,8 +66,38 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
       _sectionKeys[l] = GlobalKey();
     }
 
+    _checkAutoFocus();
+  }
+
+  @override
+  void didUpdateWidget(covariant NiagaraUnifiedStreamView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive) {
+      _focusRevision++;
+      if (widget.isActive) {
+        _checkAutoFocus();
+      } else {
+        _searchFocusNode.unfocus();
+      }
+    }
+  }
+
+  Future<void> _checkAutoFocus() async {
+    final revision = ++_focusRevision;
+    final notifier = ref.read(launcherSettingsProvider.notifier);
+    await notifier.hydration;
+    if (!mounted ||
+        revision != _focusRevision ||
+        !widget.isActive ||
+        !notifier.isLoaded) {
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && ref.read(launcherSettingsProvider).autoFocusSearch) {
+      if (mounted &&
+          revision == _focusRevision &&
+          widget.isActive &&
+          ref.read(launcherSettingsProvider).autoFocusSearch &&
+          (ModalRoute.of(context)?.isCurrent ?? true)) {
         _searchFocusNode.requestFocus();
       }
     });
@@ -71,6 +105,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
 
   @override
   void dispose() {
+    _focusRevision++;
     _clockTimer.cancel();
     _searchCtrl.dispose();
     _searchFocusNode.dispose();
@@ -159,6 +194,12 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(launcherSettingsProvider);
+    ref.listen(launcherSettingsProvider, (previous, next) {
+      if (previous?.autoFocusSearch != next.autoFocusSearch) {
+        _focusRevision++;
+        if (next.autoFocusSearch && widget.isActive) _checkAutoFocus();
+      }
+    });
     final appsAsync = ref.watch(installedAppsFutureProvider);
     final favoritePackages = ref.watch(favoritePackagesProvider);
     final hiddenPackages = ref.watch(hiddenPackagesProvider);
@@ -229,6 +270,18 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                     // Search input
                     _buildSearchBar(settings, filtered),
                     const SizedBox(height: 20),
+
+                    if (!ref.read(launcherSettingsProvider.notifier).isLoaded)
+                      Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text(ref.read(launcherSettingsProvider.notifier).loadFailed
+                            ? 'Gagal memuat preferensi.' : 'Memuat preferensi…'),
+                        if (ref.read(launcherSettingsProvider.notifier).loadFailed)
+                          TextButton(
+                            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                            onPressed: ref.read(launcherSettingsProvider.notifier).reload,
+                            child: const Text('Coba lagi'),
+                          ),
+                      ]),
 
                     // FAVORITES SECTION (Only if not searching)
                     if (_searchQuery.isEmpty && favoriteApps.isNotEmpty) ...[
@@ -608,8 +661,15 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
           GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
-              final next = !settings.autoFocusSearch;
-              ref.read(launcherSettingsProvider.notifier).setAutoFocusSearch(next);
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: const Color(0xFF161618),
+                builder: (_) => const SafeArea(child: SingleChildScrollView(
+                  padding: EdgeInsets.all(20),
+                  child: DrawerPreferencesControls(keyboardOnly: true),
+                )),
+              );
             },
             child: Icon(
               Icons.keyboard_rounded,
@@ -629,44 +689,53 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
       borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
-        child: Row(
-          children: [
-            AppIconWidget(
-              packageName: app.packageName,
-              appName: app.appName,
-              size: 42,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                app.appName,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: isFavorite ? FontWeight.w700 : FontWeight.w500,
-                  color: Colors.white.withOpacity(0.92),
-                  letterSpacing: 0.1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 34),
+          child: Row(
+            children: [
+              if (ref.read(launcherSettingsProvider).showAppIcons) ...[
+                AppIconWidget(
+                  packageName: app.packageName,
+                  appName: app.appName,
+                  size: 42,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (isFavorite)
-              const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.star_rounded, size: 14, color: Color(0xFFE5A93C)),
-              ),
-            GestureDetector(
-              onTap: () => _showAppOptions(app),
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: Icon(
-                  Icons.more_vert_rounded,
-                  size: 16,
-                  color: Colors.white.withOpacity(0.25),
+                const SizedBox(width: 14),
+              ],
+              Expanded(
+                child: Text(
+                  app.appName,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: isFavorite ? FontWeight.w700 : FontWeight.w500,
+                    color: Colors.white.withOpacity(0.92),
+                    letterSpacing: 0.1,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-          ],
+              if (isFavorite)
+                const Padding(
+                  padding: EdgeInsets.only(right: 6),
+                  child: Icon(
+                    Icons.star_rounded,
+                    size: 14,
+                    color: Color(0xFFE5A93C),
+                  ),
+                ),
+              GestureDetector(
+                onTap: () => _showAppOptions(app),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.more_vert_rounded,
+                    size: 16,
+                    color: Colors.white.withOpacity(0.25),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

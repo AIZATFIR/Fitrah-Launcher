@@ -28,6 +28,7 @@ class LauncherSettings {
 
   /// Automatically focus search and open keyboard on app drawer tab
   final bool autoFocusSearch;
+  final bool showAppIcons;
 
   /// Dynamic Theme Palette: 'fino_green', 'sky_blue', 'ocean_blue'
   final String themePalette;
@@ -100,6 +101,7 @@ class LauncherSettings {
     this.prayerIsya = '19:03',
     this.widgetDisplayMode = 'prayer',
     this.autoFocusSearch = false,
+    this.showAppIcons = true,
     this.themePalette = 'ocean_blue',
     this.focusGoal = '',
     Iterable<String> favoritePackages = defaultFavorites,
@@ -130,6 +132,7 @@ class LauncherSettings {
     String? prayerIsya,
     String? widgetDisplayMode,
     bool? autoFocusSearch,
+    bool? showAppIcons,
     String? themePalette,
     String? focusGoal,
     Iterable<String>? favoritePackages,
@@ -157,6 +160,7 @@ class LauncherSettings {
       prayerIsya: prayerIsya ?? this.prayerIsya,
       widgetDisplayMode: widgetDisplayMode ?? this.widgetDisplayMode,
       autoFocusSearch: autoFocusSearch ?? this.autoFocusSearch,
+      showAppIcons: showAppIcons ?? this.showAppIcons,
       themePalette: themePalette ?? this.themePalette,
       focusGoal: focusGoal ?? this.focusGoal,
       favoritePackages: favoritePackages ?? this.favoritePackages,
@@ -187,6 +191,7 @@ class LauncherSettings {
       'prayerIsya': prayerIsya,
       'widgetDisplayMode': widgetDisplayMode,
       'autoFocusSearch': autoFocusSearch,
+      'showAppIcons': showAppIcons,
       'themePalette': themePalette,
       'focusGoal': focusGoal,
       'favoritePackages': favoritePackages.toList(),
@@ -196,7 +201,11 @@ class LauncherSettings {
   }
 
   factory LauncherSettings.fromMap(Map<String, dynamic> map) {
+    if (map.containsKey('showAppIcons') && map['showAppIcons'] is! bool) {
+      throw const FormatException('Invalid showAppIcons');
+    }
     return LauncherSettings(
+      showAppIcons: map['showAppIcons'] as bool? ?? true,
       wallpaperType: map['wallpaperType'] as String? ?? 'system',
       customImageUrl: map['customImageUrl'] as String? ?? '',
       wallpaperDimming: (map['wallpaperDimming'] as num?)?.toDouble() ?? 0.0,

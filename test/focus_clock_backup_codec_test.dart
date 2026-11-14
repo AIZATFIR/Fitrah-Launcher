@@ -18,6 +18,19 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('FocusClockBackupCodec', () {
+    test('legacy backup without icon preference keeps visible icons', () {
+      final root =
+          jsonDecode(utf8.decode(FocusClockBackupCodec.encode(_sampleData())))
+              as Map<String, dynamic>;
+      (root['data']['launcherSettings'] as Map).remove('showAppIcons');
+      _refreshChecksum(root);
+      final decoded = FocusClockBackupCodec.decode(
+        utf8.encode(jsonEncode(root)),
+      );
+      expect(decoded.data.launcherSettings.showAppIcons, isTrue);
+      expect(decoded.data.launcherSettings.autoFocusSearch, isTrue);
+    });
+
     test(
       'live records preserve links and decode absent legacy fields as null',
       () {
@@ -108,6 +121,8 @@ void main() {
         expect(decoded.data.appSettings.single.id, 0);
         expect(decoded.data.timerSessions.single.id, 1);
         expect(decoded.data.launcherSettings.focusGoal, 'Menang LKS nasional');
+        expect(decoded.data.launcherSettings.showAppIcons, isFalse);
+        expect(decoded.data.launcherSettings.autoFocusSearch, isTrue);
         expect(decoded.data.dailyReflections.single.note, 'private note');
         expect(
           decoded.formatVersion,
@@ -418,6 +433,10 @@ FocusClockBackupData _sampleData() {
     habitEntries: [entry],
     dailyReflections: [reflection],
     timerSessions: [timer],
-    launcherSettings: LauncherSettings(focusGoal: 'Menang LKS nasional'),
+    launcherSettings: LauncherSettings(
+      focusGoal: 'Menang LKS nasional',
+      showAppIcons: false,
+      autoFocusSearch: true,
+    ),
   );
 }
