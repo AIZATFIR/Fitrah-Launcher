@@ -333,3 +333,11 @@ Source `4e4683d` contains the responsive Focus Clock prayer header. Full suite *
 Runtime: v29 cold-start/Home render succeeded on the isolated API36 QA AVD; v30's narrow prayer layout has widget coverage at 320dp but was not separately installed in the AVD. No physical Android device. Default Home, YPT permission/guard and lockscreen, reminders after reboot, browser interaction/persistence, and daily-use gates remain open. WebAssembly dry-run warns about dependency incompatibilities. APK is debug-signed local preview; no public release/deploy.
 
 Preview30 AVD follow-up: same-signature x64 debug versionCode30 installed over preview29, cold-started in 6.64s, retained the synthetic goal after hydration, rendered all five prayer labels on one line, and showed no fatal Flutter/Android error in the log tail. See [NATIVE-QA](NATIVE-QA.md). This is a 411dp emulator debug run; v30 release arm64 was not installed and no physical phone was tested.
+
+## Checkpoint local preview — 14 November 2026 — versionCode 32
+
+Source `2acf375` adds text-first schedule capture with 24-hour exact start-time selection and duration chips; it removes the difficult dual-thumb range interaction and improves compact Inbox touch targets. Focus timers now use monotonic elapsed time while running and Android boot-count/elapsed-realtime data for same-boot recovery after process loss. Legacy or unavailable native-clock state falls back to guarded wall-clock recovery; reboot with calendar/timezone change remains uncertain.
+
+Full Flutter suite: **310 passed** serially; analyzer clean. Android arm64 APK and Web JavaScript bundle compiled. APK metadata/signature, ZIP integrity and SHA-256 checks passed. Local artifacts and detailed evidence: `release_dist/2026-11-14-focus-clock-preview-32/` (ignored local deliverables); source checkpoint details: [BUILD-CHECKPOINT-2026-11-14-preview-32](BUILD-CHECKPOINT-2026-11-14-preview-32.md).
+
+Runtime limits: version32 was not installed on a phone/AVD; browser interaction/persistence were not tested. The APK uses the Android Debug signing certificate and is a personal preview, not a public release. E0–E6 adoption, device, storage and accessibility gates remain open; AI, cross-device sync, WhatsApp, MCP and public distribution are later milestones.
