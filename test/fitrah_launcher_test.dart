@@ -1,4 +1,4 @@
-import 'dart:ui' show SemanticsFlag;
+import 'dart:ui' show SemanticsAction, SemanticsFlag;
 
 import 'launcher_daily_note_test.dart' show NoteStorage;
 import 'package:fitrah_launcher/services/secure_storage_service.dart';
@@ -262,6 +262,41 @@ void main() {
       expect(find.byKey(const ValueKey('home-agenda-carousel')), findsNothing);
       expect(find.byKey(const ValueKey('home-habit-grid')), findsNothing);
 
+      semantics.dispose();
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('Home analog clock exposes its current time and action', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: FocusClockHomeView(
+              onOpenFocusClock: () {},
+              onOpenAppDrawer: () {},
+              useSampleData: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final clockSemantics = tester.getSemantics(
+        find.byKey(const ValueKey('home-analog-clock')),
+      );
+      expect(clockSemantics.hasFlag(SemanticsFlag.isButton), isTrue);
+      expect(
+        clockSemantics.getSemanticsData().hasAction(SemanticsAction.tap),
+        isTrue,
+      );
+      expect(
+        RegExp(
+          r'^Jam jadwal hari ini\. Sekarang pukul \d{2}:\d{2}\. Ketuk untuk menambah jadwal\.$',
+        ).hasMatch(clockSemantics.label),
+        isTrue,
+      );
       semantics.dispose();
       await tester.pumpWidget(const SizedBox());
     });

@@ -1905,28 +1905,29 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           const SizedBox(height: 18),
 
           // Center 12h Analog Clock Face
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              _openScheduleToClockSheet(
-                title: '',
-                initialDurationMinutes: 60,
-                identity: '',
-              );
-            },
-            child: SizedBox(
-              width: 240,
-              height: 240,
-              child: AnalogClockFace(
-                now: _currentTime,
-                activities: effectiveActivities,
-                tasks: const [],
-                viewHalf: _clockViewHalf,
-                clockHandsMode: 1,
-                is24hDial: false,
-                is24hTime: false,
-                showCurrentTime: true,
-                clockFaceTheme: tc.clockThemeIndex,
+          Semantics(
+            key: const ValueKey('home-analog-clock'),
+            button: true,
+            label:
+                'Jam jadwal hari ini. Sekarang pukul ${_formatHour(_hourNow())}. Ketuk untuk menambah jadwal.',
+            onTap: _openScheduleFromClock,
+            child: GestureDetector(
+              excludeFromSemantics: true,
+              onTap: _openScheduleFromClock,
+              child: SizedBox(
+                width: 240,
+                height: 240,
+                child: AnalogClockFace(
+                  now: _currentTime,
+                  activities: effectiveActivities,
+                  tasks: const [],
+                  viewHalf: _clockViewHalf,
+                  clockHandsMode: 1,
+                  is24hDial: false,
+                  is24hTime: false,
+                  showCurrentTime: true,
+                  clockFaceTheme: tc.clockThemeIndex,
+                ),
               ),
             ),
           ),
@@ -4938,6 +4939,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   // ── 6. Interactive Schedule to Focus Clock Modal (Existing Items First!) ──
+  void _openScheduleFromClock() {
+    HapticFeedback.selectionClick();
+    _openScheduleToClockSheet(
+      title: '',
+      initialDurationMinutes: 60,
+      identity: '',
+    );
+  }
+
   Future<void> _openScheduleToClockSheet({
     String title = '',
     int initialDurationMinutes = 60,
