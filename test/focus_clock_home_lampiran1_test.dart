@@ -4,21 +4,36 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
 import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
 import 'package:fitrah_launcher/features/settings/settings_screen.dart';
+import 'package:fitrah_launcher/providers/providers.dart';
+import 'package:fitrah_launcher/providers/sadar_providers.dart';
+import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
 import 'package:fitrah_launcher/services/secure_storage_service.dart';
 import 'launcher_daily_note_test.dart' show NoteStorage;
 
 void main() {
   group('FocusClockHomeView Lampiran 1 & Future Self Sadar System Tests', () {
-    Widget createWidgetUnderTest() {
+    Widget createWidgetUnderTest({
+      bool useSampleData = true,
+      bool emptyTasks = false,
+      SadarRepository? sadarRepository,
+    }) {
       final storage = NoteStorage()
         ..raw = LauncherSettings(widgetDisplayMode: 'focus_clock').toJson();
       return ProviderScope(
-        overrides: [secureStorageServiceProvider.overrideWithValue(storage)],
+        overrides: [
+          secureStorageServiceProvider.overrideWithValue(storage),
+          if (emptyTasks)
+            eisenhowerTasksProvider.overrideWith(
+              (ref) => Stream.value(const []),
+            ),
+          if (sadarRepository != null)
+            sadarRepoProvider.overrideWithValue(sadarRepository),
+        ],
         child: MaterialApp(
           home: FocusClockHomeView(
             onOpenFocusClock: () {},
             onOpenAppDrawer: () {},
-            useSampleData: true,
+            useSampleData: useSampleData,
           ),
         ),
       );
@@ -474,5 +489,36 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'empty production capture hides empty source and identity choices',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 760);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final emptyRepository = SadarRepository.store(null);
+        for (final habit in await emptyRepository.getHabits()) {
+          await emptyRepository.deleteHabit(habit.id);
+        }
+        await tester.pumpWidget(
+          createWidgetUnderTest(
+            useSampleData: false,
+            emptyTasks: true,
+            sadarRepository: emptyRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final addSchedule = find.text('Pasang Jadwal ke Jam');
+        await tester.ensureVisible(addSchedule);
+        await tester.tap(addSchedule);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Pilih yang Ada'), findsNothing);
+        expect(find.text('Pilih Identitas:'), findsNothing);
+        expect(find.text('Apa yang perlu kamu lakukan?'), findsOneWidget);
+      },
+    );
   });
 }

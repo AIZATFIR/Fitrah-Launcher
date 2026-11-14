@@ -4930,6 +4930,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         initialHabit == null && inboxTask == null && title.trim().isEmpty;
     bool isCustomInput = isBlankCapture;
     final inboxTasks = _inboxTasks;
+    final hasReusableItems =
+        inboxTasks.isNotEmpty ||
+        scheduleHabits.isNotEmpty ||
+        _presets.isNotEmpty;
     Task? selectedTask = inboxTask;
     String selectedTitle = initialHabit?.name ?? title.trim();
     if (selectedTitle.isEmpty && !isBlankCapture) {
@@ -5034,63 +5038,63 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            // Button to toggle custom mode
-                            InkWell(
-                              onTap: () => setSheetState(() {
-                                isCustomInput = !isCustomInput;
-                                selectedTask = null;
-                                selectedHabitId = null;
-                              }),
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isCustomInput
-                                      ? tc.accent.withOpacity(0.2)
-                                      : tc.cardElevated,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isCustomInput
-                                        ? tc.accent
-                                        : tc.stroke,
+                            if (hasReusableItems)
+                              InkWell(
+                                onTap: () => setSheetState(() {
+                                  isCustomInput = !isCustomInput;
+                                  selectedTask = null;
+                                  selectedHabitId = null;
+                                }),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
                                   ),
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 48,
-                                  minHeight: 44,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      isCustomInput
-                                          ? Icons.list_alt_rounded
-                                          : Icons.edit_note_rounded,
-                                      size: 14,
+                                  decoration: BoxDecoration(
+                                    color: isCustomInput
+                                        ? tc.accent.withOpacity(0.2)
+                                        : tc.cardElevated,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
                                       color: isCustomInput
                                           ? tc.accent
-                                          : tc.textSecondary,
+                                          : tc.stroke,
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      isCustomInput
-                                          ? 'Pilih yang Ada'
-                                          : '+ Kustom',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 48,
+                                    minHeight: 44,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isCustomInput
+                                            ? Icons.list_alt_rounded
+                                            : Icons.edit_note_rounded,
+                                        size: 14,
                                         color: isCustomInput
                                             ? tc.accent
                                             : tc.textSecondary,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        isCustomInput
+                                            ? 'Pilih yang Ada'
+                                            : '+ Kustom',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: isCustomInput
+                                              ? tc.accent
+                                              : tc.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -5453,79 +5457,80 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           ),
                           const SizedBox(height: 12),
 
-                          // Identity Selector
-                          Text(
-                            'Pilih Identitas:',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: tc.textSecondary,
+                          if (_identities.isNotEmpty) ...[
+                            Text(
+                              'Pilih Identitas:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: tc.textSecondary,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          SizedBox(
-                            height: 34,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _identities.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 8),
-                              itemBuilder: (context, i) {
-                                final id = _identities[i];
-                                final isSel =
-                                    id.name.toLowerCase() ==
-                                    selectedIdentity.toLowerCase();
-                                return InkWell(
-                                  onTap: () => setSheetState(
-                                    () => selectedIdentity = id.name,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              height: 34,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _identities.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 8),
+                                itemBuilder: (context, i) {
+                                  final id = _identities[i];
+                                  final isSel =
+                                      id.name.toLowerCase() ==
+                                      selectedIdentity.toLowerCase();
+                                  return InkWell(
+                                    onTap: () => setSheetState(
+                                      () => selectedIdentity = id.name,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: isSel
-                                          ? id.color.withOpacity(0.2)
-                                          : tc.bg,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: isSel ? id.color : tc.stroke,
-                                        width: isSel ? 1.5 : 1,
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSel
+                                            ? id.color.withOpacity(0.2)
+                                            : tc.bg,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: isSel ? id.color : tc.stroke,
+                                          width: isSel ? 1.5 : 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 6,
+                                            height: 6,
+                                            decoration: BoxDecoration(
+                                              color: id.color,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            id.name,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: isSel
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500,
+                                              color: isSel
+                                                  ? id.color
+                                                  : tc.textPrimary,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          width: 6,
-                                          height: 6,
-                                          decoration: BoxDecoration(
-                                            color: id.color,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          id.name,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: isSel
-                                                ? FontWeight.w700
-                                                : FontWeight.w500,
-                                            color: isSel
-                                                ? id.color
-                                                : tc.textPrimary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                         const SizedBox(height: 14),
 
