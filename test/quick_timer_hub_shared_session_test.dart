@@ -21,10 +21,7 @@ void main() {
         notificationServiceProvider.overrideWithValue(NotificationService()),
       ],
     );
-    addTearDown(() async {
-      await container.read(timerEngineProvider.notifier).cancel();
-      container.dispose();
-    });
+    addTearDown(container.dispose);
 
     await container
         .read(timerEngineProvider.notifier)
@@ -62,10 +59,7 @@ void main() {
         notificationServiceProvider.overrideWithValue(NotificationService()),
       ],
     );
-    addTearDown(() async {
-      await container.read(timerEngineProvider.notifier).cancel();
-      container.dispose();
-    });
+    addTearDown(container.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,

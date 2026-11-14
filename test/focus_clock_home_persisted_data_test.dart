@@ -235,7 +235,6 @@ void main() {
       ],
     );
     addTearDown(() async {
-      await container.read(timerEngineProvider.notifier).cancel();
       container.dispose();
     });
     await container
@@ -259,18 +258,21 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.text('Cancelable preset'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Batalkan timer'), findsOneWidget);
 
     await tester.tap(find.text('Batalkan timer'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(await repository.getActiveTimerSession(), isNotNull);
     expect(find.text('Batalkan timer'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('Batalkan timer'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(await repository.getActiveTimerSession(), isNull);
     expect(find.text('Batalkan timer'), findsNothing);
   });

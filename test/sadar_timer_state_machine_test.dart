@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
 import 'package:fitrah_launcher/models/habit.dart';
@@ -64,6 +66,41 @@ void main() {
         expect(engine.state.status, TimerStateStatus.paused);
         expect(engine.state.habitId, habit.id);
         expect(engine.state.remainingSeconds, 20 * 60 - 90);
+      },
+    );
+
+    test(
+      'cancel waits for startup restore before clearing the active session',
+      () async {
+        engine.dispose();
+        final pendingRestore = Completer<TimerSession?>();
+        final delayedRepo = _DelayedActiveTimerRepository(
+          pendingRestore.future,
+        );
+        repo = delayedRepo;
+        engine = SadarTimerEngine(repo);
+
+        var cancelCompleted = false;
+        final cancelling = engine.cancel().then((_) => cancelCompleted = true);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(cancelCompleted, isFalse);
+        expect(delayedRepo.clearCalled, isFalse);
+
+        pendingRestore.complete(
+          TimerSession()
+            ..habitId = habit.id
+            ..habitName = habit.name
+            ..sourceKind = TimerSessionSourceKind.habit
+            ..targetSeconds = 1200
+            ..accumulatedDurationSeconds = 75
+            ..status = TimerStateStatus.paused
+            ..updatedAt = DateTime.now(),
+        );
+        await cancelling;
+
+        expect(engine.state.isActive, isFalse);
+        expect(delayedRepo.clearCalled, isTrue);
       },
     );
 
@@ -739,5 +776,20 @@ class _FailOnceActivityTimerRepository extends SadarRepository {
     }
     completedActivityId = activityId;
     await clearTimerSession();
+  }
+}
+
+class _DelayedActiveTimerRepository extends SadarRepository {
+  _DelayedActiveTimerRepository(this.restoreResult) : super(null);
+
+  final Future<TimerSession?> restoreResult;
+  bool clearCalled = false;
+
+  @override
+  Future<TimerSession?> getActiveTimerSession() => restoreResult;
+
+  @override
+  Future<void> clearTimerSession() async {
+    clearCalled = true;
   }
 }

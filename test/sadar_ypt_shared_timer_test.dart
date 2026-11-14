@@ -48,10 +48,7 @@ void main() {
         notificationServiceProvider.overrideWithValue(NotificationService()),
       ],
     );
-    addTearDown(() async {
-      await container.read(timerEngineProvider.notifier).cancel();
-      container.dispose();
-    });
+    addTearDown(container.dispose);
     final habit = Habit()
       ..id = 783
       ..name = 'Latihan LKS'
@@ -114,10 +111,7 @@ void main() {
         ),
       ],
     );
-    addTearDown(() async {
-      await container.read(timerEngineProvider.notifier).cancel();
-      container.dispose();
-    });
+    addTearDown(container.dispose);
     final habit = Habit()
       ..id = 780
       ..name = 'Latihan LKS dengan judul yang panjang'
@@ -160,10 +154,7 @@ void main() {
         notificationServiceProvider.overrideWithValue(NotificationService()),
       ],
     );
-    addTearDown(() async {
-      await container.read(timerEngineProvider.notifier).cancel();
-      container.dispose();
-    });
+    addTearDown(container.dispose);
     final habit = Habit()
       ..id = 781
       ..name = 'Latihan LKS'
@@ -214,10 +205,7 @@ void main() {
         notificationServiceProvider.overrideWithValue(NotificationService()),
       ],
     );
-    addTearDown(() async {
-      await container.read(timerEngineProvider.notifier).cancel();
-      container.dispose();
-    });
+    addTearDown(container.dispose);
     final habit = Habit()
       ..id = 0
       ..name = 'Pomodoro Sprint'
@@ -265,10 +253,7 @@ void main() {
         ],
       );
       var closeCount = 0;
-      addTearDown(() async {
-        await container.read(timerEngineProvider.notifier).cancel();
-        container.dispose();
-      });
+      addTearDown(container.dispose);
       final habit = Habit()
         ..id = 782
         ..name = 'Latihan tersimpan'

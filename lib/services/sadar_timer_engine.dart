@@ -501,6 +501,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> pause() async {
+    await _restoreFuture;
     if (state.status != TimerStateStatus.running) return;
 
     final previousState = state;
@@ -544,6 +545,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> resume() async {
+    await _restoreFuture;
     if (state.restoreError != null) throw StateError(state.restoreError!);
     if (state.status != TimerStateStatus.paused) return;
 
@@ -580,6 +582,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> extendBy(int seconds) async {
+    await _restoreFuture;
     if (state.restoreError != null) throw StateError(state.restoreError!);
     if (state.recoveryUncertain) {
       throw StateError('Lanjutkan sesi dulu sebelum menambah durasi.');
@@ -608,6 +611,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> finishEarly() async {
+    await _restoreFuture;
     if (state.restoreError != null) throw StateError(state.restoreError!);
     if (!state.isActive) return;
     final actualDurationSeconds = _startedAt == null
@@ -639,6 +643,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> retryCompletion() async {
+    await _restoreFuture;
     if (state.restoreError != null) throw StateError(state.restoreError!);
     if (!state.isSavePending || _isCompleting) return;
     await _completeSession(
@@ -651,6 +656,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> cancel() async {
+    await _restoreFuture;
     if (state.isSavePending) return;
     final wasFloating = state.isFloating;
     _ticker?.cancel();

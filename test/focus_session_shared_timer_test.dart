@@ -23,10 +23,7 @@ void main() {
         notificationServiceProvider.overrideWithValue(NotificationService()),
       ],
     );
-    addTearDown(() async {
-      await container.read(timerEngineProvider.notifier).cancel();
-      container.dispose();
-    });
+    addTearDown(container.dispose);
 
     final now = DateTime.now();
     final minute = (now.hour % 12) * 60 + now.minute;
@@ -86,10 +83,7 @@ void main() {
           notificationServiceProvider.overrideWithValue(NotificationService()),
         ],
       );
-      addTearDown(() async {
-        await container.read(timerEngineProvider.notifier).cancel();
-        container.dispose();
-      });
+      addTearDown(container.dispose);
       final now = DateTime.now();
       final minute = (now.hour % 12) * 60 + now.minute;
       final start = minute > 0 ? minute - 1 : 0;
