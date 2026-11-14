@@ -93,4 +93,4 @@ context:
 - `flutter build apk --debug --no-pub --split-per-abi` -- armeabi-v7a, arm64-v8a and x86_64 debug APKs build; arm64 SHA-256 `5a0d670ba587f13019c825376ddf3db84e5d1cb31fe83eff02fe77fe712fa866`.
 - `git diff --check` -- no whitespace errors.
 
-**Manual checks:** Android device confirmation remains open: Home preset visible in QuickTimerHub, pause across process restart, and exactly one Activity updated on finish. No device is attached in this environment, so this gate is not claimed as passed.
+**Manual checks:** A disposable x64 API36 AVD verified a free Home timer after force-stop/reopen: the same session returned and its remaining time continued from the saved same-boot monotonic checkpoint. Home's Timer sheet then showed the active session and opened it without offering a competing start. Screenshot: `.dart_tool/android-qa/2026-11-14-v33/v36-active-timer-hub.png`. This does not close the gate: QuickTimerHub handoff, pause/restart, exactly one Activity updated on finish, reboot/timezone uncertainty, and physical-device confirmation remain open.

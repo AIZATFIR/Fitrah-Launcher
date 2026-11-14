@@ -7,6 +7,7 @@ import 'package:fitrah_launcher/features/settings/settings_screen.dart';
 import 'package:fitrah_launcher/providers/providers.dart';
 import 'package:fitrah_launcher/providers/sadar_providers.dart';
 import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
+import 'package:fitrah_launcher/models/timer_session.dart';
 import 'package:fitrah_launcher/services/secure_storage_service.dart';
 import 'launcher_daily_note_test.dart' show NoteStorage;
 
@@ -520,5 +521,38 @@ void main() {
         expect(find.text('Apa yang perlu kamu lakukan?'), findsOneWidget);
       },
     );
+
+    testWidgets('timer hub focuses on an existing paused session', (
+      tester,
+    ) async {
+      final repository = SadarRepository(null);
+      final now = DateTime.now();
+      await repository.saveTimerSession(
+        TimerSession()
+          ..habitName = 'Latihan LKS'
+          ..sourceKind = TimerSessionSourceKind.free
+          ..targetSeconds = 900
+          ..accumulatedDurationSeconds = 120
+          ..startedAt = now.subtract(const Duration(minutes: 2))
+          ..pausedAt = now
+          ..status = TimerStateStatus.paused
+          ..updatedAt = now,
+      );
+      await tester.pumpWidget(
+        createWidgetUnderTest(sadarRepository: repository),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Timer').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sesi dijeda'), findsOneWidget);
+      expect(find.text('Latihan LKS').last, findsOneWidget);
+      expect(find.text('Fokus Bebas Cepat:'), findsNothing);
+      expect(find.text('Buka sesi'), findsOneWidget);
+
+      await tester.tap(find.text('Buka sesi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Latihan LKS'), findsOneWidget);
+    });
   });
 }

@@ -4120,7 +4120,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   // ═══════════════════════════════════════════════════════════════════════════
 
   // ── 1. Focus Timer Hub (Quick Start Timed Habits or Free Focus) ──
-  void _openFocusTimerHub() {
+  Future<void> _openFocusTimerHub() async {
+    await ref.read(timerEngineProvider.notifier).waitUntilRestored();
+    if (!mounted) return;
+    final activeSession = ref.read(timerEngineProvider);
+    final tc = _HomeThemeColors.fromPalette(
+      ref.read(launcherSettingsProvider).themePalette,
+    );
     final timedHabits = _habits
         .where((h) => h.minutes != null && h.minutes! > 0)
         .toList();
@@ -4133,6 +4139,57 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (ctx) {
+        if (activeSession.isActive || activeSession.isSavePending) {
+          final status = activeSession.isSavePending
+              ? 'Sesi menunggu penyimpanan'
+              : activeSession.recoveryUncertain
+              ? 'Sesi dijeda untuk ditinjau'
+              : activeSession.isPaused
+              ? 'Sesi dijeda'
+              : 'Sesi sedang berjalan';
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: tc.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  activeSession.habitName.isEmpty
+                      ? 'Fokus bebas'
+                      : activeSession.habitName,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: tc.accent,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    if (mounted) setState(() => _currentScreen = 'timer');
+                  },
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Buka sesi'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: tc.accent,
+                    foregroundColor: tc.bg,
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         return SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
