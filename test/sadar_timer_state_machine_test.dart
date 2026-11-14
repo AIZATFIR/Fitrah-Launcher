@@ -123,6 +123,32 @@ void main() {
     });
 
     test(
+      'a backward wall-clock correction does not subtract restored time',
+      () async {
+        engine.dispose();
+        final futureCheckpoint = DateTime.now().add(const Duration(hours: 1));
+        await repo.saveTimerSession(
+          TimerSession()
+            ..habitId = habit.id
+            ..habitName = habit.name
+            ..sourceKind = TimerSessionSourceKind.habit
+            ..targetSeconds = 600
+            ..startedAt = futureCheckpoint
+            ..runningSince = futureCheckpoint
+            ..status = TimerStateStatus.running
+            ..updatedAt = DateTime.now(),
+        );
+        engine = SadarTimerEngine(repo);
+
+        await engine.waitUntilRestored();
+
+        expect(engine.state.isRunning, isTrue);
+        expect(engine.state.remainingSeconds, 600);
+        expect(engine.state.actualDurationSeconds, 0);
+      },
+    );
+
+    test(
       'habit completion keeps the local date captured when the session began',
       () async {
         engine.dispose();

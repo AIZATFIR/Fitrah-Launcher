@@ -93,6 +93,8 @@ Perubahan UI exploratif/read-only boleh berjalan saat E1/E2 diselesaikan. Pengga
 
 E2 tetap terbuka: semua consumer timer yang saat ini ada memakai owner yang sama, tanggal atribusi lokal tersimpan setelah Isar reopen, dan HabitEntry mengagregasi total detik timer. Clock monotonic/same-boot, timezone ID/offset snapshot, operation receipts/revisions, ledger detail per sesi, notification reconciliation, device recovery UI, reboot/process-death uncertainty dan physical Android checks belum diverifikasi. Home preset completion membuat Activity row(s) dan menghapus TimerSession dalam transaksi Isar yang sama; failure injection membuktikan sesi tetap aktif sampai retry sukses dan retry tidak menggandakan Activity. Jangan anggap satu owner saja menutup gate E2.
 
+**Clock safety slice (14 Nov 2026):** Timer aktif dalam satu proses kini mengukur elapsed memakai `Stopwatch` monotonik, bukan jam kalender; start, resume, pause, overtime YPT, dan finish memakai segmen yang sama. Restore lintas proses masih memakai `DateTime` checkpoint karena monotonic Android boot clock belum tersambung; elapsed negatif akibat koreksi jam mundur dibatasi ke nol agar durasi tidak berkurang. Koreksi jam maju selama app mati tetap ambigu dan dapat membuat restore menganggap sesi sudah lewat target. State-machine test synthetic future checkpoint lulus; full suite 308 tests dan analyzer bersih. Ini perbaikan terbatas, bukan bukti reboot/time-change gate.
+
 ## E3 — Habit, tindakan, jadwal dan tujuan tersambung
 
 **Hasil:** user dapat memilih habit atau task yang sama dari Home, grid dan dial, menjalankannya, lalu melihat bukti yang sama.

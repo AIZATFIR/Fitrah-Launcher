@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -67,6 +68,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   final NotificationService? _notifier;
   late final Future<void> _restoreFuture;
   Timer? _ticker;
+  Stopwatch? _segmentClock;
 
   TimerState get currentState => state;
 
@@ -119,7 +121,12 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
     if (saved.status == TimerStateStatus.running && saved.startedAt != null) {
       final runningSince = saved.runningSince ?? saved.startedAt!;
-      final elapsedSinceStart = now.difference(runningSince).inSeconds;
+      // Wall time is the only clock available across process death. A manual
+      // clock correction can make it negative, so never subtract focus time.
+      final elapsedSinceStart = math.max(
+        0,
+        now.difference(runningSince).inSeconds,
+      );
       final totalElapsed = _accumulatedSeconds + elapsedSinceStart;
       final remaining = (saved.targetSeconds - totalElapsed).clamp(
         0,
@@ -128,7 +135,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
       if (remaining <= 0) {
         if (sourceKind == TimerSessionSourceKind.yptHabit) {
-          _startedAt = runningSince;
+          _accumulatedSeconds = totalElapsed;
+          _startedAt = now;
+          _segmentClock = Stopwatch()..start();
           state = TimerState(
             habitId: saved.habitId,
             habitTargetSnapshot: saved.habitTargetSnapshot,
@@ -167,7 +176,11 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         }
         return;
       } else {
-        _startedAt = runningSince;
+        // Use monotonic time for this live process; wall time is only needed
+        // to estimate the interval that elapsed while the app was closed.
+        _accumulatedSeconds = totalElapsed;
+        _startedAt = now;
+        _segmentClock = Stopwatch()..start();
         state = TimerState(
           habitId: saved.habitId,
           habitTargetSnapshot: saved.habitTargetSnapshot,
@@ -246,6 +259,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     final previousState = state;
     final targetSec = (habit.target > 0 ? habit.target : 20) * 60;
     _startedAt = DateTime.now();
+    _segmentClock = Stopwatch()..start();
     _sessionStartedAt = _startedAt;
     _attributionLocalDate = _formatLocalDate(_startedAt!);
     _accumulatedSeconds = 0;
@@ -269,6 +283,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       await _persistState();
     } catch (_) {
       _startedAt = null;
+      _segmentClock = null;
       _sessionStartedAt = null;
       _attributionLocalDate = null;
       _accumulatedSeconds = 0;
@@ -300,6 +315,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     final previousIdentity = _sourceIdentity;
     final previousColorValue = _sourceColorValue;
     _startedAt = DateTime.now();
+    _segmentClock = Stopwatch()..start();
     _sessionStartedAt = _startedAt;
     _attributionLocalDate = _formatLocalDate(_startedAt!);
     _accumulatedSeconds = 0;
@@ -346,6 +362,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       }
     } catch (_) {
       _startedAt = null;
+      _segmentClock = null;
       _sessionStartedAt = null;
       _attributionLocalDate = null;
       _accumulatedSeconds = 0;
@@ -362,9 +379,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.status == TimerStateStatus.running && _startedAt != null) {
-        final elapsed =
-            _accumulatedSeconds +
-            DateTime.now().difference(_startedAt!).inSeconds;
+        final elapsed = _elapsedSeconds();
         final remaining = (state.targetSeconds - elapsed).clamp(
           0,
           state.targetSeconds,
@@ -429,11 +444,11 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     if (state.status != TimerStateStatus.running) return;
 
     final previousState = state;
-    final previousStartedAt = _startedAt;
-    final previousAccumulatedSeconds = _accumulatedSeconds;
+    final elapsedAtPause = _elapsedSeconds();
     if (_startedAt != null) {
-      _accumulatedSeconds += DateTime.now().difference(_startedAt!).inSeconds;
+      _accumulatedSeconds = elapsedAtPause;
       _startedAt = null;
+      _segmentClock = null;
     }
 
     _ticker?.cancel();
@@ -456,8 +471,10 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     try {
       await _persistState();
     } catch (_) {
-      _startedAt = previousStartedAt;
-      _accumulatedSeconds = previousAccumulatedSeconds;
+      // Resume from the exact duration already measured before persistence
+      // failed, using a fresh monotonic segment.
+      _startedAt = DateTime.now();
+      _segmentClock = Stopwatch()..start();
       state = previousState;
       _startTicker();
       rethrow;
@@ -470,6 +487,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
     final previousState = state;
     _startedAt = DateTime.now();
+    _segmentClock = Stopwatch()..start();
     _sessionStartedAt ??= _startedAt;
     _attributionLocalDate ??= _formatLocalDate(_sessionStartedAt!);
     state = TimerState(
@@ -489,6 +507,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       await _persistState();
     } catch (_) {
       _startedAt = null;
+      _segmentClock = null;
       state = previousState;
       rethrow;
     }
@@ -522,10 +541,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   Future<void> finishEarly() async {
     if (state.restoreError != null) throw StateError(state.restoreError!);
     if (!state.isActive) return;
-    final now = DateTime.now();
-    final actualDurationSeconds =
-        _accumulatedSeconds +
-        (_startedAt == null ? 0 : now.difference(_startedAt!).inSeconds);
+    final actualDurationSeconds = _startedAt == null
+        ? _accumulatedSeconds
+        : _elapsedSeconds();
     _ticker?.cancel();
     state = TimerState(
       habitId: state.habitId,
@@ -542,6 +560,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     );
     _accumulatedSeconds = actualDurationSeconds;
     _startedAt = null;
+    _segmentClock = null;
     _pendingActualDurationSeconds = actualDurationSeconds;
     await _completeSession(
       autoRecord: true,
@@ -573,6 +592,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     }
 
     _startedAt = null;
+    _segmentClock = null;
     _sessionStartedAt = null;
     _attributionLocalDate = null;
     _accumulatedSeconds = 0;
@@ -674,6 +694,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   Future<void> _persistState() async {
     await _repo.saveTimerSession(_buildSession());
   }
+
+  int _elapsedSeconds() =>
+      _accumulatedSeconds + (_segmentClock?.elapsed.inSeconds ?? 0);
 
   TimerSession _buildSession() => TimerSession()
     ..habitId = state.habitId
