@@ -308,3 +308,9 @@ Neither target was exercised at runtime for v26: no Android device is attached, 
 Preview28 Android arm64 compiled in 78.0s. `aapt` confirms scheduled notification and boot receivers plus BOOT_COMPLETED/MY_PACKAGE_REPLACED/vendor quick-boot actions in the final APK. Signature and package metadata verified; unused broad/foreground/exact-alarm permissions are absent. No reboot/runtime verification is claimed. Local artifact/checksum: `release_dist/2026-11-14-focus-clock-preview-28/` (ignored local deliverable).
 
 **E5 YPT pre-session presentation:** Immersive system UI and show-when-locked flags now activate only after a shared focus session starts. The missing Usage Access screen stays a normal accessible Activity state; choosing to continue starts the timer and enables the lockscreen presentation without enabling the app guard. Focused YPT suite **5 passed**, full suite **307 passed**, analyzer clean. System lock/unlock behavior still needs a device check.
+
+## Checkpoint local preview — 14 November 2026 — versionCode 29
+
+Source `d5cac0e`; Android arm64 APK compile 148.3s, Web JS compile 75.0s. APK signature/version checked; web ZIP integrity passed; local preview `127.0.0.1:4175` returned HTTP200. YPT focused suite **5 passed**, full Flutter suite **307 passed**, analyzer clean. Artifacts/checksums and limits: `release_dist/2026-11-14-focus-clock-preview-29/` (ignored local download package). Local tag `focus-clock-preview-29` pins source `d5cac0e`.
+
+Runtime remains open: no Android phone/emulator was attached, so Usage Access settings, YPT foreground enforcement, lockscreen, default Home, rebooted reminder delivery and phone upgrades are not proven. The HTTP response is not browser-interaction or persistence verification. WebAssembly remains unsupported by the current dependency graph. Package is personal preview with Android Debug signing, not a public release.
