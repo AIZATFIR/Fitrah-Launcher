@@ -370,10 +370,8 @@ void main() {
         }
         await tester.tap(find.text('Pasang').first);
         await tester.pumpAndSettle();
-        expect(
-          tester.widget<RangeSlider>(find.byType(RangeSlider)).values.start,
-          24,
-        );
+        expect(find.byType(RangeSlider), findsNothing);
+        expect(find.text('Besok 00:00'), findsWidgets);
         await tester.ensureVisible(
           find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'),
         );
@@ -424,8 +422,57 @@ void main() {
 
         // Verify Interactive Scheduling Sheet is open
         expect(find.text('Pasang ke Focus Clock'), findsWidgets);
-        expect(find.byType(RangeSlider), findsOneWidget);
+        expect(find.byType(RangeSlider), findsNothing);
+        expect(find.text('Selesaikan modul UI Focus Clock'), findsWidgets);
       },
     );
+
+    testWidgets('blank add opens as a calm, text-first schedule form', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 760);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 6; i++) {
+        if (find.text('Task & Habit Dump (Inbox)').evaluate().isNotEmpty) break;
+        await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.byIcon(Icons.flash_on_rounded).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Apa yang perlu kamu lakukan?'), findsOneWidget);
+      expect(find.text('Pilih yang Ada'), findsOneWidget);
+      expect(find.byType(RangeSlider), findsNothing);
+      expect(
+        tester.getSize(find.byTooltip('Tambah kegiatan ke Focus Clock')).width,
+        greaterThanOrEqualTo(48),
+      );
+      final durationChoice = find.ancestor(
+        of: find.text('15 m'),
+        matching: find.byType(InkWell),
+      );
+      expect(
+        tester.getSize(durationChoice.first).height,
+        greaterThanOrEqualTo(44),
+      );
+      expect(tester.takeException(), isNull);
+
+      final captureField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField &&
+            widget.decoration?.labelText == 'Apa yang perlu kamu lakukan?',
+      );
+      await tester.enterText(captureField, 'Latihan LKS');
+      expect(
+        tester.widget<TextField>(captureField).controller?.text,
+        'Latihan LKS',
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 }
