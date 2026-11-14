@@ -262,9 +262,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   String _dailyNoteStatus = '';
   int _dailyNoteRevision = 0;
 
-  // Header Toggle: false = Focus Clock Agenda Carousel, true = Prayer Schedule Bar
-  bool _showPrayerSchedule = false;
-
   // Selected Filter for Unified Sections (Lampiran 1 & Sadar Prototype)
   String _selectedPresetIdentity = '';
   String _selectedHabitIdentity = 'Semua';
@@ -1227,6 +1224,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final hr = _hourNow();
     final currentAct = _getCurrentActivityInfo(activitiesState);
     final tc = _HomeThemeColors.fromPalette(settings.themePalette);
+    final showPrayerSchedule =
+        settings.showPrayerTimes && settings.widgetDisplayMode == 'prayer';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -1253,7 +1252,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       ),
                 const SizedBox(height: 18),
                 // ── Top Header Bar (Now/Next Carousel or Prayer Timeline) ──
-                _buildTopHeaderBar(prayers, nextPrayer, tc, activitiesState),
+                _buildTopHeaderBar(
+                  prayers,
+                  nextPrayer,
+                  tc,
+                  activitiesState,
+                  showPrayerSchedule: showPrayerSchedule,
+                  prayerTimesEnabled: settings.showPrayerTimes,
+                ),
                 const SizedBox(height: 18),
 
                 // ── Center Focus Clock Analog Face Dial with AM/PM pill switch ──
@@ -1399,8 +1405,23 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     List<Map<String, dynamic>> prayers,
     Map<String, dynamic> nextPrayer,
     _HomeThemeColors tc,
-    AsyncValue<List<Activity>> activitiesState,
-  ) {
+    AsyncValue<List<Activity>> activitiesState, {
+    required bool showPrayerSchedule,
+    required bool prayerTimesEnabled,
+  }) {
+    Future<void> togglePrayerSchedule() async {
+      HapticFeedback.selectionClick();
+      if (!prayerTimesEnabled) {
+        _showToast('Aktifkan baris waktu sholat di Pengaturan Home.');
+        return;
+      }
+      final saved = await ref
+          .read(launcherSettingsProvider.notifier)
+          .setWidgetDisplayMode(showPrayerSchedule ? 'focus_clock' : 'prayer');
+      if (!mounted) return;
+      if (!saved) _showToast('Pilihan belum tersimpan. Coba lagi.');
+    }
+
     return Row(
       children: [
         // Hamburger Menu Button
@@ -1422,7 +1443,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
         // Main Content: Prayer Timeline or Agenda Carousel
         Expanded(
-          child: _showPrayerSchedule
+          child: showPrayerSchedule
               ? Row(
                   children: List.generate(prayers.length, (i) {
                     final p = prayers[i];
@@ -1503,30 +1524,40 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         const SizedBox(width: 6),
 
         // Toggle Switch Button: Agenda vs Prayer Timeline
-        InkWell(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() => _showPrayerSchedule = !_showPrayerSchedule);
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: _showPrayerSchedule
-                  ? tc.accent.withOpacity(0.18)
-                  : tc.card,
+        Semantics(
+          key: const ValueKey('home-prayer-focus-toggle'),
+          button: true,
+          toggled: showPrayerSchedule,
+          label: showPrayerSchedule
+              ? 'Tampilkan Focus Events'
+              : prayerTimesEnabled
+              ? 'Tampilkan waktu sholat'
+              : 'Waktu sholat nonaktif. Aktifkan di Pengaturan Home',
+          onTap: togglePrayerSchedule,
+          child: ExcludeSemantics(
+            child: InkWell(
+              onTap: togglePrayerSchedule,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _showPrayerSchedule ? tc.accent : tc.stroke,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: showPrayerSchedule
+                      ? tc.accent.withOpacity(0.18)
+                      : tc.card,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: showPrayerSchedule ? tc.accent : tc.stroke,
+                  ),
+                ),
+                child: Icon(
+                  showPrayerSchedule
+                      ? Icons.mosque_rounded
+                      : Icons.schedule_rounded,
+                  color: showPrayerSchedule ? tc.accent : tc.textSecondary,
+                  size: 20,
+                ),
               ),
-            ),
-            child: Icon(
-              _showPrayerSchedule
-                  ? Icons.mosque_rounded
-                  : Icons.schedule_rounded,
-              color: _showPrayerSchedule ? tc.accent : tc.textSecondary,
-              size: 20,
             ),
           ),
         ),

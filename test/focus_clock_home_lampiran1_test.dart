@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
+import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
 import 'package:fitrah_launcher/features/settings/settings_screen.dart';
+import 'package:fitrah_launcher/services/secure_storage_service.dart';
+import 'launcher_daily_note_test.dart' show NoteStorage;
 
 void main() {
   group('FocusClockHomeView Lampiran 1 & Future Self Sadar System Tests', () {
     Widget createWidgetUnderTest() {
+      final storage = NoteStorage()
+        ..raw = LauncherSettings(widgetDisplayMode: 'focus_clock').toJson();
       return ProviderScope(
+        overrides: [secureStorageServiceProvider.overrideWithValue(storage)],
         child: MaterialApp(
           home: FocusClockHomeView(
             onOpenFocusClock: () {},

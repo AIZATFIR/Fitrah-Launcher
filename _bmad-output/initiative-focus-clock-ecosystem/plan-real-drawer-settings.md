@@ -81,6 +81,13 @@ Rejected keeping the local toggle (no effect) and adding a separate settings sto
 
 ## Review Triage Log
 
+## Follow-up active Home display preference repair (14 Nov 2026)
+
+- Active `FocusClockHomeView` now follows the same saved `widgetDisplayMode` and `showPrayerTimes` values exposed by Home Settings. The prayer/Focus Events toggle persists through the settings commit queue; failed writes keep the committed view and show feedback. Turning prayer rows off gives an actionable message instead of a dead toggle.
+- The control exposes its current and disabled state to assistive technology. Regression covers saved mode hydration/change, prayer-row visibility, disabled-state label, and tap feedback.
+- Full repository suite: 303 tests passed after adding the accessibility and disabled-prayer regression checks; analyzer reported no issues.
+- Remaining Home controls (`showHeroEvent`, `showAgendaWidget`, `showHabitsWidget`) are not yet wired into the active FocusClock Home.
+
 ## Follow-up session preset repair (14 Nov 2026)
 
 - Root cause: Settings made an unsaved transient Habit and opened `SadarYptFocusView`, which always used the `yptHabit` source. The timer engine correctly clears unsupported nonpositive YPT habit IDs on completion instead of creating an Activity.

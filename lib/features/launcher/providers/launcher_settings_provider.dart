@@ -189,9 +189,8 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
     });
   }
 
-  Future<void> setWidgetDisplayMode(String mode) async {
-    await _mutate((s) => s.copyWith(widgetDisplayMode: mode));
-  }
+  Future<bool> setWidgetDisplayMode(String mode) =>
+      _mutate((s) => s.copyWith(widgetDisplayMode: mode));
 
   int _drawerWrites = 0;
   bool get drawerSaving => _drawerWrites > 0;

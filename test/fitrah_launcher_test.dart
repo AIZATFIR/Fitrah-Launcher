@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsFlag;
+
 import 'launcher_daily_note_test.dart' show NoteStorage;
 import 'package:fitrah_launcher/services/secure_storage_service.dart';
 import 'package:fitrah_launcher/core/time_math.dart';
@@ -137,11 +139,88 @@ void main() {
       await tester.pump();
 
       expect(
-        tester.widget<ColoredBox>(
-          find.byKey(const ValueKey('launcher-wallpaper-base')),
-        ).color,
+        tester
+            .widget<ColoredBox>(
+              find.byKey(const ValueKey('launcher-wallpaper-base')),
+            )
+            .color,
         const Color(0xFF0A150E),
       );
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('Home follows the saved prayer versus Focus Events setting', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final storage = NoteStorage()
+        ..raw = LauncherSettings(widgetDisplayMode: 'focus_clock').toJson();
+      final container = ProviderContainer(
+        overrides: [secureStorageServiceProvider.overrideWithValue(storage)],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: FocusClockHomeView(
+              onOpenFocusClock: () {},
+              onOpenAppDrawer: () {},
+              useSampleData: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
+      expect(find.text('Subuh'), findsNothing);
+      expect(
+        tester
+            .getSemantics(
+              find.byKey(const ValueKey('home-prayer-focus-toggle')),
+            )
+            .label,
+        'Tampilkan waktu sholat',
+      );
+
+      await tester.tap(find.byKey(const ValueKey('home-prayer-focus-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.mosque_rounded), findsOneWidget);
+      expect(find.text('Subuh'), findsOneWidget);
+      expect(
+        tester
+            .getSemantics(
+              find.byKey(const ValueKey('home-prayer-focus-toggle')),
+            )
+            .hasFlag(SemanticsFlag.isToggled),
+        isTrue,
+      );
+      expect(
+        LauncherSettings.fromJson(storage.raw!).widgetDisplayMode,
+        'prayer',
+      );
+
+      await container
+          .read(launcherSettingsProvider.notifier)
+          .togglePrayerTimes(false);
+      await tester.pumpAndSettle();
+      expect(find.text('Subuh'), findsNothing);
+      expect(
+        tester
+            .getSemantics(
+              find.byKey(const ValueKey('home-prayer-focus-toggle')),
+            )
+            .label,
+        'Waktu sholat nonaktif. Aktifkan di Pengaturan Home',
+      );
+      await tester.tap(find.byKey(const ValueKey('home-prayer-focus-toggle')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Aktifkan baris waktu sholat di Pengaturan Home.'),
+        findsOneWidget,
+      );
+      semantics.dispose();
       await tester.pumpWidget(const SizedBox());
     });
 
