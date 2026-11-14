@@ -27,6 +27,10 @@ void main() {
     testWidgets(
       'Renders top agenda carousel by default and toggles Prayer schedule',
       (tester) async {
+        tester.view.physicalSize = const Size(320, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
         await tester.pumpWidget(createWidgetUnderTest());
         await tester.pump();
 
@@ -44,6 +48,11 @@ void main() {
         expect(find.text('Asar'), findsOneWidget);
         expect(find.text('Maghrib'), findsOneWidget);
         expect(find.text('Isya'), findsOneWidget);
+        for (final name in ['Subuh', 'Dzuhur', 'Asar', 'Maghrib', 'Isya']) {
+          final label = tester.widget<Text>(find.text(name));
+          expect(label.maxLines, 1, reason: '$name must stay on one line');
+          expect(label.softWrap, isFalse, reason: '$name must not wrap');
+        }
 
         // Tap again to switch back
         await tester.tap(find.byIcon(Icons.mosque_rounded));
@@ -236,9 +245,7 @@ void main() {
         expect(find.text('Deep Coding & Refactoring 30m'), findsOneWidget);
 
         // Tap habit title to open the 5-action popover
-        await tester.ensureVisible(
-          find.text('Deep Coding & Refactoring 30m'),
-        );
+        await tester.ensureVisible(find.text('Deep Coding & Refactoring 30m'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Deep Coding & Refactoring 30m'));
         await tester.pumpAndSettle();

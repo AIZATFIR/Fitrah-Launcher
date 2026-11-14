@@ -1454,63 +1454,94 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         // Main Content: Prayer Timeline or Agenda Carousel
         Expanded(
           child: showPrayerSchedule
-              ? Row(
-                  children: List.generate(prayers.length, (i) {
-                    final p = prayers[i];
-                    final isNext = nextPrayer['index'] == i;
-                    final isDone = _prayerDone[i] == true;
-
-                    return Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(left: i == 0 ? 0 : 4),
-                        child: InkWell(
-                          onTap: () => _openPrayerActionSheet(i, p),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            decoration: BoxDecoration(
-                              color: tc.card,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isNext ? tc.accent : tc.stroke,
-                                width: isNext ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  p['name'] as String,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: isNext
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: isDone
-                                        ? const Color(0xFF5FD0A5)
-                                        : isNext
-                                        ? tc.accent
-                                        : tc.textSecondary,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  p['time'] as String,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDone
-                                        ? const Color(0xFF5FD0A5)
-                                        : tc.textPrimary,
-                                  ),
-                                ),
-                              ],
+              ? LayoutBuilder(
+                  builder: (context, constraints) {
+                    final prayerItems = List.generate(prayers.length, (i) {
+                      final p = prayers[i];
+                      final isNext = nextPrayer['index'] == i;
+                      final isDone = _prayerDone[i] == true;
+                      return InkWell(
+                        onTap: () => _openPrayerActionSheet(i, p),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          decoration: BoxDecoration(
+                            color: tc.card,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isNext ? tc.accent : tc.stroke,
+                              width: isNext ? 1.5 : 1,
                             ),
                           ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                p['name'] as String,
+                                maxLines: 1,
+                                softWrap: false,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: isNext
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isDone
+                                      ? const Color(0xFF5FD0A5)
+                                      : isNext
+                                      ? tc.accent
+                                      : tc.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                p['time'] as String,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDone
+                                      ? const Color(0xFF5FD0A5)
+                                      : tc.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      );
+                    });
+
+                    if (constraints.maxWidth < 220) {
+                      final itemWidth = (constraints.maxWidth - 8) / 3;
+                      return Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: prayerItems
+                            .map(
+                              (item) => SizedBox(width: itemWidth, child: item),
+                            )
+                            .toList(),
+                      );
+                    }
+
+                    return Row(
+                      children: prayerItems
+                          .asMap()
+                          .entries
+                          .map(
+                            (entry) => Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  left: entry.key == 0 ? 0 : 4,
+                                ),
+                                child: entry.value,
+                              ),
+                            ),
+                          )
+                          .toList(),
                     );
-                  }),
+                  },
                 )
               : showAgendaWidget
               ? KeyedSubtree(
@@ -1988,12 +2019,17 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 children: [
                   Icon(Icons.add_rounded, color: tc.accent, size: 15),
                   const SizedBox(width: 4),
-                  Text(
-                    'Pasang Jadwal ke Jam',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: tc.accent,
+                  Flexible(
+                    child: Text(
+                      'Pasang Jadwal ke Jam',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: tc.accent,
+                      ),
                     ),
                   ),
                 ],
