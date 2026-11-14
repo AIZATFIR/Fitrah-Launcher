@@ -1,6 +1,10 @@
+import 'dart:ui' show ImageFilter;
+
 import '../../core/time_math.dart';
 import '../../providers/providers.dart';
 import '../../providers/intent_providers.dart';
+import 'models/launcher_settings.dart';
+import 'providers/launcher_settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -94,6 +98,7 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(launcherSettingsProvider);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -107,15 +112,11 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0x00000000), Color(0x1A000000)],
-            ),
-          ),
-          child: PageView(
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildWallpaper(settings),
+            PageView(
             controller: _pageCtrl,
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
@@ -156,9 +157,60 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell> {
                 ),
               ),
             ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildWallpaper(LauncherSettings settings) {
+    final color = switch (settings.wallpaperType) {
+      'amoled_black' => const Color(0xFF000000),
+      'midnight_slate' => const Color(0xFF0B111E),
+      'forest_night' => const Color(0xFF0A150E),
+      'deep_obsidian' => const Color(0xFF101014),
+      'warm_charcoal' => const Color(0xFF161412),
+      _ => const Color(0xFF080D15),
+    };
+    final uri = Uri.tryParse(settings.customImageUrl);
+    final canLoadImage = settings.wallpaperType == 'custom_image' &&
+        uri != null &&
+        (uri.scheme == 'https' || uri.scheme == 'http') &&
+        uri.host.isNotEmpty;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(
+          key: const ValueKey('launcher-wallpaper-base'),
+          color: color,
+        ),
+        if (canLoadImage)
+          ImageFiltered(
+            imageFilter: ImageFilter.blur(
+              sigmaX: settings.wallpaperBlur,
+              sigmaY: settings.wallpaperBlur,
+            ),
+            child: Image.network(
+              settings.customImageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => ColoredBox(color: color),
+            ),
+          ),
+        ColoredBox(
+          color: Colors.black.withValues(alpha: settings.wallpaperDimming),
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x00000000), Color(0x1A000000)],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

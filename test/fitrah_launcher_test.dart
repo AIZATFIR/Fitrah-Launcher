@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitrah_launcher/features/launcher/fitrah_launcher_shell.dart';
 import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
+import 'package:fitrah_launcher/features/launcher/providers/launcher_settings_provider.dart';
 import 'package:fitrah_launcher/features/launcher/services/app_launcher_service.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/fitrah_home_view.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/minimalist_app_drawer.dart';
@@ -113,6 +114,35 @@ void main() {
       expect(container.read(ampmHalfProvider), halfOfNow(actual));
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
+    });
+
+    testWidgets('active launcher shell applies the saved wallpaper preset', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            secureStorageServiceProvider.overrideWithValue(NoteStorage()),
+          ],
+          child: const MaterialApp(home: FitrahLauncherShell()),
+        ),
+      );
+      await tester.pump();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(FitrahLauncherShell)),
+      );
+      await container
+          .read(launcherSettingsProvider.notifier)
+          .setWallpaperType('forest_night');
+      await tester.pump();
+
+      expect(
+        tester.widget<ColoredBox>(
+          find.byKey(const ValueKey('launcher-wallpaper-base')),
+        ).color,
+        const Color(0xFF0A150E),
+      );
+      await tester.pumpWidget(const SizedBox());
     });
 
     test('LauncherSettings serialization, defaults, and copyWith', () {

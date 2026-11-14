@@ -87,3 +87,9 @@ Rejected keeping the local toggle (no effect) and adding a separate settings sto
 - Fix: focus screen accepts an explicit session source; Settings presets use the existing `preset` path and identity. Durable save, measured completion, atomic Activity creation and retry remain in `SadarTimerEngine`/`SadarRepository`.
 - Regression added first; it failed to compile because no preset source API existed, then passed after implementation. 32 tests passed across `sadar_ypt_shared_timer_test.dart`, `sadar_timer_state_machine_test.dart`, `isar_service_persistence_test.dart`, `launcher_system_home_test.dart`; analyzer clean for the three changed Dart files.
 - New local preview built after fix: arm64 APK versionCode 17 (142.1s) and JavaScript web (100.2s). Runtime device/browser not checked.
+
+## Follow-up active wallpaper repair (14 Nov 2026)
+
+- Active launcher shell now renders the saved preset backdrop or valid custom HTTP(S) image and applies dimming/blur, with the existing subtle overlay retained. Invalid/custom-image load failures fall back to the selected base color.
+- Widget regression verifies a committed preset changes the active shell background. `fitrah_launcher_test.dart`: 6 passed; analyzer clean for shell/test.
+- Remaining: the separate `Use device wallpaper` switch still writes unsupported placeholder values and Android wallpaper retrieval is not implemented; wallpaper save failure feedback remains open.
