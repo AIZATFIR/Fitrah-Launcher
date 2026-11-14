@@ -36,6 +36,8 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
   late AnimationController _pulseCtrl;
   bool _isStarting = true;
   bool _hasSessionConflict = false;
+  bool _needsUsageAccess = false;
+  bool _skipAppGuard = false;
   bool _isSaving = false;
   bool _hasChimed = false;
   String? _actionError;
@@ -77,7 +79,29 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
     super.dispose();
   }
 
-  Future<void> _attachSharedTimer() async {
+  Future<void> _attachSharedTimer({bool skipUsageAccess = false}) async {
+    if (!skipUsageAccess &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        widget.habit.allowedPackages.isNotEmpty) {
+      var usageAccessGranted = false;
+      try {
+        usageAccessGranted =
+            await _channel.invokeMethod<bool>('checkUsageStatsPermission') ??
+            false;
+      } catch (_) {
+        usageAccessGranted = false;
+      }
+      if (!usageAccessGranted) {
+        if (mounted) {
+          setState(() {
+            _needsUsageAccess = true;
+            _isStarting = false;
+          });
+        }
+        return;
+      }
+    }
+
     try {
       final engine = ref.read(timerEngineProvider.notifier);
       final attached = widget.sessionSourceKind == TimerSessionSourceKind.preset
@@ -94,10 +118,10 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
       setState(() {
         _hasSessionConflict =
             !attached &&
-                !(timer.isSavePending &&
-                    timer.sourceKind == widget.sessionSourceKind &&
+            !(timer.isSavePending &&
+                timer.sourceKind == widget.sessionSourceKind &&
                 timer.habitId == widget.habit.id &&
-                    timer.habitName == widget.habit.name);
+                timer.habitName == widget.habit.name);
         _isStarting = false;
       });
       if (attached) _startAppGuard();
@@ -111,7 +135,9 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
   }
 
   void _startAppGuard() {
-    if (kIsWeb || widget.habit.allowedPackages.isEmpty) return;
+    if (kIsWeb || _skipAppGuard || widget.habit.allowedPackages.isEmpty) {
+      return;
+    }
     _appGuardTimer?.cancel();
     _appGuardTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       final timer = ref.read(timerEngineProvider);
@@ -154,6 +180,39 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
         }
       } catch (_) {}
     });
+  }
+
+  Future<void> _retryUsageAccess() async {
+    setState(() {
+      _needsUsageAccess = false;
+      _isStarting = true;
+      _actionError = null;
+    });
+    await _attachSharedTimer();
+  }
+
+  Future<void> _openUsageAccessSettings() async {
+    try {
+      final opened = await _channel.invokeMethod<bool>(
+        'openUsageStatsSettings',
+      );
+      if (!mounted || opened == true) return;
+      setState(() => _actionError = 'Pengaturan Android tidak dapat dibuka.');
+    } catch (_) {
+      if (mounted) {
+        setState(() => _actionError = 'Pengaturan Android tidak dapat dibuka.');
+      }
+    }
+  }
+
+  Future<void> _startWithoutAppGuard() async {
+    setState(() {
+      _skipAppGuard = true;
+      _needsUsageAccess = false;
+      _isStarting = true;
+      _actionError = null;
+    });
+    await _attachSharedTimer(skipUsageAccess: true);
   }
 
   Future<void> _togglePause() async {
@@ -274,6 +333,75 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_needsUsageAccess) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.shield_outlined,
+                      color: Color(0xFF8BAE9A),
+                      size: 40,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Akses penggunaan belum aktif',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Android memerlukan Usage Access agar Fitrah bisa membatasi aplikasi yang kamu pilih selama sesi fokus. Fitrah hanya memeriksa aplikasi aktif ketika sesi ini berjalan.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, height: 1.5),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _openUsageAccessSettings,
+                        child: const Text('Buka pengaturan akses'),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _retryUsageAccess,
+                      child: const Text('Sudah diizinkan — coba lagi'),
+                    ),
+                    TextButton(
+                      onPressed: _startWithoutAppGuard,
+                      child: const Text('Mulai tanpa batas aplikasi'),
+                    ),
+                    TextButton(
+                      onPressed: widget.onClose,
+                      child: const Text('Kembali'),
+                    ),
+                    if (_actionError != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _actionError!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.orangeAccent),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       );
     }
     if (_hasSessionConflict ||

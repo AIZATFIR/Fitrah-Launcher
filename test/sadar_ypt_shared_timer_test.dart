@@ -8,14 +8,91 @@ import 'package:fitrah_launcher/providers/providers.dart';
 import 'package:fitrah_launcher/providers/sadar_providers.dart';
 import 'package:fitrah_launcher/services/notification_service.dart';
 import 'package:fitrah_launcher/services/sadar_timer_engine.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('YPT checks usage access before enforcing an app whitelist', (
+    tester,
+  ) async {
+    final previousPlatform = debugDefaultTargetPlatformOverride;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = previousPlatform);
+    const channel = MethodChannel('fitrah_launcher/apps');
+    final calls = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          calls.add(call.method);
+          if (call.method == 'checkUsageStatsPermission') return false;
+          return true;
+        });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    final repository = SadarRepository(null);
+    final container = ProviderContainer(
+      overrides: [
+        isarProvider.overrideWithValue(null),
+        sadarRepoProvider.overrideWithValue(repository),
+        notificationServiceProvider.overrideWithValue(NotificationService()),
+      ],
+    );
+    addTearDown(() async {
+      await container.read(timerEngineProvider.notifier).cancel();
+      container.dispose();
+    });
+    final habit = Habit()
+      ..id = 783
+      ..name = 'Latihan LKS'
+      ..target = 30
+      ..allowedPackages = ['com.example.study']
+      ..colorValue = 0xff8bae9a
+      ..createdAt = DateTime.now();
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: SadarYptFocusView(habit: habit, onClose: () {}),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(calls, contains('checkUsageStatsPermission'));
+    expect(find.text('Akses penggunaan belum aktif'), findsOneWidget);
+    expect(container.read(timerEngineProvider).isActive, isFalse);
+
+    await tester.tap(find.text('Buka pengaturan akses'));
+    await tester.pump();
+    expect(calls, contains('openUsageStatsSettings'));
+
+    await tester.tap(find.text('Mulai tanpa batas aplikasi'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(container.read(timerEngineProvider).isRunning, isTrue);
+    await tester.pump(const Duration(seconds: 3));
+    expect(calls, isNot(contains('getForegroundApp')));
+    await container.read(timerEngineProvider.notifier).cancel();
+    debugDefaultTargetPlatformOverride = previousPlatform;
+  });
+
   testWidgets('YPT app-list failure is reachable at 320dp and 200% text', (
     tester,
   ) async {
+    const channel = MethodChannel('fitrah_launcher/apps');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async => true);
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
     await tester.binding.setSurfaceSize(const Size(320, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final repository = SadarRepository(null);
@@ -118,7 +195,9 @@ void main() {
     await container.read(timerEngineProvider.notifier).cancel();
   });
 
-  testWidgets('focus presets use the durable preset timer path', (tester) async {
+  testWidgets('focus presets use the durable preset timer path', (
+    tester,
+  ) async {
     final repository = SadarRepository(null);
     final container = ProviderContainer(
       overrides: [
@@ -154,11 +233,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(container.read(timerEngineProvider).sourceKind,
-        TimerSessionSourceKind.preset);
+    expect(
+      container.read(timerEngineProvider).sourceKind,
+      TimerSessionSourceKind.preset,
+    );
     expect(container.read(timerEngineProvider).habitId, 0);
-    expect((await repository.getActiveTimerSession())?.sourceKind,
-        TimerSessionSourceKind.preset);
+    expect(
+      (await repository.getActiveTimerSession())?.sourceKind,
+      TimerSessionSourceKind.preset,
+    );
     await container.read(timerEngineProvider.notifier).cancel();
   });
 
