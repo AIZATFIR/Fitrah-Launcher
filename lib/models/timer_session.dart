@@ -40,6 +40,8 @@ class TimerSession {
   String? attributionLocalDate;
   DateTime? runningSince;
   DateTime? pausedAt;
+  int? clockBootCount;
+  int? clockElapsedRealtimeMillis;
   int accumulatedDurationSeconds = 0;
 
   @enumerated

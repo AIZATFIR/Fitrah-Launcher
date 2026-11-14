@@ -59,16 +59,29 @@ class TimerState {
       : 0.0;
 }
 
+class _AndroidClockSnapshot {
+  const _AndroidClockSnapshot(this.bootCount, this.elapsedRealtimeMillis);
+
+  final int bootCount;
+  final int elapsedRealtimeMillis;
+}
+
+typedef TimerClockSnapshotReader = Future<Map<String, int>?> Function();
+
 class SadarTimerEngine extends StateNotifier<TimerState> {
-  SadarTimerEngine(this._repo, [this._notifier]) : super(const TimerState()) {
+  SadarTimerEngine(this._repo, [this._notifier, this._clockSnapshotReader])
+    : super(const TimerState()) {
     _restoreFuture = _restoreSavedSession();
   }
 
   final SadarRepository _repo;
   final NotificationService? _notifier;
+  final TimerClockSnapshotReader? _clockSnapshotReader;
   late final Future<void> _restoreFuture;
   Timer? _ticker;
   Stopwatch? _segmentClock;
+  _AndroidClockSnapshot? _androidClockSnapshot;
+  static const _androidClockChannel = MethodChannel('fitrah_launcher/apps');
 
   TimerState get currentState => state;
 
@@ -106,6 +119,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     }
 
     final now = DateTime.now();
+    _androidClockSnapshot = await _readAndroidClockSnapshot();
     final sourceKind =
         saved.sourceKind ??
         (saved.habitId > 0
@@ -123,10 +137,18 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       final runningSince = saved.runningSince ?? saved.startedAt!;
       // Wall time is the only clock available across process death. A manual
       // clock correction can make it negative, so never subtract focus time.
-      final elapsedSinceStart = math.max(
-        0,
-        now.difference(runningSince).inSeconds,
-      );
+      final sameBoot =
+          _androidClockSnapshot != null &&
+          saved.clockBootCount == _androidClockSnapshot!.bootCount &&
+          saved.clockElapsedRealtimeMillis != null;
+      final elapsedSinceStart = sameBoot
+          ? math.max(
+              0,
+              (_androidClockSnapshot!.elapsedRealtimeMillis -
+                      saved.clockElapsedRealtimeMillis!) ~/
+                  1000,
+            )
+          : math.max(0, now.difference(runningSince).inSeconds);
       final totalElapsed = _accumulatedSeconds + elapsedSinceStart;
       final remaining = (saved.targetSeconds - totalElapsed).clamp(
         0,
@@ -137,6 +159,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         if (sourceKind == TimerSessionSourceKind.yptHabit) {
           _accumulatedSeconds = totalElapsed;
           _startedAt = now;
+          _androidClockSnapshot = await _readAndroidClockSnapshot();
           _segmentClock = Stopwatch()..start();
           state = TimerState(
             habitId: saved.habitId,
@@ -180,6 +203,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         // to estimate the interval that elapsed while the app was closed.
         _accumulatedSeconds = totalElapsed;
         _startedAt = now;
+        _androidClockSnapshot = await _readAndroidClockSnapshot();
         _segmentClock = Stopwatch()..start();
         state = TimerState(
           habitId: saved.habitId,
@@ -258,6 +282,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
     final previousState = state;
     final targetSec = (habit.target > 0 ? habit.target : 20) * 60;
+    _androidClockSnapshot = await _readAndroidClockSnapshot();
     _startedAt = DateTime.now();
     _segmentClock = Stopwatch()..start();
     _sessionStartedAt = _startedAt;
@@ -284,6 +309,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     } catch (_) {
       _startedAt = null;
       _segmentClock = null;
+      _androidClockSnapshot = null;
       _sessionStartedAt = null;
       _attributionLocalDate = null;
       _accumulatedSeconds = 0;
@@ -314,6 +340,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     final previousState = state;
     final previousIdentity = _sourceIdentity;
     final previousColorValue = _sourceColorValue;
+    _androidClockSnapshot = await _readAndroidClockSnapshot();
     _startedAt = DateTime.now();
     _segmentClock = Stopwatch()..start();
     _sessionStartedAt = _startedAt;
@@ -363,6 +390,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     } catch (_) {
       _startedAt = null;
       _segmentClock = null;
+      _androidClockSnapshot = null;
       _sessionStartedAt = null;
       _attributionLocalDate = null;
       _accumulatedSeconds = 0;
@@ -449,6 +477,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _accumulatedSeconds = elapsedAtPause;
       _startedAt = null;
       _segmentClock = null;
+      _androidClockSnapshot = null;
     }
 
     _ticker?.cancel();
@@ -473,6 +502,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     } catch (_) {
       // Resume from the exact duration already measured before persistence
       // failed, using a fresh monotonic segment.
+      _androidClockSnapshot = await _readAndroidClockSnapshot();
       _startedAt = DateTime.now();
       _segmentClock = Stopwatch()..start();
       state = previousState;
@@ -486,6 +516,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     if (state.status != TimerStateStatus.paused) return;
 
     final previousState = state;
+    _androidClockSnapshot = await _readAndroidClockSnapshot();
     _startedAt = DateTime.now();
     _segmentClock = Stopwatch()..start();
     _sessionStartedAt ??= _startedAt;
@@ -508,6 +539,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     } catch (_) {
       _startedAt = null;
       _segmentClock = null;
+      _androidClockSnapshot = null;
       state = previousState;
       rethrow;
     }
@@ -561,6 +593,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _accumulatedSeconds = actualDurationSeconds;
     _startedAt = null;
     _segmentClock = null;
+    _androidClockSnapshot = null;
     _pendingActualDurationSeconds = actualDurationSeconds;
     await _completeSession(
       autoRecord: true,
@@ -593,6 +626,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
     _startedAt = null;
     _segmentClock = null;
+    _androidClockSnapshot = null;
     _sessionStartedAt = null;
     _attributionLocalDate = null;
     _accumulatedSeconds = 0;
@@ -698,6 +732,28 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   int _elapsedSeconds() =>
       _accumulatedSeconds + (_segmentClock?.elapsed.inSeconds ?? 0);
 
+  Future<_AndroidClockSnapshot?> _readAndroidClockSnapshot() async {
+    if (kIsWeb ||
+        (_clockSnapshotReader == null && !Platform.isAndroid)) {
+      return null;
+    }
+    try {
+      final values = _clockSnapshotReader != null
+          ? await _clockSnapshotReader()
+          : await _androidClockChannel.invokeMapMethod<String, int>(
+              'getTimerClockSnapshot',
+            );
+      final bootCount = values?['bootCount'];
+      final elapsedRealtimeMillis = values?['elapsedRealtimeMillis'];
+      if (bootCount == null || elapsedRealtimeMillis == null) return null;
+      return _AndroidClockSnapshot(bootCount, elapsedRealtimeMillis);
+    } catch (_) {
+      // Clock snapshots improve restore fidelity but must never block timers
+      // on platforms where the Android bridge is unavailable.
+      return null;
+    }
+  }
+
   TimerSession _buildSession() => TimerSession()
     ..habitId = state.habitId
     ..habitTargetSnapshot = state.habitTargetSnapshot
@@ -710,6 +766,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     ..startedAt = _sessionStartedAt ?? _startedAt
     ..attributionLocalDate = _attributionLocalDate
     ..runningSince = state.isRunning ? _startedAt : null
+    ..clockBootCount = _androidClockSnapshot?.bootCount
+    ..clockElapsedRealtimeMillis = _androidClockSnapshot?.elapsedRealtimeMillis
     ..accumulatedDurationSeconds = _accumulatedSeconds
     ..status = state.status;
 

@@ -32,60 +32,70 @@ const TimerSessionSchema = CollectionSchema(
       name: r'attributionLocalDate',
       type: IsarType.string,
     ),
-    r'habitId': PropertySchema(id: 3, name: r'habitId', type: IsarType.long),
-    r'habitName': PropertySchema(
+    r'clockBootCount': PropertySchema(
+      id: 3,
+      name: r'clockBootCount',
+      type: IsarType.long,
+    ),
+    r'clockElapsedRealtimeMillis': PropertySchema(
       id: 4,
+      name: r'clockElapsedRealtimeMillis',
+      type: IsarType.long,
+    ),
+    r'habitId': PropertySchema(id: 5, name: r'habitId', type: IsarType.long),
+    r'habitName': PropertySchema(
+      id: 6,
       name: r'habitName',
       type: IsarType.string,
     ),
     r'habitTargetSnapshot': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'habitTargetSnapshot',
       type: IsarType.long,
     ),
     r'pausedAt': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'pausedAt',
       type: IsarType.dateTime,
     ),
     r'runningSince': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'runningSince',
       type: IsarType.dateTime,
     ),
     r'sourceColorValue': PropertySchema(
-      id: 8,
+      id: 10,
       name: r'sourceColorValue',
       type: IsarType.long,
     ),
     r'sourceIdentity': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'sourceIdentity',
       type: IsarType.string,
     ),
     r'sourceKindIndex': PropertySchema(
-      id: 10,
+      id: 12,
       name: r'sourceKindIndex',
       type: IsarType.long,
     ),
     r'startedAt': PropertySchema(
-      id: 11,
+      id: 13,
       name: r'startedAt',
       type: IsarType.dateTime,
     ),
     r'status': PropertySchema(
-      id: 12,
+      id: 14,
       name: r'status',
       type: IsarType.byte,
       enumMap: _TimerSessionstatusEnumValueMap,
     ),
     r'targetSeconds': PropertySchema(
-      id: 13,
+      id: 15,
       name: r'targetSeconds',
       type: IsarType.long,
     ),
     r'updatedAt': PropertySchema(
-      id: 14,
+      id: 16,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
@@ -137,18 +147,20 @@ void _timerSessionSerialize(
   writer.writeLong(offsets[0], object.accumulatedDurationSeconds);
   writer.writeLong(offsets[1], object.activityId);
   writer.writeString(offsets[2], object.attributionLocalDate);
-  writer.writeLong(offsets[3], object.habitId);
-  writer.writeString(offsets[4], object.habitName);
-  writer.writeLong(offsets[5], object.habitTargetSnapshot);
-  writer.writeDateTime(offsets[6], object.pausedAt);
-  writer.writeDateTime(offsets[7], object.runningSince);
-  writer.writeLong(offsets[8], object.sourceColorValue);
-  writer.writeString(offsets[9], object.sourceIdentity);
-  writer.writeLong(offsets[10], object.sourceKindIndex);
-  writer.writeDateTime(offsets[11], object.startedAt);
-  writer.writeByte(offsets[12], object.status.index);
-  writer.writeLong(offsets[13], object.targetSeconds);
-  writer.writeDateTime(offsets[14], object.updatedAt);
+  writer.writeLong(offsets[3], object.clockBootCount);
+  writer.writeLong(offsets[4], object.clockElapsedRealtimeMillis);
+  writer.writeLong(offsets[5], object.habitId);
+  writer.writeString(offsets[6], object.habitName);
+  writer.writeLong(offsets[7], object.habitTargetSnapshot);
+  writer.writeDateTime(offsets[8], object.pausedAt);
+  writer.writeDateTime(offsets[9], object.runningSince);
+  writer.writeLong(offsets[10], object.sourceColorValue);
+  writer.writeString(offsets[11], object.sourceIdentity);
+  writer.writeLong(offsets[12], object.sourceKindIndex);
+  writer.writeDateTime(offsets[13], object.startedAt);
+  writer.writeByte(offsets[14], object.status.index);
+  writer.writeLong(offsets[15], object.targetSeconds);
+  writer.writeDateTime(offsets[16], object.updatedAt);
 }
 
 TimerSession _timerSessionDeserialize(
@@ -161,21 +173,23 @@ TimerSession _timerSessionDeserialize(
   object.accumulatedDurationSeconds = reader.readLong(offsets[0]);
   object.activityId = reader.readLongOrNull(offsets[1]);
   object.attributionLocalDate = reader.readStringOrNull(offsets[2]);
-  object.habitId = reader.readLong(offsets[3]);
-  object.habitName = reader.readString(offsets[4]);
-  object.habitTargetSnapshot = reader.readLongOrNull(offsets[5]);
+  object.clockBootCount = reader.readLongOrNull(offsets[3]);
+  object.clockElapsedRealtimeMillis = reader.readLongOrNull(offsets[4]);
+  object.habitId = reader.readLong(offsets[5]);
+  object.habitName = reader.readString(offsets[6]);
+  object.habitTargetSnapshot = reader.readLongOrNull(offsets[7]);
   object.id = id;
-  object.pausedAt = reader.readDateTimeOrNull(offsets[6]);
-  object.runningSince = reader.readDateTimeOrNull(offsets[7]);
-  object.sourceColorValue = reader.readLongOrNull(offsets[8]);
-  object.sourceIdentity = reader.readStringOrNull(offsets[9]);
-  object.sourceKindIndex = reader.readLongOrNull(offsets[10]);
-  object.startedAt = reader.readDateTimeOrNull(offsets[11]);
+  object.pausedAt = reader.readDateTimeOrNull(offsets[8]);
+  object.runningSince = reader.readDateTimeOrNull(offsets[9]);
+  object.sourceColorValue = reader.readLongOrNull(offsets[10]);
+  object.sourceIdentity = reader.readStringOrNull(offsets[11]);
+  object.sourceKindIndex = reader.readLongOrNull(offsets[12]);
+  object.startedAt = reader.readDateTimeOrNull(offsets[13]);
   object.status =
-      _TimerSessionstatusValueEnumMap[reader.readByteOrNull(offsets[12])] ??
+      _TimerSessionstatusValueEnumMap[reader.readByteOrNull(offsets[14])] ??
       TimerStateStatus.idle;
-  object.targetSeconds = reader.readLong(offsets[13]);
-  object.updatedAt = reader.readDateTime(offsets[14]);
+  object.targetSeconds = reader.readLong(offsets[15]);
+  object.updatedAt = reader.readDateTime(offsets[16]);
   return object;
 }
 
@@ -193,30 +207,34 @@ P _timerSessionDeserializeProp<P>(
     case 2:
       return (reader.readStringOrNull(offset)) as P;
     case 3:
-      return (reader.readLong(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 5:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 6:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 8:
       return (reader.readLongOrNull(offset)) as P;
+    case 8:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 9:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 10:
       return (reader.readLongOrNull(offset)) as P;
     case 11:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 12:
+      return (reader.readLongOrNull(offset)) as P;
+    case 13:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 14:
       return (_TimerSessionstatusValueEnumMap[reader.readByteOrNull(offset)] ??
               TimerStateStatus.idle)
           as P;
-    case 13:
+    case 15:
       return (reader.readLong(offset)) as P;
-    case 14:
+    case 16:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -624,6 +642,157 @@ extension TimerSessionQueryFilter
         FilterCondition.greaterThan(
           property: r'attributionLocalDate',
           value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockBootCountIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'clockBootCount'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockBootCountIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'clockBootCount'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockBootCountEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'clockBootCount', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockBootCountGreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'clockBootCount',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockBootCountLessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'clockBootCount',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockBootCountBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'clockBootCount',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockElapsedRealtimeMillisIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'clockElapsedRealtimeMillis'),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockElapsedRealtimeMillisIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'clockElapsedRealtimeMillis',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockElapsedRealtimeMillisEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'clockElapsedRealtimeMillis',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockElapsedRealtimeMillisGreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'clockElapsedRealtimeMillis',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockElapsedRealtimeMillisLessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'clockElapsedRealtimeMillis',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  clockElapsedRealtimeMillisBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'clockElapsedRealtimeMillis',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
         ),
       );
     });
@@ -1696,6 +1865,34 @@ extension TimerSessionQuerySortBy
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByClockBootCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockBootCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByClockBootCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockBootCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByClockElapsedRealtimeMillis() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockElapsedRealtimeMillis', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByClockElapsedRealtimeMillisDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockElapsedRealtimeMillis', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByHabitId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'habitId', Sort.asc);
@@ -1894,6 +2091,34 @@ extension TimerSessionQuerySortThenBy
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByClockBootCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockBootCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByClockBootCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockBootCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByClockElapsedRealtimeMillis() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockElapsedRealtimeMillis', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByClockElapsedRealtimeMillisDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockElapsedRealtimeMillis', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenByHabitId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'habitId', Sort.asc);
@@ -2086,6 +2311,20 @@ extension TimerSessionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QDistinct>
+  distinctByClockBootCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'clockBootCount');
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QDistinct>
+  distinctByClockElapsedRealtimeMillis() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'clockElapsedRealtimeMillis');
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByHabitId() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'habitId');
@@ -2195,6 +2434,19 @@ extension TimerSessionQueryProperty
   attributionLocalDateProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'attributionLocalDate');
+    });
+  }
+
+  QueryBuilder<TimerSession, int?, QQueryOperations> clockBootCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'clockBootCount');
+    });
+  }
+
+  QueryBuilder<TimerSession, int?, QQueryOperations>
+  clockElapsedRealtimeMillisProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'clockElapsedRealtimeMillis');
     });
   }
 

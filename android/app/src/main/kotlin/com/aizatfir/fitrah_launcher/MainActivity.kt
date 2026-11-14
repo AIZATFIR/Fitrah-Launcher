@@ -71,6 +71,23 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
+                "getTimerClockSnapshot" -> {
+                    val bootCount = Settings.Global.getInt(
+                        contentResolver,
+                        Settings.Global.BOOT_COUNT,
+                        -1
+                    )
+                    if (bootCount < 0) {
+                        result.success(null)
+                    } else {
+                        result.success(
+                            mapOf(
+                                "bootCount" to bootCount,
+                                "elapsedRealtimeMillis" to android.os.SystemClock.elapsedRealtime()
+                            )
+                        )
+                    }
+                }
                 "setLockscreenFocus" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: false
                     try {

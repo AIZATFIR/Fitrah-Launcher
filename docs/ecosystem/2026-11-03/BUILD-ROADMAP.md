@@ -77,7 +77,8 @@ Perubahan UI exploratif/read-only boleh berjalan saat E1/E2 diselesaikan. Pengga
 
 - [x] Simpan `attributionLocalDate` saat sesi dimulai, pulihkan nilainya dari sesi tersimpan, dan gunakan tanggal itu saat kontribusi habit dicatat. Sesi legacy tanpa field baru memakai tanggal awal yang tersimpan sebagai fallback.
 - [x] Simpan total detik timer pada `HabitEntry`, bukan hanya menit bulat; gabungkan sesi sub-menit dan konversi data timer lama dari menit yang masih tersedia.
-- [ ] Pisahkan lifecycle record dari running segment/checkpoint lebih lanjut. Tambahkan clock port terkontrol untuk unit checks; Android monotonic interval/same-boot recovery harus nyata, bukan asumsi semua DateTime delta aman.
+- [x] Tambahkan clock reader terkontrol untuk unit checks dan Android elapsed-realtime + boot-count checkpoint; sesi running pulih akurat setelah proses mati selama boot yang sama.
+- [ ] Pisahkan lifecycle record dari running segment/checkpoint lebih lanjut; reboot dan timezone/clock uncertainty masih perlu penanganan eksplisit.
 - [ ] Ubah engine existing menjadi satu SessionCoordinator atau adapter menuju satu owner baru. Jangan mempertahankan dua owner aktif selama rollout; gunakan satu feature switch untuk consumer yang sudah dialihkan.
 - [ ] Implement start/pause/resume/end/recover dengan operation receipts, revisions dan transaction single-active pointer. Pasang guard ketika startup restore masih berjalan.
 - [ ] Simpan ledger sesi dan kontribusi atomik, lalu side effects notifikasi. Finish early mencatat actual, tanpa menaikkan ke target/minimum 15 menit.
@@ -93,7 +94,9 @@ Perubahan UI exploratif/read-only boleh berjalan saat E1/E2 diselesaikan. Pengga
 
 E2 tetap terbuka: semua consumer timer yang saat ini ada memakai owner yang sama, tanggal atribusi lokal tersimpan setelah Isar reopen, dan HabitEntry mengagregasi total detik timer. Clock monotonic/same-boot, timezone ID/offset snapshot, operation receipts/revisions, ledger detail per sesi, notification reconciliation, device recovery UI, reboot/process-death uncertainty dan physical Android checks belum diverifikasi. Home preset completion membuat Activity row(s) dan menghapus TimerSession dalam transaksi Isar yang sama; failure injection membuktikan sesi tetap aktif sampai retry sukses dan retry tidak menggandakan Activity. Jangan anggap satu owner saja menutup gate E2.
 
-**Clock safety slice (14 Nov 2026):** Timer aktif dalam satu proses kini mengukur elapsed memakai `Stopwatch` monotonik, bukan jam kalender; start, resume, pause, overtime YPT, dan finish memakai segmen yang sama. Restore lintas proses masih memakai `DateTime` checkpoint karena monotonic Android boot clock belum tersambung; elapsed negatif akibat koreksi jam mundur dibatasi ke nol agar durasi tidak berkurang. Koreksi jam maju selama app mati tetap ambigu dan dapat membuat restore menganggap sesi sudah lewat target. State-machine test synthetic future checkpoint lulus; full suite 308 tests dan analyzer bersih. Ini perbaikan terbatas, bukan bukti reboot/time-change gate.
+**Clock safety slice (14 Nov 2026):** Timer aktif dalam satu proses pindah ke `Stopwatch` monotonik. Pada saat checkpoint awal, restore lintas proses masih memakai waktu kalender dan elapsed negatif dibatasi nol. Catatan keterbatasan itu kemudian ditangani sebagian oleh slice same-boot di bawah.
+
+**Same-boot recovery slice (14 Nov 2026):** Android menyimpan `BOOT_COUNT` dan `SystemClock.elapsedRealtime()` bersama checkpoint sesi. Restore pada boot yang sama menghitung durasi dari elapsed realtime dan mengabaikan perubahan jam kalender; bila boot berubah atau bridge tidak tersedia, sesi lama tetap memakai fallback wall-clock dengan elapsed negatif dibatasi nol. Timer running pakai `Stopwatch` monotonik selama proses aktif. Reader clock injectable menguji pemulihan terhadap jam kalender yang bergeser; Isar reopen suite, 309 tests serial, analyzer, Android arm64 dan web JavaScript compile lulus. Reboot recovery masih bisa salah menaksir durasi jika jam berubah saat perangkat mati; tidak ada device physical smoke untuk slice ini.
 
 ## E3 — Habit, tindakan, jadwal dan tujuan tersambung
 
