@@ -61,3 +61,9 @@ A disposable `FocusClock_QA_API36` x86_64 AVD installed the versionCode19 QA APK
 ## Notification permission timing follow-up — 14 November
 
 Source inspection confirmed `NotificationService.init()` requested Android notification permission at each app bootstrap. The request now waits until the user creates a scheduled activity, after checking whether notifications are already enabled, and repeats at most once per `NotificationService` process when declined. Flutter channel regression covers no permission call on initialization, request-on-first-schedule, no repeat for later schedules in the same process, and no request when already enabled. Version23 package is compile verified only; runtime permission UI has not been exercised on the emulator/device.
+
+## Preview30 responsive prayer header smoke — 14 November
+
+The isolated API36 `FocusClock_QA_API36` AVD upgraded from the v29 x64 release checkpoint to a same-signature x64 debug buildCode30. Install succeeded; package metadata showed versionName0.5.3/versionCode30. Cold `am start -W` completed with status ok in 6.64s and `topResumedActivity` was Fitrah `MainActivity`. After app data hydrated, screenshot `.dart_tool/android-qa/2026-11-14-v30/v30-home-settled.png` showed the retained QA-LKS-Nasional goal, single-line Subuh/Dzuhur/Asar/Maghrib/Isya cues, analog dial, empty schedule action, and daily note. Tail of 600 logcat lines contained no `FATAL EXCEPTION`, `AndroidRuntime`, or `FlutterError`. The test AVD was shut down and `Medium_Phone` was not used.
+
+This verifies a local API36 x86_64 debug build and the 411dp emulator layout only. The release arm64 APK was compiled and metadata/signature checked, but not installed. Narrow 320dp behavior is widget-tested. No actual Android device, default Home selection, YPT permission trip, lockscreen, reminders through reboot, vendor behavior, or daily use is verified.
