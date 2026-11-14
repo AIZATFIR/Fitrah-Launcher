@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../models/habit.dart';
+import '../../../models/timer_session.dart';
 import '../../sadar/widgets/sadar_ypt_focus_view.dart';
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
@@ -590,6 +591,8 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
       MaterialPageRoute(
         builder: (_) => SadarYptFocusView(
           habit: habit,
+          sessionSourceKind: TimerSessionSourceKind.preset,
+          sourceIdentity: 'focus-preset:$minutes',
           onClose: () => Navigator.of(context).pop(),
         ),
       ),

@@ -18,10 +18,14 @@ class SadarYptFocusView extends ConsumerStatefulWidget {
     super.key,
     required this.habit,
     required this.onClose,
+    this.sessionSourceKind = TimerSessionSourceKind.yptHabit,
+    this.sourceIdentity,
   });
 
   final Habit habit;
   final VoidCallback onClose;
+  final TimerSessionSourceKind sessionSourceKind;
+  final String? sourceIdentity;
 
   @override
   ConsumerState<SadarYptFocusView> createState() => _SadarYptFocusViewState();
@@ -75,17 +79,25 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
 
   Future<void> _attachSharedTimer() async {
     try {
-      final attached = await ref
-          .read(timerEngineProvider.notifier)
-          .startYpt(widget.habit);
+      final engine = ref.read(timerEngineProvider.notifier);
+      final attached = widget.sessionSourceKind == TimerSessionSourceKind.preset
+          ? await engine.startNonHabit(
+              title: widget.habit.name,
+              targetSeconds: widget.habit.target * 60,
+              sourceKind: TimerSessionSourceKind.preset,
+              sourceIdentity: widget.sourceIdentity,
+              sourceColorValue: widget.habit.colorValue,
+            )
+          : await engine.startYpt(widget.habit);
       if (!mounted) return;
       final timer = ref.read(timerEngineProvider);
       setState(() {
         _hasSessionConflict =
             !attached &&
-            !(timer.isSavePending &&
+                !(timer.isSavePending &&
+                    timer.sourceKind == widget.sessionSourceKind &&
                 timer.habitId == widget.habit.id &&
-                timer.sourceKind == TimerSessionSourceKind.yptHabit);
+                    timer.habitName == widget.habit.name);
         _isStarting = false;
       });
       if (attached) _startAppGuard();

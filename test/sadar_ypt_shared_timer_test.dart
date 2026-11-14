@@ -118,6 +118,50 @@ void main() {
     await container.read(timerEngineProvider.notifier).cancel();
   });
 
+  testWidgets('focus presets use the durable preset timer path', (tester) async {
+    final repository = SadarRepository(null);
+    final container = ProviderContainer(
+      overrides: [
+        isarProvider.overrideWithValue(null),
+        sadarRepoProvider.overrideWithValue(repository),
+        notificationServiceProvider.overrideWithValue(NotificationService()),
+      ],
+    );
+    addTearDown(() async {
+      await container.read(timerEngineProvider.notifier).cancel();
+      container.dispose();
+    });
+    final habit = Habit()
+      ..id = 0
+      ..name = 'Pomodoro Sprint'
+      ..target = 25
+      ..colorValue = 0xFFE8C07D
+      ..createdAt = DateTime.now();
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: SadarYptFocusView(
+            habit: habit,
+            onClose: () {},
+            sessionSourceKind: TimerSessionSourceKind.preset,
+            sourceIdentity: 'focus-preset:25',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(container.read(timerEngineProvider).sourceKind,
+        TimerSessionSourceKind.preset);
+    expect(container.read(timerEngineProvider).habitId, 0);
+    expect((await repository.getActiveTimerSession())?.sourceKind,
+        TimerSessionSourceKind.preset);
+    await container.read(timerEngineProvider.notifier).cancel();
+  });
+
   testWidgets(
     'YPT keeps failed completion visible and retries the same session',
     (tester) async {

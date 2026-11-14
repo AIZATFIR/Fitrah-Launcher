@@ -80,3 +80,10 @@ Rejected keeping the local toggle (no effect) and adding a separate settings sto
 - Parent review and final affected checks/local commit remain with the parent task.
 
 ## Review Triage Log
+
+## Follow-up session preset repair (14 Nov 2026)
+
+- Root cause: Settings made an unsaved transient Habit and opened `SadarYptFocusView`, which always used the `yptHabit` source. The timer engine correctly clears unsupported nonpositive YPT habit IDs on completion instead of creating an Activity.
+- Fix: focus screen accepts an explicit session source; Settings presets use the existing `preset` path and identity. Durable save, measured completion, atomic Activity creation and retry remain in `SadarTimerEngine`/`SadarRepository`.
+- Regression added first; it failed to compile because no preset source API existed, then passed after implementation. 32 tests passed across `sadar_ypt_shared_timer_test.dart`, `sadar_timer_state_machine_test.dart`, `isar_service_persistence_test.dart`, `launcher_system_home_test.dart`; analyzer clean for the three changed Dart files.
+- New local preview built after fix: arm64 APK versionCode 17 (142.1s) and JavaScript web (100.2s). Runtime device/browser not checked.
