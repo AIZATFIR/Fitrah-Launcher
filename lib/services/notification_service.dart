@@ -11,6 +11,7 @@ import '../models/activity.dart';
 class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _ready = false;
+  bool _requestedNotificationPermission = false;
 
   /// Desktop platforms lack zonedSchedule — fall back to in-process timers.
   final Map<int, Timer> _timers = {};
@@ -33,13 +34,6 @@ class NotificationService {
     const init = InitializationSettings(android: android, linux: linux);
     await _plugin.initialize(init);
 
-    // Request POST_NOTIFICATIONS permission on Android 13+
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      final androidImpl = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      await androidImpl?.requestNotificationsPermission();
-    }
-
     _ready = true;
   }
 
@@ -61,6 +55,19 @@ class NotificationService {
       final start = toDateTime(a.date, a.ampmHalf, a.startMinute);
       final fire = start.subtract(Duration(minutes: leadMinutes));
       if (fire.isBefore(DateTime.now())) return;
+
+      if (defaultTargetPlatform == TargetPlatform.android &&
+          !_requestedNotificationPermission) {
+        final androidImpl = _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        if (await androidImpl?.areNotificationsEnabled() != true) {
+          _requestedNotificationPermission = true;
+          await androidImpl?.requestNotificationsPermission();
+        }
+      }
+
       final title = a.title.isEmpty ? 'Activity' : a.title;
       final body = 'Mulai $leadMinutes menit lagi';
 
