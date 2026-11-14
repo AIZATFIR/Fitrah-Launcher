@@ -11,6 +11,7 @@ import 'package:fitrah_launcher/models/habit.dart';
 import 'package:fitrah_launcher/models/habit_entry.dart';
 import 'package:fitrah_launcher/models/preset.dart';
 import 'package:fitrah_launcher/models/timer_session.dart';
+import 'package:fitrah_launcher/models/terminal_focus_session.dart';
 import 'package:fitrah_launcher/services/sadar_timer_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar_community/isar.dart';
@@ -141,6 +142,11 @@ void main() {
       expect(restoredEntry?.targetSnapshot, 20);
       final restoredSession = await secondOpen.isar!.timerSessions.get(1);
       expect(restoredSession?.attributionLocalDate, '2026-11-04');
+      final terminalRows = await secondOpen.isar!.terminalFocusSessions
+          .where()
+          .findAll();
+      expect(terminalRows, hasLength(2));
+      expect(terminalRows.map((row) => row.sessionId).toSet(), hasLength(2));
     },
   );
 
@@ -231,6 +237,12 @@ void main() {
       expect((await db.activitys.get(unrelatedId))!.isCompleted, isFalse);
       expect((await db.activitys.get(unrelatedId))!.actualDurationSeconds, 0);
       expect(await repository.getActiveTimerSession(), isNull);
+      final terminal =
+          (await db.terminalFocusSessions.where().findAll()).single;
+      expect(terminal.sourceKind, 'activity');
+      expect(terminal.titleSnapshot, 'Linked');
+      expect(terminal.actualDurationSeconds, 503);
+      expect(terminal.status.name, 'completed');
     },
   );
 
@@ -326,6 +338,7 @@ void main() {
       expect(engine.state.isSavePending, isTrue);
       expect(await repository.getActiveTimerSession(), isNotNull);
       expect(await opened.isar!.activitys.count(), 0);
+      expect(await opened.isar!.terminalFocusSessions.count(), 0);
 
       await engine.retryCompletion();
       expect(engine.state.isSavePending, isFalse);
@@ -336,6 +349,11 @@ void main() {
       expect(activity.isCompleted, isTrue);
       expect(activity.actualDurationSeconds, lessThan(2700));
       expect(activity.description, 'Identitas: Programmer');
+      final terminal =
+          (await opened.isar!.terminalFocusSessions.where().findAll()).single;
+      expect(terminal.sourceKind, 'preset');
+      expect(terminal.titleSnapshot, 'LKS ITSSB');
+      expect(terminal.actualDurationSeconds, activity.actualDurationSeconds);
 
       await engine.retryCompletion();
       expect(await opened.isar!.activitys.count(), 1);
@@ -382,6 +400,45 @@ void main() {
     expect(saved?.activityId, activities.single.id);
     expect(saved?.sourceKind, TimerSessionSourceKind.activity);
     await engine.cancel();
+  });
+
+  test('native free finish and cancellation persist terminal rows', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'focus_clock_free_terminal_',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final opened = await IsarService.openAt(directory.path);
+    addTearDown(() => opened.isar!.close());
+    final repository = SadarRepository(opened.isar!);
+    final engine = SadarTimerEngine(repository);
+    addTearDown(engine.dispose);
+
+    await engine.startNonHabit(
+      title: 'Free focus',
+      targetSeconds: 600,
+      sourceKind: TimerSessionSourceKind.free,
+    );
+    await engine.finishEarly();
+    final completed =
+        (await opened.isar!.terminalFocusSessions.where().findAll()).single;
+    expect(completed.sourceKind, 'free');
+    expect(completed.titleSnapshot, 'Free focus');
+    expect(completed.status.name, 'completed');
+    expect(await repository.getActiveTimerSession(), isNull);
+
+    await engine.startNonHabit(
+      title: 'Cancelled focus',
+      targetSeconds: 600,
+      sourceKind: TimerSessionSourceKind.free,
+    );
+    await engine.cancel();
+    final rows = await opened.isar!.terminalFocusSessions.where().findAll();
+    expect(rows, hasLength(2));
+    final cancelled = rows.singleWhere(
+      (row) => row.titleSnapshot == 'Cancelled focus',
+    );
+    expect(cancelled.status.name, 'cancelled');
+    expect(cancelled.actualDurationSeconds, 0);
   });
 }
 

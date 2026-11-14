@@ -22,6 +22,7 @@ import '../utils/hijri_date.dart';
 import 'loop_habit_grid_widget.dart';
 import '../../../models/habit_entry.dart';
 import '../../../models/timer_session.dart';
+import '../../../models/terminal_focus_session.dart';
 import '../../../providers/sadar_providers.dart';
 import '../../../services/sadar_timer_engine.dart';
 import '../../../services/home_schedule_service.dart';
@@ -1280,6 +1281,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       ),
                 const SizedBox(height: 18),
 
+                if (!widget.useSampleData) ...[
+                  _buildTodayFocusHistory(tc),
+                  const SizedBox(height: 18),
+                ],
+
                 // ── Obsidian Daily Note Card (Direct scratchpad) ──
                 _buildObsidianDailyNoteCard(tc),
                 const SizedBox(height: 18),
@@ -1385,6 +1391,104 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       ),
     );
   }
+
+  Widget _buildTodayFocusHistory(_HomeThemeColors tc) {
+    final now = DateTime.now();
+    final date =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final history = ref.watch(terminalFocusSessionsForDateProvider(date));
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: tc.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tc.stroke),
+      ),
+      child: history.when(
+        loading: () => Text(
+          'Memuat sesi hari ini…',
+          style: TextStyle(color: tc.textSecondary),
+        ),
+        error: (_, __) => Text(
+          'Histori sesi belum dapat dimuat.',
+          style: TextStyle(color: tc.textSecondary),
+        ),
+        data: (sessions) {
+          final completedSeconds = sessions
+              .where((s) => s.status == TerminalSessionStatus.completed)
+              .fold<int>(0, (sum, s) => sum + s.actualDurationSeconds);
+          final minutes = completedSeconds ~/ 60;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.history_rounded, size: 18, color: tc.accent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Fokus hari ini · $minutes menit',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: tc.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (sessions.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Belum ada sesi tercatat hari ini.',
+                    style: TextStyle(color: tc.textSecondary),
+                  ),
+                ),
+              for (final session in sessions)
+                Padding(
+                  padding: const EdgeInsets.only(top: 7),
+                  child: Row(
+                    children: [
+                      Icon(
+                        session.status == TerminalSessionStatus.cancelled
+                            ? Icons.close_rounded
+                            : Icons.check_rounded,
+                        size: 16,
+                        color: session.status == TerminalSessionStatus.cancelled
+                            ? tc.textMuted
+                            : tc.accent,
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          session.titleSnapshot,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: tc.textPrimary),
+                        ),
+                      ),
+                      Text(
+                        session.status == TerminalSessionStatus.cancelled
+                            ? 'Dibatalkan'
+                            : _formatSessionDuration(
+                                session.actualDurationSeconds,
+                              ),
+                        style: TextStyle(color: tc.textSecondary, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatSessionDuration(int seconds) =>
+      '${seconds ~/ 60} m ${seconds % 60} d';
 
   List<Activity> _sampleActivities() {
     final now = DateTime.now();

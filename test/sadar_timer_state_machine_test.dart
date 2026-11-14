@@ -673,6 +673,7 @@ class _FailOnceTimerCompletionRepository extends SadarRepository {
   @override
   Future<HabitEntry> completeTimerSession({
     required int habitId,
+    String? sessionId,
     required String dateString,
     required int actualDurationMinutes,
     int? actualDurationSeconds,
@@ -685,6 +686,7 @@ class _FailOnceTimerCompletionRepository extends SadarRepository {
     }
     return super.completeTimerSession(
       habitId: habitId,
+      sessionId: sessionId,
       dateString: dateString,
       actualDurationMinutes: actualDurationMinutes,
       actualDurationSeconds: actualDurationSeconds,

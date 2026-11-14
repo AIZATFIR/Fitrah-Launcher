@@ -13,6 +13,7 @@ import 'package:fitrah_launcher/models/habit.dart';
 import 'package:fitrah_launcher/models/habit_entry.dart';
 import 'package:fitrah_launcher/models/preset.dart';
 import 'package:fitrah_launcher/models/task.dart';
+import 'package:fitrah_launcher/models/terminal_focus_session.dart';
 import 'package:fitrah_launcher/models/timer_session.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -62,40 +63,37 @@ void main() {
       },
     );
 
-    test(
-      'v4 keeps habit links and frozen target; v1-v3 absent fields stay null',
-      () {
-        final data = _sampleData();
-        data.activities.single.habitId = data.habits.single.id;
-        data.timerSessions.single.habitId = data.habits.single.id;
-        data.timerSessions.single.habitTargetSnapshot = 45;
-        final bytes = FocusClockBackupCodec.encode(data);
-        final decoded = FocusClockBackupCodec.decode(bytes);
-        expect(decoded.formatVersion, 4);
-        expect(decoded.data.activities.single.habitId, data.habits.single.id);
-        expect(decoded.data.timerSessions.single.habitTargetSnapshot, 45);
-        for (final version in [1, 2, 3]) {
-          final root = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
-          root['formatVersion'] = version;
-          root['data']['activities'][0].remove('habitId');
-          root['data']['timerSessions'][0].remove('habitTargetSnapshot');
-          _refreshChecksum(root);
-          final old = FocusClockBackupCodec.decode(
-            utf8.encode(jsonEncode(root)),
-          );
-          expect(old.data.activities.single.habitId, isNull);
-          expect(old.data.timerSessions.single.habitTargetSnapshot, isNull);
-        }
-        data.activities.single.habitId = -1;
-        expect(() => FocusClockBackupCodec.encode(data), throwsFormatException);
-        data.activities.single.habitId = 999999;
-        data.timerSessions.single.habitTargetSnapshot = 0;
-        expect(() => FocusClockBackupCodec.encode(data), throwsFormatException);
-        data.timerSessions.single.habitTargetSnapshot = 45;
-        data.timerSessions.single.habitId = 0;
-        expect(() => FocusClockBackupCodec.encode(data), throwsFormatException);
-      },
-    );
+    test('v5 keeps session history; v1-v4 remain compatible', () {
+      final data = _sampleData();
+      data.activities.single.habitId = data.habits.single.id;
+      data.timerSessions.single.habitId = data.habits.single.id;
+      data.timerSessions.single.habitTargetSnapshot = 45;
+      final bytes = FocusClockBackupCodec.encode(data);
+      final decoded = FocusClockBackupCodec.decode(bytes);
+      expect(decoded.formatVersion, 5);
+      expect(decoded.data.activities.single.habitId, data.habits.single.id);
+      expect(decoded.data.timerSessions.single.habitTargetSnapshot, 45);
+      for (final version in [1, 2, 3, 4]) {
+        final root = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+        root['formatVersion'] = version;
+        root['data']['activities'][0].remove('habitId');
+        root['data']['timerSessions'][0].remove('habitTargetSnapshot');
+        root['data'].remove('terminalFocusSessions');
+        _refreshChecksum(root);
+        final old = FocusClockBackupCodec.decode(utf8.encode(jsonEncode(root)));
+        expect(old.data.activities.single.habitId, isNull);
+        expect(old.data.timerSessions.single.habitTargetSnapshot, isNull);
+        expect(old.data.terminalFocusSessions, isEmpty);
+      }
+      data.activities.single.habitId = -1;
+      expect(() => FocusClockBackupCodec.encode(data), throwsFormatException);
+      data.activities.single.habitId = 999999;
+      data.timerSessions.single.habitTargetSnapshot = 0;
+      expect(() => FocusClockBackupCodec.encode(data), throwsFormatException);
+      data.timerSessions.single.habitTargetSnapshot = 45;
+      data.timerSessions.single.habitId = 0;
+      expect(() => FocusClockBackupCodec.encode(data), throwsFormatException);
+    });
 
     test(
       'round-trips supported records and preserves IDs and exact seconds',
@@ -127,6 +125,66 @@ void main() {
         expect(
           decoded.formatVersion,
           FocusClockBackupCodec.currentFormatVersion,
+        );
+      },
+    );
+
+    test(
+      'v5 round-trips terminal ledger and rejects duplicate session UUIDs',
+      () {
+        final base = _sampleData();
+        TerminalFocusSession row() => TerminalFocusSession()
+          ..id = 41
+          ..sessionId = 'stable-session-id'
+          ..sourceKind = 'free'
+          ..titleSnapshot = 'Focus snapshot'
+          ..startedAt = DateTime.utc(2026, 11, 5, 9)
+          ..completedAt = DateTime.utc(2026, 11, 5, 9, 15)
+          ..actualDurationSeconds = 900
+          ..status = TerminalSessionStatus.completed;
+        final data = FocusClockBackupData(
+          presets: base.presets,
+          activities: base.activities,
+          appSettings: base.appSettings,
+          tasks: base.tasks,
+          habits: base.habits,
+          habitEntries: base.habitEntries,
+          dailyReflections: base.dailyReflections,
+          timerSessions: base.timerSessions,
+          launcherSettings: base.launcherSettings,
+          intentDocuments: base.intentDocuments,
+          terminalFocusSessions: [row()],
+        );
+        final restored = FocusClockBackupCodec.decode(
+          FocusClockBackupCodec.encode(data),
+        ).data.terminalFocusSessions.single;
+        expect(restored.sessionId, 'stable-session-id');
+        expect(restored.actualDurationSeconds, 900);
+      final missingLedger = jsonDecode(
+        utf8.decode(FocusClockBackupCodec.encode(base)),
+      ) as Map<String, dynamic>;
+      (missingLedger['data'] as Map<String, dynamic>).remove('terminalFocusSessions');
+      _refreshChecksum(missingLedger);
+      expect(
+        () => FocusClockBackupCodec.decode(utf8.encode(jsonEncode(missingLedger))),
+        throwsFormatException,
+      );
+        final duplicate = FocusClockBackupData(
+          presets: data.presets,
+          activities: data.activities,
+          appSettings: data.appSettings,
+          tasks: data.tasks,
+          habits: data.habits,
+          habitEntries: data.habitEntries,
+          dailyReflections: data.dailyReflections,
+          timerSessions: data.timerSessions,
+          launcherSettings: data.launcherSettings,
+          intentDocuments: data.intentDocuments,
+          terminalFocusSessions: [row(), row()..id = 42],
+        );
+        expect(
+          () => FocusClockBackupCodec.encode(duplicate),
+          throwsFormatException,
         );
       },
     );

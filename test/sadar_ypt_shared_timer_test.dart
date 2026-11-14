@@ -320,6 +320,7 @@ class _FailOnceCompletionRepository extends SadarRepository {
   @override
   Future<HabitEntry> completeTimerSession({
     required int habitId,
+    String? sessionId,
     required String dateString,
     required int actualDurationMinutes,
     int? actualDurationSeconds,
@@ -330,6 +331,7 @@ class _FailOnceCompletionRepository extends SadarRepository {
     if (completionAttempts == 1) throw StateError('simulated write failure');
     return super.completeTimerSession(
       habitId: habitId,
+      sessionId: sessionId,
       dateString: dateString,
       actualDurationMinutes: actualDurationMinutes,
       actualDurationSeconds: actualDurationSeconds,

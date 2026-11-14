@@ -11,6 +11,7 @@ import '../../models/habit.dart';
 import '../../models/habit_entry.dart';
 import '../../models/daily_reflection.dart';
 import '../../models/timer_session.dart';
+import '../../models/terminal_focus_session.dart';
 
 /// Lossless storage codec. Portable backups intentionally have different rules.
 class LiveModelCodec {
@@ -32,6 +33,7 @@ class LiveModelCodec {
     HabitEntry => 'HabitEntry',
     DailyReflection => 'DailyReflection',
     TimerSession => 'TimerSession',
+    TerminalFocusSession => 'TerminalFocusSession',
     _ => throw ArgumentError('Unknown model $T'),
   };
   static int id(Object row) => switch (row) {
@@ -44,6 +46,7 @@ class LiveModelCodec {
     HabitEntry x => x.id,
     DailyReflection x => x.id,
     TimerSession x => x.id,
+    TerminalFocusSession x => x.id,
     _ => throw ArgumentError('Unknown model'),
   };
   static void setId(Object row, int id) {
@@ -66,6 +69,8 @@ class LiveModelCodec {
       case DailyReflection x:
         x.id = id;
       case TimerSession x:
+        x.id = id;
+      case TerminalFocusSession x:
         x.id = id;
       default:
         throw ArgumentError('Unknown model');
@@ -206,6 +211,7 @@ class LiveModelCodec {
       },
       TimerSession x => <String, Object?>{
         'id': x.id,
+        'sessionId': x.sessionId,
         'habitId': _integer(x.habitId),
         'habitName': x.habitName,
         'sourceKindIndex': x.sourceKindIndex == null
@@ -229,6 +235,19 @@ class LiveModelCodec {
         'accumulatedDurationSeconds': _integer(x.accumulatedDurationSeconds),
         'status': x.status.index,
         'updatedAt': _date(x.updatedAt, false),
+      },
+      TerminalFocusSession x => <String, Object?>{
+        'id': x.id,
+        'sessionId': x.sessionId,
+        'sourceKind': x.sourceKind,
+        'titleSnapshot': x.titleSnapshot,
+        'sourceIdentity': x.sourceIdentity,
+        'habitId': x.habitId,
+        'activityId': x.activityId,
+        'startedAt': _date(x.startedAt, false),
+        'completedAt': _date(x.completedAt, false),
+        'actualDurationSeconds': _integer(x.actualDurationSeconds),
+        'status': x.status.index,
       },
       _ => throw ArgumentError('Unknown model'),
     };
@@ -399,6 +418,7 @@ class LiveModelCodec {
       TimerSession =>
         TimerSession()
           ..id = _readInt(m['id'])
+          ..sessionId = m['sessionId'] as String?
           ..habitId = _readInt(m['habitId'])
           ..habitName = m['habitName'] as String
           ..sourceKindIndex = m['sourceKindIndex'] == null
@@ -434,6 +454,19 @@ class LiveModelCodec {
           )
           ..status = TimerStateStatus.values[_readInt(m['status'])]
           ..updatedAt = _readDate(m['updatedAt'], false),
+      TerminalFocusSession =>
+        TerminalFocusSession()
+          ..id = _readInt(m['id'])
+          ..sessionId = m['sessionId'] as String
+          ..sourceKind = m['sourceKind'] as String
+          ..titleSnapshot = m['titleSnapshot'] as String
+          ..sourceIdentity = m['sourceIdentity'] as String?
+          ..habitId = m['habitId'] as int?
+          ..activityId = m['activityId'] as int?
+          ..startedAt = _readDate(m['startedAt'], false)
+          ..completedAt = _readDate(m['completedAt'], false)
+          ..actualDurationSeconds = _readInt(m['actualDurationSeconds'])
+          ..status = TerminalSessionStatus.values[_readInt(m['status'])],
       _ => throw ArgumentError('Unknown model $T'),
     };
     validateId(id(result));

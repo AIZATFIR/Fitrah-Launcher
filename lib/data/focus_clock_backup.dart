@@ -15,6 +15,7 @@ import '../models/habit_entry.dart';
 import '../models/preset.dart';
 import '../models/task.dart';
 import '../models/timer_session.dart';
+import '../models/terminal_focus_session.dart';
 
 const _maxBackupBytes = 20 * 1024 * 1024;
 
@@ -30,6 +31,7 @@ class FocusClockBackupData {
     required List<TimerSession> timerSessions,
     required this.launcherSettings,
     List<FocusIntentDocument> intentDocuments = const [],
+    List<TerminalFocusSession> terminalFocusSessions = const [],
   }) : presets = List.unmodifiable(presets),
        activities = List.unmodifiable(activities),
        appSettings = List.unmodifiable(appSettings),
@@ -38,7 +40,8 @@ class FocusClockBackupData {
        habitEntries = List.unmodifiable(habitEntries),
        dailyReflections = List.unmodifiable(dailyReflections),
        timerSessions = List.unmodifiable(timerSessions),
-       intentDocuments = List.unmodifiable(intentDocuments);
+       intentDocuments = List.unmodifiable(intentDocuments),
+       terminalFocusSessions = List.unmodifiable(terminalFocusSessions);
 
   final List<Preset> presets;
   final List<Activity> activities;
@@ -50,6 +53,7 @@ class FocusClockBackupData {
   final List<TimerSession> timerSessions;
   final LauncherSettings launcherSettings;
   final List<FocusIntentDocument> intentDocuments;
+  final List<TerminalFocusSession> terminalFocusSessions;
 
   Map<String, int> get counts => {
     'Presets': presets.length,
@@ -61,6 +65,7 @@ class FocusClockBackupData {
     'Preferensi': appSettings.length,
     'Sesi timer': timerSessions.length,
     'Tujuan dan pilihan': intentDocuments.length,
+    'Histori sesi fokus': terminalFocusSessions.length,
   };
 }
 
@@ -83,7 +88,7 @@ class DecodedFocusClockBackup {
 class FocusClockBackupCodec {
   FocusClockBackupCodec._();
 
-  static const currentFormatVersion = 4;
+  static const currentFormatVersion = 5;
   static const sourceApp = 'focus-clock';
 
   /// Copy an app-owned Isar model before applying installation-only values.
@@ -146,6 +151,9 @@ class FocusClockBackupCodec {
       }
       if (version >= 3 && payload['intentDocuments'] is! List) {
         throw const FormatException('Missing intent documents');
+      }
+      if (version >= 5 && payload['terminalFocusSessions'] is! List) {
+        throw const FormatException('Missing terminal focus sessions');
       }
       final data = _fromJson(payload);
       _validate(data);
@@ -297,6 +305,7 @@ class FocusClockBackupCodec {
         .map(
           (x) => {
             'id': x.id,
+            'sessionId': x.sessionId,
             'habitId': x.habitId,
             'habitName': x.habitName,
             'sourceKind': x.sourceKind?.name,
@@ -312,6 +321,23 @@ class FocusClockBackupCodec {
             'accumulatedDurationSeconds': x.accumulatedDurationSeconds,
             'status': x.status.name,
             'updatedAt': _dateString(x.updatedAt),
+          },
+        )
+        .toList(),
+    'terminalFocusSessions': d.terminalFocusSessions
+        .map(
+          (x) => {
+            'id': x.id,
+            'sessionId': x.sessionId,
+            'sourceKind': x.sourceKind,
+            'titleSnapshot': x.titleSnapshot,
+            'sourceIdentity': x.sourceIdentity,
+            'habitId': x.habitId,
+            'activityId': x.activityId,
+            'startedAt': _dateString(x.startedAt),
+            'completedAt': _dateString(x.completedAt),
+            'actualDurationSeconds': x.actualDurationSeconds,
+            'status': x.status.name,
           },
         )
         .toList(),
@@ -385,6 +411,55 @@ class FocusClockBackupCodec {
       habitEntries: _list(map, 'habitEntries', _entryFromJson),
       dailyReflections: _list(map, 'dailyReflections', _reflectionFromJson),
       timerSessions: _list(map, 'timerSessions', _timerFromJson),
+      terminalFocusSessions: map.containsKey('terminalFocusSessions')
+          ? _list(
+              map,
+              'terminalFocusSessions',
+              (m) => TerminalFocusSession()
+                ..id = _int(m['id'], 'terminalFocusSessions.id')
+                ..sessionId = _string(
+                  m['sessionId'],
+                  'terminalFocusSessions.sessionId',
+                )
+                ..sourceKind = _string(
+                  m['sourceKind'],
+                  'terminalFocusSessions.sourceKind',
+                )
+                ..titleSnapshot = _string(
+                  m['titleSnapshot'],
+                  'terminalFocusSessions.titleSnapshot',
+                )
+                ..sourceIdentity = _nullableString(
+                  m['sourceIdentity'],
+                  'terminalFocusSessions.sourceIdentity',
+                )
+                ..habitId = _nullableInt(
+                  m['habitId'],
+                  'terminalFocusSessions.habitId',
+                )
+                ..activityId = _nullableInt(
+                  m['activityId'],
+                  'terminalFocusSessions.activityId',
+                )
+                ..startedAt = _date(
+                  m['startedAt'],
+                  'terminalFocusSessions.startedAt',
+                )
+                ..completedAt = _date(
+                  m['completedAt'],
+                  'terminalFocusSessions.completedAt',
+                )
+                ..actualDurationSeconds = _int(
+                  m['actualDurationSeconds'],
+                  'terminalFocusSessions.actualDurationSeconds',
+                )
+                ..status = _enumByName(
+                  TerminalSessionStatus.values,
+                  m['status'],
+                  'terminalFocusSessions.status',
+                ),
+            )
+          : const [],
       launcherSettings: LauncherSettings.fromMap(
         _map(map['launcherSettings'], 'launcherSettings'),
       ),
@@ -592,6 +667,7 @@ class FocusClockBackupCodec {
   static TimerSession _timerFromJson(Map<String, dynamic> m) {
     final x = TimerSession()
       ..id = _int(m['id'], 'timerSessions.id')
+      ..sessionId = _nullableString(m['sessionId'], 'timerSessions.sessionId')
       ..habitId = _int(m['habitId'], 'timerSessions.habitId')
       ..habitName = _string(m['habitName'], 'timerSessions.habitName')
       ..activityId = _nullableInt(m['activityId'], 'timerSessions.activityId')
@@ -669,6 +745,14 @@ class FocusClockBackupCodec {
     _unique(d.habits.map((x) => x.id), 'habits');
     _unique(d.habitEntries.map((x) => x.id), 'habitEntries');
     _unique(d.dailyReflections.map((x) => x.id), 'dailyReflections');
+    _unique(d.terminalFocusSessions.map((x) => x.id), 'terminalFocusSessions');
+    final terminalIds = d.terminalFocusSessions.map((x) => x.sessionId).toSet();
+    if (terminalIds.length != d.terminalFocusSessions.length) {
+      throw const FormatException('Duplicate terminal session IDs.');
+    }
+    for (final row in d.terminalFocusSessions) {
+      row.validate();
+    }
     if (d.appSettings.length != 1 || d.appSettings.single.id != 0) {
       throw const FormatException(
         'Backup harus berisi satu AppSettings dengan ID 0.',

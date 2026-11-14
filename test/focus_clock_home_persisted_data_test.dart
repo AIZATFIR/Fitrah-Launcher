@@ -4,6 +4,7 @@ import 'package:fitrah_launcher/features/sadar/widgets/sadar_timer_view.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
 import 'package:fitrah_launcher/models/activity.dart';
 import 'package:fitrah_launcher/models/timer_session.dart';
+import 'package:fitrah_launcher/models/terminal_focus_session.dart';
 import 'package:fitrah_launcher/providers/providers.dart';
 import 'package:fitrah_launcher/providers/sadar_providers.dart';
 import 'package:fitrah_launcher/services/sadar_timer_engine.dart';
@@ -20,6 +21,65 @@ void main() {
       home: FocusClockHomeView(onOpenFocusClock: _noop, onOpenAppDrawer: _noop),
     ),
   );
+
+  testWidgets('Home shows completed and cancelled focus history', (
+    tester,
+  ) async {
+    final repository = SadarRepository.store(null);
+    final now = DateTime.now();
+    final date =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final completed = TerminalFocusSession()
+      ..id = 1
+      ..sessionId = 'home-complete'
+      ..sourceKind = 'free'
+      ..titleSnapshot = 'LKS snapshot'
+      ..startedAt = now.subtract(const Duration(minutes: 15))
+      ..completedAt = now
+      ..actualDurationSeconds = 901
+      ..status = TerminalSessionStatus.completed;
+    final cancelled = TerminalFocusSession()
+      ..id = 2
+      ..sessionId = 'home-cancel'
+      ..sourceKind = 'free'
+      ..titleSnapshot = 'Cancelled session'
+      ..startedAt = now.subtract(const Duration(minutes: 5))
+      ..completedAt = now
+      ..actualDurationSeconds = 0
+      ..status = TerminalSessionStatus.cancelled;
+    final container = ProviderContainer(
+      overrides: [
+        activitiesByDateProvider.overrideWith((ref) => Stream.value(const [])),
+        sadarRepoProvider.overrideWithValue(repository),
+        terminalFocusSessionsForDateProvider(
+          date,
+        ).overrideWith((ref) => Stream.value([completed, cancelled])),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: FocusClockHomeView(
+            onOpenFocusClock: _noop,
+            onOpenAppDrawer: _noop,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('LKS snapshot'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Fokus hari ini · 15 menit'), findsOneWidget);
+    expect(find.text('LKS snapshot'), findsOneWidget);
+    expect(find.text('Cancelled session'), findsOneWidget);
+    expect(find.text('Dibatalkan'), findsOneWidget);
+  });
 
   testWidgets(
     'fresh Home shows an honest empty schedule without demo identity',

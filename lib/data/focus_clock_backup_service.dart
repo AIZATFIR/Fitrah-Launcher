@@ -46,6 +46,7 @@ class FocusClockBackupService {
         dailyReflections: await db.dailyReflections.all(),
         timerSessions: await db.timerSessions.all(),
         intentDocuments: await db.focusIntentDocuments.all(),
+        terminalFocusSessions: await db.terminalFocusSessions.all(),
       ),
     );
     return FocusClockBackupData(
@@ -58,6 +59,7 @@ class FocusClockBackupService {
       dailyReflections: snapshot.dailyReflections,
       timerSessions: snapshot.timerSessions,
       intentDocuments: snapshot.intentDocuments,
+      terminalFocusSessions: snapshot.terminalFocusSessions,
       launcherSettings: launcherSettings,
     );
   }
@@ -138,6 +140,7 @@ class FocusClockBackupService {
           dailyReflections: incoming.dailyReflections,
           timerSessions: incoming.timerSessions,
           intentDocuments: restoredIntents,
+          terminalFocusSessions: incoming.terminalFocusSessions,
         );
       });
       databaseCommitted = true;
@@ -162,6 +165,7 @@ class FocusClockBackupService {
               dailyReflections: oldData.dailyReflections,
               timerSessions: oldData.timerSessions,
               intentDocuments: oldData.intentDocuments,
+              terminalFocusSessions: oldData.terminalFocusSessions,
             );
           });
         }
@@ -239,6 +243,7 @@ class FocusClockBackupService {
     required List<dynamic> dailyReflections,
     required List<dynamic> timerSessions,
     required List<dynamic> intentDocuments,
+    required List<dynamic> terminalFocusSessions,
   }) async {
     await db.clear();
     await db.presets.putAll(presets.cast());
@@ -250,5 +255,6 @@ class FocusClockBackupService {
     await db.dailyReflections.putAll(dailyReflections.cast());
     await db.timerSessions.putAll(timerSessions.cast());
     await db.focusIntentDocuments.putAll(intentDocuments.cast());
+    await db.terminalFocusSessions.putAll(terminalFocusSessions.cast());
   }
 }

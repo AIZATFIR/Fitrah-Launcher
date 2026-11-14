@@ -5,6 +5,7 @@ import '../models/habit.dart';
 import '../models/habit_entry.dart';
 import '../models/daily_reflection.dart';
 import '../models/timer_session.dart';
+import '../models/terminal_focus_session.dart';
 import 'providers.dart';
 
 final sadarRepoProvider = Provider<SadarRepository>((ref) {
@@ -44,13 +45,15 @@ class DateRangeQuery {
 
 final habitEntriesStreamProvider =
     StreamProvider.family<List<HabitEntry>, DateRangeQuery>((ref, range) {
-  return ref.watch(sadarRepoProvider).watchEntriesForDateRange(range.start, range.end);
-});
+      return ref
+          .watch(sadarRepoProvider)
+          .watchEntriesForDateRange(range.start, range.end);
+    });
 
 final dailyFulfillmentProvider =
     FutureProvider.family<DailyFulfillmentSummary, String>((ref, dateString) {
-  return ref.watch(sadarRepoProvider).getDailyFulfillment(dateString);
-});
+      return ref.watch(sadarRepoProvider).getDailyFulfillment(dateString);
+    });
 
 final awarenessStatsProvider = FutureProvider<AwarenessStats>((ref) {
   return ref.watch(sadarRepoProvider).getAwarenessStats();
@@ -60,11 +63,19 @@ final whatIRepeatProvider = FutureProvider<List<RepetitionStat>>((ref) {
   return ref.watch(sadarRepoProvider).getWhatIRepeat();
 });
 
-final dailyReflectionProvider =
-    FutureProvider.family<DailyReflection?, String>((ref, dateString) {
-  return ref.watch(sadarRepoProvider).getDailyReflection(dateString);
-});
+final dailyReflectionProvider = FutureProvider.family<DailyReflection?, String>(
+  (ref, dateString) {
+    return ref.watch(sadarRepoProvider).getDailyReflection(dateString);
+  },
+);
 
 final activeTimerSessionProvider = FutureProvider<TimerSession?>((ref) {
   return ref.watch(sadarRepoProvider).getActiveTimerSession();
 });
+
+final terminalFocusSessionsForDateProvider =
+    StreamProvider.family<List<TerminalFocusSession>, String>((ref, date) {
+      return ref
+          .watch(sadarRepoProvider)
+          .watchTerminalFocusSessionsForDate(date);
+    });

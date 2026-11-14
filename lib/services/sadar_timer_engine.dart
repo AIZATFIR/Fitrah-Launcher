@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:uuid/uuid.dart';
 
 import '../data/repositories/sadar_repository.dart';
 import '../models/activity.dart';
@@ -98,6 +99,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   int? _pendingActualDurationSeconds;
   String? _sourceIdentity;
   int? _sourceColorValue;
+  String? _sessionId;
 
   Future<void> _restoreSavedSession() async {
     final saved = await _repo.getActiveTimerSession();
@@ -131,6 +133,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             ? TimerSessionSourceKind.habit
             : TimerSessionSourceKind.free);
     _sourceIdentity = saved.sourceIdentity;
+    _sessionId = saved.sessionId ?? const Uuid().v4();
     _sourceColorValue = saved.sourceColorValue;
     _accumulatedSeconds = saved.accumulatedDurationSeconds;
     _sessionStartedAt = saved.startedAt;
@@ -317,6 +320,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _accumulatedSeconds = 0;
     _sourceIdentity = null;
     _sourceColorValue = null;
+    _sessionId = const Uuid().v4();
 
     state = TimerState(
       habitId: habit.id,
@@ -375,6 +379,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _accumulatedSeconds = 0;
     _sourceIdentity = sourceIdentity;
     _sourceColorValue = sourceColorValue;
+    _sessionId = const Uuid().v4();
     state = TimerState(
       habitName: title,
       targetSeconds: targetSeconds,
@@ -700,6 +705,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         final targetMinutes = (state.targetSeconds / 60).ceil();
         await _repo.completeTimerSession(
           habitId: state.habitId,
+          sessionId: _sessionId,
           dateString: dateStr,
           actualDurationMinutes: actualMinutes,
           actualDurationSeconds: actualDurationSeconds,
@@ -713,6 +719,13 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           identity: _sourceIdentity,
           colorValue: _sourceColorValue,
           startedAt: _sessionStartedAt ?? DateTime.now(),
+          actualDurationSeconds:
+              actualDurationSeconds ?? state.actualDurationSeconds,
+          completedAt: DateTime.now(),
+        );
+      } else if (autoRecord &&
+          state.sourceKind == TimerSessionSourceKind.free) {
+        await _repo.completeFreeTimerSession(
           actualDurationSeconds:
               actualDurationSeconds ?? state.actualDurationSeconds,
           completedAt: DateTime.now(),
@@ -739,6 +752,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _pendingActualDurationSeconds = null;
       _sourceIdentity = null;
       _sourceColorValue = null;
+      _sessionId = null;
 
       try {
         SystemSound.play(SystemSoundType.alert);
@@ -787,6 +801,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
   TimerSession _buildSession() => TimerSession()
     ..habitId = state.habitId
+    ..sessionId = _sessionId
     ..habitTargetSnapshot = state.habitTargetSnapshot
     ..habitName = state.habitName
     ..sourceKind = state.sourceKind

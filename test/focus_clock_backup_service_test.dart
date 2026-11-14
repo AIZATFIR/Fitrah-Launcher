@@ -217,7 +217,7 @@ void main() {
       'Menang LKS',
     );
     expect((await db.focusIntentDocuments.get(1))!.payload, intentRow.payload);
-    expect(parsed.formatVersion, 4);
+    expect(parsed.formatVersion, FocusClockBackupCodec.currentFormatVersion);
     expect((await db.activitys.get(19))!.habitId, 8);
     expect(
       LauncherSettings.fromJson(

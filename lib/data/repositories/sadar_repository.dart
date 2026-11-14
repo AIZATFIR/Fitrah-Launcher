@@ -2,6 +2,7 @@ import 'dart:async';
 import '../store/focus_store.dart';
 import '../store/native_focus_store.dart';
 import 'package:isar_community/isar.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/time_math.dart';
 import '../../models/habit.dart';
@@ -9,6 +10,7 @@ import '../../models/habit_entry.dart';
 import '../../models/daily_reflection.dart';
 import '../../models/timer_session.dart';
 import '../../models/activity.dart';
+import '../../models/terminal_focus_session.dart';
 
 class RepetitionStat {
   final Habit habit;
@@ -69,6 +71,7 @@ class SadarRepository {
   final Map<int, Habit> _memHabits = {};
   final Map<String, HabitEntry> _memEntries = {}; // Key: "$habitId-$dateString"
   final Map<String, DailyReflection> _memReflections = {}; // Key: "$dateString"
+  final Map<String, TerminalFocusSession> _memTerminalSessions = {};
   int _memHabitIdCounter = 100;
   int _memEntryIdCounter = 1000;
 
@@ -571,8 +574,37 @@ class SadarRepository {
     return _observedSession;
   }
 
+  Future<List<TerminalFocusSession>> getTerminalFocusSessionsForDate(
+    String date,
+  ) async {
+    final rows = _isar == null
+        ? _memTerminalSessions.values.toList()
+        : await _isar.terminalFocusSessions.all();
+    rows.removeWhere((row) => _dateOnly(row.completedAt) != date);
+    rows.sort((a, b) => a.completedAt.compareTo(b.completedAt));
+    return rows;
+  }
+
+  Stream<List<TerminalFocusSession>> watchTerminalFocusSessionsForDate(
+    String date,
+  ) async* {
+    yield await getTerminalFocusSessionsForDate(date);
+    if (_isar == null) {
+      await for (final _ in _entriesStreamCtrl.stream) {
+        yield await getTerminalFocusSessionsForDate(date);
+      }
+    } else {
+      await for (final _ in _isar.watch()) {
+        yield await getTerminalFocusSessionsForDate(date);
+      }
+    }
+  }
+
+  String _dateOnly(DateTime value) => _formatDate(value);
+
   Future<void> saveTimerSession(TimerSession session) async {
     session.id = 1;
+    session.sessionId ??= const Uuid().v4();
     session.updatedAt = DateTime.now();
     if (_isar == null) {
       _memTimerSession = session;
@@ -603,6 +635,7 @@ class SadarRepository {
       throw StateError('Atomic Activity timer start requires durable storage.');
     }
     session.id = 1;
+    session.sessionId ??= const Uuid().v4();
     session.updatedAt = DateTime.now();
     return _isar.writeTxn(() async {
       if (await _isar.timerSessions.get(1) != null) {
@@ -671,8 +704,62 @@ class SadarRepository {
     await _isar!.timerSessions.put(session);
   }
 
+  TerminalFocusSession _terminalRow(
+    TimerSession session, {
+    required int seconds,
+    required DateTime completedAt,
+    required TerminalSessionStatus status,
+  }) {
+    final row = TerminalFocusSession()
+      ..sessionId =
+          session.sessionId ??
+          'legacy-${session.updatedAt.microsecondsSinceEpoch}'
+      ..sourceKind =
+          (session.sourceKind ??
+                  (session.habitId > 0
+                      ? TimerSessionSourceKind.habit
+                      : TimerSessionSourceKind.free))
+              .name
+      ..titleSnapshot = session.habitName.isEmpty
+          ? 'Fokus bebas'
+          : session.habitName
+      ..sourceIdentity = session.sourceIdentity
+      ..habitId = session.habitId > 0 ? session.habitId : null
+      ..activityId = session.activityId
+      ..startedAt = session.startedAt ?? completedAt
+      ..completedAt = completedAt
+      ..actualDurationSeconds = status == TerminalSessionStatus.cancelled
+          ? 0
+          : seconds
+      ..status = status;
+    row.validate();
+    return row;
+  }
+
+  Future<void> _putTerminalInTxn(TerminalFocusSession row) async {
+    if (_isar == null) {
+      _memTerminalSessions.putIfAbsent(row.sessionId, () => row);
+    } else {
+      final duplicate = await _isar.terminalFocusSessions
+          .select(where: (item) => item.sessionId == row.sessionId)
+          .findFirst();
+      if (duplicate == null) await _isar.terminalFocusSessions.put(row);
+    }
+  }
+
   Future<void> clearTimerSession() async {
     if (_isar == null) {
+      final current = _memTimerSession;
+      if (current != null) {
+        final row = _terminalRow(
+          current,
+          seconds: 0,
+          completedAt: DateTime.now(),
+          status: TerminalSessionStatus.cancelled,
+        );
+        _memTerminalSessions.putIfAbsent(row.sessionId, () => row);
+        _entriesStreamCtrl.add(null);
+      }
       _memTimerSession = null;
       return;
     }
@@ -680,6 +767,14 @@ class SadarRepository {
       final current = await _isar.timerSessions.get(1);
       if (current == null) return;
       _requireObservedSession(current);
+      await _putTerminalInTxn(
+        _terminalRow(
+          current,
+          seconds: 0,
+          completedAt: DateTime.now(),
+          status: TerminalSessionStatus.cancelled,
+        ),
+      );
       await _isar.timerSessions.delete(1);
     });
     _observedSession = null;
@@ -689,6 +784,7 @@ class SadarRepository {
   /// A failed native write leaves the session available for recovery on restart.
   Future<HabitEntry> completeTimerSession({
     required int habitId,
+    String? sessionId,
     required String dateString,
     required int actualDurationMinutes,
     int? actualDurationSeconds,
@@ -704,6 +800,21 @@ class SadarRepository {
         (habit.habitType == 'timed' && habit.unit == HabitUnit.min);
 
     if (_isar == null) {
+      final active = _memTimerSession;
+      final stableId = sessionId ?? active?.sessionId;
+      if (stableId != null && _memTerminalSessions.containsKey(stableId)) {
+        final committedEntry = _memEntries['$habitId-$dateString'];
+        if (committedEntry != null) return committedEntry;
+      }
+      if (active != null) {
+        final terminal = _terminalRow(
+          active,
+          seconds: secondsToAdd,
+          completedAt: completedAt,
+          status: TerminalSessionStatus.completed,
+        );
+        _memTerminalSessions[terminal.sessionId] = terminal;
+      }
       final key = '$habitId-$dateString';
       final existing = _memEntries[key];
       final entry =
@@ -728,6 +839,25 @@ class SadarRepository {
 
     return _isar.writeTxn(() async {
       final current = await _isar.timerSessions.get(1);
+      final stableId = sessionId ?? current?.sessionId;
+      if (stableId != null) {
+        final committed = await _isar.terminalFocusSessions
+            .select(where: (row) => row.sessionId == stableId)
+            .findFirst();
+        if (committed != null) {
+          final committedEntry = await _isar.habitEntrys
+              .select(
+                where: (row) =>
+                    row.habitId == habitId && row.dateString == dateString,
+              )
+              .findFirst();
+          if (current != null) {
+            await _isar.timerSessions.delete(1);
+          }
+          _observedSession = null;
+          if (committedEntry != null) return committedEntry;
+        }
+      }
       final existing = await _isar.habitEntrys
           .select(
             where: (x) => x.habitId == habitId && x.dateString == dateString,
@@ -757,6 +887,14 @@ class SadarRepository {
       );
 
       await _isar.habitEntrys.put(entry);
+      await _putTerminalInTxn(
+        _terminalRow(
+          current,
+          seconds: secondsToAdd,
+          completedAt: completedAt,
+          status: TerminalSessionStatus.completed,
+        ),
+      );
       await _isar.timerSessions.delete(1);
       _observedSession = null;
       return entry;
@@ -776,6 +914,19 @@ class SadarRepository {
       final session = await _isar.timerSessions.get(1);
       if (session == null) return;
       _requireObservedSession(session);
+      final terminal = _terminalRow(
+        session,
+        seconds: actualDurationSeconds,
+        completedAt: completedAt,
+        status: TerminalSessionStatus.completed,
+      );
+      final alreadyCommitted = await _isar.terminalFocusSessions
+          .select(where: (row) => row.sessionId == terminal.sessionId)
+          .findFirst();
+      if (alreadyCommitted != null) {
+        await _isar.timerSessions.delete(1);
+        return;
+      }
       final activity = await _isar.activitys.get(activityId);
       if (activity == null) {
         throw StateError('The linked Activity no longer exists.');
@@ -857,6 +1008,7 @@ class SadarRepository {
           ..updatedAt = completedAt;
         await _isar.activitys.put(activity);
       }
+      await _putTerminalInTxn(terminal);
       await _isar.timerSessions.delete(1);
     });
     _observedSession = null;
@@ -880,6 +1032,19 @@ class SadarRepository {
       _requireObservedSession(session);
       if (session.sourceKind != TimerSessionSourceKind.preset) {
         throw StateError('The active timer is not a Home preset session.');
+      }
+      final terminal = _terminalRow(
+        session,
+        seconds: actualDurationSeconds,
+        completedAt: completedAt,
+        status: TerminalSessionStatus.completed,
+      );
+      final alreadyCommitted = await _isar.terminalFocusSessions
+          .select(where: (row) => row.sessionId == terminal.sessionId)
+          .findFirst();
+      if (alreadyCommitted != null) {
+        await _isar.timerSessions.delete(1);
+        return;
       }
       final spanMinutes = (actualDurationSeconds / 60).ceil().clamp(1, 1440);
       final endAt = startedAt.add(Duration(minutes: spanMinutes));
@@ -907,6 +1072,45 @@ class SadarRepository {
           ..updatedAt = completedAt;
         await _isar.activitys.put(activity);
       }
+      await _putTerminalInTxn(terminal);
+      await _isar.timerSessions.delete(1);
+    });
+    _observedSession = null;
+  }
+
+  Future<void> completeFreeTimerSession({
+    required int actualDurationSeconds,
+    required DateTime completedAt,
+  }) async {
+    if (actualDurationSeconds < 0) throw ArgumentError('Negative duration');
+    if (_isar == null) {
+      final session = _memTimerSession;
+      if (session == null) return;
+      final row = _terminalRow(
+        session,
+        seconds: actualDurationSeconds,
+        completedAt: completedAt,
+        status: TerminalSessionStatus.completed,
+      );
+      _memTerminalSessions.putIfAbsent(row.sessionId, () => row);
+      _memTimerSession = null;
+      _entriesStreamCtrl.add(null);
+      return;
+    }
+    await _isar.writeTxn(() async {
+      final session = await _isar.timerSessions.get(1);
+      if (session == null) return;
+      _requireObservedSession(session);
+      final terminal = _terminalRow(
+        session,
+        seconds: actualDurationSeconds,
+        completedAt: completedAt,
+        status: TerminalSessionStatus.completed,
+      );
+      final existing = await _isar.terminalFocusSessions
+          .select(where: (row) => row.sessionId == terminal.sessionId)
+          .findFirst();
+      if (existing == null) await _putTerminalInTxn(terminal);
       await _isar.timerSessions.delete(1);
     });
     _observedSession = null;

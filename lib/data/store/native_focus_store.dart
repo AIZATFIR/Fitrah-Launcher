@@ -10,6 +10,7 @@ import '../../models/habit.dart';
 import '../../models/habit_entry.dart';
 import '../../models/daily_reflection.dart';
 import '../../models/timer_session.dart';
+import '../../models/terminal_focus_session.dart';
 
 class NativeFocusStore extends FocusStore {
   NativeFocusStore(this.isar);
@@ -44,6 +45,9 @@ class NativeFocusStore extends FocusStore {
       isar.habitEntrys.watchLazy().listen((_) => controller.add(null)),
       isar.dailyReflections.watchLazy().listen((_) => controller.add(null)),
       isar.timerSessions.watchLazy().listen((_) => controller.add(null)),
+      isar.terminalFocusSessions.watchLazy().listen(
+        (_) => controller.add(null),
+      ),
     ];
     controller.add(null);
     try {

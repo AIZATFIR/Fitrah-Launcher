@@ -10,6 +10,7 @@ import '../../models/habit_entry.dart';
 import '../../models/preset.dart';
 import '../../models/task.dart';
 import '../../models/timer_session.dart';
+import '../../models/terminal_focus_session.dart';
 
 /// Callers own transactions; collection writes never open nested transactions.
 abstract class FocusStore {
@@ -34,6 +35,8 @@ abstract class FocusStore {
   FocusCollection<HabitEntry> get habitEntrys => collection();
   FocusCollection<DailyReflection> get dailyReflections => collection();
   FocusCollection<TimerSession> get timerSessions => collection();
+  FocusCollection<TerminalFocusSession> get terminalFocusSessions =>
+      collection();
 }
 
 abstract interface class RecoveryJournal {
