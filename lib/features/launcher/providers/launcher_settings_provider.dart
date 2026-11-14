@@ -222,9 +222,8 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
   Future<bool> setShowAppIcons(bool enabled) =>
       _saveDrawerPreference('icons', enabled);
 
-  Future<void> setThemePalette(String palette) async {
-    await _mutate((s) => s.copyWith(themePalette: palette));
-  }
+  Future<bool> setThemePalette(String palette) =>
+      _mutate((s) => s.copyWith(themePalette: palette));
 
   Future<bool> setFavoritePackage(String package, bool favorite) {
     if (!LauncherSettings.isValidPackage(package)) return Future.value(false);

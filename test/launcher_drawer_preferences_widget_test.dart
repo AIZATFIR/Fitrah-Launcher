@@ -258,6 +258,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('settings labels match available behavior and licenses open', (
+    tester,
+  ) async {
+    await show(tester, Storage(), home: const FitrahSettingsScreen());
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Version 0.5.3'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Version 0.5.3'), findsOneWidget);
+    expect(find.text('Version 5.17'), findsNothing);
+    expect(find.text('Use device wallpaper ★'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('More'),
+      -250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Credits & Open Source Licenses'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LicensePage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('palette save failure stays open and never reports success', (
+    tester,
+  ) async {
+    await show(
+      tester,
+      Storage()..failWrite = true,
+      home: const FitrahSettingsScreen(),
+    );
+    await tester.ensureVisible(find.text('Tema & Warna Aksen').first);
+    await tester.tap(find.text('Tema & Warna Aksen').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sky Blue (Fokus & Jernih)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pilih Tema & Warna Aksen'), findsOneWidget);
+    expect(find.text('Tema belum tersimpan. Coba lagi.'), findsOneWidget);
+  });
+
   testWidgets('customization drawer controls scroll at 320dp and 200 percent', (
     tester,
   ) async {

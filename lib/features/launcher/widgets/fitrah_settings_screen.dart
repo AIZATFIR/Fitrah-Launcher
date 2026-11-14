@@ -21,7 +21,6 @@ class FitrahSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
-  bool _useDeviceWallpaper = false;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +45,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             const Padding(
               padding: EdgeInsets.only(bottom: 28),
               child: Text(
-                'Remove distractions from notifications by filtering out unnecessary notifications from the apps you choose',
+                'Akses notifikasi belum difilter oleh launcher. Pengaturan izin Android ditampilkan dengan keterangan yang jujur.',
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.45,
@@ -57,22 +56,6 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             ),
 
             const DrawerPreferencesControls(),
-
-            // 2. Use device wallpaper ★ switch
-            _buildSwitchTile(
-              title: 'Use device wallpaper ★',
-              value: _useDeviceWallpaper,
-              onChanged: (val) {
-                setState(() => _useDeviceWallpaper = val);
-                if (val) {
-                  notifier.setWallpaperType('custom');
-                } else {
-                  notifier.setWallpaperType('campfire');
-                }
-              },
-            ),
-
-            const SizedBox(height: 16),
 
             const SizedBox(height: 24),
 
@@ -129,12 +112,16 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               title: 'Rate us on Play Store',
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Terima kasih atas dukungannya!')),
+                  const SnackBar(
+                    content: Text(
+                      'Halaman Play Store belum tersedia. Kirim masukan lewat More > Support via Email.',
+                    ),
+                  ),
                 );
               },
             ),
             _buildPlainTile(
-              title: 'Device Settings',
+              title: 'Home App Settings',
               onTap: () {
                 runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openHomeSettings());
               },
@@ -149,7 +136,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               child: Padding(
                 padding: EdgeInsets.only(bottom: 24, right: 4),
                 child: Text(
-                  'Version 5.17',
+                  'Version 0.5.3',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white38,
@@ -160,39 +147,6 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w400,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: Colors.white,
-            activeTrackColor: Colors.white38,
-            inactiveThumbColor: Colors.white70,
-            inactiveTrackColor: Colors.white12,
-          ),
-        ],
       ),
     );
   }
@@ -280,7 +234,14 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               ),
               _buildPlainTile(
                 title: 'Credits & Open Source Licenses',
-                onTap: () => Navigator.pop(ctx),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showLicensePage(
+                    context: context,
+                    applicationName: 'Fitrah Launcher',
+                    applicationVersion: '0.5.3',
+                  );
+                },
               ),
             ],
           ),
@@ -487,14 +448,14 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                   Icon(Icons.notifications_off_outlined, color: Colors.white, size: 20),
                   SizedBox(width: 10),
                   Text(
-                    'Filter Gangguan Notifikasi',
+                    'Akses Pengaturan Notifikasi',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               const Text(
-                'Fitrah Launcher membantu menjaga fokus Anda dengan menyaring notifikasi acak dari media sosial dan game selama jam produktif dan waktu ibadah.',
+                'Fitrah Launcher belum menyaring notifikasi. Tombol ini hanya membuka pengaturan akses notifikasi Android; aktifkan akses hanya jika Anda memahami izinnya.',
                 style: TextStyle(fontSize: 13, color: Colors.white70, height: 1.4),
               ),
               const SizedBox(height: 20),
@@ -502,7 +463,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.security_rounded, size: 18, color: Colors.black),
-                  label: const Text('Buka Pengaturan Notifikasi HP', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  label: const Text('Buka Pengaturan Akses Notifikasi', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -626,20 +587,20 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               const SizedBox(height: 16),
               _buildGestureRow(
                 icon: Icons.swipe_up_rounded,
-                title: 'Geser ke Atas',
-                desc: 'Membuka Laci Aplikasi (App Drawer)',
+                title: 'Geser ke Kiri dari Home',
+                desc: 'Membuka daftar aplikasi.',
               ),
               const SizedBox(height: 12),
               _buildGestureRow(
                 icon: Icons.swipe_left_rounded,
-                title: 'Geser ke Kiri / Tap Jam',
-                desc: 'Membuka dial 24 jam Focus Clock',
+                title: 'Geser ke Kanan dari Home',
+                desc: 'Membuka halaman Focus Clock.',
               ),
               const SizedBox(height: 12),
               _buildGestureRow(
                 icon: Icons.touch_app_rounded,
-                title: 'Tap Tab Sholat / Focus',
-                desc: 'Beralih antara jadwal sholat dan kartu event harian',
+                title: 'Tap tab Jadwal / Sholat',
+                desc: 'Beralih antara agenda hari ini dan waktu sholat.',
               ),
               const SizedBox(height: 12),
               _buildGestureRow(
@@ -693,7 +654,9 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
 
   void _showFontPicker(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Font Montserrat aktif.')),
+      const SnackBar(
+        content: Text('Font antarmuka saat ini Inter. Pilihan font belum tersedia.'),
+      ),
     );
   }
 
@@ -774,10 +737,17 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
   }) {
     final isSelected = current == key;
     return InkWell(
-      onTap: () {
+      onTap: () async {
         HapticFeedback.selectionClick();
-        notifier.setThemePalette(key);
-        Navigator.pop(context);
+        final saved = await notifier.setThemePalette(key);
+        if (!context.mounted) return;
+        if (saved) {
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tema belum tersimpan. Coba lagi.')),
+          );
+        }
       },
       borderRadius: BorderRadius.circular(8),
       child: Padding(

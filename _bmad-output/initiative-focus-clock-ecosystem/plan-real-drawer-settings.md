@@ -93,3 +93,11 @@ Rejected keeping the local toggle (no effect) and adding a separate settings sto
 - Active launcher shell now renders the saved preset backdrop or valid custom HTTP(S) image and applies dimming/blur, with the existing subtle overlay retained. Invalid/custom-image load failures fall back to the selected base color.
 - Widget regression verifies a committed preset changes the active shell background. `fitrah_launcher_test.dart`: 6 passed; analyzer clean for shell/test.
 - Remaining: the separate `Use device wallpaper` switch still writes unsupported placeholder values and Android wallpaper retrieval is not implemented; wallpaper save failure feedback remains open.
+
+## Follow-up Settings honesty and palette persistence (14 Nov 2026)
+
+- Removed the nonfunctional device-wallpaper toggle; the supported preset/custom background is managed in Customization.
+- Replaced claims of notification filtering with clear status and an accurately labeled Android access-settings action. Corrected help text to match active horizontal launcher navigation.
+- Font reports current Inter with no fictional picker; rating action explains that no Play Store listing is configured; More opens the framework license viewer; version label matches source version 0.5.3.
+- Theme palette writes now return commit success. Both palette sheets close/show success only after commit; failure preserves the selection sheet and reports retry.
+- Regression proves a failed theme write keeps the sheet open and never reports success. Settings-focused group: 59 tests passed; analyzer clean.

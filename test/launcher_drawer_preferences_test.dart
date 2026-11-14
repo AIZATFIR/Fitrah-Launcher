@@ -175,7 +175,7 @@ void main() {
       gate.complete();
       expect(await favorite, isTrue);
       expect(await hide, isTrue);
-      await palette;
+      expect(await palette, isTrue);
       expect(await note, isTrue);
       final reopened = LauncherSettingsNotifier(store);
       await reopened.hydration;

@@ -6874,13 +6874,18 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             size: 20,
                           )
                         : null,
-                    onTap: () {
-                      ref
+                    onTap: () async {
+                      final saved = await ref
                           .read(launcherSettingsProvider.notifier)
                           .setThemePalette(key);
-                      setState(() {});
-                      Navigator.pop(ctx);
-                      _showToast('Tema diubah ke $name');
+                      if (!mounted || !ctx.mounted) return;
+                      if (saved) {
+                        setState(() {});
+                        Navigator.pop(ctx);
+                        _showToast('Tema diubah ke $name');
+                      } else {
+                        _showToast('Tema belum tersimpan. Coba lagi.');
+                      }
                     },
                   ),
                 );

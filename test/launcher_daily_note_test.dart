@@ -38,7 +38,7 @@ void main() {
     final second = notifier.setDailyNote('2026-11-08', 'second');
     gate.complete();
     expect(await first, isTrue);
-    await palette;
+    expect(await palette, isTrue);
     expect(await second, isTrue);
     final saved = LauncherSettings.fromJson(store.raw!);
     expect(saved.dailyNotes, {'2026-11-07': 'first', '2026-11-08': 'second'});
