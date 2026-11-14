@@ -194,6 +194,64 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     minimumSize: const Size(48, 48),
   );
 
+  ThemeData _intentDialogTheme(BuildContext context) {
+    final base = Theme.of(context);
+    final fieldSurface = Color.alphaBlend(
+      widget.foreground.withValues(alpha: 0.04),
+      widget.surface,
+    );
+    final outline = widget.secondary.withValues(alpha: 0.42);
+    final radius = BorderRadius.circular(12);
+
+    return base.copyWith(
+      colorScheme: base.colorScheme.copyWith(
+        primary: widget.accent,
+        onPrimary: widget.surface,
+        surface: widget.surface,
+        onSurface: widget.foreground,
+        surfaceContainer: fieldSurface,
+        surfaceContainerHigh: fieldSurface,
+        onSurfaceVariant: widget.secondary,
+        outline: widget.secondary,
+        outlineVariant: outline,
+      ),
+      textTheme: base.textTheme.apply(
+        bodyColor: widget.foreground,
+        displayColor: widget.foreground,
+      ),
+      dialogTheme: base.dialogTheme.copyWith(
+        backgroundColor: widget.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: outline),
+        ),
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        filled: true,
+        fillColor: fieldSurface,
+        labelStyle: TextStyle(color: widget.secondary),
+        hintStyle: TextStyle(color: widget.secondary),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: outline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: widget.accent, width: 1.5),
+        ),
+      ),
+      popupMenuTheme: base.popupMenuTheme.copyWith(
+        color: fieldSurface,
+        textStyle: TextStyle(color: widget.foreground),
+      ),
+      progressIndicatorTheme: base.progressIndicatorTheme.copyWith(
+        color: widget.accent,
+        linearTrackColor: fieldSurface,
+      ),
+    );
+  }
+
   Widget _failure(Object error, VoidCallback retry) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -329,6 +387,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
         case IntentActionKind.unsupported:
           await _showIntentDialog(
             context: context,
+            theme: _intentDialogTheme(context),
             builder: (c) => AlertDialog(
               title: Text(choice.title),
               content: Text(habitExecutionLimit(choice.habit!)),
@@ -361,6 +420,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     controller.text = '${old?.valueCompleted ?? 0}';
     await _showIntentDialog(
       context: context,
+      theme: _intentDialogTheme(context),
       builder: (c) => HabitActionSaveDialog(
         title: 'Jumlah ${habit.name}',
         body: TextField(
@@ -417,6 +477,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     if (!initial.goals.any((g) => g.id == goalId && !g.archived)) goalId = null;
     await _showIntentDialog(
       context: context,
+      theme: _intentDialogTheme(context),
       builder: (c) => StatefulBuilder(
         builder: (c, update) => HabitActionSaveDialog(
           title: 'Tindakan hari ini',
@@ -619,11 +680,15 @@ class _GoalEditor extends ConsumerWidget {
 
 Future<void> _showIntentDialog({
   required BuildContext context,
+  ThemeData? theme,
   required WidgetBuilder builder,
 }) async {
   final route = DialogRoute<void>(
     context: context,
-    builder: builder,
+    builder: (context) {
+      final dialog = builder(context);
+      return theme == null ? dialog : Theme(data: theme, child: dialog);
+    },
     barrierDismissible: false,
   );
   await Navigator.of(context, rootNavigator: true).push(route);

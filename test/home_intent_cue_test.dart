@@ -38,6 +38,10 @@ void main() {
     Stream<IntentState>? intentStream,
     double width = 800,
     double textScale = 1,
+    Color foreground = Colors.black,
+    Color secondary = Colors.grey,
+    Color accent = Colors.green,
+    Color surface = Colors.white,
   }) async {
     tester.view.physicalSize = Size(width, 1200);
     tester.view.devicePixelRatio = 1;
@@ -74,10 +78,10 @@ void main() {
           home: Scaffold(
             body: SingleChildScrollView(
               child: HomeIntentCue(
-                foreground: Colors.black,
-                secondary: Colors.grey,
-                accent: Colors.green,
-                surface: Colors.white,
+                foreground: foreground,
+                secondary: secondary,
+                accent: accent,
+                surface: surface,
                 onHabitTimer: habitAction ?? (_) {},
                 onHabitSchedule: habitSchedule,
                 onTaskSchedule: taskAction ?? (_) async {},
@@ -337,6 +341,61 @@ void main() {
       expect(taskId, 7);
     },
   );
+  testWidgets('choice editor modal follows each active Home palette', (
+    tester,
+  ) async {
+    for (final palette in [
+      (
+        foreground: const Color(0xffeff5f8),
+        secondary: const Color(0xff90a3b5),
+        accent: const Color(0xff38bdf8),
+        surface: const Color(0xff121924),
+      ),
+      (
+        foreground: const Color(0xfff7f2eb),
+        secondary: const Color(0xffa89f95),
+        accent: const Color(0xffe8c89a),
+        surface: const Color(0xff1d1916),
+      ),
+    ]) {
+      await show(
+        tester,
+        foreground: palette.foreground,
+        secondary: palette.secondary,
+        accent: palette.accent,
+        surface: palette.surface,
+      );
+      await tester.tap(find.text('Pilih tindakan hari ini'));
+      await tester.pumpAndSettle();
+
+      final dialog = tester.element(find.byType(AlertDialog).last);
+      final theme = Theme.of(dialog);
+      expect(theme.colorScheme.primary, palette.accent);
+      expect(theme.colorScheme.onPrimary, palette.surface);
+      expect(theme.colorScheme.onSurface, palette.foreground);
+      expect(theme.dialogTheme.backgroundColor, palette.surface);
+      expect(theme.textTheme.bodyLarge?.color, palette.foreground);
+      expect(theme.inputDecorationTheme.fillColor, isNotNull);
+      expect(theme.inputDecorationTheme.fillColor, isNot(palette.accent));
+      expect(theme.inputDecorationTheme.labelStyle?.color, palette.secondary);
+      expect(theme.progressIndicatorTheme.color, palette.accent);
+      expect(
+        (theme.inputDecorationTheme.enabledBorder as OutlineInputBorder)
+            .borderSide
+            .color,
+        palette.secondary.withValues(alpha: 0.42),
+      );
+      expect(
+        (theme.inputDecorationTheme.focusedBorder as OutlineInputBorder)
+            .borderSide
+            .color,
+        palette.accent,
+      );
+
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
   testWidgets(
     'choice editor saves explicit link, retains failed draft, reopens and clears durably',
     (tester) async {
@@ -377,6 +436,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('write failed'), findsOneWidget);
       expect(find.text('My habit'), findsOneWidget);
+      expect(
+        Theme.of(
+          tester.element(find.byType(AlertDialog).last),
+        ).colorScheme.primary,
+        Colors.green,
+      );
       store.failIntent = false;
       await tester.tap(find.text('Simpan'));
       await tester.pumpAndSettle();
