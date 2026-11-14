@@ -10,8 +10,9 @@ This preview adds a startup-restore barrier to timer mutations. It prevents an e
 - `flutter analyze --no-pub`: no issues.
 - Android arm64 release APK built as versionName `0.5.3`, versionCode `39`, minSDK `24`, targetSDK `35`, compileSDK `36`.
 - APK signature verified with the existing Android Debug certificate (SHA-256 `b8af9d95bd72793e817c2bec78f3e1360d96456ef47db5260ed0d5a19934fe3e`). Personal preview only; not suitable for Play/public release.
+- A separate x86_64 versionCode `39` APK upgraded the dedicated API36 QA AVD from versionCode `34`. Install preserved the synthetic `QA-LKS-Nasional` goal; Home role remained Fitrah; cold launch returned `Status: ok` in 3.6 seconds; Android Home key returned to `MainActivity`; sampled logcat contained no `FATAL EXCEPTION`, `AndroidRuntime`, or `FlutterError`.
 - Web JavaScript release bundle compiled and ZIP integrity passed.
-- No physical phone install, personal database upgrade, browser interaction/reload, or TalkBack navigation was verified.
+- No physical phone install, personal database upgrade, browser interaction/reload, or TalkBack navigation was verified. The x86_64 QA run does not prove arm64 runtime behavior.
 
 ## Artifacts
 
@@ -21,3 +22,5 @@ This preview adds a startup-restore barrier to timer mutations. It prevents an e
 - `release_dist/2026-11-14-focus-clock-preview-39/SHA256SUMS`
 
 The local artifacts are intentionally excluded from Git. E2 remains open for browser persistence/reload, real-device database upgrade, restart uncertainty and reminder reconciliation. Sync, AI, WhatsApp, MCP and public publication remain later roadmap goals.
+
+QA screenshot: `.dart_tool/android-qa/2026-11-14-v39-home.png`; QA x86_64 APK: `.dart_tool/android-qa/Focus-Clock-107e0fb-v39-x64-QA.apk`. The dedicated `FocusClock_QA_API36` AVD was shut down after verification; `Medium_Phone` was not touched.
