@@ -78,7 +78,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             ),
             _buildDropdownTile(
               title: 'Home Screen',
-              onTap: () => _showHomeCustomizationDialog(context, settings, notifier),
+              onTap: () => _showHomeCustomizationDialog(context),
             ),
             _buildDropdownTile(
               title: 'App Drawer',
@@ -252,148 +252,172 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
 
 
 
-  void _showHomeCustomizationDialog(
-    BuildContext context,
-    LauncherSettings settings,
-    LauncherSettingsNotifier notifier,
-  ) {
+  void _showHomeCustomizationDialog(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF161618),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Kustomisasi Tampilan Home',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Widget Utama Layar Depan:',
-                  style: TextStyle(fontSize: 12, color: Colors.white70),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          notifier.setWidgetDisplayMode('prayer');
-                          setLocal(() {});
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: settings.widgetDisplayMode != 'focus_clock'
-                                ? Colors.white.withOpacity(0.2)
-                                : const Color(0xFF222226),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
+      builder: (ctx) => Consumer(
+        builder: (ctx, ref, _) {
+          final settings = ref.watch(launcherSettingsProvider);
+          final notifier = ref.read(launcherSettingsProvider.notifier);
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Kustomisasi Tampilan Home',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Widget Utama Layar Depan:',
+                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            notifier.setWidgetDisplayMode('prayer');
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
                               color: settings.widgetDisplayMode != 'focus_clock'
-                                  ? Colors.white
-                                  : Colors.white24,
+                                  ? Colors.white.withOpacity(0.2)
+                                  : const Color(0xFF222226),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color:
+                                    settings.widgetDisplayMode != 'focus_clock'
+                                    ? Colors.white
+                                    : Colors.white24,
+                              ),
                             ),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'Waktu Sholat',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                            child: const Center(
+                              child: Text(
+                                'Waktu Sholat',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          notifier.setWidgetDisplayMode('focus_clock');
-                          setLocal(() {});
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: settings.widgetDisplayMode == 'focus_clock'
-                                ? Colors.white.withOpacity(0.2)
-                                : const Color(0xFF222226),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            notifier.setWidgetDisplayMode('focus_clock');
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
                               color: settings.widgetDisplayMode == 'focus_clock'
-                                  ? Colors.white
-                                  : Colors.white24,
+                                  ? Colors.white.withOpacity(0.2)
+                                  : const Color(0xFF222226),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color:
+                                    settings.widgetDisplayMode == 'focus_clock'
+                                    ? Colors.white
+                                    : Colors.white24,
+                              ),
                             ),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'Focus Events',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                            child: const Center(
+                              child: Text(
+                                'Focus Events',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: settings.showPrayerTimes,
+                    activeColor: Colors.white,
+                    title: const Text(
+                      'Tampilkan Baris Waktu Sholat',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: settings.showPrayerTimes,
-                  activeColor: Colors.white,
-                  title: const Text('Tampilkan Baris Waktu Sholat', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  onChanged: (v) {
-                    notifier.togglePrayerTimes(v);
-                    setLocal(() {});
-                  },
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: settings.showDate,
-                  activeColor: Colors.white,
-                  title: const Text('Tampilkan Tanggal & Hijriah', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  onChanged: (v) {
-                    notifier.setClockFormat(showDate: v);
-                    setLocal(() {});
-                  },
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.tune_rounded, size: 16, color: Colors.white),
-                    label: const Text('Buka Kustomisasi Lengkap', style: TextStyle(color: Colors.white)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white38),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (_) => const LauncherCustomizationSheet(),
-                      );
+                    onChanged: (v) {
+                      notifier.togglePrayerTimes(v);
                     },
                   ),
-                ),
-              ],
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: settings.showDate,
+                    activeColor: Colors.white,
+                    title: const Text(
+                      'Tampilkan Tanggal & Hijriah',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    onChanged: (v) {
+                      notifier.setClockFormat(showDate: v);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(
+                        Icons.tune_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      label: const Text(
+                        'Buka Kustomisasi Lengkap',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white38),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => const LauncherCustomizationSheet(),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
-
   void _showAppDrawerSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,

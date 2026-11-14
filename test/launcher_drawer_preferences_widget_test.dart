@@ -258,6 +258,43 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Home display mode selection reflects its committed value', (
+    tester,
+  ) async {
+    final store = Storage()
+      ..raw = LauncherSettings(widgetDisplayMode: 'focus_clock').toJson();
+    final container = await show(
+      tester,
+      store,
+      home: const FitrahSettingsScreen(),
+    );
+    await tester.ensureVisible(find.text('Home Screen'));
+    await tester.tap(find.text('Home Screen'));
+    await tester.pumpAndSettle();
+
+    final prayerOption = find.ancestor(
+      of: find.text('Waktu Sholat'),
+      matching: find.byType(Container),
+    ).first;
+    BoxDecoration optionDecoration() =>
+        tester.widget<Container>(prayerOption).decoration! as BoxDecoration;
+    expect(optionDecoration().border!.top.color, Colors.white24);
+
+    await tester.tap(find.text('Waktu Sholat'));
+    await tester.pumpAndSettle();
+
+    expect(
+      container.read(launcherSettingsProvider).widgetDisplayMode,
+      'prayer',
+    );
+    expect(
+      LauncherSettings.fromJson(store.raw!).widgetDisplayMode,
+      'prayer',
+    );
+    expect(optionDecoration().border!.top.color, Colors.white);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('settings labels match available behavior and licenses open', (
     tester,
   ) async {
