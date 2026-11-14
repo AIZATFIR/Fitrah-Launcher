@@ -62,3 +62,12 @@ Local artifacts under `release_dist/2026-11-09-3d463ce/` include the manifest, c
 | `Focus-Clock-3d463ce-Web-preview.zip` | 13,903,163 | `03dd0ee7102c250fe4172069f924158a7363dcc24aac84ac32b8a62a94b5b8e8` |
 
 The latest local server serves `/tmp/focus-clock-launcher-capabilities-web` at `127.0.0.1:4174`, with source revision in `BUILD-INFO.json`; listener verified. Browser runtime and physical-device behavior remain unverified. No GitHub release or production deployment was made; default Home, durable favorites/hidden/order and the remaining ecosystem gates are still open.
+
+
+## Local ecosystem preview checkpoint — 14 November 2026
+
+Source code: `53811bc`. Four local commits repaired drawer icon/keyboard preferences (`c46feeb`), Focus 25/50/90 session persistence (`df05e82`), active wallpaper rendering (`d147df2`), and truthful Settings/palette commit feedback (`53811bc`). Gradle memory defaults are now Xmx3G, metaspace 1G and two workers.
+
+Verification: full suite **302 passed**, full analyzer **No issues found**. JavaScript web compiled in 90.1s; arm64 APK versionCode19 compiled in 131.6s. A separate x86_64 QA APK compiled in 95.5s. The API36 x86_64 disposable QA AVD installed versionCode19 and cold-started to the goal cue/analog clock Home; captured log tail contained no fatal Flutter/AndroidRuntime entry. UI input subsequently stalled while host swap was exhausted; settings/preset UI runtime was not verified. This is not physical-device verification. The x64 QA-only APK and screenshot are in ignored `.dart_tool/android-qa/2026-11-14/`.
+
+Release preview artifacts: `release_dist/2026-11-14-focus-clock-preview-19/` (arm64 APK, web JS ZIP, Android QA screenshot, manifest, notes and checksums). Preview uses the existing debug signing certificate. Browser Home rendered locally, but persistence remains unverified. No public deployment, GitHub Release, Play Store upload, or remote push occurred. The ecosystem backlog (storage migration, native wallpaper retrieval, web persistence, schedule/runtime audits, cross-device sync, agent, WhatsApp and MCP) remains open; see [BUILD-ROADMAP](BUILD-ROADMAP.md).
