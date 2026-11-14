@@ -562,6 +562,17 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                             // Center: Huge Digital Clock with Pulse
                             Column(
                               children: [
+                                if (timer.recoveryUncertain) ...[
+                                  const Text(
+                                    timerRecoveryNotice,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Color(0xFFF2D7A0),
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
                                 Text(
                                   timer.isOverdue
                                       ? '+${_formatTime((timer.actualDurationSeconds - timer.targetSeconds).clamp(0, 999999))}'

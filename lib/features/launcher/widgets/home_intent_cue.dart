@@ -45,7 +45,13 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     // The cue doesn't subscribe to the session's second-by-second countdown.
     final session = ref.watch(
       timerEngineProvider.select(
-        (s) => (s.isActive, s.isPaused, s.habitName, s.restoreError),
+        (s) => (
+          s.isActive,
+          s.isPaused,
+          s.habitName,
+          s.restoreError,
+          s.recoveryUncertain,
+        ),
       ),
     );
     return Container(
@@ -102,6 +108,11 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                     Text(
                       '${session.$2 ? 'Sesi dijeda' : 'Sesi berjalan'}: ${session.$3}',
                     ),
+                    if (session.$5)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Text(timerRecoveryNotice),
+                      ),
                     FilledButton(
                       style: _primaryStyle,
                       onPressed: widget.onSession,

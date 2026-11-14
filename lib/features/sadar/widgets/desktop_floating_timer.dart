@@ -58,6 +58,20 @@ class DesktopFloatingTimer extends ConsumerWidget {
                 ),
               ],
             ),
+            if (timer.recoveryUncertain) ...[
+              const SizedBox(height: 4),
+              const Text(
+                timerRecoveryNotice,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppPalette.sand,
+                  fontSize: 10,
+                  height: 1.15,
+                ),
+              ),
+            ],
             const SizedBox(height: 6),
 
             // Big readable timer

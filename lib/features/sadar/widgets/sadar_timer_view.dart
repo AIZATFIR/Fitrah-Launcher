@@ -308,6 +308,14 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (timer.recoveryUncertain) ...[
+          Text(
+            timerRecoveryNotice,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppPalette.sand, height: 1.4),
+          ),
+          const SizedBox(height: 16),
+        ],
         // Intention Badge
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),

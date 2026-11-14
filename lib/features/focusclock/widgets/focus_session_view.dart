@@ -111,7 +111,9 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
       }
       if (mounted) setState(() => _actionError = null);
     } catch (error) {
-      if (mounted) setState(() => _actionError = 'Perubahan belum tersimpan: $error');
+      if (mounted) {
+        setState(() => _actionError = 'Perubahan belum tersimpan: $error');
+      }
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -125,7 +127,9 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
       await ref.read(timerEngineProvider.notifier).finishEarly();
       if (mounted) setState(() => _actionError = null);
     } catch (error) {
-      if (mounted) setState(() => _actionError = 'Sesi belum tersimpan: $error');
+      if (mounted) {
+        setState(() => _actionError = 'Sesi belum tersimpan: $error');
+      }
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -205,6 +209,14 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (timer.recoveryUncertain) ...[
+          Text(
+            timerRecoveryNotice,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppPalette.sand, height: 1.4),
+          ),
+          const SizedBox(height: 16),
+        ],
         // Intention Badge
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

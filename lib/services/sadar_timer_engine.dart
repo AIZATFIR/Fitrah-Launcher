@@ -15,6 +15,9 @@ import '../providers/providers.dart';
 import '../providers/sadar_providers.dart';
 import 'notification_service.dart';
 
+const timerRecoveryNotice =
+    'Waktu sejak aplikasi terakhir berjalan belum dihitung. Lanjutkan untuk menghitung lagi.';
+
 class TimerState {
   final int habitId;
   final int? habitTargetSnapshot;
@@ -28,6 +31,7 @@ class TimerState {
   final String? restoreError;
   final bool isFloating;
   final bool isSavePending;
+  final bool recoveryUncertain;
 
   const TimerState({
     this.habitId = 0,
@@ -42,6 +46,7 @@ class TimerState {
     this.restoreError,
     this.isFloating = false,
     this.isSavePending = false,
+    this.recoveryUncertain = false,
   });
 
   bool get isRunning => status == TimerStateStatus.running;
@@ -135,13 +140,35 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
     if (saved.status == TimerStateStatus.running && saved.startedAt != null) {
       final runningSince = saved.runningSince ?? saved.startedAt!;
-      // Wall time is the only clock available across process death. A manual
-      // clock correction can make it negative, so never subtract focus time.
+      // Only a matching boot identity can prove elapsed time across restore.
       final sameBoot =
           _androidClockSnapshot != null &&
           saved.clockBootCount == _androidClockSnapshot!.bootCount &&
           saved.clockElapsedRealtimeMillis != null;
-      final elapsedSinceStart = sameBoot
+      final validSameBootSnapshot =
+          sameBoot &&
+          saved.clockElapsedRealtimeMillis! <=
+              _androidClockSnapshot!.elapsedRealtimeMillis;
+      if (!validSameBootSnapshot) {
+        final remaining = (saved.targetSeconds - _accumulatedSeconds).clamp(
+          0,
+          saved.targetSeconds,
+        );
+        state = TimerState(
+          habitId: saved.habitId,
+          habitTargetSnapshot: saved.habitTargetSnapshot,
+          habitName: saved.habitName,
+          sourceKind: sourceKind,
+          activityId: saved.activityId,
+          targetSeconds: saved.targetSeconds,
+          remainingSeconds: remaining,
+          actualDurationSeconds: _accumulatedSeconds,
+          status: TimerStateStatus.paused,
+          recoveryUncertain: true,
+        );
+        return;
+      }
+      final elapsedSinceStart = validSameBootSnapshot
           ? math.max(
               0,
               (_androidClockSnapshot!.elapsedRealtimeMillis -
@@ -532,6 +559,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       actualDurationSeconds: _accumulatedSeconds,
       status: TimerStateStatus.running,
       isFloating: state.isFloating,
+      recoveryUncertain: false,
     );
 
     try {
@@ -548,6 +576,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
   Future<void> extendBy(int seconds) async {
     if (state.restoreError != null) throw StateError(state.restoreError!);
+    if (state.recoveryUncertain) {
+      throw StateError('Lanjutkan sesi dulu sebelum menambah durasi.');
+    }
     if (!state.isActive || seconds <= 0) return;
     final previousState = state;
     state = TimerState(
@@ -561,6 +592,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       actualDurationSeconds: state.actualDurationSeconds,
       status: state.status,
       isFloating: state.isFloating,
+      recoveryUncertain: state.recoveryUncertain,
     );
     try {
       await _persistState();
@@ -733,8 +765,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _accumulatedSeconds + (_segmentClock?.elapsed.inSeconds ?? 0);
 
   Future<_AndroidClockSnapshot?> _readAndroidClockSnapshot() async {
-    if (kIsWeb ||
-        (_clockSnapshotReader == null && !Platform.isAndroid)) {
+    if (kIsWeb || (_clockSnapshotReader == null && !Platform.isAndroid)) {
       return null;
     }
     try {
@@ -815,6 +846,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         remainingSeconds: state.remainingSeconds,
         status: state.status,
         isFloating: true,
+        recoveryUncertain: state.recoveryUncertain,
       );
     } catch (e) {
       debugPrint('makeFloatingWindow error: $e');
@@ -844,6 +876,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         remainingSeconds: state.remainingSeconds,
         status: state.status,
         isFloating: false,
+        recoveryUncertain: state.recoveryUncertain,
       );
     } catch (e) {
       debugPrint('restoreNormalWindow error: $e');

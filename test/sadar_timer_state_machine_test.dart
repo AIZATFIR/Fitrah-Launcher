@@ -95,7 +95,7 @@ void main() {
       expect(await repo.getActiveTimerSession(), isNotNull);
     });
 
-    test('restores overdue YPT session as running overtime', () async {
+    test('restores a YPT session without a clock identity as paused', () async {
       engine.dispose();
       final startedAt = DateTime.now().subtract(const Duration(minutes: 3));
       await repo.saveTimerSession(
@@ -113,9 +113,9 @@ void main() {
 
       await engine.waitUntilRestored();
 
-      expect(engine.state.isRunning, isTrue);
-      expect(engine.state.isOverdue, isTrue);
-      expect(engine.state.actualDurationSeconds, greaterThanOrEqualTo(180));
+      expect(engine.state.isPaused, isTrue);
+      expect(engine.state.recoveryUncertain, isTrue);
+      expect(engine.state.actualDurationSeconds, 0);
       expect(
         (await repo.getActiveTimerSession())?.sourceKind,
         TimerSessionSourceKind.yptHabit,
@@ -123,7 +123,7 @@ void main() {
     });
 
     test(
-      'a backward wall-clock correction does not subtract restored time',
+      'a missing clock identity does not infer time from a backward wall clock',
       () async {
         engine.dispose();
         final futureCheckpoint = DateTime.now().add(const Duration(hours: 1));
@@ -142,9 +142,146 @@ void main() {
 
         await engine.waitUntilRestored();
 
-        expect(engine.state.isRunning, isTrue);
+        expect(engine.state.isPaused, isTrue);
+        expect(engine.state.recoveryUncertain, isTrue);
         expect(engine.state.remainingSeconds, 600);
         expect(engine.state.actualDurationSeconds, 0);
+      },
+    );
+
+    test(
+      'forward clock jump cannot credit or complete an uncertain session',
+      () async {
+        engine.dispose();
+        final date = '2026-11-14';
+        await repo.saveTimerSession(
+          TimerSession()
+            ..habitId = habit.id
+            ..habitName = habit.name
+            ..sourceKind = TimerSessionSourceKind.habit
+            ..targetSeconds = 60
+            ..startedAt = DateTime.now().subtract(const Duration(days: 2))
+            ..runningSince = DateTime.now().subtract(const Duration(days: 2))
+            ..attributionLocalDate = date
+            ..accumulatedDurationSeconds = 17
+            ..status = TimerStateStatus.running
+            ..updatedAt = DateTime.now(),
+        );
+        engine = SadarTimerEngine(repo);
+
+        await engine.waitUntilRestored();
+
+        expect(engine.state.isPaused, isTrue);
+        expect(engine.state.recoveryUncertain, isTrue);
+        expect(engine.state.actualDurationSeconds, 17);
+        expect(engine.state.remainingSeconds, 43);
+        expect(await repo.getEntriesForDateRange(date, date), isEmpty);
+        expect(
+          (await repo.getActiveTimerSession())?.status,
+          TimerStateStatus.running,
+        );
+
+        await engine.finishEarly();
+
+        expect(engine.state.actualDurationSeconds, 17);
+        expect(await repo.getEntriesForDateRange(date, date), hasLength(1));
+      },
+    );
+
+    test(
+      'continue starts a fresh segment and clears uncertainty after save',
+      () async {
+        engine.dispose();
+        await repo.saveTimerSession(
+          TimerSession()
+            ..habitId = habit.id
+            ..habitName = habit.name
+            ..sourceKind = TimerSessionSourceKind.habit
+            ..targetSeconds = 600
+            ..startedAt = DateTime.now().subtract(const Duration(hours: 4))
+            ..runningSince = DateTime.now().subtract(const Duration(hours: 4))
+            ..accumulatedDurationSeconds = 55
+            ..status = TimerStateStatus.running
+            ..updatedAt = DateTime.now(),
+        );
+        engine = SadarTimerEngine(repo);
+
+        await engine.waitUntilRestored();
+        expect(engine.state.recoveryUncertain, isTrue);
+
+        await engine.resume();
+
+        final persisted = await repo.getActiveTimerSession();
+        expect(engine.state.isRunning, isTrue);
+        expect(engine.state.recoveryUncertain, isFalse);
+        expect(engine.state.actualDurationSeconds, 55);
+        expect(persisted?.accumulatedDurationSeconds, 55);
+        expect(persisted?.runningSince, isNotNull);
+      },
+    );
+
+    test(
+      'failed Continue keeps the paused checkpoint and uncertainty notice',
+      () async {
+        final failingRepo = _FailOnSaveRepository(failOnSaveNumber: 2);
+        await failingRepo.saveTimerSession(
+          TimerSession()
+            ..habitId = habit.id
+            ..habitName = habit.name
+            ..sourceKind = TimerSessionSourceKind.habit
+            ..targetSeconds = 600
+            ..startedAt = DateTime.now().subtract(const Duration(hours: 1))
+            ..runningSince = DateTime.now().subtract(const Duration(hours: 1))
+            ..accumulatedDurationSeconds = 28
+            ..status = TimerStateStatus.running
+            ..updatedAt = DateTime.now(),
+        );
+        final failedContinueEngine = SadarTimerEngine(failingRepo);
+        addTearDown(failedContinueEngine.dispose);
+        await failedContinueEngine.waitUntilRestored();
+
+        await expectLater(
+          failedContinueEngine.resume(),
+          throwsA(isA<StateError>()),
+        );
+
+        expect(failedContinueEngine.state.isPaused, isTrue);
+        expect(failedContinueEngine.state.recoveryUncertain, isTrue);
+        expect(failedContinueEngine.state.actualDurationSeconds, 28);
+      },
+    );
+
+    test(
+      'uncertain paused session must be continued before target extension',
+      () async {
+        engine.dispose();
+        await repo.saveTimerSession(
+          TimerSession()
+            ..habitId = habit.id
+            ..habitName = habit.name
+            ..sourceKind = TimerSessionSourceKind.habit
+            ..targetSeconds = 600
+            ..startedAt = DateTime.now().subtract(const Duration(hours: 1))
+            ..runningSince = DateTime.now().subtract(const Duration(hours: 1))
+            ..accumulatedDurationSeconds = 28
+            ..status = TimerStateStatus.running
+            ..updatedAt = DateTime.now(),
+        );
+        engine = SadarTimerEngine(repo);
+
+        await engine.waitUntilRestored();
+        await expectLater(engine.extendBy(60), throwsA(isA<StateError>()));
+
+        expect(engine.state.isPaused, isTrue);
+        expect(engine.state.recoveryUncertain, isTrue);
+        expect(engine.state.actualDurationSeconds, 28);
+        expect(engine.state.targetSeconds, 600);
+
+        await engine.resume();
+        await engine.extendBy(60);
+        expect(engine.state.isRunning, isTrue);
+        expect(engine.state.recoveryUncertain, isFalse);
+        expect(engine.state.targetSeconds, 660);
       },
     );
 
@@ -175,8 +312,45 @@ void main() {
         await engine.waitUntilRestored();
 
         expect(engine.state.isRunning, isTrue);
+        expect(engine.state.recoveryUncertain, isFalse);
         expect(engine.state.remainingSeconds, 540);
         expect(engine.state.actualDurationSeconds, 60);
+      },
+    );
+
+    test(
+      'a mismatched Android boot identity restores the saved checkpoint',
+      () async {
+        engine.dispose();
+        await repo.saveTimerSession(
+          TimerSession()
+            ..habitId = habit.id
+            ..habitName = habit.name
+            ..sourceKind = TimerSessionSourceKind.habit
+            ..targetSeconds = 600
+            ..startedAt = DateTime.now().subtract(const Duration(hours: 2))
+            ..runningSince = DateTime.now().subtract(const Duration(hours: 2))
+            ..clockBootCount = 11
+            ..clockElapsedRealtimeMillis = 5000
+            ..accumulatedDurationSeconds = 71
+            ..status = TimerStateStatus.running
+            ..updatedAt = DateTime.now(),
+        );
+        engine = SadarTimerEngine(
+          repo,
+          null,
+          () async => {
+            'bootCount': 12,
+            'elapsedRealtimeMillis': 60 * 60 * 1000,
+          },
+        );
+
+        await engine.waitUntilRestored();
+
+        expect(engine.state.isPaused, isTrue);
+        expect(engine.state.recoveryUncertain, isTrue);
+        expect(engine.state.actualDurationSeconds, 71);
+        expect(engine.state.remainingSeconds, 529);
       },
     );
 

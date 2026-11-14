@@ -155,10 +155,25 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
   Future<void> _rescheduleTimer(int shiftMinutes) async {
     SystemSound.play(SystemSoundType.click);
     HapticFeedback.selectionClick();
-    await ref.read(timerEngineProvider.notifier).extendBy(shiftMinutes * 60);
+    try {
+      await ref.read(timerEngineProvider.notifier).extendBy(shiftMinutes * 60);
+    } on StateError catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Durasi timer belum tersimpan.')),
+        );
+      }
+    }
   }
 
   void _showRescheduleDialog() {
+    final recoveryUncertain = ref.read(timerEngineProvider).recoveryUncertain;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppPalette.card,
@@ -191,6 +206,13 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                 'Geser atau tambahkan durasi fokus saat ini:',
                 style: TextStyle(fontSize: 12, color: AppPalette.textDim),
               ),
+              if (recoveryUncertain) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  'Lanjutkan sesi dulu sebelum menambah durasi.',
+                  style: TextStyle(fontSize: 12, color: AppPalette.sand),
+                ),
+              ],
               const SizedBox(height: 16),
               Wrap(
                 spacing: 10,
@@ -204,10 +226,12 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                     ),
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('+15 Menit'),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _rescheduleTimer(15);
-                    },
+                    onPressed: recoveryUncertain
+                        ? null
+                        : () {
+                            Navigator.pop(ctx);
+                            _rescheduleTimer(15);
+                          },
                   ),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
@@ -217,10 +241,12 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                     ),
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('+30 Menit'),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _rescheduleTimer(30);
-                    },
+                    onPressed: recoveryUncertain
+                        ? null
+                        : () {
+                            Navigator.pop(ctx);
+                            _rescheduleTimer(30);
+                          },
                   ),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
@@ -230,10 +256,12 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                     ),
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('+60 Menit'),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _rescheduleTimer(60);
-                    },
+                    onPressed: recoveryUncertain
+                        ? null
+                        : () {
+                            Navigator.pop(ctx);
+                            _rescheduleTimer(60);
+                          },
                   ),
                 ],
               ),

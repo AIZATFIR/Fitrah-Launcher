@@ -738,6 +738,26 @@ void main() {
       expect(find.text('Lanjutkan sesi'), findsOneWidget);
     },
   );
+  testWidgets('uncertain restored session shows recovery notice on Home', (
+    tester,
+  ) async {
+    await SadarRepository.store(store).saveTimerSession(
+      TimerSession()
+        ..habitId = 7
+        ..habitName = 'Saved session'
+        ..sourceKind = TimerSessionSourceKind.habit
+        ..targetSeconds = 600
+        ..startedAt = now.subtract(const Duration(hours: 1))
+        ..runningSince = now.subtract(const Duration(hours: 1))
+        ..accumulatedDurationSeconds = 45
+        ..status = TimerStateStatus.running
+        ..updatedAt = now,
+    );
+    await show(tester);
+
+    expect(find.text(timerRecoveryNotice), findsOneWidget);
+    expect(find.text('Lanjutkan sesi'), findsOneWidget);
+  });
   testWidgets(
     'unknown legacy habit offers generic detail without invented sets',
     (tester) async {
