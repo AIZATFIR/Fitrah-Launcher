@@ -321,7 +321,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
             .read(notificationServiceProvider)
             .showNotification(
               id: widget.habit.id,
-              title: 'Waktu Selesai! 🎯',
+              title: 'Waktu selesai',
               body:
                   'Target "${widget.habit.name}" tercapai. Waktu ekstra tetap dihitung.',
             );
@@ -592,11 +592,11 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                 const SizedBox(height: 8),
                                 Text(
                                   timer.isCompleted && !timer.isSavePending
-                                      ? '🎉 Target Tercapai! Alhamdulillah'
+                                      ? 'Target tercapai. Alhamdulillah.'
                                       : (timer.isPaused
-                                            ? '⏸️ Sesi Dijeda'
+                                            ? 'Sesi dijeda'
                                             : (timer.isOverdue
-                                                  ? '🔥 Waktu Tambahan Ekstra Fokus'
+                                                  ? 'Waktu tambahan'
                                                   : 'Tetap fokus & sadar')),
                                   style: TextStyle(
                                     fontSize: 14,

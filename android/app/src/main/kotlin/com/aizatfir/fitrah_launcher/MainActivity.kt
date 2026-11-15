@@ -7,11 +7,17 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.WindowManager
+import android.view.Gravity
+import android.view.MotionEvent
+import android.widget.TextView
+import android.os.Handler
+import android.os.Looper
 import android.util.LruCache
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs
@@ -22,6 +28,22 @@ import java.io.ByteArrayOutputStream
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "fitrah_launcher/apps"
     private var homeChannel: MethodChannel? = null
+    private var screenTimeView: TextView? = null
+    private val screenTimeHandler = Handler(Looper.getMainLooper())
+    private var screenTimeEnabled = false
+    private var screenTimeTucked = false
+    private var screenTimeOnLeft = false
+    private var screenTimeLabel = ""
+    private val screenTimeRefresh = object : Runnable {
+        override fun run() {
+            if (!screenTimeEnabled || !Settings.canDrawOverlays(this@MainActivity)) {
+                removeScreenTimeCue()
+                return
+            }
+            refreshScreenTimeCue()
+            screenTimeHandler.postDelayed(this, 60_000L)
+        }
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -50,6 +72,164 @@ class MainActivity : FlutterActivity() {
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
             WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
         )
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (screenTimeEnabled) {
+            if (!Settings.canDrawOverlays(this)) {
+                removeScreenTimeCue()
+            } else {
+                refreshScreenTimeCue()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        screenTimeHandler.removeCallbacks(screenTimeRefresh)
+        removeScreenTimeCue()
+        super.onDestroy()
+    }
+
+    private fun hasUsageAccess(): Boolean = try {
+        val appOps = getSystemService(android.content.Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
+        } else {
+            appOps.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
+        }
+        mode == android.app.AppOpsManager.MODE_ALLOWED
+    } catch (_: Exception) { false }
+
+    private fun todayUsageMinutes(): Int? {
+        if (!hasUsageAccess()) return null
+        return try {
+            val calendar = java.util.Calendar.getInstance()
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+            calendar.set(java.util.Calendar.MINUTE, 0)
+            calendar.set(java.util.Calendar.SECOND, 0)
+            calendar.set(java.util.Calendar.MILLISECOND, 0)
+            val manager = getSystemService(android.content.Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+            val rows = manager.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, calendar.timeInMillis, System.currentTimeMillis())
+            if (rows.isNullOrEmpty()) return null
+            (rows.sumOf { it.totalTimeInForeground } / 60_000L).toInt()
+        } catch (_: Exception) { null }
+    }
+
+    private fun refreshScreenTimeCue() {
+        val view = screenTimeView ?: return
+        val minutes = todayUsageMinutes()
+        screenTimeLabel = if (minutes == null) "— mnt · Tujuan" else "${minutes} mnt · Tujuan"
+        if (!screenTimeTucked) view.text = screenTimeLabel
+        view.contentDescription = if (minutes == null) {
+            "Data waktu layar tidak tersedia. Ketuk untuk kembali ke tujuan."
+        } else {
+            "Waktu layar hari ini: $minutes menit. Ketuk untuk kembali ke tujuan."
+        }
+        view.alpha = if (minutes == null) 0.82f else 1f
+    }
+
+    private fun removeScreenTimeCue() {
+        screenTimeView?.let { view -> try { (getSystemService(WINDOW_SERVICE) as WindowManager).removeView(view) } catch (_: Exception) {} }
+        screenTimeView = null
+        screenTimeTucked = false
+    }
+
+    private fun syncScreenTimeCue(enabled: Boolean): Boolean {
+        screenTimeEnabled = enabled
+        screenTimeHandler.removeCallbacks(screenTimeRefresh)
+        if (!enabled || !Settings.canDrawOverlays(this) || !hasUsageAccess()) {
+            removeScreenTimeCue()
+            return false
+        }
+        if (screenTimeView == null) {
+            val view = TextView(this).apply {
+                textSize = 11f
+                setTextColor(0xFFF5EEE0.toInt())
+                gravity = Gravity.CENTER
+                isFocusable = true
+                setPadding(10, 6, 10, 6)
+                background = GradientDrawable().apply {
+                    setColor(0xEE23222B.toInt())
+                    cornerRadius = 28f
+                    setStroke(1, 0x88F0C987.toInt())
+                }
+                setOnClickListener {
+                    if (screenTimeTucked) {
+                        screenTimeTucked = false
+                        text = screenTimeLabel
+                        setPadding(14, 10, 14, 10)
+                        val restored = (layoutParams as WindowManager.LayoutParams).apply {
+                            width = WindowManager.LayoutParams.WRAP_CONTENT
+                            x = 0
+                        }
+                        try { (getSystemService(WINDOW_SERVICE) as WindowManager).updateViewLayout(this, restored) } catch (_: Exception) {}
+                        return@setOnClickListener
+                    }
+                    val intent = Intent(this@MainActivity, MainActivity::class.java).apply {
+                        action = Intent.ACTION_MAIN
+                        addCategory(Intent.CATEGORY_HOME)
+                        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    }
+                    startActivity(intent)
+                }
+            }
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                android.graphics.PixelFormat.TRANSLUCENT
+            ).apply { gravity = Gravity.TOP or Gravity.END; x = 8; y = 88 }
+            var startY = 0
+            var touchX = 0f
+            var touchY = 0f
+            var dragged = false
+            view.setOnTouchListener { _, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        startY = params.y
+                        touchX = event.rawX
+                        touchY = event.rawY
+                        dragged = false
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (kotlin.math.abs(event.rawX - touchX) > 12f || kotlin.math.abs(event.rawY - touchY) > 12f) dragged = true
+                        val screenWidth = resources.displayMetrics.widthPixels
+                        screenTimeOnLeft = event.rawX < screenWidth / 2f
+                        params.gravity = Gravity.TOP or if (screenTimeOnLeft) Gravity.START else Gravity.END
+                        params.x = if (screenTimeOnLeft) event.rawX.toInt() else (screenWidth - event.rawX).toInt()
+                        params.y = (startY + (event.rawY - touchY).toInt()).coerceAtLeast(0)
+                        try { (getSystemService(WINDOW_SERVICE) as WindowManager).updateViewLayout(view, params) } catch (_: Exception) {}
+                        true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        if (!dragged) {
+                            view.performClick()
+                        } else {
+                            screenTimeTucked = true
+                            view.text = if (screenTimeOnLeft) "‹" else "›"
+                            view.setPadding(0, 8, 0, 8)
+                            params.width = (resources.displayMetrics.density * 44).toInt()
+                            params.x = 8
+                            try { (getSystemService(WINDOW_SERVICE) as WindowManager).updateViewLayout(view, params) } catch (_: Exception) {}
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+            try {
+                (getSystemService(WINDOW_SERVICE) as WindowManager).addView(view, params)
+                screenTimeView = view
+            } catch (_: Exception) { return false }
+        }
+        refreshScreenTimeCue()
+        screenTimeHandler.postDelayed(screenTimeRefresh, 60_000L)
+        return screenTimeView != null
     }
 
     // In-memory icon cache to prevent frame drops during list scrolling (1/8 max heap)
@@ -396,17 +576,7 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "checkUsageStatsPermission" -> {
-                    try {
-                        val appOps = getSystemService(android.content.Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-                        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            appOps.unsafeCheckOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
-                        } else {
-                            appOps.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
-                        }
-                        result.success(mode == android.app.AppOpsManager.MODE_ALLOWED)
-                    } catch (e: Exception) {
-                        result.success(false)
-                    }
+                    result.success(hasUsageAccess())
                 }
                 "openUsageStatsSettings" -> {
                     try {
@@ -418,6 +588,22 @@ class MainActivity : FlutterActivity() {
                     } catch (e: Exception) {
                         result.error("ERROR_OPENING_USAGE_SETTINGS", e.message, null)
                     }
+                }
+                "checkOverlayPermission" -> result.success(Settings.canDrawOverlays(this))
+                "openOverlaySettings" -> {
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("ERROR_OPENING_OVERLAY_SETTINGS", e.message, null)
+                    }
+                }
+                "getTodayScreenTimeMinutes" -> result.success(todayUsageMinutes())
+                "syncScreenTimeCue" -> {
+                    result.success(syncScreenTimeCue(call.argument<Boolean>("enabled") ?: false))
                 }
                 "getForegroundApp" -> {
                     try {

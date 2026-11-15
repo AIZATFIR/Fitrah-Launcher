@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'drawer_preferences_controls.dart';
 import 'launcher_action_feedback.dart';
 import 'default_home_status_control.dart';
@@ -7,20 +8,154 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../models/habit.dart';
 import '../../../models/timer_session.dart';
+import '../../../core/theme.dart';
 import '../../sadar/widgets/sadar_ypt_focus_view.dart';
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
 import '../services/app_launcher_service.dart';
+import '../services/screen_time_service.dart';
 import 'launcher_customization_sheet.dart';
 
 class FitrahSettingsScreen extends ConsumerStatefulWidget {
   const FitrahSettingsScreen({super.key});
 
   @override
-  ConsumerState<FitrahSettingsScreen> createState() => _FitrahSettingsScreenState();
+  ConsumerState<FitrahSettingsScreen> createState() =>
+      _FitrahSettingsScreenState();
 }
 
-class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
+class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
+    with WidgetsBindingObserver {
+  final _screenTime = ScreenTimeService();
+  bool _usageGranted = false;
+  bool _overlayGranted = false;
+  bool _cueActive = false;
+  bool _cueWindowFailed = false;
+  Completer<void>? _settingsReturn;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshScreenTimePermissions();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (!(_settingsReturn?.isCompleted ?? true)) _settingsReturn?.complete();
+      _refreshScreenTimePermissions();
+    }
+  }
+
+  Future<void> _refreshScreenTimePermissions() async {
+    final usage = await _screenTime.hasUsageAccess();
+    final overlay = await _screenTime.hasOverlayAccess();
+    if (!mounted) return;
+    setState(() {
+      _usageGranted = usage;
+      _overlayGranted = overlay;
+    });
+    final settings = ref.read(launcherSettingsProvider);
+    final cueActive = await _screenTime.sync(
+      cueEnabled: await _screenTime.cueAvailable(
+        optedIn: settings.screenTimeCueEnabled,
+      ),
+    );
+    if (!mounted) return;
+    setState(() {
+      _cueActive = cueActive;
+      _cueWindowFailed =
+          settings.screenTimeCueEnabled && usage && overlay && !cueActive;
+    });
+  }
+
+  Future<bool> _explainAndOpen(String capability) async {
+    final isUsage = capability == 'Usage Access';
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$capability diperlukan'),
+        content: Text(
+          isUsage
+              ? 'Fitrah membaca total waktu layar hari ini dari Android. Data yang tidak tersedia akan ditandai, bukan dianggap nol.'
+              : 'Android meminta izin tampil di atas aplikasi lain agar cue kecil dan tombol Tujuan tetap terlihat. Sentuhan di luar cue tetap menuju aplikasi di bawahnya.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Nanti'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Buka Pengaturan'),
+          ),
+        ],
+      ),
+    );
+    if (open != true) return false;
+    final returned = Completer<void>();
+    _settingsReturn = returned;
+    bool opened;
+    if (isUsage) {
+      opened = await _screenTime.openUsageSettings();
+    } else {
+      opened = await _screenTime.openOverlaySettings();
+    }
+    if (!opened) {
+      _settingsReturn = null;
+      return false;
+    }
+    try {
+      await returned.future.timeout(const Duration(minutes: 5));
+    } on TimeoutException {
+      return false;
+    } finally {
+      if (identical(_settingsReturn, returned)) _settingsReturn = null;
+    }
+    if (!mounted) return false;
+    final granted = isUsage
+        ? await _screenTime.hasUsageAccess()
+        : await _screenTime.hasOverlayAccess();
+    setState(() {
+      if (isUsage) {
+        _usageGranted = granted;
+      } else {
+        _overlayGranted = granted;
+      }
+    });
+    return granted;
+  }
+
+  Future<void> _toggleCue(bool enabled) async {
+    final notifier = ref.read(launcherSettingsProvider.notifier);
+    if (!enabled) {
+      await notifier.setScreenTimeCueEnabled(false);
+      await _refreshScreenTimePermissions();
+      return;
+    }
+    if (!_usageGranted && !await _explainAndOpen('Usage Access')) return;
+    if (!_overlayGranted && !await _explainAndOpen('Izin overlay')) return;
+    if (!_usageGranted || !_overlayGranted) return;
+    await notifier.setScreenTimeCueEnabled(true);
+    await _refreshScreenTimePermissions();
+  }
+
+  Future<void> _toggleLimit(bool enabled) async {
+    if (enabled && !_usageGranted && !await _explainAndOpen('Usage Access')) {
+      return;
+    }
+    await ref
+        .read(launcherSettingsProvider.notifier)
+        .setGentleLimitEnabled(enabled);
+    await _refreshScreenTimePermissions();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,12 +163,16 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
     final notifier = ref.read(launcherSettingsProvider.notifier);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppPalette.bg,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppPalette.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: Colors.white,
+            size: 22,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -41,6 +180,8 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           children: [
+            _buildScreenTimeSection(settings),
+            const SizedBox(height: 20),
             // Top Description
             const Padding(
               padding: EdgeInsets.only(bottom: 28),
@@ -123,7 +264,11 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             _buildPlainTile(
               title: 'Home App Settings',
               onTap: () {
-                runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openHomeSettings());
+                runLauncherAction(
+                  context,
+                  ref.read(appLauncherServiceProvider),
+                  (service) => service.openHomeSettings(),
+                );
               },
             ),
             const DefaultHomeStatusControl(),
@@ -150,6 +295,163 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
       ),
     );
   }
+
+  Widget _buildScreenTimeSection(LauncherSettings settings) {
+    final android = _screenTime.supported;
+    final usageLabel = !android
+        ? 'Android saja — tidak tersedia di platform ini'
+        : _usageGranted
+        ? 'Usage Access aktif'
+        : 'Usage Access belum diizinkan';
+    final overlayLabel = !android
+        ? 'Android saja — tidak tersedia di platform ini'
+        : _overlayGranted
+        ? 'Overlay aktif'
+        : 'Overlay belum diizinkan';
+    return Card(
+      color: AppPalette.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppPalette.stroke),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Waktu layar',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppPalette.bookpaperText,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Cue kecil dan batas harian yang lembut. Keduanya mati secara default.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppPalette.textDim),
+            ),
+            const SizedBox(height: 10),
+            _permissionStatus(usageLabel),
+            _permissionStatus(overlayLabel),
+            _permissionStatus(
+              !android
+                  ? 'Cue Android saja — tidak tersedia di platform ini'
+                  : _cueActive
+                  ? 'Cue aktif'
+                  : _cueWindowFailed
+                  ? 'Android belum dapat menampilkan cue'
+                  : 'Cue tidak aktif',
+            ),
+            SwitchListTile.adaptive(
+              key: const ValueKey('screen-time-cue-switch'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Tampilkan cue waktu layar'),
+              subtitle: const Text(
+                'Menampilkan menit hari ini dan aksi Tujuan.',
+              ),
+              value: settings.screenTimeCueEnabled,
+              onChanged: android ? _toggleCue : null,
+            ),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Batas harian lembut'),
+              subtitle: const Text(
+                'Jeda singkat saat membuka aplikasi dari drawer Fitrah.',
+              ),
+              value: settings.gentleLimitEnabled,
+              onChanged: android ? _toggleLimit : null,
+            ),
+            if (android) ...[
+              Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                children: [
+                  _numberSetting(
+                    'Batas',
+                    settings.dailyLimitMinutes,
+                    'menit',
+                    const [30, 60, 90, 120, 180, 240],
+                    (value) => ref
+                        .read(launcherSettingsProvider.notifier)
+                        .setScreenTimeThreshold(limitMinutes: value),
+                  ),
+                  _numberSetting(
+                    'Jeda',
+                    settings.gentleWaitSeconds,
+                    'detik',
+                    const [10, 20, 30, 60],
+                    (value) => ref
+                        .read(launcherSettingsProvider.notifier)
+                        .setScreenTimeThreshold(waitSeconds: value),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Aplikasi sistem dan jalur darurat tetap dapat digunakan. Statistik bisa tidak tersedia bila akses dicabut.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppPalette.textDim),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _permissionStatus(String text) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      children: [
+        const Icon(Icons.circle, size: 7, color: AppPalette.accent),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(color: AppPalette.textDim, fontSize: 12),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _numberSetting(
+    String label,
+    int value,
+    String unit,
+    List<int> choices,
+    ValueChanged<int> onChanged,
+  ) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text('$label ', style: const TextStyle(color: AppPalette.text)),
+      Flexible(
+        child: DropdownButton<int>(
+          isExpanded: true,
+          value: choices.contains(value) ? value : null,
+          hint: Text(
+            '$value',
+            style: const TextStyle(color: AppPalette.bookpaperText),
+          ),
+          dropdownColor: AppPalette.cardHigh,
+          items: choices
+              .map(
+                (choice) => DropdownMenuItem(
+                  value: choice,
+                  child: Text('$choice $unit'),
+                ),
+              )
+              .toList(),
+          onChanged: (choice) {
+            if (choice != null) onChanged(choice);
+          },
+        ),
+      ),
+    ],
+  );
 
   Widget _buildDropdownTile({
     required String title,
@@ -182,10 +484,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
     );
   }
 
-  Widget _buildPlainTile({
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildPlainTile({required String title, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -220,7 +519,9 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                 title: 'Support via Email',
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final uri = Uri.parse('mailto:aizatfir@gmail.com?subject=Fitrah%20Launcher%20Support');
+                  final uri = Uri.parse(
+                    'mailto:aizatfir@gmail.com?subject=Fitrah%20Launcher%20Support',
+                  );
                   if (await canLaunchUrl(uri)) launchUrl(uri);
                 },
               ),
@@ -228,7 +529,9 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                 title: 'GitHub Repository',
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final uri = Uri.parse('https://github.com/AIZATFIR/Fitrah-Launcher');
+                  final uri = Uri.parse(
+                    'https://github.com/AIZATFIR/Fitrah-Launcher',
+                  );
                   if (await canLaunchUrl(uri)) launchUrl(uri);
                 },
               ),
@@ -249,8 +552,6 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
       ),
     );
   }
-
-
 
   void _showHomeCustomizationDialog(BuildContext context) {
     showModalBottomSheet(
@@ -418,6 +719,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
       ),
     );
   }
+
   void _showAppDrawerSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -435,7 +737,11 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             children: [
               Text(
                 'Pengaturan App Drawer',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
               SizedBox(height: 16),
               DrawerPreferencesControls(),
@@ -443,8 +749,14 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.swipe_left_rounded, color: Colors.white70),
-                title: Text('Cara Akses App Drawer', style: TextStyle(color: Colors.white, fontSize: 14)),
-                subtitle: Text('Geser layar utama ke kiri untuk membuka daftar aplikasi. Gunakan pencarian untuk menemukan aplikasi.', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                title: Text(
+                  'Cara Akses App Drawer',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                subtitle: Text(
+                  'Geser layar utama ke kiri untuk membuka daftar aplikasi. Gunakan pencarian untuk menemukan aplikasi.',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
               ),
             ],
           ),
@@ -469,33 +781,61 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.notifications_off_outlined, color: Colors.white, size: 20),
+                  Icon(
+                    Icons.notifications_off_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   SizedBox(width: 10),
                   Text(
                     'Akses Pengaturan Notifikasi',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               const Text(
                 'Fitrah Launcher belum menyaring notifikasi. Tombol ini hanya membuka pengaturan akses notifikasi Android; aktifkan akses hanya jika Anda memahami izinnya.',
-                style: TextStyle(fontSize: 13, color: Colors.white70, height: 1.4),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white70,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.security_rounded, size: 18, color: Colors.black),
-                  label: const Text('Buka Pengaturan Akses Notifikasi', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  icon: const Icon(
+                    Icons.security_rounded,
+                    size: 18,
+                    color: Colors.black,
+                  ),
+                  label: const Text(
+                    'Buka Pengaturan Akses Notifikasi',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   onPressed: () {
                     Navigator.pop(ctx);
-                    runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openNotificationListenerSettings());
+                    runLauncherAction(
+                      context,
+                      ref.read(appLauncherServiceProvider),
+                      (service) => service.openNotificationListenerSettings(),
+                    );
                   },
                 ),
               ),
@@ -526,7 +866,11 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                   SizedBox(width: 10),
                   Text(
                     'Mulai Sesi Fokus Sadar (YPT)',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -538,23 +882,61 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               const SizedBox(height: 16),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.flash_on_rounded, color: Colors.amber),
-                title: const Text('25 Menit (Pomodoro Sprint)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                subtitle: const Text('Fokus singkat terarah', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                onTap: () => _launchFocusSession(context, 25, 'Pomodoro Sprint'),
+                leading: const Icon(
+                  Icons.flash_on_rounded,
+                  color: Colors.amber,
+                ),
+                title: const Text(
+                  '25 Menit (Pomodoro Sprint)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Fokus singkat terarah',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                onTap: () =>
+                    _launchFocusSession(context, 25, 'Pomodoro Sprint'),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.psychology_rounded, color: Color(0xFF38BDF8)),
-                title: const Text('50 Menit (Deep Work)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                subtitle: const Text('Ideal untuk belajar / ngoding', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                onTap: () => _launchFocusSession(context, 50, 'Deep Work Session'),
+                leading: const Icon(
+                  Icons.psychology_rounded,
+                  color: Color(0xFF38BDF8),
+                ),
+                title: const Text(
+                  '50 Menit (Deep Work)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Ideal untuk belajar / ngoding',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                onTap: () =>
+                    _launchFocusSession(context, 50, 'Deep Work Session'),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.all_inclusive_rounded, color: Color(0xFF34D399)),
-                title: const Text('90 Menit (Flow State)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                subtitle: const Text('Siklus ritme ultradian optimal', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                leading: const Icon(
+                  Icons.all_inclusive_rounded,
+                  color: Color(0xFF34D399),
+                ),
+                title: const Text(
+                  '90 Menit (Flow State)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Siklus ritme ultradian optimal',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
                 onTap: () => _launchFocusSession(context, 90, 'Flow State'),
               ),
             ],
@@ -604,7 +986,11 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                   SizedBox(width: 10),
                   Text(
                     'Panduan Gestur Launcher',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -662,7 +1048,11 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -679,7 +1069,9 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
   void _showFontPicker(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Font antarmuka saat ini Inter. Pilihan font belum tersedia.'),
+        content: Text(
+          'Font antarmuka saat ini Inter. Pilihan font belum tersedia.',
+        ),
       ),
     );
   }
@@ -704,12 +1096,19 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
             children: [
               const Text(
                 'Pilih Tema & Warna Aksen',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
                 'Ubah suasana visual seluruh launcher',
-                style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.5)),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.5),
+                ),
               ),
               const SizedBox(height: 18),
               _buildPaletteOption(
@@ -738,9 +1137,9 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
               ),
               _buildPaletteOption(
                 ctx,
-                title: 'Warm Bookpaper (Amber Obsidian)',
+                title: 'Bookpaper',
                 key: 'full_book',
-                color: const Color(0xFFE2BE82),
+                color: AppPalette.accent,
                 current: settings.themePalette,
                 notifier: notifier,
               ),
@@ -797,8 +1196,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen> {
                 ),
               ),
             ),
-            if (isSelected)
-              Icon(Icons.check_rounded, color: color, size: 20),
+            if (isSelected) Icon(Icons.check_rounded, color: color, size: 20),
           ],
         ),
       ),

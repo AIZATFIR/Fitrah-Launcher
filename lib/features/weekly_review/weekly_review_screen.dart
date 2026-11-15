@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
+import '../../widgets/activity_icon.dart';
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../providers/providers.dart';
@@ -11,8 +12,7 @@ class WeeklyReviewScreen extends ConsumerStatefulWidget {
   const WeeklyReviewScreen({super.key});
 
   @override
-  ConsumerState<WeeklyReviewScreen> createState() =>
-      _WeeklyReviewScreenState();
+  ConsumerState<WeeklyReviewScreen> createState() => _WeeklyReviewScreenState();
 }
 
 class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
@@ -43,7 +43,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     final async = ref.watch(weekActivitiesProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Weekly Review'),
+        title: const Text('Tinjauan Mingguan'),
         actions: [
           IconButton(
             tooltip: 'Salin Ringkasan Minggu Ini',
@@ -53,25 +53,30 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                 : () {
                     final activities = async.valueOrNull!;
                     final stats = _computeStats(activities);
-                    final rate = stats.total > 0 ? (stats.done / stats.total * 100).toStringAsFixed(0) : '0';
-                    final summary = '''📊 FOCUS CLOCK - RINGKASAN MINGGU INI
+                    final rate = stats.total > 0
+                        ? (stats.done / stats.total * 100).toStringAsFixed(0)
+                        : '0';
+                    final summary =
+                        '''FOCUS CLOCK - RINGKASAN MINGGU INI
 • Aktivitas Selesai: ${stats.done}/${stats.total} ($rate%)
 • Waktu Deep Work: ${stats.deepWorkMinutes ~/ 60}j ${stats.deepWorkMinutes % 60}m
 • Tugas Penting: ${stats.importantDone}/${stats.importantTotal}''';
-                    
+
                     Clipboard.setData(ClipboardData(text: summary));
                     HapticFeedback.lightImpact();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('✅ Ringkasan mingguan berhasil disalin ke clipboard!'),
+                        content: Text(
+                          'Ringkasan minggu disalin.',
+                        ),
                         duration: Duration(seconds: 2),
                       ),
                     );
                   },
           ),
           IconButton(
-            tooltip: 'AI Consultation',
-            icon: const Text('✨', style: TextStyle(fontSize: 18)),
+            tooltip: 'Analisis minggu ini',
+            icon: const Icon(Icons.insights_outlined, size: 20),
             onPressed: async.valueOrNull == null || _aiLoading
                 ? null
                 : () => _requestAiReview(async.valueOrNull!),
@@ -127,15 +132,16 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
     final total = activities.length;
     final done = activities.where((a) => a.isCompleted).length;
     final deepWorkMinutes = activities
-        .where((a) =>
-            a.isCompleted &&
-            (a.title.contains('Deep Work') || a.title.contains('🎯')))
+        .where(
+          (a) =>
+              a.isCompleted &&
+              (a.title.contains('Deep Work') || a.title.contains('🎯')),
+        )
         .fold<int>(0, (sum, a) => sum + (a.endMinute - a.startMinute));
     final importantDone = activities
         .where((a) => a.importance >= 1 && a.isCompleted)
         .length;
-    final importantTotal =
-        activities.where((a) => a.importance >= 1).length;
+    final importantTotal = activities.where((a) => a.importance >= 1).length;
 
     return _WeekStats(
       byDay: byDay,
@@ -148,16 +154,18 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   }
 
   String _buildReviewPrompt(_WeekStats s, List<Activity> activities) {
-    final rate =
-        s.total > 0 ? (s.done / s.total * 100).toStringAsFixed(0) : '0';
+    final rate = s.total > 0
+        ? (s.done / s.total * 100).toStringAsFixed(0)
+        : '0';
     final dayLines = s.byDay
-        .map((d) =>
-            '  ${_dayName(d.day)}: ${d.done}/${d.total} completed')
+        .map((d) => '  ${_dayName(d.day)}: ${d.done}/${d.total} completed')
         .join('\n');
     final titles = activities
         .take(20)
-        .map((a) =>
-            '  - [${a.isCompleted ? "✓" : " "}] ${a.title} (${a.importance >= 1 ? "important" : "low"})')
+        .map(
+          (a) =>
+              '  - [${a.isCompleted ? "✓" : " "}] ${a.title} (${a.importance >= 1 ? "important" : "low"})',
+        )
         .join('\n');
 
     return '''Weekly review analysis. Respond in the same language I usually use.
@@ -215,8 +223,7 @@ class _Body extends StatelessWidget {
         // Week label
         Text(
           'Week of ${monday.day}/${monday.month}',
-          style: const TextStyle(
-              fontSize: 13, color: AppPalette.textDim),
+          style: const TextStyle(fontSize: 13, color: AppPalette.textDim),
         ),
         const SizedBox(height: 12),
 
@@ -227,8 +234,9 @@ class _Body extends StatelessWidget {
         // Day bars
         ...List.generate(7, (i) {
           final day = monday.add(Duration(days: i));
-          final dayActs =
-              activities.where((a) => dateOnly(a.date) == day).toList();
+          final dayActs = activities
+              .where((a) => dateOnly(a.date) == day)
+              .toList();
           final dayDone = dayActs.where((a) => a.isCompleted).length;
           final dayTotal = dayActs.length;
           final isToday = day == today;
@@ -254,9 +262,10 @@ class _Body extends StatelessWidget {
               children: [
                 CircularProgressIndicator(color: AppPalette.accent),
                 SizedBox(height: 10),
-                Text('AI analyzing your week…',
-                    style: TextStyle(
-                        color: AppPalette.textDim, fontSize: 13)),
+                Text(
+                  'Menyusun tinjauan minggu…',
+                  style: TextStyle(color: AppPalette.textDim, fontSize: 13),
+                ),
               ],
             ),
           )
@@ -266,11 +275,17 @@ class _Body extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                const Text('✨', style: TextStyle(fontSize: 32)),
+                const Icon(
+                  Icons.rate_review_outlined,
+                  size: 30,
+                  color: AppPalette.textDim,
+                ),
                 const SizedBox(height: 8),
-                const Text('Tap ✨ above for AI review',
-                    style: TextStyle(
-                        color: AppPalette.textDim, fontSize: 13)),
+                const Text(
+                  'Pilih Analisis AI untuk melihat tinjauan minggu ini.',
+                  style: TextStyle(color: AppPalette.textDim, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           ),
@@ -282,8 +297,11 @@ class _Body extends StatelessWidget {
 // ── Completion ring ───────────────────────────────────────────────────────────
 
 class _CompletionRing extends StatelessWidget {
-  const _CompletionRing(
-      {required this.rate, required this.done, required this.total});
+  const _CompletionRing({
+    required this.rate,
+    required this.done,
+    required this.total,
+  });
   final double rate;
   final int done;
   final int total;
@@ -304,8 +322,8 @@ class _CompletionRing extends StatelessWidget {
               color: rate >= 0.8
                   ? Colors.greenAccent.shade400
                   : rate >= 0.5
-                      ? AppPalette.accent
-                      : AppPalette.danger,
+                  ? AppPalette.accent
+                  : AppPalette.danger,
             ),
             Column(
               mainAxisSize: MainAxisSize.min,
@@ -313,12 +331,16 @@ class _CompletionRing extends StatelessWidget {
                 Text(
                   '${(rate * 100).round()}%',
                   style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.w700),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 Text(
                   '$done/$total',
                   style: const TextStyle(
-                      fontSize: 12, color: AppPalette.textDim),
+                    fontSize: 12,
+                    color: AppPalette.textDim,
+                  ),
                 ),
               ],
             ),
@@ -358,8 +380,7 @@ class _DayBar extends StatelessWidget {
               _days[day.weekday - 1],
               style: TextStyle(
                 fontSize: 12,
-                fontWeight:
-                    isToday ? FontWeight.w700 : FontWeight.w400,
+                fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
                 color: isToday ? AppPalette.accent : AppPalette.textDim,
               ),
             ),
@@ -375,10 +396,10 @@ class _DayBar extends StatelessWidget {
                 color: total == 0
                     ? AppPalette.stroke
                     : rate >= 0.8
-                        ? Colors.greenAccent.shade400
-                        : rate >= 0.5
-                            ? AppPalette.accent
-                            : AppPalette.danger,
+                    ? Colors.greenAccent.shade400
+                    : rate >= 0.5
+                    ? AppPalette.accent
+                    : AppPalette.danger,
               ),
             ),
           ),
@@ -387,8 +408,7 @@ class _DayBar extends StatelessWidget {
             width: 40,
             child: Text(
               total == 0 ? '—' : '$done/$total',
-              style: const TextStyle(
-                  fontSize: 11, color: AppPalette.textDim),
+              style: const TextStyle(fontSize: 11, color: AppPalette.textDim),
               textAlign: TextAlign.right,
             ),
           ),
@@ -407,14 +427,16 @@ class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final deepWork = activities
-        .where((a) =>
-            a.isCompleted &&
-            (a.title.contains('Deep Work') || a.title.contains('🎯')))
+        .where(
+          (a) =>
+              a.isCompleted &&
+              (a.title.contains('Deep Work') || a.title.contains('🎯')),
+        )
         .fold<int>(0, (s, a) => s + (a.endMinute - a.startMinute));
-    final importantDone =
-        activities.where((a) => a.importance >= 1 && a.isCompleted).length;
-    final importantTotal =
-        activities.where((a) => a.importance >= 1).length;
+    final importantDone = activities
+        .where((a) => a.importance >= 1 && a.isCompleted)
+        .length;
+    final importantTotal = activities.where((a) => a.importance >= 1).length;
 
     return Row(
       children: [
@@ -435,8 +457,11 @@ class _StatsRow extends StatelessWidget {
 }
 
 class _StatChip extends StatelessWidget {
-  const _StatChip(
-      {required this.icon, required this.label, required this.value});
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
   final String icon;
   final String label;
   final String value;
@@ -454,13 +479,28 @@ class _StatChip extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$icon $label',
-                style: const TextStyle(
-                    fontSize: 11, color: AppPalette.textDim)),
+            Row(
+              children: [
+                ActivityIcon(
+                  iconKey: icon,
+                  size: 14,
+                  color: AppPalette.textDim,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppPalette.textDim,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700)),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
           ],
         ),
       ),
@@ -481,22 +521,34 @@ class _AiReviewCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppPalette.accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: AppPalette.accent.withValues(alpha: 0.3)),
+        border: Border.all(color: AppPalette.accent.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            const Text('✨ ', style: TextStyle(fontSize: 16)),
-            const Text('AI Weekly Review',
-                style: TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w600)),
-          ]),
+          Row(
+            children: [
+              const Icon(
+                Icons.insights_outlined,
+                size: 18,
+                color: AppPalette.accent,
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'Analisis mingguan',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
-          Text(review,
-              style: const TextStyle(
-                  fontSize: 13, height: 1.55, color: AppPalette.text)),
+          Text(
+            review,
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.55,
+              color: AppPalette.text,
+            ),
+          ),
         ],
       ),
     );
@@ -523,8 +575,7 @@ class _WeekStats {
 }
 
 class _DayStat {
-  const _DayStat(
-      {required this.day, required this.total, required this.done});
+  const _DayStat({required this.day, required this.total, required this.done});
   final DateTime day;
   final int total;
   final int done;

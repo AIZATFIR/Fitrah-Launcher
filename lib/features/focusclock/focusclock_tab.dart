@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 
 import '../../core/theme.dart';
+import '../../widgets/activity_icon.dart';
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../models/preset.dart';
@@ -42,8 +43,9 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _focusNode.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _focusNode.requestFocus(),
+    );
   }
 
   @override
@@ -86,8 +88,10 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
             if (presets.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('No presets yet.',
-                    style: TextStyle(color: AppPalette.textDim)),
+                child: Text(
+                  'No presets yet.',
+                  style: TextStyle(color: AppPalette.textDim),
+                ),
               )
             else
               Wrap(
@@ -97,18 +101,21 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
                   final idx = entry.key;
                   final p = entry.value;
                   final color = Color(p.colorValue);
-                  final hasIcon =
-                      p.iconKey != null && p.iconKey!.isNotEmpty;
+                  final hasIcon = p.iconKey != null && p.iconKey!.isNotEmpty;
                   return GestureDetector(
                     onTap: () => Navigator.pop(context, p),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: color.withValues(alpha: 0.5), width: 1.5),
+                          color: color.withValues(alpha: 0.5),
+                          width: 1.5,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -127,28 +134,33 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
                               child: Text(
                                 '${idx + 1}',
                                 style: const TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           if (hasIcon) ...[
-                            Text(p.iconKey!,
-                                style: const TextStyle(fontSize: 18)),
+                            ActivityIcon(iconKey: p.iconKey, color: color),
                             const SizedBox(width: 8),
                           ] else ...[
                             Container(
                               width: 12,
                               height: 12,
                               decoration: BoxDecoration(
-                                  color: color, shape: BoxShape.circle),
+                                color: color,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                             const SizedBox(width: 8),
                           ],
-                          Text(p.name,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14)),
+                          Text(
+                            p.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -163,10 +175,16 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
                   style: FilledButton.styleFrom(
                     backgroundColor: AppPalette.accent.withValues(alpha: 0.15),
                     foregroundColor: AppPalette.accent,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                   ),
                   icon: const Icon(Icons.arrow_forward_rounded, size: 24),
-                  label: const Text('Custom Activity', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  label: const Text(
+                    'Custom Activity',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
                   onPressed: () => Navigator.pop(context, 'custom'),
                 ),
               ],
@@ -193,7 +211,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   final bool _isExiting = false;
   int? _dragClickMinute;
   int _dragValue = 0;
-  
+
   late final AnimationController _revealCtrl;
   late final AnimationController _pulseCtrl;
   late final AnimationController _startupCtrl;
@@ -211,15 +229,25 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   void initState() {
     super.initState();
     _revealCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
     _pulseCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 2000));
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
     _startupCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1400));
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
     _aimLockCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _exitCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 850));
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    );
 
     _hoverMinuteNotifier = ValueNotifier<int?>(null);
     _dragStartNotifier = ValueNotifier<int?>(null);
@@ -245,7 +273,13 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
   double get _grow => clockGrowFactor(1.0, ref.read(planningModeProvider));
 
-  bool _hasConflict(int start, int end, List<Activity> activities, {int? excludeId, required bool is24h}) {
+  bool _hasConflict(
+    int start,
+    int end,
+    List<Activity> activities, {
+    int? excludeId,
+    required bool is24h,
+  }) {
     for (final a in activities) {
       if (excludeId != null && a.id == excludeId) continue;
       final aStart = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24h);
@@ -272,16 +306,20 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     return false;
   }
 
-
-
-  ({int start, int end})? _getFreeInterval(int hoverMin, int slotStart, int slotEnd, List<Activity> activities, {required bool is24h}) {
+  ({int start, int end})? _getFreeInterval(
+    int hoverMin,
+    int slotStart,
+    int slotEnd,
+    List<Activity> activities, {
+    required bool is24h,
+  }) {
     List<({int start, int end})> freeIntervals = [
-      (start: slotStart, end: slotEnd)
+      (start: slotStart, end: slotEnd),
     ];
     for (final a in activities) {
       final aStart = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24h);
       final aEnd = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24h);
-      
+
       final nextFree = <({int start, int end})>[];
       for (final f in freeIntervals) {
         if (aStart >= f.end || aEnd <= f.start) {
@@ -297,7 +335,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       }
       freeIntervals = nextFree;
     }
-    
+
     for (final f in freeIntervals) {
       if (hoverMin >= f.start && hoverMin < f.end) {
         return f;
@@ -308,17 +346,39 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
   @override
   Widget build(BuildContext context) {
-    final is24hDial = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24hDial ?? false));
-    final is24hTime = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false));
-    final showCurrentTime = ref.watch(settingsProvider.select((s) => s.valueOrNull?.showCurrentTime ?? true));
-    final currentTimeFormat = ref.watch(settingsProvider.select((s) => s.valueOrNull?.currentTimeFormat ?? 'short'));
-    final floatTimeText = ref.watch(settingsProvider.select((s) => s.valueOrNull?.floatTimeText ?? false));
-    final glowStyle = ref.watch(settingsProvider.select((s) => s.valueOrNull?.glowStyle ?? 'default'));
+    final is24hDial = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.is24hDial ?? false),
+    );
+    final is24hTime = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false),
+    );
+    final showCurrentTime = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.showCurrentTime ?? true),
+    );
+    final currentTimeFormat = ref.watch(
+      settingsProvider.select(
+        (s) => s.valueOrNull?.currentTimeFormat ?? 'short',
+      ),
+    );
+    final floatTimeText = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.floatTimeText ?? false),
+    );
+    final glowStyle = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.glowStyle ?? 'default'),
+    );
     final is24h = is24hDial;
-    final clockHandsMode = ref.watch(settingsProvider.select((s) => s.valueOrNull?.clockHandsMode ?? 1));
-    final clockFaceTheme = ref.watch(settingsProvider.select((s) => s.valueOrNull?.clockFaceTheme ?? 1));
-    final activitiesAsync = ref.watch(is24hDial ? activitiesByDateProvider : activitiesByHalfProvider);
-    final tasks = ref.watch(is24hDial ? tasksByDateProvider : tasksByHalfProvider);
+    final clockHandsMode = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.clockHandsMode ?? 1),
+    );
+    final clockFaceTheme = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.clockFaceTheme ?? 1),
+    );
+    final activitiesAsync = ref.watch(
+      is24hDial ? activitiesByDateProvider : activitiesByHalfProvider,
+    );
+    final tasks = ref.watch(
+      is24hDial ? tasksByDateProvider : tasksByHalfProvider,
+    );
     final half = ref.watch(ampmHalfProvider);
     final nowAsync = ref.watch(currentTimeProvider);
     final now = nowAsync.valueOrNull ?? DateTime.now();
@@ -346,10 +406,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       }
     });
 
-    final m = is24h 
+    final m = is24h
         ? (now.hour * 60 + now.minute)
         : ((now.hour % 12) * 60 + now.minute);
-        
+
     final hasCurrent = activities.any((a) {
       final start = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24h);
       final end = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24h);
@@ -377,50 +437,80 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
           ),
         );
       },
-      child: LayoutBuilder(builder: (context, constraints) {
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: LayoutBuilder(
-                    builder: (context, c) => Stack(
-                      children: [
-                        Positioned.fill(
-                          child: DragTarget<Preset>(
-                            onAcceptWithDetails: (details) =>
-                                _onPresetDropped(details.data),
-                            builder: (ctx, candidate, rejected) {
-                              return MouseRegion(
-                                onHover: (e) {
-                                  final centered = _toCenter(e.localPosition, c.biggest);
-                                  final rDist = centered.distance;
-                                  final r = c.biggest.shortestSide / 2 * _grow;
-                                  final outer = r * 0.95 * 1.15;
-                                  
-                                  if (rDist <= outer) {
-                                    _revealCtrl.forward();
-                                    final newMinute = offsetToMinute(centered, is24h: is24h);
-                                    if (_hoverMinuteNotifier.value != newMinute) {
-                                      _hoverMinuteNotifier.value = newMinute;
-                                    }
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: LayoutBuilder(
+                      builder: (context, c) => Stack(
+                        children: [
+                          Positioned.fill(
+                            child: DragTarget<Preset>(
+                              onAcceptWithDetails: (details) =>
+                                  _onPresetDropped(details.data),
+                              builder: (ctx, candidate, rejected) {
+                                return MouseRegion(
+                                  onHover: (e) {
+                                    final centered = _toCenter(
+                                      e.localPosition,
+                                      c.biggest,
+                                    );
+                                    final rDist = centered.distance;
+                                    final r =
+                                        c.biggest.shortestSide / 2 * _grow;
+                                    final outer = r * 0.95 * 1.15;
 
-                                    if (isInstant) {
-                                      final interval = ref.read(instantIntervalProvider);
-                                      final slotStart = (newMinute ~/ interval) * interval;
-                                      final slotEnd = slotStart + interval;
-                                      
-                                      final freeSeg = _getFreeInterval(newMinute, slotStart, slotEnd, activities, is24h: is24h);
-                                      if (freeSeg != null) {
-                                        _dragStartNotifier.value = freeSeg.start;
-                                        _dragEndNotifier.value = freeSeg.end;
-                                      } else {
+                                    if (rDist <= outer) {
+                                      _revealCtrl.forward();
+                                      final newMinute = offsetToMinute(
+                                        centered,
+                                        is24h: is24h,
+                                      );
+                                      if (_hoverMinuteNotifier.value !=
+                                          newMinute) {
+                                        _hoverMinuteNotifier.value = newMinute;
+                                      }
+
+                                      if (isInstant) {
+                                        final interval = ref.read(
+                                          instantIntervalProvider,
+                                        );
+                                        final slotStart =
+                                            (newMinute ~/ interval) * interval;
+                                        final slotEnd = slotStart + interval;
+
+                                        final freeSeg = _getFreeInterval(
+                                          newMinute,
+                                          slotStart,
+                                          slotEnd,
+                                          activities,
+                                          is24h: is24h,
+                                        );
+                                        if (freeSeg != null) {
+                                          _dragStartNotifier.value =
+                                              freeSeg.start;
+                                          _dragEndNotifier.value = freeSeg.end;
+                                        } else {
+                                          _dragStartNotifier.value = null;
+                                          _dragEndNotifier.value = null;
+                                        }
+                                      }
+                                    } else {
+                                      _revealCtrl.reverse();
+                                      if (_hoverMinuteNotifier.value != null) {
+                                        _hoverMinuteNotifier.value = null;
+                                      }
+                                      if (isInstant) {
                                         _dragStartNotifier.value = null;
                                         _dragEndNotifier.value = null;
                                       }
                                     }
-                                  } else {
+                                  },
+                                  onExit: (_) {
                                     _revealCtrl.reverse();
                                     if (_hoverMinuteNotifier.value != null) {
                                       _hoverMinuteNotifier.value = null;
@@ -429,368 +519,545 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                       _dragStartNotifier.value = null;
                                       _dragEndNotifier.value = null;
                                     }
-                                  }
-                                },
-                                onExit: (_) {
-                                  _revealCtrl.reverse();
-                                  if (_hoverMinuteNotifier.value != null) {
-                                    _hoverMinuteNotifier.value = null;
-                                  }
-                                  if (isInstant) {
-                                    _dragStartNotifier.value = null;
-                                    _dragEndNotifier.value = null;
-                                  }
-                                },
-                                child: Listener(
-                                  onPointerDown: (_) {
-                                    ref.read(isClockDraggingProvider.notifier).state = true;
                                   },
-                                  onPointerUp: (_) {
-                                    ref.read(isClockDraggingProvider.notifier).state = false;
-                                  },
-                                  onPointerCancel: (_) {
-                                    ref.read(isClockDraggingProvider.notifier).state = false;
-                                  },
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onSecondaryTap: () {
-                                      ref.read(precisionModeProvider.notifier).state = !_isPrecisionMode;
+                                  child: Listener(
+                                    onPointerDown: (_) {
+                                      ref
+                                              .read(
+                                                isClockDraggingProvider
+                                                    .notifier,
+                                              )
+                                              .state =
+                                          true;
                                     },
-                                    onTapUp: (e) {
-                                      if (isInstant) {
-                                        final centered = _toCenter(e.localPosition, c.biggest);
-                                        final rawMin = _snap(offsetToMinute(centered, is24h: is24h));
-                                        final interval = ref.read(instantIntervalProvider);
-                                        _dragStartNotifier.value = rawMin;
-                                        _dragEndNotifier.value = rawMin + interval;
+                                    onPointerUp: (_) {
+                                      ref
+                                              .read(
+                                                isClockDraggingProvider
+                                                    .notifier,
+                                              )
+                                              .state =
+                                          false;
+                                    },
+                                    onPointerCancel: (_) {
+                                      ref
+                                              .read(
+                                                isClockDraggingProvider
+                                                    .notifier,
+                                              )
+                                              .state =
+                                          false;
+                                    },
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onSecondaryTap: () {
+                                        ref
+                                                .read(
+                                                  precisionModeProvider
+                                                      .notifier,
+                                                )
+                                                .state =
+                                            !_isPrecisionMode;
+                                      },
+                                      onTapUp: (e) {
+                                        if (isInstant) {
+                                          final centered = _toCenter(
+                                            e.localPosition,
+                                            c.biggest,
+                                          );
+                                          final rawMin = _snap(
+                                            offsetToMinute(
+                                              centered,
+                                              is24h: is24h,
+                                            ),
+                                          );
+                                          final interval = ref.read(
+                                            instantIntervalProvider,
+                                          );
+                                          _dragStartNotifier.value = rawMin;
+                                          _dragEndNotifier.value =
+                                              rawMin + interval;
 
-                                        final Color themeAccentColor;
-                                        if (clockFaceTheme == 2) {
-                                          themeAccentColor = Colors.white;
-                                        } else if (clockFaceTheme == 3) {
-                                          themeAccentColor = const Color(0xFF3399FF);
-                                        } else if (clockFaceTheme == 4) {
-                                          themeAccentColor = const Color(0xFFBB86FC);
-                                        } else if (clockFaceTheme == 5 || clockFaceTheme == 6) {
-                                          themeAccentColor = const Color(0xFFFFD54F);
+                                          final Color themeAccentColor;
+                                          if (clockFaceTheme == 2) {
+                                            themeAccentColor = Colors.white;
+                                          } else if (clockFaceTheme == 3) {
+                                            themeAccentColor = const Color(
+                                              0xFF3399FF,
+                                            );
+                                          } else if (clockFaceTheme == 4) {
+                                            themeAccentColor = const Color(
+                                              0xFFBB86FC,
+                                            );
+                                          } else if (clockFaceTheme == 5 ||
+                                              clockFaceTheme == 6) {
+                                            themeAccentColor = const Color(
+                                              0xFFFFD54F,
+                                            );
+                                          } else {
+                                            themeAccentColor =
+                                                AppPalette.accent;
+                                          }
+                                          _onInstantModeTap(
+                                            date,
+                                            themeAccentColor,
+                                          );
                                         } else {
-                                          themeAccentColor = AppPalette.accent;
+                                          final lead =
+                                              ref
+                                                  .read(settingsProvider)
+                                                  .valueOrNull
+                                                  ?.notifLeadMinutes ??
+                                              1;
+                                          _onTapUp(
+                                            e.localPosition,
+                                            c.biggest,
+                                            activities,
+                                            lead,
+                                          );
                                         }
-                                        _onInstantModeTap(date, themeAccentColor);
-                                      } else {
-                                        final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-                                        _onTapUp(e.localPosition, c.biggest, activities, lead);
-                                      }
-                                    },
-                                    onDoubleTapDown: (e) {
-                                      final instantMode = ref.read(isInstantModeProvider);
-                                      ref.read(isInstantModeProvider.notifier).state = !instantMode;
-                                      HapticFeedback.mediumImpact();
-                                    },
-                                    onLongPressStart: (e) {
-                                      if (!isInstant) {
-                                        _onLongPressStart(e.localPosition, c.biggest, activities);
-                                      }
-                                    },
-                                    onLongPressMoveUpdate: (e) {
-                                      if (!isInstant) {
-                                        _onLongPressMove(e.localPosition, c.biggest, activities);
-                                      }
-                                    },
-                                    onLongPressEnd: (_) {
-                                      if (!isInstant) {
-                                        final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-                                        _onLongPressEnd(lead);
-                                      }
-                                    },
-                                    onPanStart: (e) {
-                                      _onPanStart(e.localPosition, c.biggest);
-                                    },
-                                    onPanUpdate: (e) {
-                                      _onPanUpdate(e.localPosition, c.biggest, activities);
-                                    },
-                                    onPanEnd: (_) {
-                                      if (ref.read(isInstantModeProvider)) {
-                                        if (_hasDragged && _dragStartNotifier.value != null && _dragEndNotifier.value != null) {
-                                          final themeAccentColor = AppPalette.accent;
-                                          _onInstantModeTap(date, themeAccentColor);
+                                      },
+                                      onDoubleTapDown: (e) {
+                                        final instantMode = ref.read(
+                                          isInstantModeProvider,
+                                        );
+                                        ref
+                                                .read(
+                                                  isInstantModeProvider
+                                                      .notifier,
+                                                )
+                                                .state =
+                                            !instantMode;
+                                        HapticFeedback.mediumImpact();
+                                      },
+                                      onLongPressStart: (e) {
+                                        if (!isInstant) {
+                                          _onLongPressStart(
+                                            e.localPosition,
+                                            c.biggest,
+                                            activities,
+                                          );
                                         }
-                                      } else {
-                                        _onPanEnd();
-                                      }
-                                    },
-                                    child: RepaintBoundary(
-                                      child: AnimatedBuilder(
-                                        animation: Listenable.merge([
-                                          _pulseCtrl,
-                                          _revealCtrl,
-                                          _hoverMinuteNotifier,
-                                          _dragStartNotifier,
-                                          _dragEndNotifier,
-                                          _dragConflictNotifier,
-                                        ]),
-                                        builder: (context, child) => AnalogClockFace(
-                                          now: now,
-                                          activities: activities,
-                                          tasks: tasks,
-                                          viewHalf: half,
-                                          previewStartMinute: _dragStartNotifier.value,
-                                          previewEndMinute: _dragEndNotifier.value,
-                                          previewColor: candidate.isNotEmpty
-                                              ? Color(candidate.first!.colorValue)
-                                              : (isInstant ? const Color(0xFFFFEE99).withValues(alpha: 0.27) : null),
-                                          previewConflict: _dragConflictNotifier.value,
-                                          pulse: _pulseCtrl.value,
-                                          clockHandsMode: clockHandsMode,
-                                          is24hDial: is24hDial,
-                                          is24hTime: is24hTime,
-                                          floatTimeText: floatTimeText,
-                                          showCurrentTime: showCurrentTime,
-                                          currentTimeFormat: currentTimeFormat,
-                                          glowStyle: glowStyle,
-                                          isToday: isToday,
-                                          hoverMinute: _hoverMinuteNotifier.value,
-                                          isPrecisionMode: _isPrecisionMode,
-                                          outerReveal: 1.0 + (_revealCtrl.value * 0.04),
-                                          clockFaceTheme: clockFaceTheme,
+                                      },
+                                      onLongPressMoveUpdate: (e) {
+                                        if (!isInstant) {
+                                          _onLongPressMove(
+                                            e.localPosition,
+                                            c.biggest,
+                                            activities,
+                                          );
+                                        }
+                                      },
+                                      onLongPressEnd: (_) {
+                                        if (!isInstant) {
+                                          final lead =
+                                              ref
+                                                  .read(settingsProvider)
+                                                  .valueOrNull
+                                                  ?.notifLeadMinutes ??
+                                              1;
+                                          _onLongPressEnd(lead);
+                                        }
+                                      },
+                                      onPanStart: (e) {
+                                        _onPanStart(e.localPosition, c.biggest);
+                                      },
+                                      onPanUpdate: (e) {
+                                        _onPanUpdate(
+                                          e.localPosition,
+                                          c.biggest,
+                                          activities,
+                                        );
+                                      },
+                                      onPanEnd: (_) {
+                                        if (ref.read(isInstantModeProvider)) {
+                                          if (_hasDragged &&
+                                              _dragStartNotifier.value !=
+                                                  null &&
+                                              _dragEndNotifier.value != null) {
+                                            final themeAccentColor =
+                                                AppPalette.accent;
+                                            _onInstantModeTap(
+                                              date,
+                                              themeAccentColor,
+                                            );
+                                          }
+                                        } else {
+                                          _onPanEnd();
+                                        }
+                                      },
+                                      child: RepaintBoundary(
+                                        child: AnimatedBuilder(
+                                          animation: Listenable.merge([
+                                            _pulseCtrl,
+                                            _revealCtrl,
+                                            _hoverMinuteNotifier,
+                                            _dragStartNotifier,
+                                            _dragEndNotifier,
+                                            _dragConflictNotifier,
+                                          ]),
+                                          builder: (context, child) =>
+                                              AnalogClockFace(
+                                                now: now,
+                                                activities: activities,
+                                                tasks: tasks,
+                                                viewHalf: half,
+                                                previewStartMinute:
+                                                    _dragStartNotifier.value,
+                                                previewEndMinute:
+                                                    _dragEndNotifier.value,
+                                                previewColor:
+                                                    candidate.isNotEmpty
+                                                    ? Color(
+                                                        candidate
+                                                            .first!
+                                                            .colorValue,
+                                                      )
+                                                    : (isInstant
+                                                          ? const Color(
+                                                              0xFFFFEE99,
+                                                            ).withValues(
+                                                              alpha: 0.27,
+                                                            )
+                                                          : null),
+                                                previewConflict:
+                                                    _dragConflictNotifier.value,
+                                                pulse: _pulseCtrl.value,
+                                                clockHandsMode: clockHandsMode,
+                                                is24hDial: is24hDial,
+                                                is24hTime: is24hTime,
+                                                floatTimeText: floatTimeText,
+                                                showCurrentTime:
+                                                    showCurrentTime,
+                                                currentTimeFormat:
+                                                    currentTimeFormat,
+                                                glowStyle: glowStyle,
+                                                isToday: isToday,
+                                                hoverMinute:
+                                                    _hoverMinuteNotifier.value,
+                                                isPrecisionMode:
+                                                    _isPrecisionMode,
+                                                outerReveal:
+                                                    1.0 +
+                                                    (_revealCtrl.value * 0.04),
+                                                clockFaceTheme: clockFaceTheme,
+                                              ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                        if (schedulingTask != null)
-                          Positioned(
-                            top: 10,
-                            left: 16,
-                            right: 16,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: AppPalette.card,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6)),
-                                boxShadow: [
-                                  BoxShadow(color: AppPalette.accent.withValues(alpha: 0.2), blurRadius: 12),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.info_outline, size: 20, color: AppPalette.accent),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'Tap an activity to schedule "${schedulingTask.title}"',
-                                      style: const TextStyle(fontSize: 13, color: AppPalette.accent, fontWeight: FontWeight.w600),
+                          if (schedulingTask != null)
+                            Positioned(
+                              top: 10,
+                              left: 16,
+                              right: 16,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppPalette.card,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppPalette.accent.withValues(
+                                      alpha: 0.6,
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.close, size: 18, color: AppPalette.textDim),
-                                    onPressed: () => ref.read(schedulingTaskProvider.notifier).state = null,
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
-                                ],
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppPalette.accent.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      blurRadius: 12,
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.info_outline,
+                                      size: 20,
+                                      color: AppPalette.accent,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Tap an activity to schedule "${schedulingTask.title}"',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppPalette.accent,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        size: 18,
+                                        color: AppPalette.textDim,
+                                      ),
+                                      onPressed: () =>
+                                          ref
+                                                  .read(
+                                                    schedulingTaskProvider
+                                                        .notifier,
+                                                  )
+                                                  .state =
+                                              null,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-  
-            // Top Header Action Bar & Quick Timer Hub
-            // Calm Minimal Header Overlay
-            Positioned(
-              top: 14,
-              left: 18,
-              right: 18,
-              child: Row(
-                children: [
-                  // App Title & Contextual Menu (Routines & Reflection)
-                  PopupMenuButton<String>(
-                    tooltip: 'Menu Fokus',
-                    color: AppPalette.card,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: AppPalette.stroke),
-                    ),
-                    onSelected: (val) {
-                      HapticFeedback.mediumImpact();
-                      if (val == 'routines') {
-                        ref.read(tabIndexProvider.notifier).state = 0;
-                      } else if (val == 'copy_day') {
-                        _showCopyScheduleDialog(context, ref.read(currentDateProvider));
-                      } else if (val == 'command') {
-                        showDialog(
-                          context: context,
-                          builder: (_) => const CommandPaletteModal(),
-                        );
-                      } else if (val == 'hotkeys') {
-                        showDialog(
-                          context: context,
-                          builder: (_) => const HotkeysModal(),
-                        );
-                      }
-                    },
-                    itemBuilder: (ctx) => [
-                      const PopupMenuItem(
-                        value: 'routines',
-                        child: Row(
-                          children: [
-                            Icon(Icons.auto_stories_rounded, size: 16, color: AppPalette.accent),
-                            SizedBox(width: 10),
-                            Text('Routine Templates', style: TextStyle(fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'copy_day',
-                        child: Row(
-                          children: [
-                            Icon(Icons.copy_rounded, size: 16, color: AppPalette.accent),
-                            SizedBox(width: 10),
-                            Text('Copy Schedule', style: TextStyle(fontSize: 13)),
-                          ],
-                        ),
-                      ),
-
-                      const PopupMenuItem(
-                        value: 'command',
-                        child: Row(
-                          children: [
-                            Icon(Icons.terminal_rounded, size: 16, color: AppPalette.textDim),
-                            SizedBox(width: 10),
-                            Text('Command Palette (Ctrl+K)', style: TextStyle(fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'hotkeys',
-                        child: Row(
-                          children: [
-                            Icon(Icons.help_outline_rounded, size: 16, color: AppPalette.textDim),
-                            SizedBox(width: 10),
-                            Text('Bantuan Shortcut', style: TextStyle(fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                    ],
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppPalette.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppPalette.stroke),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'FOCUS',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 2,
-                              color: AppPalette.text,
-                            ),
-                          ),
-                          Text(
-                            'CLOCK',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 2,
-                              color: AppPalette.accent,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: AppPalette.textDim),
                         ],
                       ),
                     ),
                   ),
+                ),
+              ),
 
-                  const Spacer(),
-
-                  // Current Date & Time Display
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          _showLargeCalendarBatchPicker(context, date);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4)),
-                          ),
+              // Top Header Action Bar & Quick Timer Hub
+              // Calm Minimal Header Overlay
+              Positioned(
+                top: 14,
+                left: 18,
+                right: 18,
+                child: Row(
+                  children: [
+                    // App Title & Contextual Menu (Routines & Reflection)
+                    PopupMenuButton<String>(
+                      tooltip: 'Menu Fokus',
+                      color: AppPalette.card,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: AppPalette.stroke),
+                      ),
+                      onSelected: (val) {
+                        HapticFeedback.mediumImpact();
+                        if (val == 'routines') {
+                          ref.read(tabIndexProvider.notifier).state = 0;
+                        } else if (val == 'copy_day') {
+                          _showCopyScheduleDialog(
+                            context,
+                            ref.read(currentDateProvider),
+                          );
+                        } else if (val == 'command') {
+                          showDialog(
+                            context: context,
+                            builder: (_) => const CommandPaletteModal(),
+                          );
+                        } else if (val == 'hotkeys') {
+                          showDialog(
+                            context: context,
+                            builder: (_) => const HotkeysModal(),
+                          );
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'routines',
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.calendar_month_rounded, size: 13, color: AppPalette.accent),
-                              const SizedBox(width: 6),
+                              Icon(
+                                Icons.auto_stories_rounded,
+                                size: 16,
+                                color: AppPalette.accent,
+                              ),
+                              SizedBox(width: 10),
                               Text(
-                                '${date.day} ${_monthName(date.month)} ${date.year}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppPalette.text,
-                                ),
+                                'Routine Templates',
+                                style: TextStyle(fontSize: 13),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      _AmPmMini(
-                        half: half,
-                        onChanged: (h) {
-                          HapticFeedback.selectionClick();
-                          ref.read(ampmHalfProvider.notifier).state = h;
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        formatTimeOfDay(now, is24h: is24h),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppPalette.accent,
-                          letterSpacing: 0.5,
+                        const PopupMenuItem(
+                          value: 'copy_day',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.copy_rounded,
+                                size: 16,
+                                color: AppPalette.accent,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Copy Schedule',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const PopupMenuItem(
+                          value: 'command',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.terminal_rounded,
+                                size: 16,
+                                color: AppPalette.textDim,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Command Palette (Ctrl+K)',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'hotkeys',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.help_outline_rounded,
+                                size: 16,
+                                color: AppPalette.textDim,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Bantuan Shortcut',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppPalette.card,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppPalette.stroke),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'FOCUS',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 2,
+                                color: AppPalette.text,
+                              ),
+                            ),
+                            Text(
+                              'CLOCK',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 2,
+                                color: AppPalette.accent,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 14,
+                              color: AppPalette.textDim,
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+                    ),
 
-            // Bottom Contextual Card (Now, Next & Natural Intent Engine)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 8,
-              child: Center(
-                child: NowNextCard(
-                  activities: activities,
-                  now: now,
-                  date: date,
+                    const Spacer(),
+
+                    // Current Date & Time Display
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            _showLargeCalendarBatchPicker(context, date);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppPalette.card,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: AppPalette.accent.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.calendar_month_rounded,
+                                  size: 13,
+                                  color: AppPalette.accent,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${date.day} ${_monthName(date.month)} ${date.year}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppPalette.text,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _AmPmMini(
+                          half: half,
+                          onChanged: (h) {
+                            HapticFeedback.selectionClick();
+                            ref.read(ampmHalfProvider.notifier).state = h;
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          formatTimeOfDay(now, is24h: is24h),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppPalette.accent,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
-        );
-      }),
+
+              // Bottom Contextual Card (Now, Next & Natural Intent Engine)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 8,
+                child: Center(
+                  child: NowNextCard(
+                    activities: activities,
+                    now: now,
+                    date: date,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -799,7 +1066,20 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   bool get _is24h => ref.read(settingsProvider).valueOrNull?.is24hDial ?? false;
 
   String _monthName(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return months[month - 1];
   }
 
@@ -823,21 +1103,21 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final start = _dragStartNotifier.value;
     final end = _dragEndNotifier.value;
     if (start == null || end == null) return;
-    
+
     _dragStartNotifier.value = null;
     _dragEndNotifier.value = null;
     _hoverMinuteNotifier.value = null;
-    
+
     final is24h = _is24h;
     final half = ref.read(ampmHalfProvider);
     final start24 = is24h ? start : (start + (half == AmPmHalf.pm ? 720 : 0));
     final end24 = is24h ? end : (end + (half == AmPmHalf.pm ? 720 : 0));
-    
+
     final dbStart = toDbMinute(start24);
     final dbHalf = toDbHalf(start24);
     final dbEnd = toDbEndMinute(end24, dbHalf);
     final duration = end24 - start24;
-    
+
     final activity = Activity()
       ..title = 'Fokus ${duration}m'
       ..startMinute = dbStart
@@ -851,7 +1131,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       ..updatedAt = DateTime.now();
 
     final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-    await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
+    await ref
+        .read(activityRepoProvider)
+        .upsert(activity, notifLeadMinutes: lead);
 
     HapticFeedback.mediumImpact();
   }
@@ -862,7 +1144,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final rDist = centered.distance;
     final outer = size.shortestSide / 2 * 0.95 * _grow;
     if (rDist > outer) return;
-    
+
     ref.read(isClockDraggingProvider.notifier).state = true;
     _hasDragged = false;
     final is24h = _is24h;
@@ -889,7 +1171,12 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       final rawSnapped = _snap(raw);
       _dragStartNotifier.value = rawSnapped;
       _dragEndNotifier.value = rawSnapped + interval;
-      _dragConflictNotifier.value = _hasConflict(rawSnapped, rawSnapped + interval, activities, is24h: is24h);
+      _dragConflictNotifier.value = _hasConflict(
+        rawSnapped,
+        rawSnapped + interval,
+        activities,
+        is24h: is24h,
+      );
       _hoverMinuteNotifier.value = rawSnapped;
       if (rawSnapped != prevEnd) HapticFeedback.selectionClick();
       return;
@@ -930,7 +1217,12 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
     _dragStartNotifier.value = start;
     _dragEndNotifier.value = end;
-    _dragConflictNotifier.value = _hasConflict(start, end, activities, is24h: is24h);
+    _dragConflictNotifier.value = _hasConflict(
+      start,
+      end,
+      activities,
+      is24h: is24h,
+    );
     _hoverMinuteNotifier.value = raw;
 
     if (_isPrecisionMode && !_aimLockCtrl.isAnimating) {
@@ -940,9 +1232,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     if (end != prevEnd) HapticFeedback.selectionClick();
   }
 
-
-
-  Future<void> _showLargeCalendarBatchPicker(BuildContext context, DateTime currentDate) async {
+  Future<void> _showLargeCalendarBatchPicker(
+    BuildContext context,
+    DateTime currentDate,
+  ) async {
     final selectedDates = <DateTime>{dateOnly(currentDate)};
     bool isBatchMode = false;
 
@@ -950,7 +1243,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
-          final isToday = dateOnly(selectedDates.first) == dateOnly(DateTime.now());
+          final isToday =
+              dateOnly(selectedDates.first) == dateOnly(DateTime.now());
 
           return Dialog(
             backgroundColor: AppPalette.card,
@@ -966,20 +1260,36 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.calendar_month_rounded, color: AppPalette.accent, size: 20),
+                      const Icon(
+                        Icons.calendar_month_rounded,
+                        color: AppPalette.accent,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
-                        isBatchMode ? 'Batch Duplikasi Jadwal' : 'Pilih Tanggal Jam',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        isBatchMode
+                            ? 'Batch Duplikasi Jadwal'
+                            : 'Pilih Tanggal Jam',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const Spacer(),
                       // Mode Switch: Pindah Hari vs Batch Mode
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppPalette.bg,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isBatchMode ? AppPalette.accent.withValues(alpha: 0.5) : AppPalette.stroke),
+                          border: Border.all(
+                            color: isBatchMode
+                                ? AppPalette.accent.withValues(alpha: 0.5)
+                                : AppPalette.stroke,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -989,7 +1299,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: isBatchMode ? AppPalette.accent : AppPalette.text,
+                                color: isBatchMode
+                                    ? AppPalette.accent
+                                    : AppPalette.text,
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -1001,7 +1313,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 onChanged: (val) {
                                   setDialogState(() {
                                     isBatchMode = val;
-                                    if (!isBatchMode && selectedDates.length > 1) {
+                                    if (!isBatchMode &&
+                                        selectedDates.length > 1) {
                                       final first = selectedDates.first;
                                       selectedDates.clear();
                                       selectedDates.add(first);
@@ -1015,7 +1328,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       ),
                       const SizedBox(width: 4),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded, color: AppPalette.textDim),
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: AppPalette.textDim,
+                        ),
                         onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
@@ -1023,13 +1339,16 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                   const SizedBox(height: 12),
                   CalendarDatePicker(
                     initialDate: selectedDates.first,
-                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                    firstDate: DateTime.now().subtract(
+                      const Duration(days: 365),
+                    ),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                     onDateChanged: (picked) {
                       final key = dateOnly(picked);
                       setDialogState(() {
                         if (isBatchMode) {
-                          if (selectedDates.contains(key) && selectedDates.length > 1) {
+                          if (selectedDates.contains(key) &&
+                              selectedDates.length > 1) {
                             selectedDates.remove(key);
                           } else {
                             selectedDates.add(key);
@@ -1054,16 +1373,25 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                     ),
                     child: Row(
                       children: [
-                        Icon(isBatchMode ? Icons.copy_rounded : Icons.today_rounded, size: 16, color: AppPalette.accent),
+                        Icon(
+                          isBatchMode
+                              ? Icons.copy_rounded
+                              : Icons.today_rounded,
+                          size: 16,
+                          color: AppPalette.accent,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             isBatchMode
                                 ? (selectedDates.length == 1
-                                    ? 'Batch Mode: Pilih beberapa tanggal tujuan'
-                                    : 'Batch Duplikasi ke ${selectedDates.length} Hari Terpilih')
+                                      ? 'Batch Mode: Pilih beberapa tanggal tujuan'
+                                      : 'Batch Duplikasi ke ${selectedDates.length} Hari Terpilih')
                                 : 'Tanggal Aktif: ${selectedDates.first.day}/${selectedDates.first.month}/${selectedDates.first.year}${isToday ? ' (Hari Ini)' : ''}',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -1080,15 +1408,24 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                               selectedDates.clear();
                               selectedDates.add(today);
                             });
-                            ref.read(currentDateProvider.notifier).state = today;
+                            ref.read(currentDateProvider.notifier).state =
+                                today;
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppPalette.accent,
-                            side: BorderSide(color: AppPalette.accent.withValues(alpha: 0.5)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            side: BorderSide(
+                              color: AppPalette.accent.withValues(alpha: 0.5),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                           ),
                           icon: const Icon(Icons.history_rounded, size: 15),
-                          label: const Text('Hari Ini', style: TextStyle(fontSize: 12)),
+                          label: const Text(
+                            'Hari Ini',
+                            style: TextStyle(fontSize: 12),
+                          ),
                         ),
                       const Spacer(),
                       TextButton(
@@ -1100,21 +1437,38 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppPalette.accent,
                           foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 12,
+                          ),
                         ),
-                        icon: Icon(isBatchMode ? Icons.copy_all_rounded : Icons.check_circle_rounded, size: 18),
+                        icon: Icon(
+                          isBatchMode
+                              ? Icons.copy_all_rounded
+                              : Icons.check_circle_rounded,
+                          size: 18,
+                        ),
                         label: Text(
                           isBatchMode
-                              ? (selectedDates.length > 1 ? 'Terapkan (${selectedDates.length} Hari)' : 'Pilih Hari Tujuan')
+                              ? (selectedDates.length > 1
+                                    ? 'Terapkan (${selectedDates.length} Hari)'
+                                    : 'Pilih Hari Tujuan')
                               : 'Buka Jadwal Tanggal Ini',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         onPressed: () async {
                           final primaryDate = selectedDates.first;
-                          ref.read(currentDateProvider.notifier).state = primaryDate;
+                          ref.read(currentDateProvider.notifier).state =
+                              primaryDate;
                           if (isBatchMode && selectedDates.length > 1) {
-                            final targets = selectedDates.where((d) => d != currentDate).toList();
-                            await _copyScheduleToDates(context, currentDate, targets);
+                            final targets = selectedDates
+                                .where((d) => d != currentDate)
+                                .toList();
+                            await _copyScheduleToDates(
+                              context,
+                              currentDate,
+                              targets,
+                            );
                           }
                           if (context.mounted) Navigator.pop(ctx);
                         },
@@ -1140,7 +1494,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       _dragClickMinute = null;
       return;
     }
-    if (_dragStartNotifier.value == null || _dragEndNotifier.value == null) return;
+    if (_dragStartNotifier.value == null || _dragEndNotifier.value == null)
+      return;
     final start = _dragStartNotifier.value!;
     final endVal = _dragEndNotifier.value!;
     final end = (endVal - start) < 5 ? start + 5 : endVal;
@@ -1174,8 +1529,11 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         startMinute: dbStart,
         endMinute: dbEnd,
       );
-      final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-      await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
+      final lead =
+          ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
+      await ref
+          .read(activityRepoProvider)
+          .upsert(activity, notifLeadMinutes: lead);
     } else if (result == 'custom') {
       final duration = end24 - start24;
       final activity = Activity()
@@ -1186,7 +1544,11 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         ..endMinute = dbEnd
         ..colorValue = presetColors.first;
       if (!mounted) return;
-      await showActivityDetailSheet(context, activity: activity, mode: DetailMode.create);
+      await showActivityDetailSheet(
+        context,
+        activity: activity,
+        mode: DetailMode.create,
+      );
     } else {
       final duration = end24 - start24;
       if (duration >= 5) {
@@ -1197,13 +1559,21 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
           ..startMinute = dbStart
           ..endMinute = dbEnd
           ..colorValue = presetColors.first;
-        final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-        await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
+        final lead =
+            ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
+        await ref
+            .read(activityRepoProvider)
+            .upsert(activity, notifLeadMinutes: lead);
       }
     }
   }
 
-  Future<void> _onTapUp(Offset p, Size size, List<Activity> activities, int leadMinutes) async {
+  Future<void> _onTapUp(
+    Offset p,
+    Size size,
+    List<Activity> activities,
+    int leadMinutes,
+  ) async {
     if (_draggingActivity != null) return;
     final hit = _hitActivity(p, size, activities);
     if (hit == null) return;
@@ -1230,16 +1600,22 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     if (hit == null) return;
     final a = activities.firstWhere((x) => x.id == hit);
     HapticFeedback.mediumImpact();
-    
+
     ref.read(isClockDraggingProvider.notifier).state = true;
     _draggingActivity = a;
-    
+
     final is24h = _is24h;
     final start = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24h);
     final end = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24h);
     _dragStartNotifier.value = start;
     _dragEndNotifier.value = end;
-    _dragConflictNotifier.value = _hasConflict(start, end, activities, excludeId: a.id, is24h: is24h);
+    _dragConflictNotifier.value = _hasConflict(
+      start,
+      end,
+      activities,
+      excludeId: a.id,
+      is24h: is24h,
+    );
   }
 
   void _onLongPressMove(Offset p, Size size, List<Activity> activities) {
@@ -1247,8 +1623,17 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final centered = _toCenter(p, size);
     final is24h = _is24h;
     final newStart = _snap(offsetToMinute(centered, is24h: is24h));
-    final duration = toUiMinute(_draggingActivity!.endMinute, _draggingActivity!.ampmHalf, is24h: is24h) -
-                     toUiMinute(_draggingActivity!.startMinute, _draggingActivity!.ampmHalf, is24h: is24h);
+    final duration =
+        toUiMinute(
+          _draggingActivity!.endMinute,
+          _draggingActivity!.ampmHalf,
+          is24h: is24h,
+        ) -
+        toUiMinute(
+          _draggingActivity!.startMinute,
+          _draggingActivity!.ampmHalf,
+          is24h: is24h,
+        );
     if (newStart == _dragStartNotifier.value) return;
     HapticFeedback.selectionClick();
 
@@ -1257,7 +1642,13 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     _dragStartNotifier.value = newStart;
     _dragEndNotifier.value = newEnd;
     _hoverMinuteNotifier.value = offsetToMinute(centered, is24h: is24h);
-    _dragConflictNotifier.value = _hasConflict(newStart, newEnd, activities, excludeId: _draggingActivity!.id, is24h: is24h);
+    _dragConflictNotifier.value = _hasConflict(
+      newStart,
+      newEnd,
+      activities,
+      excludeId: _draggingActivity!.id,
+      is24h: is24h,
+    );
 
     if (_isPrecisionMode && !_aimLockCtrl.isAnimating) {
       _aimLockCtrl.forward(from: 0.0);
@@ -1267,7 +1658,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   Future<void> _onLongPressEnd(int leadMinutes) async {
     ref.read(isClockDraggingProvider.notifier).state = false;
     if (_draggingActivity == null) return;
-    
+
     final start = _dragStartNotifier.value!;
     final end = _dragEndNotifier.value!;
     final is24h = _is24h;
@@ -1283,8 +1674,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     a.startMinute = dbStart;
     a.endMinute = dbEnd;
     a.ampmHalf = dbHalf;
-    await ref.read(activityRepoProvider).upsert(a, notifLeadMinutes: leadMinutes);
-    
+    await ref
+        .read(activityRepoProvider)
+        .upsert(a, notifLeadMinutes: leadMinutes);
+
     _draggingActivity = null;
     _dragStartNotifier.value = null;
     _dragEndNotifier.value = null;
@@ -1297,10 +1690,14 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final date = ref.read(currentDateProvider);
     final is24h = _is24h;
     final half = ref.read(ampmHalfProvider);
-    final dropMin = _hoverMinuteNotifier.value ?? snap5(is24h ? (now.hour * 60 + now.minute) : minuteOfHalf(now));
+    final dropMin =
+        _hoverMinuteNotifier.value ??
+        snap5(is24h ? (now.hour * 60 + now.minute) : minuteOfHalf(now));
     final start = dropMin;
-    final end = is24h ? (start + 60).clamp(0, 1440) : (start + 60).clamp(0, 720);
-    
+    final end = is24h
+        ? (start + 60).clamp(0, 1440)
+        : (start + 60).clamp(0, 720);
+
     final start24 = is24h ? start : (start + (half == AmPmHalf.pm ? 720 : 0));
     final end24 = is24h ? end : (end + (half == AmPmHalf.pm ? 720 : 0));
 
@@ -1316,10 +1713,18 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       endMinute: dbEnd,
     );
     if (!mounted) return;
-    await showActivityDetailSheet(context, activity: a, mode: DetailMode.create);
+    await showActivityDetailSheet(
+      context,
+      activity: a,
+      mode: DetailMode.create,
+    );
   }
 
-  Future<void> _copyScheduleToDates(BuildContext context, DateTime sourceDate, List<DateTime> targetDates) async {
+  Future<void> _copyScheduleToDates(
+    BuildContext context,
+    DateTime sourceDate,
+    List<DateTime> targetDates,
+  ) async {
     final activityRepo = ref.read(activityRepoProvider);
     final sourceActivities = await activityRepo.getByDate(sourceDate);
     if (sourceActivities.isEmpty) {
@@ -1330,7 +1735,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       }
       return;
     }
-    
+
     final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
     for (final targetDate in targetDates) {
       final targetActivities = await activityRepo.getByDate(targetDate);
@@ -1357,17 +1762,25 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     }
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Copied schedule to ${targetDates.length} day(s).')),
+        SnackBar(
+          content: Text('Copied schedule to ${targetDates.length} day(s).'),
+        ),
       );
     }
   }
 
-  Future<void> _showCopyScheduleDialog(BuildContext context, DateTime sourceDate) async {
+  Future<void> _showCopyScheduleDialog(
+    BuildContext context,
+    DateTime sourceDate,
+  ) async {
     final result = await showDialog<List<DateTime>>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppPalette.card,
-        title: const Text('Copy Day Schedule', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Copy Day Schedule',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1382,7 +1795,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 backgroundColor: AppPalette.accent.withValues(alpha: 0.15),
                 foregroundColor: AppPalette.accent,
                 alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               icon: const Icon(Icons.next_plan_outlined, size: 18),
               label: const Text('Tomorrow'),
@@ -1396,7 +1812,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 backgroundColor: AppPalette.accent.withValues(alpha: 0.15),
                 foregroundColor: AppPalette.accent,
                 alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               icon: const Icon(Icons.date_range_outlined, size: 18),
               label: const Text('Next 3 Days'),
@@ -1414,12 +1833,21 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 backgroundColor: AppPalette.accent.withValues(alpha: 0.15),
                 foregroundColor: AppPalette.accent,
                 alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               icon: const Icon(Icons.date_range, size: 18),
               label: const Text('Next 7 Days'),
               onPressed: () {
-                Navigator.pop(ctx, List.generate(7, (i) => sourceDate.add(Duration(days: i + 1))));
+                Navigator.pop(
+                  ctx,
+                  List.generate(
+                    7,
+                    (i) => sourceDate.add(Duration(days: i + 1)),
+                  ),
+                );
               },
             ),
             const SizedBox(height: 8),
@@ -1428,7 +1856,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 backgroundColor: AppPalette.accent.withValues(alpha: 0.15),
                 foregroundColor: AppPalette.accent,
                 alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               icon: const Icon(Icons.calendar_month_outlined, size: 18),
               label: const Text('Pick Specific Date...'),
@@ -1449,7 +1880,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppPalette.textDim)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppPalette.textDim),
+            ),
           ),
         ],
       ),
@@ -1515,7 +1949,8 @@ class _FocusToolsControlBar extends ConsumerStatefulWidget {
   const _FocusToolsControlBar();
 
   @override
-  ConsumerState<_FocusToolsControlBar> createState() => _FocusToolsControlBarState();
+  ConsumerState<_FocusToolsControlBar> createState() =>
+      _FocusToolsControlBarState();
 }
 
 class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
@@ -1525,7 +1960,9 @@ class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
   @override
   Widget build(BuildContext context) {
     final isInstantActive = ref.watch(isInstantModeProvider);
-    final currentMinutes = _isHourUnit ? (_sliderValue * 60).round() : _sliderValue.round();
+    final currentMinutes = _isHourUnit
+        ? (_sliderValue * 60).round()
+        : _sliderValue.round();
 
     return Listener(
       onPointerSignal: (event) {
@@ -1533,12 +1970,20 @@ class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
           final delta = event.scrollDelta.dy;
           setState(() {
             if (_isHourUnit) {
-              _sliderValue = (_sliderValue - (delta > 0 ? 0.5 : -0.5)).clamp(0.5, 12.0);
+              _sliderValue = (_sliderValue - (delta > 0 ? 0.5 : -0.5)).clamp(
+                0.5,
+                12.0,
+              );
             } else {
-              _sliderValue = (_sliderValue - (delta > 0 ? 5.0 : -5.0)).clamp(1.0, 180.0);
+              _sliderValue = (_sliderValue - (delta > 0 ? 5.0 : -5.0)).clamp(
+                1.0,
+                180.0,
+              );
             }
           });
-          ref.read(instantIntervalProvider.notifier).state = (_isHourUnit ? (_sliderValue * 60).round() : _sliderValue.round());
+          ref.read(instantIntervalProvider.notifier).state = (_isHourUnit
+              ? (_sliderValue * 60).round()
+              : _sliderValue.round());
         }
       },
       child: Container(
@@ -1547,14 +1992,21 @@ class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
         decoration: BoxDecoration(
           color: AppPalette.card.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4), width: 1.2),
+          border: Border.all(
+            color: AppPalette.accent.withValues(alpha: 0.4),
+            width: 1.2,
+          ),
           boxShadow: [
             BoxShadow(
               color: AppPalette.accent.withValues(alpha: 0.18),
               blurRadius: 16,
               spreadRadius: 1,
             ),
-            const BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4)),
+            const BoxShadow(
+              color: Colors.black45,
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
           ],
         ),
         child: Column(
@@ -1567,7 +2019,14 @@ class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('ON', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppPalette.accent)),
+                    const Text(
+                      'ON',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppPalette.accent,
+                      ),
+                    ),
                     const SizedBox(width: 2),
                     Transform.scale(
                       scale: 0.75,
@@ -1598,11 +2057,16 @@ class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: AppPalette.accent.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6)),
+                      border: Border.all(
+                        color: AppPalette.accent.withValues(alpha: 0.6),
+                      ),
                     ),
                     child: Text(
                       _isHourUnit ? 'JAM' : 'MENIT',
@@ -1634,21 +2098,34 @@ class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
                   child: SliderTheme(
                     data: SliderThemeData(
                       trackHeight: 3,
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                      thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: 6,
+                      ),
+                      overlayShape: const RoundSliderOverlayShape(
+                        overlayRadius: 12,
+                      ),
                       activeTrackColor: AppPalette.accent,
                       inactiveTrackColor: AppPalette.stroke,
                       thumbColor: AppPalette.accent,
                     ),
                     child: Slider(
-                      value: _sliderValue.clamp(_isHourUnit ? 0.5 : 5.0, _isHourUnit ? 12.0 : 180.0),
+                      value: _sliderValue.clamp(
+                        _isHourUnit ? 0.5 : 5.0,
+                        _isHourUnit ? 12.0 : 180.0,
+                      ),
                       min: _isHourUnit ? 0.5 : 5.0,
                       max: _isHourUnit ? 12.0 : 180.0,
                       divisions: _isHourUnit ? 23 : 35,
                       onChanged: (val) {
-                        final snapped = _isHourUnit ? val : (val / 5).round() * 5.0;
+                        final snapped = _isHourUnit
+                            ? val
+                            : (val / 5).round() * 5.0;
                         setState(() => _sliderValue = snapped);
-                        ref.read(instantIntervalProvider.notifier).state = _isHourUnit ? (snapped * 60).round() : snapped.round();
+                        ref
+                            .read(instantIntervalProvider.notifier)
+                            .state = _isHourUnit
+                            ? (snapped * 60).round()
+                            : snapped.round();
                       },
                     ),
                   ),
@@ -1656,80 +2133,80 @@ class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
               ],
             ),
 
-          const SizedBox(height: 4),
+            const SizedBox(height: 4),
 
-          // Quick Presets Chips Bar
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _QuickPresetChip(
-                  label: '15m',
-                  onTap: () {
-                    setState(() {
-                      _isHourUnit = false;
-                      _sliderValue = 15;
-                    });
-                    ref.read(instantIntervalProvider.notifier).state = 15;
-                    HapticFeedback.selectionClick();
-                  },
-                ),
-                const SizedBox(width: 4),
-                _QuickPresetChip(
-                  label: '30m',
-                  onTap: () {
-                    setState(() {
-                      _isHourUnit = false;
-                      _sliderValue = 30;
-                    });
-                    ref.read(instantIntervalProvider.notifier).state = 30;
-                    HapticFeedback.selectionClick();
-                  },
-                ),
-                const SizedBox(width: 4),
-                _QuickPresetChip(
-                  label: '45m',
-                  onTap: () {
-                    setState(() {
-                      _isHourUnit = false;
-                      _sliderValue = 45;
-                    });
-                    ref.read(instantIntervalProvider.notifier).state = 45;
-                    HapticFeedback.selectionClick();
-                  },
-                ),
-                const SizedBox(width: 4),
-                _QuickPresetChip(
-                  label: '1 Jam',
-                  onTap: () {
-                    setState(() {
-                      _isHourUnit = true;
-                      _sliderValue = 1.0;
-                    });
-                    ref.read(instantIntervalProvider.notifier).state = 60;
-                    HapticFeedback.selectionClick();
-                  },
-                ),
-                const SizedBox(width: 4),
-                _QuickPresetChip(
-                  label: '2 Jam',
-                  onTap: () {
-                    setState(() {
-                      _isHourUnit = true;
-                      _sliderValue = 2.0;
-                    });
-                    ref.read(instantIntervalProvider.notifier).state = 120;
-                    HapticFeedback.selectionClick();
-                  },
-                ),
-              ],
+            // Quick Presets Chips Bar
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _QuickPresetChip(
+                    label: '15m',
+                    onTap: () {
+                      setState(() {
+                        _isHourUnit = false;
+                        _sliderValue = 15;
+                      });
+                      ref.read(instantIntervalProvider.notifier).state = 15;
+                      HapticFeedback.selectionClick();
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _QuickPresetChip(
+                    label: '30m',
+                    onTap: () {
+                      setState(() {
+                        _isHourUnit = false;
+                        _sliderValue = 30;
+                      });
+                      ref.read(instantIntervalProvider.notifier).state = 30;
+                      HapticFeedback.selectionClick();
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _QuickPresetChip(
+                    label: '45m',
+                    onTap: () {
+                      setState(() {
+                        _isHourUnit = false;
+                        _sliderValue = 45;
+                      });
+                      ref.read(instantIntervalProvider.notifier).state = 45;
+                      HapticFeedback.selectionClick();
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _QuickPresetChip(
+                    label: '1 Jam',
+                    onTap: () {
+                      setState(() {
+                        _isHourUnit = true;
+                        _sliderValue = 1.0;
+                      });
+                      ref.read(instantIntervalProvider.notifier).state = 60;
+                      HapticFeedback.selectionClick();
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  _QuickPresetChip(
+                    label: '2 Jam',
+                    onTap: () {
+                      setState(() {
+                        _isHourUnit = true;
+                        _sliderValue = 2.0;
+                      });
+                      ref.read(instantIntervalProvider.notifier).state = 120;
+                      HapticFeedback.selectionClick();
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _QuickPresetChip extends StatelessWidget {
@@ -1750,7 +2227,11 @@ class _QuickPresetChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 9, color: AppPalette.textDim, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            fontSize: 9,
+            color: AppPalette.textDim,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

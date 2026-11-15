@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/time_math.dart';
 import '../../models/routine_blueprint.dart';
 import '../../providers/providers.dart';
+import '../../widgets/activity_icon.dart';
 import 'widgets/blueprint_clock_preview.dart';
 
 class BlueprintEditorSheet extends ConsumerStatefulWidget {
@@ -10,7 +11,10 @@ class BlueprintEditorSheet extends ConsumerStatefulWidget {
 
   const BlueprintEditorSheet({super.key, this.initialBlueprint});
 
-  static Future<void> show(BuildContext context, {RoutineBlueprint? blueprint}) {
+  static Future<void> show(
+    BuildContext context, {
+    RoutineBlueprint? blueprint,
+  }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -40,55 +44,71 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
     'Custom Routine',
   ];
 
-  final List<String> _icons = ['🕌', '⚡', '🌿', '🎯', '💻', '🎨', '🚀', '🏃', '📚', '☕'];
+  final List<String> _icons = [
+    '🕌',
+    '⚡',
+    '🌿',
+    '🎯',
+    '💻',
+    '🎨',
+    '🚀',
+    '🏃',
+    '📚',
+    '☕',
+  ];
 
   @override
   void initState() {
     super.initState();
     final b = widget.initialBlueprint;
     _nameController = TextEditingController(
-        text: b != null ? (b.author == 'Official Dev' ? '${b.name} (Custom)' : b.name) : 'Rutinitas Harian Saya');
+      text: b != null
+          ? (b.author == 'Official Dev' ? '${b.name} (Custom)' : b.name)
+          : 'Rutinitas Harian Saya',
+    );
     _taglineController = TextEditingController(
-        text: b?.tagline ?? 'Pola waktu harian yang sadar dan produktif.');
+      text: b?.tagline ?? 'Pola waktu harian yang sadar dan produktif.',
+    );
     _descController = TextEditingController(
-        text: b?.description ?? 'Alasan dan filosofi di balik rutinitas ini.');
+      text: b?.description ?? 'Alasan dan filosofi di balik rutinitas ini.',
+    );
     _category = b?.category ?? 'Balance & Wellness';
     _iconKey = b?.iconKey ?? '⚡';
     _blocks = b != null ? List.from(b.blocks) : _defaultSeedBlocks();
   }
 
   List<BlueprintBlock> _defaultSeedBlocks() => [
-        const BlueprintBlock(
-          title: 'Deep Work Session',
-          startMinute: 360, // 06:00 AM
-          endMinute: 540,   // 09:00 AM
-          ampmHalf: AmPmHalf.am,
-          iconKey: '💻',
-          colorValue: 0xFF3B82F6,
-          philosophy: 'Fokus mendalam tanpa gangguan.',
-          category: 'Deepwork',
-        ),
-        const BlueprintBlock(
-          title: 'Midday Reset & Lunch',
-          startMinute: 0,   // 12:00 PM
-          endMinute: 90,    // 01:30 PM
-          ampmHalf: AmPmHalf.pm,
-          iconKey: '🥗',
-          colorValue: 0xFFEAB308,
-          philosophy: 'Makan bergizi dan istirahat sejenak.',
-          category: 'Rest',
-        ),
-        const BlueprintBlock(
-          title: 'Exercise & Health',
-          startMinute: 300, // 05:00 PM
-          endMinute: 420,   // 07:00 PM
-          ampmHalf: AmPmHalf.pm,
-          iconKey: '🏃',
-          colorValue: 0xFF10B981,
-          philosophy: 'Aktivitas fisik menjaga kebugaran.',
-          category: 'Exercise',
-        ),
-      ];
+    const BlueprintBlock(
+      title: 'Deep Work Session',
+      startMinute: 360, // 06:00 AM
+      endMinute: 540, // 09:00 AM
+      ampmHalf: AmPmHalf.am,
+      iconKey: '💻',
+      colorValue: 0xFF3B82F6,
+      philosophy: 'Fokus mendalam tanpa gangguan.',
+      category: 'Deepwork',
+    ),
+    const BlueprintBlock(
+      title: 'Midday Reset & Lunch',
+      startMinute: 0, // 12:00 PM
+      endMinute: 90, // 01:30 PM
+      ampmHalf: AmPmHalf.pm,
+      iconKey: '🥗',
+      colorValue: 0xFFEAB308,
+      philosophy: 'Makan bergizi dan istirahat sejenak.',
+      category: 'Rest',
+    ),
+    const BlueprintBlock(
+      title: 'Exercise & Health',
+      startMinute: 300, // 05:00 PM
+      endMinute: 420, // 07:00 PM
+      ampmHalf: AmPmHalf.pm,
+      iconKey: '🏃',
+      colorValue: 0xFF10B981,
+      philosophy: 'Aktivitas fisik menjaga kebugaran.',
+      category: 'Exercise',
+    ),
+  ];
 
   @override
   void dispose() {
@@ -104,7 +124,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
         const BlueprintBlock(
           title: 'Aktivitas Baru',
           startMinute: 480, // 08:00 AM
-          endMinute: 600,   // 10:00 AM
+          endMinute: 600, // 10:00 AM
           ampmHalf: AmPmHalf.am,
           iconKey: '⚡',
           colorValue: 0xFF8B5CF6,
@@ -158,8 +178,11 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Row(
               children: [
-                const Icon(Icons.auto_stories_rounded,
-                    color: Color(0xFFEAB308), size: 22),
+                const Icon(
+                  Icons.auto_stories_rounded,
+                  color: Color(0xFFEAB308),
+                  size: 22,
+                ),
                 const SizedBox(width: 10),
                 const Text(
                   'Template Maker Studio',
@@ -211,7 +234,10 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                       // Tagline
                       TextField(
                         controller: _taglineController,
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Tagline Singkat',
                           labelStyle: const TextStyle(color: Colors.white60),
@@ -228,9 +254,13 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                       TextField(
                         controller: _descController,
                         maxLines: 2,
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                         decoration: InputDecoration(
-                          labelText: 'Filosofi & Tujuan Rutinitas (Recipe to a Good Life)',
+                          labelText:
+                              'Filosofi & Tujuan Rutinitas (Recipe to a Good Life)',
                           labelStyle: const TextStyle(color: Colors.white60),
                           filled: true,
                           fillColor: Colors.white.withOpacity(0.04),
@@ -248,10 +278,15 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                             child: DropdownButtonFormField<String>(
                               value: _category,
                               dropdownColor: const Color(0xFF1E1E2E),
-                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Kategori',
-                                labelStyle: const TextStyle(color: Colors.white60),
+                                labelStyle: const TextStyle(
+                                  color: Colors.white60,
+                                ),
                                 filled: true,
                                 fillColor: Colors.white.withOpacity(0.04),
                                 border: OutlineInputBorder(
@@ -260,7 +295,12 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                                 ),
                               ),
                               items: _categories
-                                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                                  .map(
+                                    (c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text(c),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (v) {
                                 if (v != null) setState(() => _category = v);
@@ -272,10 +312,15 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                             child: DropdownButtonFormField<String>(
                               value: _iconKey,
                               dropdownColor: const Color(0xFF1E1E2E),
-                              style: const TextStyle(color: Colors.white, fontSize: 16),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Ikon Utama',
-                                labelStyle: const TextStyle(color: Colors.white60),
+                                labelStyle: const TextStyle(
+                                  color: Colors.white60,
+                                ),
                                 filled: true,
                                 fillColor: Colors.white.withOpacity(0.04),
                                 border: OutlineInputBorder(
@@ -284,8 +329,17 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                                 ),
                               ),
                               items: _icons
-                                  .map((ic) => DropdownMenuItem(
-                                      value: ic, child: Text('$ic  $ic')))
+                                  .map(
+                                    (ic) => DropdownMenuItem(
+                                      value: ic,
+                                      child: ActivityIcon(
+                                        iconKey: ic,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (v) {
                                 if (v != null) setState(() => _iconKey = v);
@@ -331,7 +385,9 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 12),
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.04),
                             borderRadius: BorderRadius.circular(14),
@@ -349,8 +405,10 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 alignment: Alignment.center,
-                                child: Text(b.iconKey,
-                                    style: const TextStyle(fontSize: 18)),
+                                child: ActivityIcon(
+                                  iconKey: b.iconKey,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -379,14 +437,20 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                               ),
                               IconButton(
                                 onPressed: () => _editBlock(index),
-                                icon: const Icon(Icons.edit_outlined,
-                                    color: Colors.white70, size: 18),
+                                icon: const Icon(
+                                  Icons.edit_outlined,
+                                  color: Colors.white70,
+                                  size: 18,
+                                ),
                                 tooltip: 'Edit Blok',
                               ),
                               IconButton(
                                 onPressed: () => _deleteBlock(index),
-                                icon: const Icon(Icons.delete_outline_rounded,
-                                    color: Colors.redAccent, size: 18),
+                                icon: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: Colors.redAccent,
+                                  size: 18,
+                                ),
                                 tooltip: 'Hapus Blok',
                               ),
                             ],
@@ -418,10 +482,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                       ),
                       const SizedBox(height: 20),
                       // Realtime Mini Clock Preview
-                      BlueprintClockPreview(
-                        blocks: _blocks,
-                        size: 160,
-                      ),
+                      BlueprintClockPreview(blocks: _blocks, size: 160),
                       const SizedBox(height: 16),
                       Text(
                         '${_blocks.length} Blok Waktu Terpasang',
@@ -460,7 +521,9 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
   }
 
   Future<BlueprintBlock?> _showEditBlockDialog(
-      BuildContext context, BlueprintBlock block) async {
+    BuildContext context,
+    BlueprintBlock block,
+  ) async {
     final titleCtrl = TextEditingController(text: block.title);
     final philCtrl = TextEditingController(text: block.philosophy);
     int start = block.startMinute;
@@ -477,7 +540,10 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text('Edit Blok Waktu', style: TextStyle(color: Colors.white)),
+          title: const Text(
+            'Edit Blok Waktu',
+            style: TextStyle(color: Colors.white),
+          ),
           content: SizedBox(
             width: 400,
             child: Column(
@@ -504,7 +570,10 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                 // Half selector
                 Row(
                   children: [
-                    const Text('Bagian Hari:', style: TextStyle(color: Colors.white70)),
+                    const Text(
+                      'Bagian Hari:',
+                      style: TextStyle(color: Colors.white70),
+                    ),
                     const Spacer(),
                     ChoiceChip(
                       label: const Text('AM (00-12)'),
@@ -525,8 +594,10 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                 // Time Sliders
                 Row(
                   children: [
-                    Text('Mulai: ${formatMinute(start, half)}',
-                        style: const TextStyle(color: Colors.white70)),
+                    Text(
+                      'Mulai: ${formatMinute(start, half)}',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
                     Expanded(
                       child: Slider(
                         value: (start / 15).round().toDouble(),
@@ -545,8 +616,10 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                 ),
                 Row(
                   children: [
-                    Text('Selesai: ${formatMinute(end, half)}',
-                        style: const TextStyle(color: Colors.white70)),
+                    Text(
+                      'Selesai: ${formatMinute(end, half)}',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
                     Expanded(
                       child: Slider(
                         value: (end / 15).round().toDouble(),
@@ -571,7 +644,9 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
             ElevatedButton(
               onPressed: () {
                 final result = block.copyWith(
-                  title: titleCtrl.text.trim().isEmpty ? 'Aktivitas' : titleCtrl.text.trim(),
+                  title: titleCtrl.text.trim().isEmpty
+                      ? 'Aktivitas'
+                      : titleCtrl.text.trim(),
                   philosophy: philCtrl.text.trim(),
                   startMinute: start,
                   endMinute: end,
@@ -596,11 +671,14 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
     final tagline = _taglineController.text.trim();
     final description = _descController.text.trim();
 
-    final isNew = widget.initialBlueprint == null ||
+    final isNew =
+        widget.initialBlueprint == null ||
         widget.initialBlueprint!.author == 'Official Dev';
 
     final toSave = RoutineBlueprint(
-      id: isNew ? DateTime.now().millisecondsSinceEpoch : widget.initialBlueprint!.id,
+      id: isNew
+          ? DateTime.now().millisecondsSinceEpoch
+          : widget.initialBlueprint!.id,
       name: name,
       tagline: tagline,
       description: description,

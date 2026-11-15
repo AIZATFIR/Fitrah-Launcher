@@ -33,6 +33,10 @@ class LauncherSettings {
   /// Dynamic Theme Palette: 'fino_green', 'sky_blue', 'ocean_blue'
   final String themePalette;
   final String focusGoal;
+  final bool screenTimeCueEnabled;
+  final bool gentleLimitEnabled;
+  final int dailyLimitMinutes;
+  final int gentleWaitSeconds;
   // Stored with preferences; move to a database if note volume grows large.
   final Map<String, String> _dailyNotes;
   Map<String, String> get dailyNotes => Map.unmodifiable(_dailyNotes);
@@ -102,8 +106,12 @@ class LauncherSettings {
     this.widgetDisplayMode = 'prayer',
     this.autoFocusSearch = false,
     this.showAppIcons = true,
-    this.themePalette = 'ocean_blue',
+    this.themePalette = 'full_book',
     this.focusGoal = '',
+    this.screenTimeCueEnabled = false,
+    this.gentleLimitEnabled = false,
+    this.dailyLimitMinutes = 120,
+    this.gentleWaitSeconds = 20,
     Iterable<String> favoritePackages = defaultFavorites,
     Iterable<String> hiddenPackages = const {},
     Map<String, String> dailyNotes = const {},
@@ -135,6 +143,10 @@ class LauncherSettings {
     bool? showAppIcons,
     String? themePalette,
     String? focusGoal,
+    bool? screenTimeCueEnabled,
+    bool? gentleLimitEnabled,
+    int? dailyLimitMinutes,
+    int? gentleWaitSeconds,
     Iterable<String>? favoritePackages,
     Iterable<String>? hiddenPackages,
     Map<String, String>? dailyNotes,
@@ -163,6 +175,10 @@ class LauncherSettings {
       showAppIcons: showAppIcons ?? this.showAppIcons,
       themePalette: themePalette ?? this.themePalette,
       focusGoal: focusGoal ?? this.focusGoal,
+      screenTimeCueEnabled: screenTimeCueEnabled ?? this.screenTimeCueEnabled,
+      gentleLimitEnabled: gentleLimitEnabled ?? this.gentleLimitEnabled,
+      dailyLimitMinutes: dailyLimitMinutes ?? this.dailyLimitMinutes,
+      gentleWaitSeconds: gentleWaitSeconds ?? this.gentleWaitSeconds,
       favoritePackages: favoritePackages ?? this.favoritePackages,
       hiddenPackages: hiddenPackages ?? this.hiddenPackages,
       dailyNotes: Map.unmodifiable(dailyNotes ?? this.dailyNotes),
@@ -194,6 +210,10 @@ class LauncherSettings {
       'showAppIcons': showAppIcons,
       'themePalette': themePalette,
       'focusGoal': focusGoal,
+      'screenTimeCueEnabled': screenTimeCueEnabled,
+      'gentleLimitEnabled': gentleLimitEnabled,
+      'dailyLimitMinutes': dailyLimitMinutes,
+      'gentleWaitSeconds': gentleWaitSeconds,
       'favoritePackages': favoritePackages.toList(),
       'hiddenPackages': hiddenPackages.toList(),
       'dailyNotes': dailyNotes,
@@ -235,8 +255,17 @@ class LauncherSettings {
       prayerIsya: map['prayerIsya'] as String? ?? '19:03',
       widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'prayer',
       autoFocusSearch: map['autoFocusSearch'] as bool? ?? false,
-      themePalette: map['themePalette'] as String? ?? 'ocean_blue',
+      themePalette: switch (map['themePalette'] as String? ?? 'full_book') {
+        'ocean_blue' || 'sage' => 'full_book',
+        final palette => palette,
+      },
       focusGoal: map['focusGoal'] as String? ?? '',
+      screenTimeCueEnabled: map['screenTimeCueEnabled'] as bool? ?? false,
+      gentleLimitEnabled: map['gentleLimitEnabled'] as bool? ?? false,
+      dailyLimitMinutes: ((map['dailyLimitMinutes'] as num?)?.toInt() ?? 120)
+          .clamp(15, 1440),
+      gentleWaitSeconds: ((map['gentleWaitSeconds'] as num?)?.toInt() ?? 20)
+          .clamp(5, 300),
       favoritePackages: decodePackages(
         map,
         'favoritePackages',

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme.dart';
+import '../../../widgets/activity_icon.dart';
 import '../../../models/daily_reflection.dart';
 import '../../../models/habit.dart';
 import '../../../models/habit_entry.dart';
@@ -97,11 +98,13 @@ class _TodayViewState extends ConsumerState<TodayView> {
 
   Future<void> _incrementCount(Habit habit, int delta) async {
     HapticFeedback.selectionClick();
-    await ref.read(sadarRepoProvider).incrementHabitCount(
-      habitId: habit.id,
-      dateString: _todayStr,
-      delta: delta,
-    );
+    await ref
+        .read(sadarRepoProvider)
+        .incrementHabitCount(
+          habitId: habit.id,
+          dateString: _todayStr,
+          delta: delta,
+        );
   }
 
   Future<void> _toggleComplete(Habit habit, HabitStatus currentStatus) async {
@@ -124,8 +127,8 @@ class _TodayViewState extends ConsumerState<TodayView> {
             SnackBar(
               content: Text(
                 step.isRest
-                    ? '💤 Rest Day tercatat! Lanjut ke jadwal berikutnya.'
-                    : '🔥 ${step.title} selesai! Lanjut ke jadwal berikutnya.',
+                    ? 'Hari istirahat tercatat. Lanjut ke jadwal berikutnya.'
+                    : '${step.title} selesai. Lanjut ke jadwal berikutnya.',
               ),
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
@@ -143,7 +146,9 @@ class _TodayViewState extends ConsumerState<TodayView> {
       return;
     }
 
-    final newStatus = currentStatus == HabitStatus.yes ? HabitStatus.unmarked : HabitStatus.yes;
+    final newStatus = currentStatus == HabitStatus.yes
+        ? HabitStatus.unmarked
+        : HabitStatus.yes;
     await repo.recordEntryStatus(
       habitId: habit.id,
       dateString: _todayStr,
@@ -174,248 +179,271 @@ class _TodayViewState extends ConsumerState<TodayView> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. Salutation & Core Philosophy Prompt
-            Text(
-              _greeting(),
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: AppPalette.text,
-                letterSpacing: -0.6,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'How do you want to live today?',
-              style: TextStyle(
-                fontSize: 15,
-                color: AppPalette.textDim,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // 2. TODAY Header Line
-            Row(
-              children: [
-                const Text(
-                  'TODAY',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2.0,
-                    color: AppPalette.accent,
-                  ),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Salutation & Core Philosophy Prompt
+              Text(
+                _greeting(),
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: AppPalette.text,
+                  letterSpacing: -0.6,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    height: 1,
-                    color: AppPalette.stroke,
-                  ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'How do you want to live today?',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: AppPalette.textDim,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
+              ),
 
-            // 3. List of Things
-            habitsAsync.when(
-              data: (habits) {
-                if (habits.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(vertical: 36),
-                    alignment: Alignment.center,
-                    child: Column(
-                      children: [
-                        const Text(
-                          'No things chosen for today yet.',
-                          style: TextStyle(fontSize: 13, color: AppPalette.textDim),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () => _openHabitEditor(),
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Pilih yang Bermakna Hari Ini'),
-                        ),
-                      ],
+              const SizedBox(height: 28),
+
+              // 2. TODAY Header Line
+              Row(
+                children: [
+                  const Text(
+                    'TODAY',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2.0,
+                      color: AppPalette.accent,
                     ),
-                  );
-                }
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(height: 1, color: AppPalette.stroke),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-                int completedCount = 0;
-                for (final h in habits) {
-                  final entry = entriesMap[h.id];
-                  if (entry?.status == HabitStatus.yes) {
-                    completedCount++;
-                  }
-                }
-
-                return Column(
-                  children: [
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: habits.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final habit = habits[index];
-                        final entry = entriesMap[habit.id];
-                        final isDone = entry?.status == HabitStatus.yes;
-                        final habitColor = Color(habit.colorValue);
-                        final habitType = habit.effectiveHabitType;
-
-                        return _buildHabitCard(
-                          habit: habit,
-                          entry: entry,
-                          isDone: isDone,
-                          habitColor: habitColor,
-                          habitType: habitType,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 18),
-
-                    // + Add & Progress Line
-                    Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: () => _openHabitEditor(),
-                          icon: const Icon(Icons.add_rounded, size: 18, color: AppPalette.accent),
-                          label: const Text(
-                            'Add',
+              // 3. List of Things
+              habitsAsync.when(
+                data: (habits) {
+                  if (habits.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 36),
+                      alignment: Alignment.center,
+                      child: Column(
+                        children: [
+                          const Text(
+                            'No things chosen for today yet.',
                             style: TextStyle(
-                              color: AppPalette.accent,
-                              fontWeight: FontWeight.w700,
                               fontSize: 13,
+                              color: AppPalette.textDim,
                             ),
                           ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '$completedCount / ${habits.length} done',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppPalette.textDim,
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: () => _openHabitEditor(),
+                            icon: const Icon(Icons.add_rounded, size: 18),
+                            label: const Text('Pilih yang Bermakna Hari Ini'),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Error: $e', style: const TextStyle(color: Color(0xFFEF4444))),
-            ),
-
-            const SizedBox(height: 24),
-            const Divider(color: AppPalette.stroke, height: 1),
-            const SizedBox(height: 24),
-
-            // 4. Today's Reflection Card
-            reflectionAsync.when(
-              data: (reflection) {
-                final hasReflected = reflection != null &&
-                    (reflection.proudOfToday.isNotEmpty || reflection.note.isNotEmpty);
-
-                return InkWell(
-                  onTap: () => _openReflection(reflection),
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppPalette.card,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: hasReflected ? AppPalette.accent.withValues(alpha: 0.4) : AppPalette.stroke,
+                        ],
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.favorite_border_rounded, size: 18, color: AppPalette.accent),
-                            const SizedBox(width: 8),
-                            const Text(
-                              "Today's reflection",
+                    );
+                  }
+
+                  int completedCount = 0;
+                  for (final h in habits) {
+                    final entry = entriesMap[h.id];
+                    if (entry?.status == HabitStatus.yes) {
+                      completedCount++;
+                    }
+                  }
+
+                  return Column(
+                    children: [
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: habits.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final habit = habits[index];
+                          final entry = entriesMap[habit.id];
+                          final isDone = entry?.status == HabitStatus.yes;
+                          final habitColor = Color(habit.colorValue);
+                          final habitType = habit.effectiveHabitType;
+
+                          return _buildHabitCard(
+                            habit: habit,
+                            entry: entry,
+                            isDone: isDone,
+                            habitColor: habitColor,
+                            habitType: habitType,
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // + Add & Progress Line
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => _openHabitEditor(),
+                            icon: const Icon(
+                              Icons.add_rounded,
+                              size: 18,
+                              color: AppPalette.accent,
+                            ),
+                            label: const Text(
+                              'Add',
                               style: TextStyle(
+                                color: AppPalette.accent,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppPalette.text,
                               ),
                             ),
-                            const Spacer(),
-                            if (hasReflected)
-                              Text(
-                                _feelingLabel(reflection.feeling),
-                                style: const TextStyle(fontSize: 12, color: AppPalette.accent, fontWeight: FontWeight.bold),
-                              )
-                            else
-                              const Text(
-                                '[ How did today feel? ]',
-                                style: TextStyle(fontSize: 12, color: AppPalette.textDim),
-                              ),
-                          ],
-                        ),
-                        if (hasReflected && reflection.proudOfToday.isNotEmpty) ...[
-                          const SizedBox(height: 10),
+                          ),
+                          const Spacer(),
                           Text(
-                            '“${reflection.proudOfToday}”',
+                            '$completedCount / ${habits.length} done',
                             style: const TextStyle(
                               fontSize: 13,
-                              fontStyle: FontStyle.italic,
-                              color: AppPalette.text,
-                              height: 1.4,
+                              fontWeight: FontWeight.bold,
+                              color: AppPalette.textDim,
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-                );
-              },
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-            ),
-
-            const SizedBox(height: 48),
-
-            // 5. Calm Clock Display at bottom
-            Center(
-              child: Text(
-                timeFormatted,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.5,
-                  color: AppPalette.textDim,
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text(
+                  'Error: $e',
+                  style: const TextStyle(color: Color(0xFFEF4444)),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-          ],
+
+              const SizedBox(height: 24),
+              const Divider(color: AppPalette.stroke, height: 1),
+              const SizedBox(height: 24),
+
+              // 4. Today's Reflection Card
+              reflectionAsync.when(
+                data: (reflection) {
+                  final hasReflected =
+                      reflection != null &&
+                      (reflection.proudOfToday.isNotEmpty ||
+                          reflection.note.isNotEmpty);
+
+                  return InkWell(
+                    onTap: () => _openReflection(reflection),
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppPalette.card,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: hasReflected
+                              ? AppPalette.accent.withValues(alpha: 0.4)
+                              : AppPalette.stroke,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.favorite_border_rounded,
+                                size: 18,
+                                color: AppPalette.accent,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                "Today's reflection",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppPalette.text,
+                                ),
+                              ),
+                              const Spacer(),
+                              if (hasReflected)
+                                Text(
+                                  _feelingLabel(reflection.feeling),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppPalette.accent,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              else
+                                const Text(
+                                  '[ How did today feel? ]',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppPalette.textDim,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (hasReflected &&
+                              reflection.proudOfToday.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Text(
+                              '“${reflection.proudOfToday}”',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                                color: AppPalette.text,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+
+              const SizedBox(height: 48),
+
+              // 5. Calm Clock Display at bottom
+              Center(
+                child: Text(
+                  timeFormatted,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.5,
+                    color: AppPalette.textDim,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   String _feelingLabel(ReflectionFeeling feeling) {
     switch (feeling) {
       case ReflectionFeeling.proud:
-        return 'Proud 🌟';
+        return 'Proud';
       case ReflectionFeeling.good:
-        return 'Good 🌿';
+        return 'Good';
       case ReflectionFeeling.okay:
-        return 'Okay ☁️';
+        return 'Okay';
       case ReflectionFeeling.notSatisfied:
-        return 'Reflecting 🌧️';
+        return 'Reflecting';
     }
   }
 
@@ -441,7 +469,9 @@ class _TodayViewState extends ConsumerState<TodayView> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             backgroundColor: AppPalette.accent.withValues(alpha: 0.18),
             foregroundColor: AppPalette.accent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
           icon: const Icon(Icons.play_arrow_rounded, size: 16),
           label: const Text(
@@ -454,7 +484,7 @@ class _TodayViewState extends ConsumerState<TodayView> {
     } else if (habitType == 'progression') {
       final step = habit.currentStep;
       if (step.isRest) {
-        title = '${habit.name}: 💤 ${step.dayName} (Rest Day)';
+        title = '${habit.name}: ${step.dayName} (hari istirahat)';
         subtitle = 'Hari pemulihan & istirahat otot';
         if (!isDone) {
           trailingAction = FilledButton.tonalIcon(
@@ -462,14 +492,17 @@ class _TodayViewState extends ConsumerState<TodayView> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.2),
               foregroundColor: const Color(0xFF818CF8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             icon: const Icon(Icons.bedtime_rounded, size: 16),
             label: const Text(
               'Ambil Rest',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
             ),
-            onPressed: () => _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
+            onPressed: () =>
+                _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
           );
         }
       } else {
@@ -481,14 +514,17 @@ class _TodayViewState extends ConsumerState<TodayView> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               backgroundColor: const Color(0xFFEAB308).withValues(alpha: 0.2),
               foregroundColor: const Color(0xFFFDE047),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             icon: const Icon(Icons.check_rounded, size: 16),
             label: Text(
               '${step.target}x Selesai',
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
             ),
-            onPressed: () => _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
+            onPressed: () =>
+                _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
           );
         }
       }
@@ -500,7 +536,9 @@ class _TodayViewState extends ConsumerState<TodayView> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             backgroundColor: const Color(0xFFEC4899).withValues(alpha: 0.2),
             foregroundColor: const Color(0xFFF472B6),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
           icon: const Icon(Icons.timer_outlined, size: 16),
           label: const Text(
@@ -519,9 +557,15 @@ class _TodayViewState extends ConsumerState<TodayView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.remove_circle_outline_rounded, size: 20, color: Colors.white54),
+              icon: const Icon(
+                Icons.remove_circle_outline_rounded,
+                size: 20,
+                color: Colors.white54,
+              ),
               visualDensity: VisualDensity.compact,
-              onPressed: currentVal > 0 ? () => _incrementCount(habit, -1) : null,
+              onPressed: currentVal > 0
+                  ? () => _incrementCount(habit, -1)
+                  : null,
             ),
             Text(
               '$currentVal',
@@ -532,7 +576,11 @@ class _TodayViewState extends ConsumerState<TodayView> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.add_circle_outline_rounded, size: 20, color: AppPalette.accent),
+              icon: const Icon(
+                Icons.add_circle_outline_rounded,
+                size: 20,
+                color: AppPalette.accent,
+              ),
               visualDensity: VisualDensity.compact,
               onPressed: () => _incrementCount(habit, 1),
             ),
@@ -543,16 +591,16 @@ class _TodayViewState extends ConsumerState<TodayView> {
       }
     }
 
-    String badgeLabel = '🔢 Count';
+    String badgeLabel = 'Hitungan';
     Color badgeColor = const Color(0xFF3B82F6);
     if (habitType == 'timed') {
-      badgeLabel = '⏱️ YPT';
+      badgeLabel = 'Timer';
       badgeColor = AppPalette.accent;
     } else if (habitType == 'progression') {
-      badgeLabel = '🏋️ Bodybuilding';
+      badgeLabel = 'Latihan';
       badgeColor = const Color(0xFFEAB308);
     } else if (habitType == 'hybrid') {
-      badgeLabel = '⚡ Hybrid';
+      badgeLabel = 'Campuran';
       badgeColor = const Color(0xFFEC4899);
     }
 
@@ -577,7 +625,8 @@ class _TodayViewState extends ConsumerState<TodayView> {
           children: [
             // Checkbox Button
             InkWell(
-              onTap: () => _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
+              onTap: () =>
+                  _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 width: 26,
@@ -591,14 +640,22 @@ class _TodayViewState extends ConsumerState<TodayView> {
                   ),
                 ),
                 child: isDone
-                    ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
+                    ? const Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      )
                     : null,
               ),
             ),
             const SizedBox(width: 12),
 
             // Emoji
-            Text(habit.iconKey, style: const TextStyle(fontSize: 20)),
+            ActivityIcon(
+              iconKey: habit.iconKey,
+              size: 20,
+              color: AppPalette.accent,
+            ),
             const SizedBox(width: 10),
 
             // Main Info
@@ -614,9 +671,15 @@ class _TodayViewState extends ConsumerState<TodayView> {
                           title,
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: isDone ? FontWeight.w500 : FontWeight.w700,
-                            color: isDone ? AppPalette.textDim : AppPalette.text,
-                            decoration: isDone ? TextDecoration.lineThrough : null,
+                            fontWeight: isDone
+                                ? FontWeight.w500
+                                : FontWeight.w700,
+                            color: isDone
+                                ? AppPalette.textDim
+                                : AppPalette.text,
+                            decoration: isDone
+                                ? TextDecoration.lineThrough
+                                : null,
                             decorationColor: AppPalette.textDim,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -624,7 +687,10 @@ class _TodayViewState extends ConsumerState<TodayView> {
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1.5,
+                        ),
                         decoration: BoxDecoration(
                           color: badgeColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(5),
@@ -661,7 +727,11 @@ class _TodayViewState extends ConsumerState<TodayView> {
 
             // Edit options button
             IconButton(
-              icon: const Icon(Icons.more_vert_rounded, size: 18, color: Colors.white38),
+              icon: const Icon(
+                Icons.more_vert_rounded,
+                size: 18,
+                color: Colors.white38,
+              ),
               visualDensity: VisualDensity.compact,
               tooltip: 'Ubah Kebiasaan',
               onPressed: () => _openHabitEditor(habit),

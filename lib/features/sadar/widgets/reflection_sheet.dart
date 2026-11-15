@@ -124,13 +124,29 @@ class _ReflectionSheetState extends ConsumerState<ReflectionSheet> {
             const SizedBox(height: 10),
             Row(
               children: [
-                _feelingChip(ReflectionFeeling.notSatisfied, '🌧️', 'Reflecting'),
+                _feelingChip(
+                  ReflectionFeeling.notSatisfied,
+                  Icons.cloud_outlined,
+                  'Reflecting',
+                ),
                 const SizedBox(width: 8),
-                _feelingChip(ReflectionFeeling.okay, '☁️', 'Okay'),
+                _feelingChip(
+                  ReflectionFeeling.okay,
+                  Icons.remove_rounded,
+                  'Okay',
+                ),
                 const SizedBox(width: 8),
-                _feelingChip(ReflectionFeeling.good, '🌿', 'Good'),
+                _feelingChip(
+                  ReflectionFeeling.good,
+                  Icons.spa_outlined,
+                  'Good',
+                ),
                 const SizedBox(width: 8),
-                _feelingChip(ReflectionFeeling.proud, '🌟', 'Proud'),
+                _feelingChip(
+                  ReflectionFeeling.proud,
+                  Icons.check_circle_outline_rounded,
+                  'Proud',
+                ),
               ],
             ),
 
@@ -156,8 +172,12 @@ class _ReflectionSheetState extends ConsumerState<ReflectionSheet> {
               controller: _proudCtrl,
               style: const TextStyle(fontSize: 14, color: AppPalette.text),
               decoration: InputDecoration(
-                hintText: 'misal: Aku belajar bahasa walau awalnya terasa lelah.',
-                hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 13),
+                hintText:
+                    'misal: Aku belajar bahasa walau awalnya terasa lelah.',
+                hintStyle: const TextStyle(
+                  color: AppPalette.textDim,
+                  fontSize: 13,
+                ),
                 filled: true,
                 fillColor: AppPalette.bg,
                 border: OutlineInputBorder(
@@ -190,7 +210,10 @@ class _ReflectionSheetState extends ConsumerState<ReflectionSheet> {
               style: const TextStyle(fontSize: 13, color: AppPalette.text),
               decoration: InputDecoration(
                 hintText: 'Catatan tambahan tentang hari ini...',
-                hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 13),
+                hintStyle: const TextStyle(
+                  color: AppPalette.textDim,
+                  fontSize: 13,
+                ),
                 filled: true,
                 fillColor: AppPalette.bg,
                 border: OutlineInputBorder(
@@ -213,7 +236,9 @@ class _ReflectionSheetState extends ConsumerState<ReflectionSheet> {
                 backgroundColor: AppPalette.accent,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               onPressed: _save,
               child: const Text(
@@ -227,7 +252,7 @@ class _ReflectionSheetState extends ConsumerState<ReflectionSheet> {
     );
   }
 
-  Widget _feelingChip(ReflectionFeeling feeling, String emoji, String label) {
+  Widget _feelingChip(ReflectionFeeling feeling, IconData icon, String label) {
     final isSelected = _feeling == feeling;
     return Expanded(
       child: InkWell(
@@ -240,7 +265,9 @@ class _ReflectionSheetState extends ConsumerState<ReflectionSheet> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppPalette.accent.withValues(alpha: 0.2) : AppPalette.bg,
+            color: isSelected
+                ? AppPalette.accent.withValues(alpha: 0.2)
+                : AppPalette.bg,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected ? AppPalette.accent : AppPalette.stroke,
@@ -250,7 +277,11 @@ class _ReflectionSheetState extends ConsumerState<ReflectionSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 20)),
+              Icon(
+                icon,
+                size: 20,
+                color: isSelected ? AppPalette.accent : AppPalette.textDim,
+              ),
               const SizedBox(height: 4),
               Text(
                 label,

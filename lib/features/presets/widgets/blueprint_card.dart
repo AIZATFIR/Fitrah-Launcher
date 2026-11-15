@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/activity_icon.dart';
 import '../../../models/routine_blueprint.dart';
 import '../dialogs/apply_blueprint_dialog.dart';
 import '../dialogs/blueprint_detail_dialog.dart';
@@ -22,10 +23,7 @@ class BlueprintCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF161622),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.08),
-          width: 1.2,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.25),
@@ -53,7 +51,10 @@ class BlueprintCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEAB308).withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
@@ -69,7 +70,10 @@ class BlueprintCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(8),
@@ -105,7 +109,11 @@ class BlueprintCard extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              Text(b.iconKey, style: const TextStyle(fontSize: 22)),
+                              ActivityIcon(
+                                iconKey: b.iconKey,
+                                size: 22,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -137,10 +145,7 @@ class BlueprintCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 14),
                     // Mini Visual Dial Preview
-                    BlueprintClockPreview(
-                      blocks: b.blocks,
-                      size: 78,
-                    ),
+                    BlueprintClockPreview(blocks: b.blocks, size: 78),
                   ],
                 ),
                 const SizedBox(height: 18),
@@ -155,7 +160,11 @@ class BlueprintCard extends StatelessWidget {
                         blueprint: b,
                         onCustomize: onCustomize,
                       ),
-                      icon: const Icon(Icons.menu_book_rounded, size: 16, color: Colors.white70),
+                      icon: const Icon(
+                        Icons.menu_book_rounded,
+                        size: 16,
+                        color: Colors.white70,
+                      ),
                       label: const Text(
                         'Baca Panduan',
                         style: TextStyle(color: Colors.white70, fontSize: 12),
@@ -167,7 +176,10 @@ class BlueprintCard extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white70,
                         side: BorderSide(color: Colors.white.withOpacity(0.15)),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -181,7 +193,10 @@ class BlueprintCard extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFEAB308),
                         foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -189,7 +204,10 @@ class BlueprintCard extends StatelessWidget {
                       icon: const Icon(Icons.bolt_rounded, size: 16),
                       label: const Text(
                         'Terapkan',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

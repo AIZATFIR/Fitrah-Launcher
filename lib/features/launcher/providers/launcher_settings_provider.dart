@@ -253,6 +253,20 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
   Future<bool> setFocusGoal(String goal) =>
       _mutate((s) => s.copyWith(focusGoal: goal.trim()));
 
+  Future<bool> setScreenTimeCueEnabled(bool enabled) =>
+      _mutate((s) => s.copyWith(screenTimeCueEnabled: enabled));
+
+  Future<bool> setGentleLimitEnabled(bool enabled) =>
+      _mutate((s) => s.copyWith(gentleLimitEnabled: enabled));
+
+  Future<bool> setScreenTimeThreshold({int? limitMinutes, int? waitSeconds}) =>
+      _mutate(
+        (s) => s.copyWith(
+          dailyLimitMinutes: limitMinutes?.clamp(15, 1440),
+          gentleWaitSeconds: waitSeconds?.clamp(5, 300),
+        ),
+      );
+
   Future<bool> setDailyNote(String date, String value) async {
     final revision = (_noteRevisions[date] ?? 0) + 1;
     _noteRevisions[date] = revision;

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme.dart';
+import '../../widgets/activity_icon.dart';
 import '../../core/time_math.dart';
 import '../../models/task.dart';
 import '../../models/activity.dart';
@@ -70,7 +71,10 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppPalette.card,
-        title: const Text('New Timeline Task', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'New Timeline Task',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
         content: TextField(
           controller: titleCtrl,
           autofocus: true,
@@ -84,10 +88,16 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppPalette.textDim)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppPalette.textDim),
+            ),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppPalette.accent, foregroundColor: Colors.black),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppPalette.accent,
+              foregroundColor: Colors.black,
+            ),
             onPressed: () => Navigator.pop(ctx, titleCtrl.text),
             child: const Text('Create'),
           ),
@@ -115,7 +125,10 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppPalette.card,
-        title: const Text('New Timeline Task', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'New Timeline Task',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
         content: TextField(
           controller: titleCtrl,
           autofocus: true,
@@ -129,10 +142,16 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppPalette.textDim)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppPalette.textDim),
+            ),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppPalette.accent, foregroundColor: Colors.black),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppPalette.accent,
+              foregroundColor: Colors.black,
+            ),
             onPressed: () => Navigator.pop(ctx, titleCtrl.text),
             child: const Text('Create'),
           ),
@@ -156,12 +175,14 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
   Widget _modeButton(bool targetTaskMode, IconData icon, String label) {
     final active = _isTaskMode == targetTaskMode;
     return GestureDetector(
-      onTap: active ? null : () {
-        setState(() {
-          _isTaskMode = targetTaskMode;
-        });
-        HapticFeedback.selectionClick();
-      },
+      onTap: active
+          ? null
+          : () {
+              setState(() {
+                _isTaskMode = targetTaskMode;
+              });
+              HapticFeedback.selectionClick();
+            },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
@@ -200,7 +221,7 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
 
     // List of tasks scheduled for this day (entire 24h)
     final scheduledTasks = ref.watch(tasksByDateProvider);
-    
+
     // List of activities scheduled for this day (entire 24h)
     final activitiesAsync = ref.watch(activitiesByDateProvider);
     final activities = activitiesAsync.valueOrNull ?? const <Activity>[];
@@ -210,12 +231,13 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
 
     // Format header date label
     final isToday = date == dateOnly(DateTime.now());
-    final isTomorrow = date == dateOnly(DateTime.now().add(const Duration(days: 1)));
+    final isTomorrow =
+        date == dateOnly(DateTime.now().add(const Duration(days: 1)));
     final dateString = isToday
         ? 'Today'
         : isTomorrow
-            ? 'Tomorrow'
-            : DateFormat('EEE, MMM d').format(date);
+        ? 'Tomorrow'
+        : DateFormat('EEE, MMM d').format(date);
 
     const double timelineHeight = 1920.0; // 80dp per hour * 24 hours
 
@@ -233,9 +255,14 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_rounded, size: 16, color: AppPalette.textDim),
+                  icon: const Icon(
+                    Icons.arrow_back_ios_rounded,
+                    size: 16,
+                    color: AppPalette.textDim,
+                  ),
                   onPressed: () {
-                    ref.read(currentDateProvider.notifier).state = date.subtract(const Duration(days: 1));
+                    ref.read(currentDateProvider.notifier).state = date
+                        .subtract(const Duration(days: 1));
                     HapticFeedback.lightImpact();
                   },
                 ),
@@ -246,24 +273,40 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: date,
-                          firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          firstDate: DateTime.now().subtract(
+                            const Duration(days: 365),
+                          ),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                         );
                         if (picked != null) {
-                          ref.read(currentDateProvider.notifier).state = dateOnly(picked);
+                          ref.read(currentDateProvider.notifier).state =
+                              dateOnly(picked);
                         }
                       },
                       child: Text(
                         dateString.toUpperCase(),
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppPalette.text, letterSpacing: 1.2),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: AppPalette.text,
+                          letterSpacing: 1.2,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppPalette.textDim),
+                  icon: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: AppPalette.textDim,
+                  ),
                   onPressed: () {
-                    ref.read(currentDateProvider.notifier).state = date.add(const Duration(days: 1));
+                    ref.read(currentDateProvider.notifier).state = date.add(
+                      const Duration(days: 1),
+                    );
                     HapticFeedback.lightImpact();
                   },
                 ),
@@ -284,7 +327,11 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
               child: Row(
                 children: [
                   Expanded(
-                    child: _modeButton(false, Icons.directions_run_rounded, 'Activity'),
+                    child: _modeButton(
+                      false,
+                      Icons.directions_run_rounded,
+                      'Activity',
+                    ),
                   ),
                   Expanded(
                     child: _modeButton(true, Icons.task_alt_rounded, 'Task'),
@@ -304,10 +351,12 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
               onAcceptWithDetails: (details) async {
                 // Drop unscheduled task onto the timeline
                 final task = details.data;
-                final renderBox = _dragTargetKey.currentContext?.findRenderObject() as RenderBox?;
+                final renderBox =
+                    _dragTargetKey.currentContext?.findRenderObject()
+                        as RenderBox?;
                 if (renderBox == null) return;
                 final localOffset = renderBox.globalToLocal(details.offset);
-                
+
                 final double relativeY = localOffset.dy + _scrollCtrl.offset;
                 final clickMin = (relativeY / timelineHeight) * 1440.0;
                 final start = snap5(clickMin.toInt()).clamp(0, 1440 - 30);
@@ -325,7 +374,9 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                 final isOver = candidateData.isNotEmpty;
                 return Container(
                   decoration: BoxDecoration(
-                    color: isOver ? AppPalette.accent.withValues(alpha: 0.03) : Colors.transparent,
+                    color: isOver
+                        ? AppPalette.accent.withValues(alpha: 0.03)
+                        : Colors.transparent,
                   ),
                   child: SingleChildScrollView(
                     controller: _scrollCtrl,
@@ -336,53 +387,92 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                           behavior: HitTestBehavior.opaque,
                           onDoubleTapDown: (details) {
                             if (!_isTaskMode) {
-                              _createTaskAt((details.localPosition.dy / timelineHeight * 1440).toInt(), date);
+                              _createTaskAt(
+                                (details.localPosition.dy /
+                                        timelineHeight *
+                                        1440)
+                                    .toInt(),
+                                date,
+                              );
                             }
                           },
                           onVerticalDragStart: _isTaskMode
                               ? (details) {
-                                  ref.read(isClockDraggingProvider.notifier).state = true;
+                                  ref
+                                          .read(
+                                            isClockDraggingProvider.notifier,
+                                          )
+                                          .state =
+                                      true;
                                   setState(() {
-                                    _createTaskDragStart = details.localPosition.dy;
-                                    _createTaskDragCurrent = details.localPosition.dy;
+                                    _createTaskDragStart =
+                                        details.localPosition.dy;
+                                    _createTaskDragCurrent =
+                                        details.localPosition.dy;
                                   });
                                 }
                               : null,
                           onVerticalDragUpdate: _isTaskMode
                               ? (details) {
                                   setState(() {
-                                    _createTaskDragCurrent = details.localPosition.dy;
+                                    _createTaskDragCurrent =
+                                        details.localPosition.dy;
                                   });
                                 }
                               : null,
                           onVerticalDragEnd: _isTaskMode
                               ? (details) async {
-                                  ref.read(isClockDraggingProvider.notifier).state = false;
-                                  if (_createTaskDragStart != null && _createTaskDragCurrent != null) {
+                                  ref
+                                          .read(
+                                            isClockDraggingProvider.notifier,
+                                          )
+                                          .state =
+                                      false;
+                                  if (_createTaskDragStart != null &&
+                                      _createTaskDragCurrent != null) {
                                     final startY = _createTaskDragStart!;
                                     final endY = _createTaskDragCurrent!;
-                                    
-                                    final min1 = (startY / timelineHeight) * 1440.0;
-                                    final min2 = (endY / timelineHeight) * 1440.0;
-                                    
-                                    final double rawStart = min1 < min2 ? min1 : min2;
-                                    final double rawEnd = min1 < min2 ? min2 : min1;
-                                    
-                                    final int finalStart = snap5(rawStart.round()).clamp(0, 1435);
-                                    final int finalEnd = snap5(rawEnd.round()).clamp(finalStart + 5, 1440);
-                                    
+
+                                    final min1 =
+                                        (startY / timelineHeight) * 1440.0;
+                                    final min2 =
+                                        (endY / timelineHeight) * 1440.0;
+
+                                    final double rawStart = min1 < min2
+                                        ? min1
+                                        : min2;
+                                    final double rawEnd = min1 < min2
+                                        ? min2
+                                        : min1;
+
+                                    final int finalStart = snap5(
+                                      rawStart.round(),
+                                    ).clamp(0, 1435);
+                                    final int finalEnd = snap5(
+                                      rawEnd.round(),
+                                    ).clamp(finalStart + 5, 1440);
+
                                     setState(() {
                                       _createTaskDragStart = null;
                                       _createTaskDragCurrent = null;
                                     });
-                                    
-                                    await _createTaskAtRange(finalStart, finalEnd, date);
+
+                                    await _createTaskAtRange(
+                                      finalStart,
+                                      finalEnd,
+                                      date,
+                                    );
                                   }
                                 }
                               : null,
                           onVerticalDragCancel: _isTaskMode
                               ? () {
-                                  ref.read(isClockDraggingProvider.notifier).state = false;
+                                  ref
+                                          .read(
+                                            isClockDraggingProvider.notifier,
+                                          )
+                                          .state =
+                                      false;
                                   setState(() {
                                     _createTaskDragStart = null;
                                     _createTaskDragCurrent = null;
@@ -393,30 +483,47 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                             height: timelineHeight,
                             child: Column(
                               children: List.generate(24, (index) {
-                                final timeStr = '${index.toString().padLeft(2, '0')}:00';
+                                final timeStr =
+                                    '${index.toString().padLeft(2, '0')}:00';
                                 return Container(
                                   height: 80,
                                   decoration: const BoxDecoration(
-                                    border: Border(bottom: BorderSide(color: AppPalette.stroke, width: 0.5)),
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: AppPalette.stroke,
+                                        width: 0.5,
+                                      ),
+                                    ),
                                   ),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Container(
                                         width: 55,
-                                        padding: const EdgeInsets.only(top: 4, left: 8),
+                                        padding: const EdgeInsets.only(
+                                          top: 4,
+                                          left: 8,
+                                        ),
                                         child: Text(
                                           timeStr,
-                                          style: const TextStyle(fontSize: 10, color: AppPalette.textDim, fontWeight: FontWeight.w600),
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: AppPalette.textDim,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
                                       ),
                                       Expanded(
                                         child: Container(
-                                          margin: const EdgeInsets.only(top: 40),
+                                          margin: const EdgeInsets.only(
+                                            top: 40,
+                                          ),
                                           decoration: BoxDecoration(
                                             border: Border(
                                               bottom: BorderSide(
-                                                color: AppPalette.stroke.withValues(alpha: 0.3),
+                                                color: AppPalette.stroke
+                                                    .withValues(alpha: 0.3),
                                                 width: 0.5,
                                                 style: BorderStyle.solid,
                                               ),
@@ -433,23 +540,32 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                         ),
 
                         // Drag-to-create Task Preview
-                        if (_isTaskMode && _createTaskDragStart != null && _createTaskDragCurrent != null)
+                        if (_isTaskMode &&
+                            _createTaskDragStart != null &&
+                            _createTaskDragCurrent != null)
                           Builder(
                             builder: (context) {
                               final startY = _createTaskDragStart!;
                               final endY = _createTaskDragCurrent!;
                               final double top = startY < endY ? startY : endY;
                               final double height = (startY - endY).abs();
-                              
+
                               final min1 = (startY / timelineHeight) * 1440.0;
                               final min2 = (endY / timelineHeight) * 1440.0;
-                              final int startMin = snap5(min1 < min2 ? min1.round() : min2.round()).clamp(0, 1435);
-                              final int endMin = snap5(min1 < min2 ? min2.round() : min1.round()).clamp(startMin + 5, 1440);
-                              
-                              final uiHalf = startMin < 720 ? AmPmHalf.am : AmPmHalf.pm;
+                              final int startMin = snap5(
+                                min1 < min2 ? min1.round() : min2.round(),
+                              ).clamp(0, 1435);
+                              final int endMin = snap5(
+                                min1 < min2 ? min2.round() : min1.round(),
+                              ).clamp(startMin + 5, 1440);
+
+                              final uiHalf = startMin < 720
+                                  ? AmPmHalf.am
+                                  : AmPmHalf.pm;
                               final uiStartMin = startMin % 720;
                               final uiEndMin = endMin % 720;
-                              final timeStr = '${formatMinuteOfHalf(uiStartMin, uiHalf, is24h: true)} – ${formatMinuteOfHalf(uiEndMin, uiHalf, is24h: true)}';
+                              final timeStr =
+                                  '${formatMinuteOfHalf(uiStartMin, uiHalf, is24h: true)} – ${formatMinuteOfHalf(uiEndMin, uiHalf, is24h: true)}';
 
                               return Positioned(
                                 top: top,
@@ -458,10 +574,14 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                                 height: height.clamp(12.0, timelineHeight),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: AppPalette.accent.withValues(alpha: 0.15),
+                                    color: AppPalette.accent.withValues(
+                                      alpha: 0.15,
+                                    ),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: AppPalette.accent.withValues(alpha: 0.6),
+                                      color: AppPalette.accent.withValues(
+                                        alpha: 0.6,
+                                      ),
                                       width: 1.5,
                                     ),
                                   ),
@@ -481,26 +601,48 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
 
                         // B. Scheduled Activity Cards (Wider, acting as background platform)
                         ...activities.map((a) {
-                          final bool isThisDragging = _draggedActivityId == a.id;
-                          final double start = isThisDragging ? _draggedActivityStart! : toUiMinute(a.startMinute, a.ampmHalf).toDouble();
-                          final double end = isThisDragging ? _draggedActivityEnd! : toUiMinute(a.endMinute, a.ampmHalf).toDouble();
+                          final bool isThisDragging =
+                              _draggedActivityId == a.id;
+                          final double start = isThisDragging
+                              ? _draggedActivityStart!
+                              : toUiMinute(
+                                  a.startMinute,
+                                  a.ampmHalf,
+                                ).toDouble();
+                          final double end = isThisDragging
+                              ? _draggedActivityEnd!
+                              : toUiMinute(a.endMinute, a.ampmHalf).toDouble();
 
                           final top = (start / 1440.0) * timelineHeight;
-                          final cardHeight = ((end - start) / 1440.0) * timelineHeight;
+                          final cardHeight =
+                              ((end - start) / 1440.0) * timelineHeight;
 
                           Widget card = _ActivityTimelineCard(
                             activity: a,
                             isDragging: isThisDragging,
                             is24h: true,
-                            onTap: () => showActivityDetailSheet(context, activity: a, mode: DetailMode.view),
+                            onTap: () => showActivityDetailSheet(
+                              context,
+                              activity: a,
+                              mode: DetailMode.view,
+                            ),
                             onCompleteToggle: () async {
                               HapticFeedback.selectionClick();
-                              await ref.read(activityRepoProvider).markComplete(a, !a.isCompleted);
+                              await ref
+                                  .read(activityRepoProvider)
+                                  .markComplete(a, !a.isCompleted);
                             },
                             onPanStart: () {
-                              ref.read(isClockDraggingProvider.notifier).state = true;
-                              final startVal = toUiMinute(a.startMinute, a.ampmHalf).toDouble();
-                              final endVal = toUiMinute(a.endMinute, a.ampmHalf).toDouble();
+                              ref.read(isClockDraggingProvider.notifier).state =
+                                  true;
+                              final startVal = toUiMinute(
+                                a.startMinute,
+                                a.ampmHalf,
+                              ).toDouble();
+                              final endVal = toUiMinute(
+                                a.endMinute,
+                                a.ampmHalf,
+                              ).toDouble();
                               setState(() {
                                 _draggedActivityId = a.id;
                                 _draggedActivityStart = startVal;
@@ -512,27 +654,49 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                             },
                             onPanUpdate: (dy) {
                               final deltaMin = (dy / timelineHeight) * 1440.0;
-                              final dur = toUiMinute(a.endMinute, a.ampmHalf) - toUiMinute(a.startMinute, a.ampmHalf);
+                              final dur =
+                                  toUiMinute(a.endMinute, a.ampmHalf) -
+                                  toUiMinute(a.startMinute, a.ampmHalf);
                               setState(() {
                                 _accumulatedDelta += deltaMin;
-                                final target = _draggedStartBase! + _accumulatedDelta;
-                                _draggedActivityStart = snap5(target.round()).toDouble().clamp(0.0, 1440.0 - dur);
-                                _draggedActivityEnd = _draggedActivityStart! + dur;
+                                final target =
+                                    _draggedStartBase! + _accumulatedDelta;
+                                _draggedActivityStart = snap5(
+                                  target.round(),
+                                ).toDouble().clamp(0.0, 1440.0 - dur);
+                                _draggedActivityEnd =
+                                    _draggedActivityStart! + dur;
                               });
                             },
                             onPanEnd: () async {
-                              ref.read(isClockDraggingProvider.notifier).state = false;
+                              ref.read(isClockDraggingProvider.notifier).state =
+                                  false;
                               final finalStart = _draggedActivityStart!.round();
-                              final dur = toUiMinute(a.endMinute, a.ampmHalf) - toUiMinute(a.startMinute, a.ampmHalf);
-                              final finalEnd = (finalStart + dur).clamp(0, 1440);
-                              
+                              final dur =
+                                  toUiMinute(a.endMinute, a.ampmHalf) -
+                                  toUiMinute(a.startMinute, a.ampmHalf);
+                              final finalEnd = (finalStart + dur).clamp(
+                                0,
+                                1440,
+                              );
+
                               final updated = a
                                 ..startMinute = toDbMinute(finalStart)
                                 ..ampmHalf = toDbHalf(finalStart)
-                                ..endMinute = toDbEndMinute(finalEnd, toDbHalf(finalStart));
-                                
-                              final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-                              await ref.read(activityRepoProvider).upsert(updated, notifLeadMinutes: lead);
+                                ..endMinute = toDbEndMinute(
+                                  finalEnd,
+                                  toDbHalf(finalStart),
+                                );
+
+                              final lead =
+                                  ref
+                                      .read(settingsProvider)
+                                      .valueOrNull
+                                      ?.notifLeadMinutes ??
+                                  1;
+                              await ref
+                                  .read(activityRepoProvider)
+                                  .upsert(updated, notifLeadMinutes: lead);
                               setState(() {
                                 _draggedActivityId = null;
                                 _draggedStartBase = null;
@@ -541,9 +705,16 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                               HapticFeedback.lightImpact();
                             },
                             onResizeTopStart: () {
-                              ref.read(isClockDraggingProvider.notifier).state = true;
-                              final startVal = toUiMinute(a.startMinute, a.ampmHalf).toDouble();
-                              final endVal = toUiMinute(a.endMinute, a.ampmHalf).toDouble();
+                              ref.read(isClockDraggingProvider.notifier).state =
+                                  true;
+                              final startVal = toUiMinute(
+                                a.startMinute,
+                                a.ampmHalf,
+                              ).toDouble();
+                              final endVal = toUiMinute(
+                                a.endMinute,
+                                a.ampmHalf,
+                              ).toDouble();
                               setState(() {
                                 _draggedActivityId = a.id;
                                 _draggedActivityStart = startVal;
@@ -557,22 +728,39 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                               final deltaMin = (dy / timelineHeight) * 1440.0;
                               setState(() {
                                 _accumulatedDelta += deltaMin;
-                                final target = _draggedStartBase! + _accumulatedDelta;
-                                _draggedActivityStart = snap5(target.round()).toDouble().clamp(0.0, _draggedActivityEnd! - 5.0);
+                                final target =
+                                    _draggedStartBase! + _accumulatedDelta;
+                                _draggedActivityStart = snap5(target.round())
+                                    .toDouble()
+                                    .clamp(0.0, _draggedActivityEnd! - 5.0);
                               });
                             },
                             onResizeTopEnd: () async {
-                              ref.read(isClockDraggingProvider.notifier).state = false;
+                              ref.read(isClockDraggingProvider.notifier).state =
+                                  false;
                               final finalStart = _draggedActivityStart!.round();
-                              
-                              final absoluteEnd = toUiMinute(a.endMinute, a.ampmHalf);
+
+                              final absoluteEnd = toUiMinute(
+                                a.endMinute,
+                                a.ampmHalf,
+                              );
                               final updated = a
                                 ..startMinute = toDbMinute(finalStart)
                                 ..ampmHalf = toDbHalf(finalStart)
-                                ..endMinute = toDbEndMinute(absoluteEnd, toDbHalf(finalStart));
-                                
-                              final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-                              await ref.read(activityRepoProvider).upsert(updated, notifLeadMinutes: lead);
+                                ..endMinute = toDbEndMinute(
+                                  absoluteEnd,
+                                  toDbHalf(finalStart),
+                                );
+
+                              final lead =
+                                  ref
+                                      .read(settingsProvider)
+                                      .valueOrNull
+                                      ?.notifLeadMinutes ??
+                                  1;
+                              await ref
+                                  .read(activityRepoProvider)
+                                  .upsert(updated, notifLeadMinutes: lead);
                               setState(() {
                                 _draggedActivityId = null;
                                 _draggedStartBase = null;
@@ -581,9 +769,16 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                               HapticFeedback.lightImpact();
                             },
                             onResizeBottomStart: () {
-                              ref.read(isClockDraggingProvider.notifier).state = true;
-                              final startVal = toUiMinute(a.startMinute, a.ampmHalf).toDouble();
-                              final endVal = toUiMinute(a.endMinute, a.ampmHalf).toDouble();
+                              ref.read(isClockDraggingProvider.notifier).state =
+                                  true;
+                              final startVal = toUiMinute(
+                                a.startMinute,
+                                a.ampmHalf,
+                              ).toDouble();
+                              final endVal = toUiMinute(
+                                a.endMinute,
+                                a.ampmHalf,
+                              ).toDouble();
                               setState(() {
                                 _draggedActivityId = a.id;
                                 _draggedActivityStart = startVal;
@@ -597,18 +792,36 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                               final deltaMin = (dy / timelineHeight) * 1440.0;
                               setState(() {
                                 _accumulatedDelta += deltaMin;
-                                final target = _draggedEndBase! + _accumulatedDelta;
-                                _draggedActivityEnd = snap5(target.round()).toDouble().clamp(_draggedActivityStart! + 5.0, 1440.0);
+                                final target =
+                                    _draggedEndBase! + _accumulatedDelta;
+                                _draggedActivityEnd = snap5(target.round())
+                                    .toDouble()
+                                    .clamp(
+                                      _draggedActivityStart! + 5.0,
+                                      1440.0,
+                                    );
                               });
                             },
                             onResizeBottomEnd: () async {
-                              ref.read(isClockDraggingProvider.notifier).state = false;
+                              ref.read(isClockDraggingProvider.notifier).state =
+                                  false;
                               final finalEnd = _draggedActivityEnd!.round();
-                              
-                              final updated = a..endMinute = toDbEndMinute(finalEnd, a.ampmHalf);
-                              
-                              final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-                              await ref.read(activityRepoProvider).upsert(updated, notifLeadMinutes: lead);
+
+                              final updated = a
+                                ..endMinute = toDbEndMinute(
+                                  finalEnd,
+                                  a.ampmHalf,
+                                );
+
+                              final lead =
+                                  ref
+                                      .read(settingsProvider)
+                                      .valueOrNull
+                                      ?.notifLeadMinutes ??
+                                  1;
+                              await ref
+                                  .read(activityRepoProvider)
+                                  .upsert(updated, notifLeadMinutes: lead);
                               setState(() {
                                 _draggedActivityId = null;
                                 _draggedStartBase = null;
@@ -620,10 +833,7 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
 
                           if (_isTaskMode) {
                             card = IgnorePointer(
-                              child: Opacity(
-                                opacity: 0.35,
-                                child: card,
-                              ),
+                              child: Opacity(opacity: 0.35, child: card),
                             );
                           }
 
@@ -640,16 +850,28 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                         // C. Scheduled Task Cards (Nested inside the activity platforms)
                         ...scheduledTasks.map((task) {
                           final bool isThisDragging = _draggedTaskId == task.id;
-                          final double start = isThisDragging ? _draggedTaskStart! : toUiMinute(task.startMinute!, task.ampmHalf).toDouble();
-                          final double end = isThisDragging ? _draggedTaskEnd! : toUiMinute(task.endMinute!, task.ampmHalf).toDouble();
+                          final double start = isThisDragging
+                              ? _draggedTaskStart!
+                              : toUiMinute(
+                                  task.startMinute!,
+                                  task.ampmHalf,
+                                ).toDouble();
+                          final double end = isThisDragging
+                              ? _draggedTaskEnd!
+                              : toUiMinute(
+                                  task.endMinute!,
+                                  task.ampmHalf,
+                                ).toDouble();
 
                           final top = (start / 1440.0) * timelineHeight;
-                          final cardHeight = ((end - start) / 1440.0) * timelineHeight;
+                          final cardHeight =
+                              ((end - start) / 1440.0) * timelineHeight;
 
                           return Positioned(
                             key: ValueKey('task_${task.id}'),
                             top: top,
-                            left: 80, // slightly indented so it sits nicely inside the activity background
+                            left:
+                                80, // slightly indented so it sits nicely inside the activity background
                             right: 24, // slightly inset from the right edge
                             height: cardHeight.clamp(24.0, timelineHeight),
                             child: _TaskTimelineCard(
@@ -658,20 +880,33 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                               onTap: () => showTaskDetailSheet(context, task),
                               onCheckboxChanged: (val) async {
                                 if (val != null) {
-                                  await ref.read(taskRepoProvider).toggleCompletion(task.id);
+                                  await ref
+                                      .read(taskRepoProvider)
+                                      .toggleCompletion(task.id);
                                 }
                               },
                               onSubtaskToggle: (idx) async {
                                 final list = task.subtaskList;
                                 list[idx].isCompleted = !list[idx].isCompleted;
                                 final updated = task..subtaskList = list;
-                                await ref.read(taskRepoProvider).update(updated);
+                                await ref
+                                    .read(taskRepoProvider)
+                                    .update(updated);
                                 HapticFeedback.selectionClick();
                               },
                               onPanStart: () {
-                                ref.read(isClockDraggingProvider.notifier).state = true;
-                                final startVal = toUiMinute(task.startMinute!, task.ampmHalf).toDouble();
-                                final endVal = toUiMinute(task.endMinute!, task.ampmHalf).toDouble();
+                                ref
+                                        .read(isClockDraggingProvider.notifier)
+                                        .state =
+                                    true;
+                                final startVal = toUiMinute(
+                                  task.startMinute!,
+                                  task.ampmHalf,
+                                ).toDouble();
+                                final endVal = toUiMinute(
+                                  task.endMinute!,
+                                  task.ampmHalf,
+                                ).toDouble();
                                 setState(() {
                                   _draggedTaskId = task.id;
                                   _draggedTaskStart = startVal;
@@ -683,26 +918,50 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                               },
                               onPanUpdate: (dy) {
                                 final deltaMin = (dy / timelineHeight) * 1440.0;
-                                final dur = toUiMinute(task.endMinute!, task.ampmHalf) - toUiMinute(task.startMinute!, task.ampmHalf);
+                                final dur =
+                                    toUiMinute(task.endMinute!, task.ampmHalf) -
+                                    toUiMinute(
+                                      task.startMinute!,
+                                      task.ampmHalf,
+                                    );
                                 setState(() {
                                   _accumulatedDelta += deltaMin;
-                                  final target = _draggedStartBase! + _accumulatedDelta;
-                                  _draggedTaskStart = snap5(target.round()).toDouble().clamp(0.0, 1440.0 - dur);
+                                  final target =
+                                      _draggedStartBase! + _accumulatedDelta;
+                                  _draggedTaskStart = snap5(
+                                    target.round(),
+                                  ).toDouble().clamp(0.0, 1440.0 - dur);
                                   _draggedTaskEnd = _draggedTaskStart! + dur;
                                 });
                               },
                               onPanEnd: () async {
-                                ref.read(isClockDraggingProvider.notifier).state = false;
+                                ref
+                                        .read(isClockDraggingProvider.notifier)
+                                        .state =
+                                    false;
                                 final finalStart = _draggedTaskStart!.round();
-                                final dur = toUiMinute(task.endMinute!, task.ampmHalf) - toUiMinute(task.startMinute!, task.ampmHalf);
-                                final finalEnd = (finalStart + dur).clamp(0, 1440);
-                                
+                                final dur =
+                                    toUiMinute(task.endMinute!, task.ampmHalf) -
+                                    toUiMinute(
+                                      task.startMinute!,
+                                      task.ampmHalf,
+                                    );
+                                final finalEnd = (finalStart + dur).clamp(
+                                  0,
+                                  1440,
+                                );
+
                                 final updated = task
                                   ..startMinute = toDbMinute(finalStart)
                                   ..ampmHalf = toDbHalf(finalStart)
-                                  ..endMinute = toDbEndMinute(finalEnd, toDbHalf(finalStart));
-                                  
-                                await ref.read(taskRepoProvider).update(updated);
+                                  ..endMinute = toDbEndMinute(
+                                    finalEnd,
+                                    toDbHalf(finalStart),
+                                  );
+
+                                await ref
+                                    .read(taskRepoProvider)
+                                    .update(updated);
                                 setState(() {
                                   _draggedTaskId = null;
                                   _draggedStartBase = null;
@@ -711,9 +970,18 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                                 HapticFeedback.lightImpact();
                               },
                               onResizeTopStart: () {
-                                ref.read(isClockDraggingProvider.notifier).state = true;
-                                final startVal = toUiMinute(task.startMinute!, task.ampmHalf).toDouble();
-                                final endVal = toUiMinute(task.endMinute!, task.ampmHalf).toDouble();
+                                ref
+                                        .read(isClockDraggingProvider.notifier)
+                                        .state =
+                                    true;
+                                final startVal = toUiMinute(
+                                  task.startMinute!,
+                                  task.ampmHalf,
+                                ).toDouble();
+                                final endVal = toUiMinute(
+                                  task.endMinute!,
+                                  task.ampmHalf,
+                                ).toDouble();
                                 setState(() {
                                   _draggedTaskId = task.id;
                                   _draggedTaskStart = startVal;
@@ -727,21 +995,35 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                                 final deltaMin = (dy / timelineHeight) * 1440.0;
                                 setState(() {
                                   _accumulatedDelta += deltaMin;
-                                  final target = _draggedStartBase! + _accumulatedDelta;
-                                  _draggedTaskStart = snap5(target.round()).toDouble().clamp(0.0, _draggedTaskEnd! - 5.0);
+                                  final target =
+                                      _draggedStartBase! + _accumulatedDelta;
+                                  _draggedTaskStart = snap5(target.round())
+                                      .toDouble()
+                                      .clamp(0.0, _draggedTaskEnd! - 5.0);
                                 });
                               },
                               onResizeTopEnd: () async {
-                                ref.read(isClockDraggingProvider.notifier).state = false;
+                                ref
+                                        .read(isClockDraggingProvider.notifier)
+                                        .state =
+                                    false;
                                 final finalStart = _draggedTaskStart!.round();
-                                
-                                final absoluteEnd = toUiMinute(task.endMinute!, task.ampmHalf);
+
+                                final absoluteEnd = toUiMinute(
+                                  task.endMinute!,
+                                  task.ampmHalf,
+                                );
                                 final updated = task
                                   ..startMinute = toDbMinute(finalStart)
                                   ..ampmHalf = toDbHalf(finalStart)
-                                  ..endMinute = toDbEndMinute(absoluteEnd, toDbHalf(finalStart));
-                                  
-                                await ref.read(taskRepoProvider).update(updated);
+                                  ..endMinute = toDbEndMinute(
+                                    absoluteEnd,
+                                    toDbHalf(finalStart),
+                                  );
+
+                                await ref
+                                    .read(taskRepoProvider)
+                                    .update(updated);
                                 setState(() {
                                   _draggedTaskId = null;
                                   _draggedStartBase = null;
@@ -750,9 +1032,18 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                                 HapticFeedback.lightImpact();
                               },
                               onResizeBottomStart: () {
-                                ref.read(isClockDraggingProvider.notifier).state = true;
-                                final startVal = toUiMinute(task.startMinute!, task.ampmHalf).toDouble();
-                                final endVal = toUiMinute(task.endMinute!, task.ampmHalf).toDouble();
+                                ref
+                                        .read(isClockDraggingProvider.notifier)
+                                        .state =
+                                    true;
+                                final startVal = toUiMinute(
+                                  task.startMinute!,
+                                  task.ampmHalf,
+                                ).toDouble();
+                                final endVal = toUiMinute(
+                                  task.endMinute!,
+                                  task.ampmHalf,
+                                ).toDouble();
                                 setState(() {
                                   _draggedTaskId = task.id;
                                   _draggedTaskStart = startVal;
@@ -766,17 +1057,29 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                                 final deltaMin = (dy / timelineHeight) * 1440.0;
                                 setState(() {
                                   _accumulatedDelta += deltaMin;
-                                  final target = _draggedEndBase! + _accumulatedDelta;
-                                  _draggedTaskEnd = snap5(target.round()).toDouble().clamp(_draggedTaskStart! + 5.0, 1440.0);
+                                  final target =
+                                      _draggedEndBase! + _accumulatedDelta;
+                                  _draggedTaskEnd = snap5(target.round())
+                                      .toDouble()
+                                      .clamp(_draggedTaskStart! + 5.0, 1440.0);
                                 });
                               },
                               onResizeBottomEnd: () async {
-                                ref.read(isClockDraggingProvider.notifier).state = false;
+                                ref
+                                        .read(isClockDraggingProvider.notifier)
+                                        .state =
+                                    false;
                                 final finalEnd = _draggedTaskEnd!.round();
-                                
-                                final updated = task..endMinute = toDbEndMinute(finalEnd, task.ampmHalf);
-                                
-                                await ref.read(taskRepoProvider).update(updated);
+
+                                final updated = task
+                                  ..endMinute = toDbEndMinute(
+                                    finalEnd,
+                                    task.ampmHalf,
+                                  );
+
+                                await ref
+                                    .read(taskRepoProvider)
+                                    .update(updated);
                                 setState(() {
                                   _draggedTaskId = null;
                                   _draggedStartBase = null;
@@ -808,54 +1111,86 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                   padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
                   child: Row(
                     children: [
-                      const Icon(Icons.inbox_outlined, size: 16, color: AppPalette.accent),
+                      const Icon(
+                        Icons.inbox_outlined,
+                        size: 16,
+                        color: AppPalette.accent,
+                      ),
                       const SizedBox(width: 8),
                       const Text(
                         'Inbox / Unscheduled',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppPalette.textDim, letterSpacing: 0.8),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppPalette.textDim,
+                          letterSpacing: 0.8,
+                        ),
                       ),
                       const Spacer(),
                       Text(
                         '${unscheduledTasks.length} tasks',
-                        style: const TextStyle(fontSize: 10, color: AppPalette.textDim),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppPalette.textDim,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                
+
                 // Unscheduled Tasks list
                 Expanded(
                   child: unscheduledTasks.isEmpty
                       ? const Center(
                           child: Text(
                             'No unscheduled tasks',
-                            style: TextStyle(color: AppPalette.textDim, fontSize: 12, fontStyle: FontStyle.italic),
+                            style: TextStyle(
+                              color: AppPalette.textDim,
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
                           ),
                         )
                       : ListView.builder(
                           itemCount: unscheduledTasks.length,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           itemBuilder: (context, index) {
                             final task = unscheduledTasks[index];
                             final subCount = task.subtaskList.length;
-                            final subDone = task.subtaskList.where((s) => s.isCompleted).length;
+                            final subDone = task.subtaskList
+                                .where((s) => s.isCompleted)
+                                .length;
 
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2.0),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 2.0,
+                              ),
                               child: Draggable<Task>(
                                 data: task,
                                 feedback: Material(
                                   color: Colors.transparent,
                                   child: Container(
                                     width: 250,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: AppPalette.accent.withValues(alpha: 0.9),
+                                      color: AppPalette.accent.withValues(
+                                        alpha: 0.9,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       task.title,
-                                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12),
+                                      style: const TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -880,8 +1215,15 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Add an unscheduled task...',
-                      hintStyle: const TextStyle(fontSize: 12, color: AppPalette.textDim),
-                      prefixIcon: const Icon(Icons.add, size: 16, color: AppPalette.textDim),
+                      hintStyle: const TextStyle(
+                        fontSize: 12,
+                        color: AppPalette.textDim,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.add,
+                        size: 16,
+                        color: AppPalette.textDim,
+                      ),
                       filled: true,
                       fillColor: AppPalette.bg,
                       isDense: true,
@@ -946,7 +1288,8 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
         onTap: () => showTaskDetailSheet(context, task),
       ),
     );
-  }}
+  }
+}
 
 // ── CUSTOM TIMELINE TASK CARD WITH MOVE/RESIZE HANDLES ──────────────────────────
 
@@ -994,7 +1337,7 @@ class _TaskTimelineCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final showSubtasks = constraints.maxHeight >= 64.0;
-        
+
         return Container(
           decoration: BoxDecoration(
             color: AppPalette.card.withValues(alpha: isDragging ? 0.95 : 0.85),
@@ -1004,7 +1347,12 @@ class _TaskTimelineCard extends StatelessWidget {
               width: isDragging ? 1.5 : 1.0,
             ),
             boxShadow: isDragging
-                ? [BoxShadow(color: AppPalette.accent.withValues(alpha: 0.3), blurRadius: 10)]
+                ? [
+                    BoxShadow(
+                      color: AppPalette.accent.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                    ),
+                  ]
                 : null,
           ),
           child: ClipRRect(
@@ -1018,7 +1366,9 @@ class _TaskTimelineCard extends StatelessWidget {
                   bottom: 0,
                   width: 4,
                   child: Container(
-                    color: task.isCompleted ? AppPalette.textDim : AppPalette.accent,
+                    color: task.isCompleted
+                        ? AppPalette.textDim
+                        : AppPalette.accent,
                   ),
                 ),
 
@@ -1028,7 +1378,8 @@ class _TaskTimelineCard extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     onTap: onTap,
                     onVerticalDragStart: (_) => onPanStart(),
-                    onVerticalDragUpdate: (details) => onPanUpdate(details.delta.dy),
+                    onVerticalDragUpdate: (details) =>
+                        onPanUpdate(details.delta.dy),
                     onVerticalDragEnd: (_) => onPanEnd(),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
@@ -1044,15 +1395,21 @@ class _TaskTimelineCard extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                                    color: task.isCompleted ? AppPalette.textDim : AppPalette.text,
+                                    decoration: task.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    color: task.isCompleted
+                                        ? AppPalette.textDim
+                                        : AppPalette.text,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 if (showSubtasks && subCount > 0) ...[
                                   const SizedBox(height: 4),
-                                  ...task.subtaskList.asMap().entries.map((entry) {
+                                  ...task.subtaskList.asMap().entries.map((
+                                    entry,
+                                  ) {
                                     final idx = entry.key;
                                     final s = entry.value;
                                     return Padding(
@@ -1063,13 +1420,18 @@ class _TaskTimelineCard extends StatelessWidget {
                                             onTap: () => onSubtaskToggle(idx),
                                             behavior: HitTestBehavior.opaque,
                                             child: Padding(
-                                              padding: const EdgeInsets.only(right: 4),
+                                              padding: const EdgeInsets.only(
+                                                right: 4,
+                                              ),
                                               child: Icon(
                                                 s.isCompleted
                                                     ? Icons.check_box_outlined
-                                                    : Icons.check_box_outline_blank_rounded,
+                                                    : Icons
+                                                          .check_box_outline_blank_rounded,
                                                 size: 11,
-                                                color: s.isCompleted ? AppPalette.accent : AppPalette.textDim,
+                                                color: s.isCompleted
+                                                    ? AppPalette.accent
+                                                    : AppPalette.textDim,
                                               ),
                                             ),
                                           ),
@@ -1078,8 +1440,12 @@ class _TaskTimelineCard extends StatelessWidget {
                                               s.title,
                                               style: TextStyle(
                                                 fontSize: 9.5,
-                                                color: s.isCompleted ? AppPalette.textDim : AppPalette.text,
-                                                decoration: s.isCompleted ? TextDecoration.lineThrough : null,
+                                                color: s.isCompleted
+                                                    ? AppPalette.textDim
+                                                    : AppPalette.text,
+                                                decoration: s.isCompleted
+                                                    ? TextDecoration.lineThrough
+                                                    : null,
                                               ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -1089,11 +1455,11 @@ class _TaskTimelineCard extends StatelessWidget {
                                       ),
                                     );
                                   }),
-                                ]
+                                ],
                               ],
                             ),
                           ),
-                          
+
                           // Checkbox
                           SizedBox(
                             width: 24,
@@ -1120,7 +1486,8 @@ class _TaskTimelineCard extends StatelessWidget {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onVerticalDragStart: (_) => onResizeTopStart(),
-                    onVerticalDragUpdate: (details) => onResizeTopUpdate(details.delta.dy),
+                    onVerticalDragUpdate: (details) =>
+                        onResizeTopUpdate(details.delta.dy),
                     onVerticalDragEnd: (_) => onResizeTopEnd(),
                     child: MouseRegion(
                       cursor: SystemMouseCursors.resizeUpDown,
@@ -1147,7 +1514,8 @@ class _TaskTimelineCard extends StatelessWidget {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onVerticalDragStart: (_) => onResizeBottomStart(),
-                    onVerticalDragUpdate: (details) => onResizeBottomUpdate(details.delta.dy),
+                    onVerticalDragUpdate: (details) =>
+                        onResizeBottomUpdate(details.delta.dy),
                     onVerticalDragEnd: (_) => onResizeBottomEnd(),
                     child: MouseRegion(
                       cursor: SystemMouseCursors.resizeUpDown,
@@ -1207,14 +1575,15 @@ class _ActivityTimelineCard extends StatelessWidget {
   final VoidCallback onResizeBottomStart;
   final ValueChanged<double> onResizeBottomUpdate;
   final VoidCallback onResizeBottomEnd;
-  
+
   final bool is24h;
 
   @override
   Widget build(BuildContext context) {
     final color = Color(activity.colorValue);
     final fg = color.computeLuminance() > 0.4 ? Colors.black87 : Colors.white;
-    final timeStr = '${formatMinuteOfHalf(activity.startMinute, activity.ampmHalf, is24h: is24h)} – ${formatMinuteOfHalf(activity.endMinute, activity.ampmHalf, is24h: is24h)}';
+    final timeStr =
+        '${formatMinuteOfHalf(activity.startMinute, activity.ampmHalf, is24h: is24h)} – ${formatMinuteOfHalf(activity.endMinute, activity.ampmHalf, is24h: is24h)}';
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1225,11 +1594,18 @@ class _ActivityTimelineCard extends StatelessWidget {
             color: color.withValues(alpha: isDragging ? 0.95 : 0.85),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isDragging ? AppPalette.accent : color.withValues(alpha: 0.5),
+              color: isDragging
+                  ? AppPalette.accent
+                  : color.withValues(alpha: 0.5),
               width: isDragging ? 1.5 : 1.0,
             ),
             boxShadow: isDragging
-                ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10)]
+                ? [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                    ),
+                  ]
                 : null,
           ),
           child: ClipRRect(
@@ -1242,9 +1618,7 @@ class _ActivityTimelineCard extends StatelessWidget {
                   top: 0,
                   bottom: 0,
                   width: 4,
-                  child: Container(
-                    color: color,
-                  ),
+                  child: Container(color: color),
                 ),
 
                 // Draggable Card Body
@@ -1253,14 +1627,20 @@ class _ActivityTimelineCard extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     onTap: onTap,
                     onVerticalDragStart: (_) => onPanStart(),
-                    onVerticalDragUpdate: (details) => onPanUpdate(details.delta.dy),
+                    onVerticalDragUpdate: (details) =>
+                        onPanUpdate(details.delta.dy),
                     onVerticalDragEnd: (_) => onPanEnd(),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
                       child: Row(
                         children: [
-                          if (activity.iconKey != null && activity.iconKey!.isNotEmpty) ...[
-                            Text(activity.iconKey!, style: const TextStyle(fontSize: 14)),
+                          if (activity.iconKey != null &&
+                              activity.iconKey!.isNotEmpty) ...[
+                            ActivityIcon(
+                              iconKey: activity.iconKey,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                             const SizedBox(width: 6),
                           ],
                           Expanded(
@@ -1269,11 +1649,15 @@ class _ActivityTimelineCard extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  activity.title.isEmpty ? '(no title)' : activity.title,
+                                  activity.title.isEmpty
+                                      ? '(no title)'
+                                      : activity.title,
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    decoration: activity.isCompleted ? TextDecoration.lineThrough : null,
+                                    decoration: activity.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                     color: fg,
                                   ),
                                   maxLines: 1,
@@ -1283,13 +1667,16 @@ class _ActivityTimelineCard extends StatelessWidget {
                                   const SizedBox(height: 2),
                                   Text(
                                     timeStr,
-                                    style: TextStyle(fontSize: 9, color: fg.withValues(alpha: 0.75)),
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: fg.withValues(alpha: 0.75),
+                                    ),
                                   ),
                                 ],
                               ],
                             ),
                           ),
-                          
+
                           // Checkbox/Complete Icon
                           GestureDetector(
                             onTap: onCompleteToggle,
@@ -1316,7 +1703,8 @@ class _ActivityTimelineCard extends StatelessWidget {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onVerticalDragStart: (_) => onResizeTopStart(),
-                    onVerticalDragUpdate: (details) => onResizeTopUpdate(details.delta.dy),
+                    onVerticalDragUpdate: (details) =>
+                        onResizeTopUpdate(details.delta.dy),
                     onVerticalDragEnd: (_) => onResizeTopEnd(),
                     child: MouseRegion(
                       cursor: SystemMouseCursors.resizeUpDown,
@@ -1343,7 +1731,8 @@ class _ActivityTimelineCard extends StatelessWidget {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onVerticalDragStart: (_) => onResizeBottomStart(),
-                    onVerticalDragUpdate: (details) => onResizeBottomUpdate(details.delta.dy),
+                    onVerticalDragUpdate: (details) =>
+                        onResizeBottomUpdate(details.delta.dy),
                     onVerticalDragEnd: (_) => onResizeBottomEnd(),
                     child: MouseRegion(
                       cursor: SystemMouseCursors.resizeUpDown,

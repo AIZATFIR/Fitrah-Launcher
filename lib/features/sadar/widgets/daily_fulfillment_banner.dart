@@ -59,11 +59,16 @@ class DailyFulfillmentBanner extends ConsumerWidget {
                       if (isToday) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppPalette.accent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5)),
+                            border: Border.all(
+                              color: AppPalette.accent.withValues(alpha: 0.5),
+                            ),
                           ),
                           child: const Text(
                             'HARI INI',
@@ -96,17 +101,25 @@ class DailyFulfillmentBanner extends ConsumerWidget {
                   backgroundColor: isShowingAwareness
                       ? AppPalette.accent.withValues(alpha: 0.25)
                       : AppPalette.bg,
-                  foregroundColor: isShowingAwareness ? AppPalette.accent : AppPalette.textDim,
+                  foregroundColor: isShowingAwareness
+                      ? AppPalette.accent
+                      : AppPalette.textDim,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
-                      color: isShowingAwareness ? AppPalette.accent : AppPalette.stroke,
+                      color: isShowingAwareness
+                          ? AppPalette.accent
+                          : AppPalette.stroke,
                     ),
                   ),
                 ),
-                tooltip: isShowingAwareness ? 'Tutup Pola Kesadaran' : 'Lihat Pola Kesadaran',
+                tooltip: isShowingAwareness
+                    ? 'Tutup Pola Kesadaran'
+                    : 'Lihat Pola Kesadaran',
                 icon: Icon(
-                  isShowingAwareness ? Icons.calendar_view_week_rounded : Icons.insights_rounded,
+                  isShowingAwareness
+                      ? Icons.calendar_view_week_rounded
+                      : Icons.insights_rounded,
                   size: 20,
                 ),
                 onPressed: onToggleAwareness,
@@ -141,12 +154,16 @@ class DailyFulfillmentBanner extends ConsumerWidget {
                       ),
                       Text(
                         summary.isFulfilled
-                            ? 'Hari Terpenuhi 🌿'
-                            : (completed > 0 ? 'Membangun Hari' : 'Mulai dari satu aksi'),
+                            ? 'Hari terpenuhi'
+                            : (completed > 0
+                                  ? 'Membangun Hari'
+                                  : 'Mulai dari satu aksi'),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: summary.isFulfilled ? const Color(0xFF22C55E) : AppPalette.textDim,
+                          color: summary.isFulfilled
+                              ? const Color(0xFF22C55E)
+                              : AppPalette.textDim,
                         ),
                       ),
                     ],
@@ -159,7 +176,9 @@ class DailyFulfillmentBanner extends ConsumerWidget {
                       minHeight: 6,
                       backgroundColor: AppPalette.bg,
                       valueColor: AlwaysStoppedAnimation(
-                        summary.isFulfilled ? const Color(0xFF22C55E) : AppPalette.accent,
+                        summary.isFulfilled
+                            ? const Color(0xFF22C55E)
+                            : AppPalette.accent,
                       ),
                     ),
                   ),

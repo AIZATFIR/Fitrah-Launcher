@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme.dart';
+import '../../../widgets/activity_icon.dart';
 import '../../../models/habit.dart';
 import '../../../models/habit_entry.dart';
 import '../../../providers/sadar_providers.dart';
@@ -66,8 +67,6 @@ class _TriangleCaretPainter extends CustomPainter {
 }
 
 /// Loop Habit Tracker Inspired 7-Day Grid Widget
-/// Pixel-faithful to user screenshots with pure flat solid pills, Organize reorderable list,
-/// New Journal with IDEAS presets, and direct Focus Clock timer integration.
 class LoopHabitGridWidget extends ConsumerStatefulWidget {
   const LoopHabitGridWidget({super.key, this.onStartTimer});
 
@@ -87,18 +86,18 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
 
   // Preset habit ideas matching user's actual habits
   static const List<String> _habitIdeas = [
-    '😇 🕌 1 ayat Al quran (smkdutalib, jalan yg benar, pencerahan)',
-    '10 min Open Laptop and throw my phone',
-    '🎓 1 module AI 50% - Dicoding - Portofolio, skill, knowledge, advantage',
-    '💪 Grind Physique (abs, shoulder, Hand group, back)',
-    '🪶 😇 1 Kalaam harian (Paham Rahmat tuhan)',
-    '🧠 📖 Baca 5 halaman (growth, lebih pintar)',
-    '🧠 🎬 Tonton 2 Watch later edukasi (growth, lebih pintar)',
-    '🎸 10 menit pegang guitar (attractive, relaxing)',
-    '📝 Write story notebook 1 Sentence',
-    '💻 45 min Focus / Deep Work',
-    '🏃 20 min Cardio / Jogging',
-    '🧘 10 min Mindfulness / Refleksi',
+    'Baca satu ayat Al-Qur’an',
+    'Buka laptop dan jauhkan ponsel selama 10 menit',
+    'Selesaikan satu modul Dicoding',
+    'Latihan kekuatan tubuh',
+    'Baca satu kalam harian',
+    'Baca 5 halaman',
+    'Tonton 2 video edukasi tersimpan',
+    'Main gitar selama 10 menit',
+    'Tulis satu kalimat di jurnal',
+    'Fokus mendalam selama 45 menit',
+    'Kardio atau joging selama 20 menit',
+    'Refleksi selama 10 menit',
   ];
 
   @override
@@ -164,6 +163,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   @override
   Widget build(BuildContext context) {
     final habitsAsync = ref.watch(habitsStreamProvider);
+    final showWeekControls = habitsAsync.valueOrNull?.isNotEmpty ?? true;
     final weekDays = _getCurrentWeekDays();
     final startDateStr = _formatDate(weekDays.first);
     final endDateStr = _formatDate(weekDays.last);
@@ -184,158 +184,168 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Header (Screenshot 1: Menu ≡, This Week, Calendar 📅) ──
-              Padding(
-                padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
-                child: Row(
-                  children: [
-                    // Organize / Menu Hamburger button
-                    IconButton(
-                      icon: const Icon(
-                        Icons.menu_rounded,
-                        size: 22,
-                        color: AppPalette.text,
+              if (showWeekControls) ...[
+                // Week controls are useful once there are habits to track.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+                  child: Row(
+                    children: [
+                      // Organize / Menu Hamburger button
+                      IconButton(
+                        icon: const Icon(
+                          Icons.menu_rounded,
+                          size: 22,
+                          color: AppPalette.text,
+                        ),
+                        tooltip: 'Atur kebiasaan',
+                        splashRadius: 18,
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                        padding: EdgeInsets.zero,
+                        onPressed: () => _openOrganizeSheet(context),
                       ),
-                      tooltip: 'Organize',
-                      splashRadius: 18,
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                      padding: EdgeInsets.zero,
-                      onPressed: () => _openOrganizeSheet(context),
-                    ),
-                    const SizedBox(width: 4),
+                      const SizedBox(width: 4),
 
-                    // "This Week" (or Date range)
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          _isCurrentWeek
-                              ? 'This Week'
-                              : DateFormat(
-                                  'MMM d - MMM d',
-                                ).format(weekDays.first),
-                          maxLines: 1,
-                          style: GoogleFonts.inter(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: AppPalette.text,
-                            letterSpacing: -0.2,
+                      // "This Week" (or Date range)
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _isCurrentWeek
+                                ? 'Minggu ini'
+                                : DateFormat(
+                                    'MMM d - MMM d',
+                                  ).format(weekDays.first),
+                            maxLines: 1,
+                            style: GoogleFonts.outfit(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: AppPalette.text,
+                              letterSpacing: -0.2,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
+                      const SizedBox(width: 4),
 
-                    // Navigation arrows < >
-                    IconButton(
-                      icon: const Icon(
-                        Icons.chevron_left_rounded,
-                        size: 20,
-                        color: AppPalette.textDim,
-                      ),
-                      splashRadius: 16,
-                      constraints: const BoxConstraints(
-                        minWidth: 28,
-                        minHeight: 28,
-                      ),
-                      padding: EdgeInsets.zero,
-                      tooltip: 'Minggu Sebelumnya',
-                      onPressed: _previousWeek,
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20,
-                        color: AppPalette.textDim,
-                      ),
-                      splashRadius: 16,
-                      constraints: const BoxConstraints(
-                        minWidth: 28,
-                        minHeight: 28,
-                      ),
-                      padding: EdgeInsets.zero,
-                      tooltip: 'Minggu Selanjutnya',
-                      onPressed: _nextWeek,
-                    ),
-
-                    const Spacer(),
-
-                    // Today Calendar button
-                    IconButton(
-                      icon: const Icon(
-                        Icons.calendar_today_rounded,
-                        size: 18,
-                        color: AppPalette.text,
-                      ),
-                      splashRadius: 18,
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                      padding: EdgeInsets.zero,
-                      tooltip: 'Hari Ini',
-                      onPressed: _goToToday,
-                    ),
-                  ],
-                ),
-              ),
-
-              // ── Weekday Headers (Mon Tue Wed Thu Fri Sat Sun) ──
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                child: Row(
-                  children: weekDays.asMap().entries.map((entry) {
-                    final idx = entry.key;
-                    final day = entry.value;
-                    final isToday = _formatDate(day) == todayStr;
-                    final isSelected = idx == _selectedDayIndex;
-
-                    return Expanded(
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          if (_actionBusy) return;
-                          HapticFeedback.selectionClick();
-                          setState(() => _selectedDayIndex = idx);
-                        },
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              DateFormat('E').format(day), // Mon, Tue...
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: isToday
-                                    ? FontWeight.w700
-                                    : (isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.w500),
-                                color: isToday
-                                    ? const Color(
-                                        0xFFF59E0B,
-                                      ) // Vibrant Amber/Orange for active day like Screenshot 1
-                                    : (isSelected
-                                          ? AppPalette.text
-                                          : AppPalette.textDim),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                          ],
+                      // Navigation arrows < >
+                      IconButton(
+                        icon: const Icon(
+                          Icons.chevron_left_rounded,
+                          size: 20,
+                          color: AppPalette.textDim,
                         ),
+                        splashRadius: 16,
+                        constraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 28,
+                        ),
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Minggu Sebelumnya',
+                        onPressed: _previousWeek,
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 20,
+                          color: AppPalette.textDim,
+                        ),
+                        splashRadius: 16,
+                        constraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 28,
+                        ),
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Minggu Selanjutnya',
+                        onPressed: _nextWeek,
+                      ),
 
-              const Divider(height: 1, color: Color(0xFF222622)),
+                      const Spacer(),
+
+                      // Today Calendar button
+                      IconButton(
+                        icon: const Icon(
+                          Icons.calendar_today_rounded,
+                          size: 18,
+                          color: AppPalette.text,
+                        ),
+                        splashRadius: 18,
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Hari Ini',
+                        onPressed: _goToToday,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── Weekday Headers ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  child: Row(
+                    children: weekDays.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final day = entry.value;
+                      final isToday = _formatDate(day) == todayStr;
+                      final isSelected = idx == _selectedDayIndex;
+
+                      return Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            if (_actionBusy) return;
+                            HapticFeedback.selectionClick();
+                            setState(() => _selectedDayIndex = idx);
+                          },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                const [
+                                  'Sen',
+                                  'Sel',
+                                  'Rab',
+                                  'Kam',
+                                  'Jum',
+                                  'Sab',
+                                  'Min',
+                                ][day.weekday - 1],
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  fontWeight: isToday
+                                      ? FontWeight.w700
+                                      : (isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w500),
+                                  color: isToday
+                                      ? const Color(
+                                          0xFFF59E0B,
+                                        ) // Vibrant Amber/Orange for active day like Screenshot 1
+                                      : (isSelected
+                                            ? AppPalette.text
+                                            : AppPalette.textDim),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+
+                const Divider(height: 1, color: AppPalette.stroke),
+              ],
 
               // ── Habits List with Pure Flat Solid Day Cells ──
               habitsAsync.when(
@@ -343,51 +353,28 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                   if (habits.isEmpty) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(
-                        vertical: 24,
-                        horizontal: 16,
+                        horizontal: 14,
+                        vertical: 10,
                       ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.check_circle_outline_rounded,
-                              size: 28,
-                              color: Colors.white.withOpacity(0.3),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Belum ada kebiasaan',
+                              style: TextStyle(color: AppPalette.textDim),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Belum ada kebiasaan.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white.withOpacity(0.5),
-                              ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _openNewJournalSheet(context),
+                            icon: const Icon(Icons.add_rounded, size: 18),
+                            label: const Text('Tambah'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppPalette.accent,
+                              side: const BorderSide(color: AppPalette.stroke),
+                              minimumSize: const Size(48, 44),
                             ),
-                            const SizedBox(height: 12),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF48C774),
-                                foregroundColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
-                              ),
-                              icon: const Icon(Icons.add_rounded, size: 18),
-                              label: const Text(
-                                'Tambah habit',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              onPressed: () => _openNewJournalSheet(context),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     );
                   }
@@ -413,7 +400,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // ── Line 1: Emoji + Habit Title + Play Timer Button ──
+                              // ── Habit icon, title, and timer action ──
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(
                                   12,
@@ -424,9 +411,10 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                 child: Row(
                                   children: [
                                     if (habit.iconKey.isNotEmpty) ...[
-                                      Text(
-                                        habit.iconKey,
-                                        style: const TextStyle(fontSize: 15),
+                                      ActivityIcon(
+                                        iconKey: habit.iconKey,
+                                        size: 15,
+                                        color: AppPalette.accent,
                                       ),
                                       const SizedBox(width: 8),
                                     ],
@@ -439,7 +427,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                         ),
                                         child: Text(
                                           habit.name,
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.outfit(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
                                             color: AppPalette.text,
@@ -459,7 +447,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                         icon: const Icon(
                                           Icons.play_circle_outline_rounded,
                                           size: 20,
-                                          color: Color(0xFF48C774),
+                                          color: AppPalette.accent,
                                         ),
                                         tooltip: 'Mulai di Focus Clock',
                                         splashRadius: 16,
@@ -550,13 +538,11 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                             ), // clean pill like Screenshot 1
                                             border: isTargetCell
                                                 ? Border.all(
-                                                    color: const Color(
-                                                      0xFF38BDF8,
-                                                    ),
+                                                    color: AppPalette.accent,
                                                     width: 1.8,
                                                   )
                                                 : Border.all(
-                                                    color: Colors.white
+                                                    color: AppPalette.text
                                                         .withOpacity(0.06),
                                                     width: 0.8,
                                                   ),
@@ -570,7 +556,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                                   child: CustomPaint(
                                                     painter:
                                                         DiagonalStripesPainter(
-                                                          color: Colors.white
+                                                          color: AppPalette.text
                                                               .withOpacity(
                                                                 0.35,
                                                               ),
@@ -619,9 +605,8 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                                   size: Size(12, 7),
                                                   painter:
                                                       _TriangleCaretPainter(
-                                                        color: Color(
-                                                          0xFF2563EB,
-                                                        ),
+                                                        color:
+                                                            AppPalette.accent,
                                                       ),
                                                 )
                                               : const SizedBox(height: 7),
@@ -638,12 +623,10 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                   ),
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF141A16),
+                                    color: AppPalette.cardHigh,
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: const Color(
-                                        0xFF2563EB,
-                                      ).withOpacity(0.6),
+                                      color: AppPalette.accent.withOpacity(0.6),
                                       width: 1.2,
                                     ),
                                   ),
@@ -664,12 +647,10 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                                 DateFormat(
                                                   'EEEE, d MMMM',
                                                 ).format(selectedDate),
-                                                style: GoogleFonts.inter(
+                                                style: GoogleFonts.outfit(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w600,
-                                                  color: const Color(
-                                                    0xFF38BDF8,
-                                                  ),
+                                                  color: AppPalette.accent,
                                                 ),
                                               ),
                                             ),
@@ -709,7 +690,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                               const SizedBox(height: 6),
                               Divider(
                                 height: 1,
-                                color: Colors.white.withOpacity(0.06),
+                                color: AppPalette.text.withOpacity(0.06),
                               ),
                             ],
                           );
@@ -721,7 +702,10 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                       padding: const EdgeInsets.all(12),
                       child: Text(
                         'Error: $e',
-                        style: const TextStyle(fontSize: 10, color: Colors.red),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppPalette.danger,
+                        ),
                       ),
                     ),
                   );
@@ -731,7 +715,10 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                   padding: const EdgeInsets.all(12),
                   child: Text(
                     'Error: $e',
-                    style: const TextStyle(fontSize: 10, color: Colors.red),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppPalette.danger,
+                    ),
                   ),
                 ),
               ),
@@ -746,13 +733,13 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   Color _getBlockColor(HabitStatus status, Habit habit) {
     switch (status) {
       case HabitStatus.yes:
-        return const Color(0xFF48C774); // Pure solid green like Screenshot 1
+        return AppPalette.accent; // Pure solid green like Screenshot 1
       case HabitStatus.no:
-        return const Color(0xFFEF5350); // Pure solid red like Screenshot 1
+        return AppPalette.danger; // Pure solid red like Screenshot 1
       case HabitStatus.skip:
-        return const Color(0xFF2C322E);
+        return AppPalette.cardHigh;
       case HabitStatus.unmarked:
-        return Colors.white.withOpacity(0.06);
+        return AppPalette.text.withOpacity(0.06);
     }
   }
 
@@ -844,7 +831,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
         ),
         if (_actionBusy) const LinearProgressIndicator(),
         if (_actionError != null)
-          Text(_actionError!, style: const TextStyle(color: Colors.redAccent)),
+          Text(_actionError!, style: const TextStyle(color: AppPalette.danger)),
       ],
     );
   }
@@ -941,7 +928,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF121713),
+      backgroundColor: AppPalette.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -969,17 +956,17 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                           IconButton(
                             icon: const Icon(
                               Icons.arrow_back,
-                              color: Colors.white,
+                              color: AppPalette.text,
                             ),
                             onPressed: () => Navigator.pop(ctx),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Organize',
-                            style: GoogleFonts.inter(
+                            'Atur kebiasaan',
+                            style: GoogleFonts.outfit(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: AppPalette.text,
                             ),
                           ),
                           const Spacer(),
@@ -992,7 +979,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white70,
+                                color: AppPalette.textDim,
                                 letterSpacing: 0.4,
                               ),
                             ),
@@ -1001,7 +988,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                       ),
                     ),
 
-                    const Divider(height: 1, color: Color(0xFF222823)),
+                    const Divider(height: 1, color: AppPalette.stroke),
 
                     // + New Journal button
                     InkWell(
@@ -1018,16 +1005,16 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                           children: [
                             const Icon(
                               Icons.add_circle,
-                              color: Color(0xFF48C774),
+                              color: AppPalette.accent,
                               size: 24,
                             ),
                             const SizedBox(width: 14),
                             Text(
-                              'New Journal',
-                              style: GoogleFonts.inter(
+                              'Catatan baru',
+                              style: GoogleFonts.outfit(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: AppPalette.text,
                               ),
                             ),
                           ],
@@ -1041,12 +1028,12 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'JOURNALS',
-                          style: GoogleFonts.inter(
+                          'CATATAN',
+                          style: GoogleFonts.outfit(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.8,
-                            color: Colors.white54,
+                            color: AppPalette.textDim,
                           ),
                         ),
                       ),
@@ -1060,7 +1047,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                             return const Center(
                               child: Text(
                                 'Tidak ada habit.',
-                                style: TextStyle(color: Colors.white38),
+                                style: TextStyle(color: AppPalette.textDim),
                               ),
                             );
                           }
@@ -1089,7 +1076,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                 leading: IconButton(
                                   icon: const Icon(
                                     Icons.remove_circle,
-                                    color: Color(0xFFEF5350),
+                                    color: AppPalette.danger,
                                     size: 22,
                                   ),
                                   tooltip: 'Hapus / Arsipkan',
@@ -1097,18 +1084,18 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                       _confirmArchiveOrDelete(context, habit),
                                 ),
                                 title: Text(
-                                  '${habit.iconKey.isNotEmpty ? '${habit.iconKey} ' : ''}${habit.name}',
-                                  style: GoogleFonts.inter(
+                                  habit.name,
+                                  style: GoogleFonts.outfit(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.white,
+                                    color: AppPalette.text,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 trailing: const Icon(
                                   Icons.drag_handle,
-                                  color: Colors.white38,
+                                  color: AppPalette.textDim,
                                   size: 22,
                                 ),
                               );
@@ -1120,7 +1107,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                         error: (e, _) => Center(
                           child: Text(
                             'Error: $e',
-                            style: const TextStyle(color: Colors.red),
+                            style: const TextStyle(color: AppPalette.danger),
                           ),
                         ),
                       ),
@@ -1133,10 +1120,10 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                         horizontal: 16,
                       ),
                       child: Text(
-                        'Tap, hold, and drag the handles to move an item.',
-                        style: GoogleFonts.inter(
+                        'Tekan dan geser untuk mengatur urutan.',
+                        style: GoogleFonts.outfit(
                           fontSize: 12,
-                          color: Colors.white38,
+                          color: AppPalette.textDim,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -1163,7 +1150,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
       isScrollControlled: true,
       isDismissible: false,
       enableDrag: false,
-      backgroundColor: const Color(0xFF121713),
+      backgroundColor: AppPalette.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -1192,7 +1179,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                             IconButton(
                               icon: const Icon(
                                 Icons.arrow_back,
-                                color: Colors.white,
+                                color: AppPalette.text,
                               ),
                               onPressed: saving
                                   ? null
@@ -1200,11 +1187,13 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              habitToEdit == null ? 'Habit baru' : 'Edit habit',
-                              style: GoogleFonts.inter(
+                              habitToEdit == null
+                                  ? 'Kebiasaan baru'
+                                  : 'Ubah kebiasaan',
+                              style: GoogleFonts.outfit(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                color: AppPalette.text,
                               ),
                             ),
                           ],
@@ -1259,11 +1248,11 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                 },
                           child: Text(
                             saving ? 'Menyimpan…' : 'Simpan',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.outfit(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.5,
-                              color: const Color(0xFF48C774),
+                              color: AppPalette.accent,
                             ),
                           ),
                         ),
@@ -1273,7 +1262,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                     if (saveError != null)
                       Text(
                         saveError!,
-                        style: const TextStyle(color: Colors.redAccent),
+                        style: const TextStyle(color: AppPalette.danger),
                       ),
 
                     const SizedBox(height: 14),
@@ -1287,29 +1276,29 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                             controller: nameCtrl,
                             enabled: !saving,
                             autofocus: habitToEdit == null,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.outfit(
                               fontSize: 16,
-                              color: Colors.white,
+                              color: AppPalette.text,
                             ),
                             decoration: InputDecoration(
                               labelText: 'Name',
                               labelStyle: const TextStyle(
-                                color: Colors.white54,
+                                color: AppPalette.textDim,
                                 fontSize: 14,
                               ),
                               hintText: 'e.g. 1 ayat Al quran',
-                              hintStyle: const TextStyle(
-                                color: Colors.white24,
+                              hintStyle: TextStyle(
+                                color: AppPalette.textDim.withOpacity(0.5),
                                 fontSize: 13,
                               ),
                               border: UnderlineInputBorder(
                                 borderSide: BorderSide(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: AppPalette.text.withOpacity(0.2),
                                 ),
                               ),
                               focusedBorder: const UnderlineInputBorder(
                                 borderSide: BorderSide(
-                                  color: Color(0xFF48C774),
+                                  color: AppPalette.accent,
                                   width: 2,
                                 ),
                               ),
@@ -1320,10 +1309,10 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                         OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(
-                              color: Color(0xFF38BDF8),
+                              color: AppPalette.accent,
                               width: 1.4,
                             ),
-                            foregroundColor: const Color(0xFF38BDF8),
+                            foregroundColor: AppPalette.accent,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 8,
@@ -1342,8 +1331,8 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                   });
                                 },
                           child: Text(
-                            'IDEAS',
-                            style: GoogleFonts.inter(
+                            'IDE KEGIATAN',
+                            style: GoogleFonts.outfit(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
@@ -1368,7 +1357,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   void _showIdeasPicker(BuildContext context, ValueChanged<String> onSelect) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF151C17),
+      backgroundColor: AppPalette.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -1380,21 +1369,23 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
               child: Text(
-                'IDEAS & PRESETS',
-                style: GoogleFonts.inter(
+                'IDE KEGIATAN',
+                style: GoogleFonts.outfit(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF38BDF8),
+                  color: AppPalette.accent,
                   letterSpacing: 0.8,
                 ),
               ),
             ),
-            const Divider(height: 1, color: Color(0xFF263328)),
+            const Divider(height: 1, color: AppPalette.stroke),
             Expanded(
               child: ListView.separated(
                 itemCount: _habitIdeas.length,
-                separatorBuilder: (_, __) =>
-                    Divider(height: 1, color: Colors.white.withOpacity(0.04)),
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  color: AppPalette.text.withOpacity(0.04),
+                ),
                 itemBuilder: (context, idx) {
                   final idea = _habitIdeas[idx];
                   return ListTile(
@@ -1404,9 +1395,9 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                     ),
                     title: Text(
                       idea,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.outfit(
                         fontSize: 14,
-                        color: Colors.white,
+                        color: AppPalette.text,
                       ),
                     ),
                     onTap: () {
@@ -1429,23 +1420,26 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF171F19),
+        backgroundColor: AppPalette.cardHigh,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Text(
-          'Hapus Habit?',
-          style: GoogleFonts.inter(
-            color: Colors.white,
+          'Hapus kebiasaan?',
+          style: GoogleFonts.outfit(
+            color: AppPalette.text,
             fontWeight: FontWeight.w700,
           ),
         ),
         content: Text(
           'Pilih apakah ingin mengarsipkan atau menghapus permanen "${habit.name}".',
-          style: const TextStyle(color: Colors.white70, fontSize: 13),
+          style: const TextStyle(color: AppPalette.textDim, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal', style: TextStyle(color: Colors.white54)),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppPalette.textDim),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -1456,13 +1450,11 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
             },
             child: const Text(
               'Arsipkan',
-              style: TextStyle(color: Colors.amberAccent),
+              style: TextStyle(color: AppPalette.accent),
             ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF5350),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppPalette.danger),
             onPressed: () {
               ref
                   .read(sadarRepoProvider)
@@ -1471,7 +1463,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
             },
             child: const Text(
               'Hapus Permanen',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppPalette.text),
             ),
           ),
         ],
@@ -1483,7 +1475,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   void _showArchivedHabitsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF121713),
+      backgroundColor: AppPalette.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -1502,28 +1494,31 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                   child: Row(
                     children: [
                       Text(
-                        'Archived Journals',
-                        style: GoogleFonts.inter(
+                        'Catatan arsip',
+                        style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: AppPalette.text,
                         ),
                       ),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white54),
+                        icon: const Icon(
+                          Icons.close,
+                          color: AppPalette.textDim,
+                        ),
                         onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
                   ),
                 ),
-                const Divider(height: 1, color: Color(0xFF222823)),
+                const Divider(height: 1, color: AppPalette.stroke),
                 Expanded(
                   child: list.isEmpty
                       ? const Center(
                           child: Text(
                             'Tidak ada jurnal yang diarsipkan.',
-                            style: TextStyle(color: Colors.white38),
+                            style: TextStyle(color: AppPalette.textDim),
                           ),
                         )
                       : ListView.builder(
@@ -1533,7 +1528,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                             return ListTile(
                               title: Text(
                                 h.name,
-                                style: const TextStyle(color: Colors.white),
+                                style: const TextStyle(color: AppPalette.text),
                               ),
                               trailing: TextButton(
                                 onPressed: () {
@@ -1543,7 +1538,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                 },
                                 child: const Text(
                                   'Pulihkan',
-                                  style: TextStyle(color: Color(0xFF48C774)),
+                                  style: TextStyle(color: AppPalette.accent),
                                 ),
                               ),
                             );

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme.dart';
+import '../../widgets/activity_icon.dart';
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../providers/providers.dart';
@@ -16,7 +17,9 @@ class AgendaTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(currentDateProvider);
-    final is24h = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24h ?? false));
+    final is24h = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.is24h ?? false),
+    );
 
     final today = dateOnly(DateTime.now());
     final isToday = selectedDate == today;
@@ -24,8 +27,8 @@ class AgendaTab extends ConsumerWidget {
     final dateString = isToday
         ? 'Today'
         : isTomorrow
-            ? 'Tomorrow'
-            : DateFormat('EEE, MMM d').format(selectedDate);
+        ? 'Tomorrow'
+        : DateFormat('EEE, MMM d').format(selectedDate);
 
     return Column(
       children: [
@@ -35,9 +38,14 @@ class AgendaTab extends ConsumerWidget {
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_rounded, size: 16, color: AppPalette.textDim),
+                icon: const Icon(
+                  Icons.arrow_back_ios_rounded,
+                  size: 16,
+                  color: AppPalette.textDim,
+                ),
                 onPressed: () {
-                  ref.read(currentDateProvider.notifier).state = selectedDate.subtract(const Duration(days: 1));
+                  ref.read(currentDateProvider.notifier).state = selectedDate
+                      .subtract(const Duration(days: 1));
                   HapticFeedback.lightImpact();
                 },
               ),
@@ -48,16 +56,25 @@ class AgendaTab extends ConsumerWidget {
                       final picked = await showDatePicker(
                         context: context,
                         initialDate: selectedDate,
-                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        firstDate: DateTime.now().subtract(
+                          const Duration(days: 365),
+                        ),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (picked != null) {
-                        ref.read(currentDateProvider.notifier).state = dateOnly(picked);
+                        ref.read(currentDateProvider.notifier).state = dateOnly(
+                          picked,
+                        );
                       }
                     },
                     child: Text(
                       dateString.toUpperCase(),
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppPalette.text, letterSpacing: 1.2),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: AppPalette.text,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
                 ),
@@ -66,7 +83,10 @@ class AgendaTab extends ConsumerWidget {
                 builder: (context, ref, _) {
                   final isGCalSignedIn = ref.watch(gcalSignedInProvider);
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: isGCalSignedIn
                           ? Colors.greenAccent.withValues(alpha: 0.15)
@@ -84,7 +104,9 @@ class AgendaTab extends ConsumerWidget {
                         Icon(
                           Icons.sync_rounded,
                           size: 11,
-                          color: isGCalSignedIn ? Colors.greenAccent : AppPalette.textDim,
+                          color: isGCalSignedIn
+                              ? Colors.greenAccent
+                              : AppPalette.textDim,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -92,7 +114,9 @@ class AgendaTab extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: isGCalSignedIn ? Colors.greenAccent : AppPalette.textDim,
+                            color: isGCalSignedIn
+                                ? Colors.greenAccent
+                                : AppPalette.textDim,
                           ),
                         ),
                       ],
@@ -102,9 +126,14 @@ class AgendaTab extends ConsumerWidget {
               ),
               const SizedBox(width: 4),
               IconButton(
-                icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppPalette.textDim),
+                icon: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: AppPalette.textDim,
+                ),
                 onPressed: () {
-                  ref.read(currentDateProvider.notifier).state = selectedDate.add(const Duration(days: 1));
+                  ref.read(currentDateProvider.notifier).state = selectedDate
+                      .add(const Duration(days: 1));
                   HapticFeedback.lightImpact();
                 },
               ),
@@ -112,7 +141,9 @@ class AgendaTab extends ConsumerWidget {
           ),
         ),
         _WeekStrip(selectedDate: selectedDate),
-        Expanded(child: _TimelineView(date: selectedDate, is24h: is24h)),
+        Expanded(
+          child: _TimelineView(date: selectedDate, is24h: is24h),
+        ),
       ],
     );
   }
@@ -155,8 +186,8 @@ class _WeekStrip extends ConsumerWidget {
                       color: isSelected
                           ? Colors.black
                           : isToday
-                              ? AppPalette.accent
-                              : AppPalette.textDim,
+                          ? AppPalette.accent
+                          : AppPalette.textDim,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -165,7 +196,9 @@ class _WeekStrip extends ConsumerWidget {
                     width: 30,
                     height: 30,
                     decoration: BoxDecoration(
-                      color: isSelected ? AppPalette.accent : Colors.transparent,
+                      color: isSelected
+                          ? AppPalette.accent
+                          : Colors.transparent,
                       shape: BoxShape.circle,
                       border: isToday && !isSelected
                           ? Border.all(color: AppPalette.accent, width: 1.5)
@@ -180,8 +213,8 @@ class _WeekStrip extends ConsumerWidget {
                         color: isSelected
                             ? Colors.black
                             : isToday
-                                ? AppPalette.accent
-                                : AppPalette.text,
+                            ? AppPalette.accent
+                            : AppPalette.text,
                       ),
                     ),
                   ),
@@ -220,7 +253,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
   // create-by-drag state
   int? _createStartMin; // absolute minute of day
   int? _createEndMin;
-  
+
   double _hourHMultiplier = 1.0;
   double _baseScale = 1.0;
 
@@ -246,7 +279,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
   Widget build(BuildContext context) {
     final activitiesAsync = ref.watch(activitiesByDateProvider);
     final activities = activitiesAsync.valueOrNull ?? const <Activity>[];
-    
+
     final double hourH = _hourH * _hourHMultiplier;
     final double totalH = hourH * 24;
 
@@ -258,8 +291,12 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
               final isCtrl = HardwareKeyboard.instance.isControlPressed;
               if (isCtrl) {
                 setState(() {
-                  final double zoomChange = -pointerSignal.scrollDelta.dy * 0.002;
-                  _hourHMultiplier = (_hourHMultiplier + zoomChange).clamp(0.6, 3.0);
+                  final double zoomChange =
+                      -pointerSignal.scrollDelta.dy * 0.002;
+                  _hourHMultiplier = (_hourHMultiplier + zoomChange).clamp(
+                    0.6,
+                    3.0,
+                  );
                 });
               }
             }
@@ -271,7 +308,9 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
               } else if (details.pointerCount == 1) {
                 final scrollOff = _scroll.hasClients ? _scroll.offset : 0.0;
                 final localY = details.localFocalPoint.dy;
-                final absMin = ((localY + scrollOff) / hourH * 60).round().clamp(0, 1439);
+                final absMin = ((localY + scrollOff) / hourH * 60)
+                    .round()
+                    .clamp(0, 1439);
                 setState(() {
                   _createStartMin = absMin;
                   _createEndMin = absMin;
@@ -281,12 +320,17 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
             onScaleUpdate: (details) {
               if (details.pointerCount == 2) {
                 setState(() {
-                  _hourHMultiplier = (_baseScale * details.scale).clamp(0.6, 3.0);
+                  _hourHMultiplier = (_baseScale * details.scale).clamp(
+                    0.6,
+                    3.0,
+                  );
                 });
               } else if (details.pointerCount == 1 && _createStartMin != null) {
                 final scrollOff = _scroll.hasClients ? _scroll.offset : 0.0;
                 final localY = details.localFocalPoint.dy;
-                final newEndMin = ((localY + scrollOff) / hourH * 60).round().clamp(_createStartMin! + 5, 1439);
+                final newEndMin = ((localY + scrollOff) / hourH * 60)
+                    .round()
+                    .clamp(_createStartMin! + 5, 1439);
                 setState(() {
                   _createEndMin = newEndMin;
                 });
@@ -340,30 +384,36 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
   Widget _buildLabels(double hourH) {
     final items = <Widget>[];
     for (int h = 1; h < 24; h++) {
-      items.add(Positioned(
-        top: h * hourH - 7,
-        left: 0,
-        right: 4,
-        child: Text(
-          _hourLabel(h),
-          textAlign: TextAlign.right,
-          style: const TextStyle(fontSize: 10, color: AppPalette.textDim),
-        ),
-      ));
-      // :15 :30 :45 sub-labels
-      for (final m in [15, 30, 45]) {
-        items.add(Positioned(
-          top: h * hourH + m / 60 * hourH - 5,
+      items.add(
+        Positioned(
+          top: h * hourH - 7,
+          left: 0,
           right: 4,
           child: Text(
-            ':${m.toString().padLeft(2, '0')}',
+            _hourLabel(h),
             textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: 8,
-              color: AppPalette.textDim.withValues(alpha: m == 30 ? 0.6 : 0.35),
+            style: const TextStyle(fontSize: 10, color: AppPalette.textDim),
+          ),
+        ),
+      );
+      // :15 :30 :45 sub-labels
+      for (final m in [15, 30, 45]) {
+        items.add(
+          Positioned(
+            top: h * hourH + m / 60 * hourH - 5,
+            right: 4,
+            child: Text(
+              ':${m.toString().padLeft(2, '0')}',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 8,
+                color: AppPalette.textDim.withValues(
+                  alpha: m == 30 ? 0.6 : 0.35,
+                ),
+              ),
             ),
           ),
-        ));
+        );
       }
     }
     return Stack(children: items);
@@ -383,8 +433,10 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
     final createPreviews = <Widget>[];
     if (_createStartMin != null && _createEndMin != null) {
       final top = _createStartMin! / 60 * hourH;
-      final h = ((_createEndMin! - _createStartMin!) / 60 * hourH)
-          .clamp(20.0, double.infinity);
+      final h = ((_createEndMin! - _createStartMin!) / 60 * hourH).clamp(
+        20.0,
+        double.infinity,
+      );
       createPreviews.add(
         Positioned(
           top: top,
@@ -419,8 +471,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
     final isDragging = _draggingId == a.id;
     final delta = isDragging ? _snappedDeltaMin(hourH) : 0;
     final startMin = (offsetMin + a.startMinute + delta).clamp(0, 1440 - 1);
-    final endMin =
-        (offsetMin + a.endMinute + delta).clamp(startMin + 1, 1440);
+    final endMin = (offsetMin + a.endMinute + delta).clamp(startMin + 1, 1440);
     final top = startMin / 60 * hourH;
     final height = ((endMin - startMin) / 60 * hourH).clamp(22.0, 1e6);
     final color = Color(a.colorValue);
@@ -434,14 +485,19 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
       child: GestureDetector(
         onTap: isDragging
             ? null
-            : () => showActivityDetailSheet(context,
-                activity: a, mode: DetailMode.view),
+            : () => showActivityDetailSheet(
+                context,
+                activity: a,
+                mode: DetailMode.view,
+              ),
         onVerticalDragStart: a.isLocked
             ? (_) {
                 HapticFeedback.vibrate();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Aktivitas terkunci 🔒 Buka kuncian terlebih dahulu.'),
+                    content: Text(
+                      'Aktivitas terkunci. Buka kuncinya terlebih dahulu.',
+                    ),
                     duration: Duration(seconds: 2),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -454,8 +510,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
                   _dragDeltaY = 0;
                 });
               },
-        onVerticalDragUpdate: (d) =>
-            setState(() => _dragDeltaY += d.delta.dy),
+        onVerticalDragUpdate: (d) => setState(() => _dragDeltaY += d.delta.dy),
         onVerticalDragEnd: (_) => _commitBlockDrag(a, hourH),
         child: Opacity(
           opacity: a.isCompleted ? 0.45 : 1.0,
@@ -473,7 +528,11 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
               child: Row(
                 children: [
                   if (a.iconKey != null && a.iconKey!.isNotEmpty) ...[
-                    Text(a.iconKey!, style: const TextStyle(fontSize: 11)),
+                    ActivityIcon(
+                      iconKey: a.iconKey,
+                      size: 14,
+                      color: AppPalette.accent,
+                    ),
                     const SizedBox(width: 4),
                   ],
                   Expanded(
@@ -487,21 +546,23 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontSize: 12,
-                              height: 1.1,
-                              fontWeight: FontWeight.w600,
-                              color: fg,
-                              decoration: a.isCompleted
-                                  ? TextDecoration.lineThrough
-                                  : null),
+                            fontSize: 12,
+                            height: 1.1,
+                            fontWeight: FontWeight.w600,
+                            color: fg,
+                            decoration: a.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
                         ),
                         if (height > 40)
                           Text(
                             _timeRange(a),
                             style: TextStyle(
-                                fontSize: 10,
-                                height: 1.1,
-                                color: fg.withValues(alpha: 0.75)),
+                              fontSize: 10,
+                              height: 1.1,
+                              color: fg.withValues(alpha: 0.75),
+                            ),
                           ),
                       ],
                     ),
@@ -509,18 +570,28 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
                   if (a.isLocked)
                     Padding(
                       padding: const EdgeInsets.only(right: 4),
-                      child: Icon(Icons.lock_rounded, size: 12, color: fg.withValues(alpha: 0.85)),
+                      child: Icon(
+                        Icons.lock_rounded,
+                        size: 12,
+                        color: fg.withValues(alpha: 0.85),
+                      ),
                     ),
                   if (a.recurrence != 'none')
-                    Icon(Icons.repeat, size: 11, color: fg.withValues(alpha: 0.6)),
-                  
+                    Icon(
+                      Icons.repeat,
+                      size: 11,
+                      color: fg.withValues(alpha: 0.6),
+                    ),
+
                   // 1-Tap Copy Button (Image 1)
                   if (!isDragging)
                     GestureDetector(
                       onTap: () async {
                         HapticFeedback.mediumImpact();
                         final messenger = ScaffoldMessenger.of(context);
-                        await ref.read(activityRepoProvider).duplicateActivity(a, widget.date);
+                        await ref
+                            .read(activityRepoProvider)
+                            .duplicateActivity(a, widget.date);
                         messenger.showSnackBar(
                           const SnackBar(
                             content: Text('Aktivitas berhasil disalin!'),
@@ -544,8 +615,9 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
                     GestureDetector(
                       onTap: () {
                         HapticFeedback.selectionClick();
-                        ref.read(activityRepoProvider).markComplete(
-                            a, !a.isCompleted);
+                        ref
+                            .read(activityRepoProvider)
+                            .markComplete(a, !a.isCompleted);
                       },
                       child: Padding(
                         padding: const EdgeInsets.only(left: 2),
@@ -583,8 +655,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
     final dur = a.endMinute - a.startMinute;
     a.startMinute = (a.startMinute + delta).clamp(0, 720 - dur);
     a.endMinute = a.startMinute + dur;
-    final lead =
-        ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
+    final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
     await ref.read(activityRepoProvider).upsert(a, notifLeadMinutes: lead);
     HapticFeedback.lightImpact();
   }
@@ -637,7 +708,11 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
   }
 
   String _timeRange(Activity a) {
-    final s = formatMinuteOfHalf(a.startMinute, a.ampmHalf, is24h: widget.is24h);
+    final s = formatMinuteOfHalf(
+      a.startMinute,
+      a.ampmHalf,
+      is24h: widget.is24h,
+    );
     final e = formatMinuteOfHalf(a.endMinute, a.ampmHalf, is24h: widget.is24h);
     return '$s – $e';
   }
@@ -649,8 +724,11 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
 // ── Now line ─────────────────────────────────────────────────────────────────
 
 class _NowLine extends StatefulWidget {
-  const _NowLine(
-      {required this.hourH, required this.labelW, required this.scroll});
+  const _NowLine({
+    required this.hourH,
+    required this.labelW,
+    required this.scroll,
+  });
   final double hourH;
   final double labelW;
   final ScrollController scroll;
@@ -685,10 +763,8 @@ class _NowLineState extends State<_NowLine> {
 
   @override
   Widget build(BuildContext context) {
-    final topInContent =
-        (_now.hour * 60 + _now.minute) / 60 * widget.hourH;
-    final scrollOff =
-        widget.scroll.hasClients ? widget.scroll.offset : 0.0;
+    final topInContent = (_now.hour * 60 + _now.minute) / 60 * widget.hourH;
+    final scrollOff = widget.scroll.hasClients ? widget.scroll.offset : 0.0;
     final top = topInContent - scrollOff;
 
     return Positioned(
@@ -699,12 +775,14 @@ class _NowLineState extends State<_NowLine> {
         child: Row(
           children: [
             Container(
-                width: 9,
-                height: 9,
-                decoration: const BoxDecoration(
-                    color: Colors.redAccent, shape: BoxShape.circle)),
-            Expanded(
-                child: Container(height: 1.5, color: Colors.redAccent)),
+              width: 9,
+              height: 9,
+              decoration: const BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+              ),
+            ),
+            Expanded(child: Container(height: 1.5, color: Colors.redAccent)),
           ],
         ),
       ),
@@ -731,20 +809,27 @@ class _GridPainter extends CustomPainter {
       ..strokeWidth = 0.3;
 
     for (int h = 0; h <= 24; h++) {
-      canvas.drawLine(Offset(0, h * hourH), Offset(size.width, h * hourH), hour);
+      canvas.drawLine(
+        Offset(0, h * hourH),
+        Offset(size.width, h * hourH),
+        hour,
+      );
       if (h < 24) {
         canvas.drawLine(
-            Offset(0, h * hourH + hourH * 0.25),
-            Offset(size.width, h * hourH + hourH * 0.25),
-            quarter);
+          Offset(0, h * hourH + hourH * 0.25),
+          Offset(size.width, h * hourH + hourH * 0.25),
+          quarter,
+        );
         canvas.drawLine(
-            Offset(0, h * hourH + hourH * 0.5),
-            Offset(size.width, h * hourH + hourH * 0.5),
-            half);
+          Offset(0, h * hourH + hourH * 0.5),
+          Offset(size.width, h * hourH + hourH * 0.5),
+          half,
+        );
         canvas.drawLine(
-            Offset(0, h * hourH + hourH * 0.75),
-            Offset(size.width, h * hourH + hourH * 0.75),
-            quarter);
+          Offset(0, h * hourH + hourH * 0.75),
+          Offset(size.width, h * hourH + hourH * 0.75),
+          quarter,
+        );
       }
     }
   }

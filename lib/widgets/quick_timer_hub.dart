@@ -306,9 +306,9 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
             const SnackBar(
               content: Row(
                 children: [
-                  Icon(Icons.emoji_events, color: AppPalette.accent),
+                  Icon(Icons.check_circle_outline_rounded, color: AppPalette.accent),
                   SizedBox(width: 8),
-                  Text('🎉 Sesi fokus selesai! Pekerjaan bermakna terwujud.'),
+                  Text('Sesi fokus selesai. Pekerjaan bermakna tercatat.'),
                 ],
               ),
             ),

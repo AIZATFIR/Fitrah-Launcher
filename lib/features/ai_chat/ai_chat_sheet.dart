@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
 import '../../services/ai_service.dart';
+import '../../services/ai_action_proposal.dart';
 import '../../services/voice_assistant_service.dart';
 
 /// Embeddable chat panel — lives in the pull-up sheet under the Clock tab.
@@ -58,16 +59,24 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
 
     try {
       final ai = ref.read(aiServiceProvider);
-      final reply = await ai.send(text);
+      final reply = await ai.send(text, allowActions: true);
       final modeLabel = ai.activeMode.label;
 
-      _replaceLast(ChatMessage(role: 'model', text: reply, modeLabel: modeLabel));
+      _replaceLast(
+        ChatMessage(
+          role: 'model',
+          text: reply,
+          modeLabel: modeLabel,
+          proposals: ai.pendingActions,
+        ),
+      );
 
       // Aura Voice Output (TTS)
       ref.read(voiceAssistantServiceProvider).speak(reply);
     } catch (e) {
       _replaceLast(
-          ChatMessage(role: 'model', text: '❌ Aura error: ${e.toString()}'));
+        ChatMessage(role: 'model', text: '❌ Aura error: ${e.toString()}'),
+      );
     } finally {
       if (mounted) setState(() => _sending = false);
       _scrollToBottom();
@@ -81,11 +90,13 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
       voice.stopListening();
     } else {
       widget.onExpandSheet?.call();
-      voice.startListening(onResult: (spokenText) {
-        if (spokenText.trim().isNotEmpty) {
-          _ctrl.text = spokenText;
-        }
-      });
+      voice.startListening(
+        onResult: (spokenText) {
+          if (spokenText.trim().isNotEmpty) {
+            _ctrl.text = spokenText;
+          }
+        },
+      );
     }
   }
 
@@ -104,7 +115,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('🌅 Fitrah Blueprint'),
+        title: const Text('Fitrah Blueprint'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -114,44 +125,69 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
               style: TextStyle(fontSize: 13),
             ),
             const SizedBox(height: 16),
-            StatefulBuilder(builder: (ctx, setS) => Column(
-              children: [
-                Row(children: [
-                  Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            StatefulBuilder(
+              builder: (ctx, setS) => Column(
+                children: [
+                  Row(
                     children: [
-                      const Text('Jam Bangun', style: TextStyle(fontSize: 12)),
-                      Slider(
-                        value: wakeH.toDouble(),
-                        min: 3, max: 10, divisions: 7,
-                        label: '${wakeH.toString().padLeft(2, '0')}:00',
-                        activeColor: AppPalette.accent,
-                        onChanged: (v) => setS(() => wakeH = v.toInt()),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Jam Bangun',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            Slider(
+                              value: wakeH.toDouble(),
+                              min: 3,
+                              max: 10,
+                              divisions: 7,
+                              label: '${wakeH.toString().padLeft(2, '0')}:00',
+                              activeColor: AppPalette.accent,
+                              onChanged: (v) => setS(() => wakeH = v.toInt()),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '${wakeH.toString().padLeft(2, '0')}:00',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ],
-                  )),
-                  Text('${wakeH.toString().padLeft(2, '0')}:00',
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                ]),
-                Row(children: [
-                  Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                  Row(
                     children: [
-                      const Text('Jam Tidur', style: TextStyle(fontSize: 12)),
-                      Slider(
-                        value: sleepH.toDouble(),
-                        min: 19, max: 26, divisions: 7,
-                        label: '${(sleepH % 24).toString().padLeft(2, '0')}:00',
-                        activeColor: AppPalette.accent,
-                        onChanged: (v) => setS(() => sleepH = v.toInt()),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Jam Tidur',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            Slider(
+                              value: sleepH.toDouble(),
+                              min: 19,
+                              max: 26,
+                              divisions: 7,
+                              label:
+                                  '${(sleepH % 24).toString().padLeft(2, '0')}:00',
+                              activeColor: AppPalette.accent,
+                              onChanged: (v) => setS(() => sleepH = v.toInt()),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '${(sleepH % 24).toString().padLeft(2, '0')}:00',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ],
-                  )),
-                  Text('${(sleepH % 24).toString().padLeft(2, '0')}:00',
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                ]),
-              ],
-            )),
+                  ),
+                ],
+              ),
+            ),
             TextField(
               controller: goalCtrl,
               decoration: const InputDecoration(
@@ -164,8 +200,9 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: AppPalette.accent,
@@ -180,8 +217,9 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   .toList();
               final dateStr =
                   '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-              final goalsStr =
-                  goals.isEmpty ? '' : ' Goals: ${goals.join(', ')}.';
+              final goalsStr = goals.isEmpty
+                  ? ''
+                  : ' Goals: ${goals.join(', ')}.';
               final prompt =
                   'Buatkan Fitrah Blueprint untuk hari ini ($dateStr). '
                   'Bangun: ${wakeH.toString().padLeft(2, '0')}:00, '
@@ -221,48 +259,99 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
         // Panel header: title + mode badge + blueprint + mic + new session
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
-          child: Row(
-            children: [
-              const Icon(Icons.auto_awesome, size: 18, color: AppPalette.accent),
-              const SizedBox(width: 8),
-              const Text(
-                'Aura Secretary',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(width: 6),
-              // Mode badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppPalette.accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppPalette.accent.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  activeMode.label,
-                  style: const TextStyle(fontSize: 10, color: AppPalette.accent, fontWeight: FontWeight.w500),
-                ),
-              ),
-              const Spacer(),
-              // Blueprint Launch
-              Tooltip(
-                message: 'Fitrah Blueprint',
-                child: IconButton(
-                  onPressed: () => _showBlueprintDialog(context),
-                  icon: const Icon(Icons.psychology, size: 20, color: AppPalette.accent),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: messages.isEmpty ? null : _newChat,
-                icon: const Icon(Icons.add_comment_outlined, size: 15),
-                label: const Text('New', style: TextStyle(fontSize: 12)),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppPalette.textDim,
-                ),
-              ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 420;
+              return Row(
+                children: [
+                  const Icon(
+                    Icons.auto_awesome,
+                    size: 18,
+                    color: AppPalette.accent,
+                  ),
+                  const SizedBox(width: 8),
+                  if (compact)
+                    const Expanded(
+                      child: Text(
+                        'Aura Secretary',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  else ...[
+                    const Text(
+                      'Aura Secretary',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppPalette.accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppPalette.accent.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        activeMode.label,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppPalette.accent,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  Tooltip(
+                    message: 'Fitrah Blueprint',
+                    child: IconButton(
+                      onPressed: () => _showBlueprintDialog(context),
+                      icon: const Icon(
+                        Icons.psychology,
+                        size: 20,
+                        color: AppPalette.accent,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                    ),
+                  ),
+                  if (compact)
+                    IconButton(
+                      tooltip: 'Chat baru',
+                      onPressed: messages.isEmpty ? null : _newChat,
+                      icon: const Icon(Icons.add_comment_outlined, size: 20),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                    )
+                  else
+                    TextButton.icon(
+                      onPressed: messages.isEmpty ? null : _newChat,
+                      icon: const Icon(Icons.add_comment_outlined, size: 15),
+                      label: const Text('New', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppPalette.textDim,
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
 
@@ -274,7 +363,12 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   controller: _listCtrl,
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                   itemCount: messages.length,
-                  itemBuilder: (_, i) => _Bubble(msg: messages[i]),
+                  itemBuilder: (_, i) => _Bubble(
+                    msg: messages[i],
+                    onProposalChanged: () {
+                      if (mounted) setState(() {});
+                    },
+                  ),
                 ),
         ),
 
@@ -297,9 +391,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                         style: IconButton.styleFrom(
                           backgroundColor: listening
                               ? Colors.redAccent
-                              : (speaking
-                                  ? AppPalette.accent
-                                  : AppPalette.bg),
+                              : (speaking ? AppPalette.accent : AppPalette.bg),
                           foregroundColor: listening || speaking
                               ? Colors.white
                               : AppPalette.accent,
@@ -329,15 +421,20 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   focusNode: _focus,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _send(),
-                  maxLines: null,
+                  minLines: 1,
+                  maxLines: 4,
                   decoration: InputDecoration(
                     hintText: 'Tanya Aura atau jadwalkan sesuatu...',
                     hintStyle: const TextStyle(
-                        color: AppPalette.textDim, fontSize: 14),
+                      color: AppPalette.textDim,
+                      fontSize: 14,
+                    ),
                     filled: true,
                     fillColor: AppPalette.bg,
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,
@@ -355,8 +452,9 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                         child: Padding(
                           padding: EdgeInsets.all(10),
                           child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: AppPalette.accent),
+                            strokeWidth: 2.5,
+                            color: AppPalette.accent,
+                          ),
                         ),
                       )
                     : IconButton(
@@ -380,8 +478,9 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
 // ── Bubble ─────────────────────────────────────────────────────────────────
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.msg});
+  const _Bubble({required this.msg, required this.onProposalChanged});
   final ChatMessage msg;
+  final VoidCallback onProposalChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -389,8 +488,9 @@ class _Bubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser) ...[
@@ -403,7 +503,12 @@ class _Bubble extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Center(
-                  child: Icon(Icons.auto_awesome, size: 14, color: AppPalette.accent)),
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 14,
+                  color: AppPalette.accent,
+                ),
+              ),
             ),
           ],
           Flexible(
@@ -427,23 +532,152 @@ class _Bubble extends StatelessWidget {
                 ),
               ),
               child: msg.isLoading
-                  ? const SizedBox(
-                      width: 40,
-                      height: 16,
-                      child: _ThreeDots(),
-                    )
-                  : MarkdownBody(
-                      data: msg.text,
-                      styleSheet: MarkdownStyleSheet(
-                        p: const TextStyle(fontSize: 14, color: AppPalette.text),
-                        strong: const TextStyle(fontWeight: FontWeight.w600, color: AppPalette.text),
-                        em: const TextStyle(fontStyle: FontStyle.italic, color: AppPalette.text),
-                        listBullet: const TextStyle(color: AppPalette.text),
-                      ),
+                  ? const SizedBox(width: 40, height: 16, child: _ThreeDots())
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        MarkdownBody(
+                          data: msg.text,
+                          styleSheet: MarkdownStyleSheet(
+                            p: const TextStyle(
+                              fontSize: 14,
+                              color: AppPalette.text,
+                            ),
+                            strong: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: AppPalette.text,
+                            ),
+                            em: const TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: AppPalette.text,
+                            ),
+                            listBullet: const TextStyle(color: AppPalette.text),
+                          ),
+                        ),
+                        for (final proposal in msg.proposals)
+                          _AiProposalCard(
+                            proposal: proposal,
+                            onChanged: onProposalChanged,
+                          ),
+                      ],
                     ),
             ),
           ),
           if (isUser) const SizedBox(width: 34),
+        ],
+      ),
+    );
+  }
+}
+
+class _AiProposalCard extends StatefulWidget {
+  const _AiProposalCard({required this.proposal, required this.onChanged});
+  final AiActionProposal proposal;
+  final VoidCallback onChanged;
+
+  @override
+  State<_AiProposalCard> createState() => _AiProposalCardState();
+}
+
+class _AiProposalCardState extends State<_AiProposalCard> {
+  bool _working = false;
+  String? _error;
+
+  String get _summary {
+    return widget.proposal.summary;
+  }
+
+  Future<void> _approve() async {
+    setState(() {
+      _working = true;
+      _error = null;
+    });
+    try {
+      await widget.proposal.approve();
+    } catch (e) {
+      _error = e.toString();
+    }
+    if (mounted) setState(() => _working = false);
+    widget.onChanged();
+  }
+
+  void _dismiss() {
+    widget.proposal.dismiss();
+    setState(() {});
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final proposal = widget.proposal;
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppPalette.bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppPalette.stroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            proposal.isApplied
+                ? 'Diterapkan'
+                : proposal.isPending
+                ? 'Perubahan menunggu persetujuan'
+                : 'Perubahan dibatalkan',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: proposal.isApplied
+                  ? AppPalette.accent
+                  : AppPalette.textDim,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            _summary,
+            style: const TextStyle(fontSize: 13, color: AppPalette.text),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Belum berhasil: $_error',
+                style: const TextStyle(fontSize: 12, color: Colors.redAccent),
+              ),
+            ),
+          if (proposal.isPending) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _working ? null : _dismiss,
+                    child: const Text('Batal'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _working ? null : _approve,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppPalette.accent,
+                      foregroundColor: Colors.black,
+                    ),
+                    child: _working
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Terapkan'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -485,8 +719,10 @@ class _ThreeDotsState extends State<_ThreeDots>
           mainAxisSize: MainAxisSize.min,
           children: List.generate(3, (i) {
             final phase = (_c.value - i * 0.2).clamp(0.0, 1.0);
-            final opacity = (phase < 0.5 ? phase * 2 : (1 - phase) * 2)
-                .clamp(0.3, 1.0);
+            final opacity = (phase < 0.5 ? phase * 2 : (1 - phase) * 2).clamp(
+              0.3,
+              1.0,
+            );
             return Container(
               width: 7,
               height: 7,
@@ -529,16 +765,19 @@ class _EmptyState extends StatelessWidget {
               '"Tambah gym jam 6 pagi besok"',
               '"Geser jadwal meeting ke jam 3 sore"',
               '"Apa kegiatan utama saya hari ini?"',
-            ].map((s) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Text(
-                    s,
-                    style: const TextStyle(
-                        color: AppPalette.accent,
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic),
+            ].map(
+              (s) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Text(
+                  s,
+                  style: const TextStyle(
+                    color: AppPalette.accent,
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
                   ),
-                )),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
+import '../../widgets/activity_icon.dart';
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../providers/providers.dart';
@@ -122,7 +123,7 @@ class SimpleModeView extends ConsumerWidget {
                           ),
                           const Spacer(),
                           const Text(
-                            '⚡ SIMPLE MODE',
+                            'FOKUS CEPAT',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
@@ -207,7 +208,7 @@ class SimpleModeView extends ConsumerWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '⚡ BUAT AKTIVITAS FOKUS',
+                                        'Buat sesi fokus',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w900,
@@ -365,7 +366,7 @@ class SimpleModeView extends ConsumerWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '📖 Talking About Your Day',
+                                      'Cerita tentang harimu',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
@@ -446,7 +447,10 @@ class _QuickPresetCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Text(icon, style: const TextStyle(fontSize: 20)),
+              ActivityIcon(
+                iconKey: icon,
+                color: highlight ? AppPalette.accent : AppPalette.textDim,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

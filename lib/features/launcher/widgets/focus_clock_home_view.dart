@@ -56,9 +56,20 @@ class _HomeThemeColors {
 
   factory _HomeThemeColors.fromPalette(String palette) {
     switch (palette) {
+      case 'full_book':
+        return const _HomeThemeColors(
+          bg: AppPalette.bg,
+          card: AppPalette.card,
+          cardElevated: AppPalette.bookpaperFieldBg,
+          stroke: AppPalette.stroke,
+          accent: AppPalette.accent,
+          textPrimary: Color(0xFFF5EBE6),
+          textSecondary: Color(0xFFA69F95),
+          textMuted: Color(0xFFA69F95),
+          clockThemeIndex: 7,
+        );
       case 'sand':
       case 'warm_sand':
-      case 'full_book':
         return const _HomeThemeColors(
           bg: Color(0xFF141210),
           card: Color(0xFF1D1916),
@@ -96,20 +107,31 @@ class _HomeThemeColors {
         );
       case 'sage':
       case 'fino_green':
-      case 'natural_slate':
-      default:
-        // Sadar Way of Life M3 Sage Green Aesthetic
         return const _HomeThemeColors(
-          bg: AppPalette.bg,
-          card: AppPalette.card,
-          cardElevated: AppPalette.cardHigh,
-          stroke: AppPalette.stroke,
-          accent: AppPalette.accent,
-          textPrimary: AppPalette.text,
-          textSecondary: AppPalette.textDim,
+          bg: Color(0xFF0F1410),
+          card: Color(0xFF1A2018),
+          cardElevated: Color(0xFF222B20),
+          stroke: Color(0xFF2E3E30),
+          accent: Color(0xFF7FCFAA),
+          textPrimary: Color(0xFFE8F0EB),
+          textSecondary: Color(0xFF8FAF9A),
           textMuted: Color(0xFF5A7A60),
           clockThemeIndex: 1,
         );
+      case 'natural_slate':
+        return const _HomeThemeColors(
+          bg: Color(0xFF12151B),
+          card: Color(0xFF1D222B),
+          cardElevated: Color(0xFF262C36),
+          stroke: Color(0xFF363D49),
+          accent: Color(0xFFD8B26E),
+          textPrimary: Color(0xFFF3EEE6),
+          textSecondary: Color(0xFFA79F94),
+          textMuted: Color(0xFF716B63),
+          clockThemeIndex: 7,
+        );
+      default:
+        return _HomeThemeColors.fromPalette('full_book');
     }
   }
 }
@@ -1278,7 +1300,24 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         activitiesState,
                         tc,
                         showHeroEvent: settings.showHeroEvent,
+                        compact: true,
                       ),
+                const SizedBox(height: 18),
+
+                // Habits stay close to the goal and clock cue.
+                if (settings.showHabitsWidget)
+                  Container(
+                    key: const ValueKey('home-habit-grid'),
+                    decoration: BoxDecoration(
+                      color: tc.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: tc.stroke, width: 0.5),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: LoopHabitGridWidget(
+                      onStartTimer: _openHabitFocusTimer,
+                    ),
+                  ),
                 const SizedBox(height: 18),
 
                 if (!widget.useSampleData) ...[
@@ -1286,27 +1325,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   const SizedBox(height: 18),
                 ],
 
-                // ── Obsidian Daily Note Card (Direct scratchpad) ──
                 _buildObsidianDailyNoteCard(tc),
-                const SizedBox(height: 18),
-
-                // ── Loop Habit Tracker (Pixel-faithful to user screenshot) ──
-                if (settings.showHabitsWidget)
-                  Container(
-                    key: const ValueKey('home-habit-grid'),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.25),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.08),
-                        width: 0.5,
-                      ),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: LoopHabitGridWidget(
-                      onStartTimer: _openHabitFocusTimer,
-                    ),
-                  ),
                 const SizedBox(height: 18),
 
                 // ── Task & Habit Dump Section (Dump Inbox -> Direct Clock Schedule) ──
@@ -1397,28 +1416,30 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final date =
         '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final history = ref.watch(terminalFocusSessionsForDateProvider(date));
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: tc.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tc.stroke),
-      ),
-      child: history.when(
-        loading: () => Text(
+    return history.when(
+      loading: () => _focusHistoryCard(
+        tc,
+        Text(
           'Memuat sesi hari ini…',
           style: TextStyle(color: tc.textSecondary),
         ),
-        error: (_, __) => Text(
+      ),
+      error: (_, __) => _focusHistoryCard(
+        tc,
+        Text(
           'Histori sesi belum dapat dimuat.',
           style: TextStyle(color: tc.textSecondary),
         ),
-        data: (sessions) {
-          final completedSeconds = sessions
-              .where((s) => s.status == TerminalSessionStatus.completed)
-              .fold<int>(0, (sum, s) => sum + s.actualDurationSeconds);
-          final minutes = completedSeconds ~/ 60;
-          return Column(
+      ),
+      data: (sessions) {
+        if (sessions.isEmpty) return const SizedBox.shrink();
+        final completedSeconds = sessions
+            .where((s) => s.status == TerminalSessionStatus.completed)
+            .fold<int>(0, (sum, s) => sum + s.actualDurationSeconds);
+        final minutes = completedSeconds ~/ 60;
+        return _focusHistoryCard(
+          tc,
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -1438,14 +1459,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ),
                 ],
               ),
-              if (sessions.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'Belum ada sesi tercatat hari ini.',
-                    style: TextStyle(color: tc.textSecondary),
-                  ),
-                ),
               for (final session in sessions)
                 Padding(
                   padding: const EdgeInsets.only(top: 7),
@@ -1481,11 +1494,21 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ),
                 ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
+
+  Widget _focusHistoryCard(_HomeThemeColors tc, Widget child) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: tc.card,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: tc.stroke),
+    ),
+    child: child,
+  );
 
   String _formatSessionDuration(int seconds) =>
       '${seconds ~/ 60} m ${seconds % 60} d';
@@ -1558,92 +1581,57 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         // Main Content: Prayer Timeline or Agenda Carousel
         Expanded(
           child: showPrayerSchedule
-              ? LayoutBuilder(
-                  builder: (context, constraints) {
-                    final prayerItems = List.generate(prayers.length, (i) {
-                      final p = prayers[i];
-                      final isNext = nextPrayer['index'] == i;
-                      final isDone = _prayerDone[i] == true;
-                      return InkWell(
-                        onTap: () => _openPrayerActionSheet(i, p),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          decoration: BoxDecoration(
-                            color: tc.card,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isNext ? tc.accent : tc.stroke,
-                              width: isNext ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                p['name'] as String,
-                                maxLines: 1,
-                                softWrap: false,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: isNext
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                  color: isDone
-                                      ? const Color(0xFF5FD0A5)
-                                      : isNext
-                                      ? tc.accent
-                                      : tc.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                p['time'] as String,
-                                maxLines: 1,
-                                softWrap: false,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDone
-                                      ? const Color(0xFF5FD0A5)
-                                      : tc.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
+              ? Builder(
+                  builder: (context) {
+                    final index = nextPrayer['index'] as int;
+                    final prayer = prayers[index];
+                    final isDone = _prayerDone[index] == true;
+                    return InkWell(
+                      onTap: () => _openPrayerScheduleSheet(prayers, index, tc),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 44,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: tc.card,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: tc.stroke),
                         ),
-                      );
-                    });
-
-                    if (constraints.maxWidth < 220) {
-                      final itemWidth = (constraints.maxWidth - 8) / 3;
-                      return Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: prayerItems
-                            .map(
-                              (item) => SizedBox(width: itemWidth, child: item),
-                            )
-                            .toList(),
-                      );
-                    }
-
-                    return Row(
-                      children: prayerItems
-                          .asMap()
-                          .entries
-                          .map(
-                            (entry) => Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  left: entry.key == 0 ? 0 : 4,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.mosque_outlined,
+                              size: 18,
+                              color: isDone ? tc.textSecondary : tc.accent,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                prayer['name'] as String,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: isDone
+                                      ? tc.textSecondary
+                                      : tc.textPrimary,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                child: entry.value,
                               ),
                             ),
-                          )
-                          .toList(),
+                            const SizedBox(width: 6),
+                            Text(
+                              prayer['time'] as String,
+                              style: TextStyle(
+                                color: isDone ? tc.textSecondary : tc.accent,
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 )
@@ -1913,6 +1901,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     AsyncValue<List<Activity>> activitiesState,
     _HomeThemeColors tc, {
     required bool showHeroEvent,
+    bool compact = false,
   }) {
     final effectiveActivities =
         activitiesState.valueOrNull ?? const <Activity>[];
@@ -1923,224 +1912,313 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: tc.stroke, width: 1.0),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(compact ? 12 : 16),
       child: Column(
         children: [
-          // Keep every labeled action visible on narrow phone screens.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final amPmSelector = Container(
-                decoration: BoxDecoration(
-                  color: tc.cardElevated,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: tc.stroke, width: 1.0),
-                ),
-                padding: const EdgeInsets.all(2),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildAmPmPill('AM', _clockViewHalf == AmPmHalf.am, () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _clockViewHalf = AmPmHalf.am);
-                    }, tc),
-                    _buildAmPmPill('PM', _clockViewHalf == AmPmHalf.pm, () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _clockViewHalf = AmPmHalf.pm);
-                    }, tc),
-                  ],
-                ),
-              );
-              final searchTool = _buildHeaderToolPill(
-                icon: Icons.search_rounded,
-                label: 'Cari',
-                isActive: false,
-                onTap: _openSearchSheet,
-                tc: tc,
-              );
-              final listTool = _buildHeaderToolPill(
-                icon: Icons.format_list_bulleted_rounded,
-                label: 'Daftar',
-                isActive: _isListView,
-                onTap: () => setState(() => _isListView = !_isListView),
-                tc: tc,
-              );
-              final timerTool = _buildHeaderToolPill(
-                icon: Icons.timer_outlined,
-                label: 'Timer',
-                isActive: _activeTimer != null && _activeTimer!.isRunning,
-                onTap: _openFocusTimerHub,
-                tc: tc,
-              );
-
-              if (constraints.maxWidth < 400) {
-                return Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [amPmSelector, timerTool],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [searchTool, listTool],
-                    ),
-                  ],
-                );
-              }
-
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  amPmSelector,
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      searchTool,
-                      const SizedBox(width: 6),
-                      listTool,
-                      const SizedBox(width: 6),
-                      timerTool,
-                    ],
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 18),
-
-          // Center 12h Analog Clock Face
-          Semantics(
-            key: const ValueKey('home-analog-clock'),
-            button: true,
-            label:
-                'Jam jadwal hari ini. Sekarang pukul ${_formatHour(_hourNow())}. Ketuk untuk menambah jadwal.',
-            onTap: _openScheduleFromClock,
-            child: GestureDetector(
-              excludeFromSemantics: true,
-              onTap: _openScheduleFromClock,
-              child: SizedBox(
-                width: 240,
-                height: 240,
-                child: AnalogClockFace(
-                  now: _currentTime,
-                  activities: effectiveActivities,
-                  tasks: const [],
-                  viewHalf: _clockViewHalf,
-                  clockHandsMode: 1,
-                  is24hDial: false,
-                  is24hTime: false,
-                  showCurrentTime: true,
-                  clockFaceTheme: tc.clockThemeIndex,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Instant User Clarity Status Badge (Current Time + What Am I Doing Now)
-          if (showHeroEvent) ...[
+          if (compact) ...[
             Row(
-              key: const ValueKey('home-current-event'),
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  _formatHour(hr),
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                    color: tc.textPrimary,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: (currentAct['color'] as Color).withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: (currentAct['color'] as Color).withOpacity(0.5),
-                        width: 1.0,
+                Semantics(
+                  key: const ValueKey('home-analog-clock'),
+                  button: true,
+                  label:
+                      'Buka jam jadwal. Sekarang pukul ${_formatHour(_hourNow())}.',
+                  onTap: widget.onOpenFocusClock,
+                  child: GestureDetector(
+                    excludeFromSemantics: true,
+                    onTap: widget.onOpenFocusClock,
+                    child: SizedBox(
+                      width: 148,
+                      height: 148,
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: SizedBox(
+                          width: 240,
+                          height: 240,
+                          child: AnalogClockFace(
+                            now: _currentTime,
+                            activities: effectiveActivities,
+                            tasks: const [],
+                            viewHalf: _clockViewHalf,
+                            clockHandsMode: 1,
+                            is24hDial: false,
+                            is24hTime: false,
+                            showCurrentTime: false,
+                            clockFaceTheme: tc.clockThemeIndex,
+                          ),
+                        ),
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: currentAct['color'] as Color,
-                            shape: BoxShape.circle,
-                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SEKARANG',
+                        style: TextStyle(
+                          color: tc.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
                         ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            currentAct['remaining'] != null
-                                ? '${currentAct['name']} (${currentAct['remaining']})'
-                                : currentAct['name'],
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: currentAct['color'] as Color,
-                            ),
-                          ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _formatHour(hr),
+                        style: TextStyle(
+                          color: tc.textPrimary,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        currentAct['name'] as String,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: tc.textSecondary, height: 1.3),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: widget.onOpenFocusClock,
+                        style: TextButton.styleFrom(
+                          foregroundColor: tc.accent,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(48, 44),
+                        ),
+                        icon: const Icon(Icons.schedule_rounded, size: 18),
+                        label: const Text('Buka jam'),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-          ],
+          ] else ...[
+            // Keep every labeled action visible on narrow phone screens.
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final amPmSelector = Container(
+                  decoration: BoxDecoration(
+                    color: tc.cardElevated,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: tc.stroke, width: 1.0),
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildAmPmPill('AM', _clockViewHalf == AmPmHalf.am, () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _clockViewHalf = AmPmHalf.am);
+                      }, tc),
+                      _buildAmPmPill('PM', _clockViewHalf == AmPmHalf.pm, () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _clockViewHalf = AmPmHalf.pm);
+                      }, tc),
+                    ],
+                  ),
+                );
+                final searchTool = _buildHeaderToolPill(
+                  icon: Icons.search_rounded,
+                  label: 'Cari',
+                  isActive: false,
+                  onTap: _openSearchSheet,
+                  tc: tc,
+                );
+                final listTool = _buildHeaderToolPill(
+                  icon: Icons.format_list_bulleted_rounded,
+                  label: 'Daftar',
+                  isActive: _isListView,
+                  onTap: () => setState(() => _isListView = !_isListView),
+                  tc: tc,
+                );
+                final timerTool = _buildHeaderToolPill(
+                  icon: Icons.timer_outlined,
+                  label: 'Timer',
+                  isActive: _activeTimer != null && _activeTimer!.isRunning,
+                  onTap: _openFocusTimerHub,
+                  tc: tc,
+                );
 
-          // Clean Inline Tap Button to Schedule Activity
-          InkWell(
-            onTap: () => _openScheduleToClockSheet(
-              title: '',
-              initialDurationMinutes: 60,
-              identity: '',
+                if (constraints.maxWidth < 400) {
+                  return Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [amPmSelector, timerTool],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [searchTool, listTool],
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    amPmSelector,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        searchTool,
+                        const SizedBox(width: 6),
+                        listTool,
+                        const SizedBox(width: 6),
+                        timerTool,
+                      ],
+                    ),
+                  ],
+                );
+              },
             ),
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: tc.accent.withOpacity(0.3),
-                  width: 0.8,
+            const SizedBox(height: 18),
+
+            // Center 12h Analog Clock Face
+            Semantics(
+              key: const ValueKey('home-analog-clock'),
+              button: true,
+              label:
+                  'Jam jadwal hari ini. Sekarang pukul ${_formatHour(_hourNow())}. Ketuk untuk menambah jadwal.',
+              onTap: _openScheduleFromClock,
+              child: GestureDetector(
+                excludeFromSemantics: true,
+                onTap: _openScheduleFromClock,
+                child: SizedBox(
+                  width: 240,
+                  height: 240,
+                  child: AnalogClockFace(
+                    now: _currentTime,
+                    activities: effectiveActivities,
+                    tasks: const [],
+                    viewHalf: _clockViewHalf,
+                    clockHandsMode: 1,
+                    is24hDial: false,
+                    is24hTime: false,
+                    showCurrentTime: true,
+                    clockFaceTheme: tc.clockThemeIndex,
+                  ),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+            ),
+            const SizedBox(height: 14),
+
+            // Instant User Clarity Status Badge (Current Time + What Am I Doing Now)
+            if (showHeroEvent) ...[
+              Row(
+                key: const ValueKey('home-current-event'),
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_rounded, color: tc.accent, size: 15),
-                  const SizedBox(width: 4),
+                  Text(
+                    _formatHour(hr),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                      color: tc.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Flexible(
-                    child: Text(
-                      'Pasang Jadwal ke Jam',
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: tc.accent,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (currentAct['color'] as Color).withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: (currentAct['color'] as Color).withOpacity(
+                            0.5,
+                          ),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: currentAct['color'] as Color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              currentAct['remaining'] != null
+                                  ? '${currentAct['name']} (${currentAct['remaining']})'
+                                  : currentAct['name'],
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: currentAct['color'] as Color,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+            ],
+
+            // Clean Inline Tap Button to Schedule Activity
+            InkWell(
+              onTap: () => _openScheduleToClockSheet(
+                title: '',
+                initialDurationMinutes: 60,
+                identity: '',
+              ),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: tc.accent.withOpacity(0.3),
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_rounded, color: tc.accent, size: 15),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'Pasang Jadwal ke Jam',
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: tc.accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -2148,11 +2226,35 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // ── Obsidian Daily Note Card (Direct friction-free scratchpad) ─────────────
   Widget _buildObsidianDailyNoteCard(_HomeThemeColors tc) {
+    const weekdays = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
+    ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    final date = DateTime.parse(_dailyNoteDate);
     return Container(
       decoration: BoxDecoration(
         color: tc.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tc.stroke, width: 1.0),
+        border: Border.all(color: tc.stroke, width: 0.75),
       ),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       child: Column(
@@ -2166,11 +2268,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   Icon(Icons.edit_note_rounded, size: 18, color: tc.accent),
                   const SizedBox(width: 8),
                   Text(
-                    'DAILY NOTE',
-                    style: GoogleFonts.inter(
-                      fontSize: 11.5,
+                    'Catatan hari ini',
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
+                      letterSpacing: 0,
                       color: tc.textPrimary,
                     ),
                   ),
@@ -2178,13 +2280,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
               Flexible(
                 child: Text(
-                  DateFormat(
-                    'EEEE, d MMM',
-                  ).format(DateTime.parse(_dailyNoteDate)),
+                  '${weekdays[date.weekday - 1]}, ${date.day} '
+                  '${months[date.month - 1]}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.outfit(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: tc.textSecondary,
@@ -2199,7 +2300,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             controller: _dailyNoteController,
             maxLines: 4,
             minLines: 2,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.outfit(
               fontSize: 13.5,
               height: 1.45,
               color: tc.textPrimary,
@@ -2212,7 +2313,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               focusedBorder: InputBorder.none,
               filled: false,
               hintText: 'Tulis pemikiran, niat, atau catatan hari ini...',
-              hintStyle: GoogleFonts.inter(fontSize: 13, color: tc.textMuted),
+              hintStyle: GoogleFonts.outfit(fontSize: 13, color: tc.textMuted),
             ),
             onChanged: (val) {
               _dailyNote = val;
@@ -2308,7 +2409,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               children: [
                 Text(
                   'Daftar Blok Waktu',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.outfit(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
@@ -2370,7 +2471,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 ),
                 title: Text(
                   b.isDone ? '${b.name} (selesai)' : b.name,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.outfit(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                     color: b.isDone ? tc.textMuted : tc.textPrimary,
@@ -2378,7 +2479,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 ),
                 subtitle: Text(
                   '${_formatHour(b.startHour)} - ${_formatHour(b.endHour)}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.outfit(
                     fontSize: 11,
                     color: tc.textSecondary,
                   ),
@@ -2397,30 +2498,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildUnifiedPresetSection(_HomeThemeColors tc) {
     if (_identities.isEmpty) {
-      return Container(
-        decoration: BoxDecoration(
-          color: tc.card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: tc.stroke),
-        ),
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Preset Blok Waktu',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: tc.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Belum ada preset atau identitas yang kamu tambahkan.',
-              style: TextStyle(color: tc.textSecondary, fontSize: 12),
-            ),
-          ],
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(
+          'Blok waktu',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: tc.textPrimary,
+          ),
         ),
       );
     }
@@ -2676,9 +2762,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   void _openPresetIdentityFilterSheet() {
+    final tc = _HomeThemeColors.fromPalette(
+      ref.read(launcherSettingsProvider).themePalette,
+    );
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF161A22),
+      backgroundColor: tc.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -2710,19 +2799,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ),
                   title: Text(
                     id.name,
-                    style: const TextStyle(
-                      color: Color(0xFFEDEFF2),
+                    style: TextStyle(
+                      color: tc.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   trailing:
                       _selectedPresetIdentity.toLowerCase() ==
                           id.name.toLowerCase()
-                      ? const Icon(
-                          Icons.check,
-                          color: Color(0xFF5FD0A5),
-                          size: 18,
-                        )
+                      ? Icon(Icons.check, color: tc.accent, size: 18)
                       : null,
                   onTap: () {
                     setState(() => _selectedPresetIdentity = id.name);
@@ -2730,16 +2815,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   },
                 ),
               ),
-              const Divider(color: Color(0xFF1E2430)),
+              Divider(color: tc.stroke),
               ListTile(
-                leading: const Icon(
-                  Icons.add_circle_outline,
-                  color: Color(0xFFE8C07D),
-                ),
-                title: const Text(
+                leading: Icon(Icons.add_circle_outline, color: tc.accent),
+                title: Text(
                   'Tambah Identitas Baru',
                   style: TextStyle(
-                    color: Color(0xFFE8C07D),
+                    color: tc.accent,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -3066,31 +3148,17 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // ── (+) Tambah Identitas Baru Button ──
   Widget _buildAddIdentityButton(_HomeThemeColors tc) {
-    return InkWell(
-      onTap: _openCreateNewIdentityDialog,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: 50,
-        decoration: BoxDecoration(
-          color: tc.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: tc.accent.withOpacity(0.5), width: 1.5),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        style: TextButton.styleFrom(
+          foregroundColor: tc.accent,
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_circle_outline_rounded, color: tc.accent, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Tambah Blok Identitas Baru',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: tc.accent,
-              ),
-            ),
-          ],
-        ),
+        onPressed: _openCreateNewIdentityDialog,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Tambah identitas'),
       ),
     );
   }
@@ -3189,7 +3257,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   children: [
                     Text(
                       'TUJUAN HARI INI',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.outfit(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.7,
@@ -3201,7 +3269,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       hasGoal ? goal : 'Apa yang ingin kamu jaga hari ini?',
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.outfit(
                         fontSize: hasGoal ? 19 : 16,
                         height: 1.35,
                         fontWeight: hasGoal ? FontWeight.w600 : FontWeight.w400,
@@ -3818,8 +3886,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   decoration: InputDecoration(
                     hintText:
                         'Tulis catatan harian untuk ${_formatDateShort(_selectedNoteDate)}...',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFF8A93A3),
+                    hintStyle: TextStyle(
+                      color: AppPalette.textDim,
                       fontSize: 13,
                     ),
                     filled: true,
@@ -5979,9 +6047,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         ? null
         : ref.watch(eisenhowerTasksProvider);
     final tasks = _inboxTasks;
-    final compact =
-        MediaQuery.sizeOf(context).width < 380 ||
-        MediaQuery.textScalerOf(context).scale(14) > 18;
     final store = widget.useSampleData ? null : ref.read(taskRepoProvider).isar;
     final unavailable =
         !widget.useSampleData && (store == null || !store.isDurable);
@@ -5991,7 +6056,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       decoration: BoxDecoration(
         color: tc.card,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: tc.stroke, width: 1.5),
+        border: Border.all(color: tc.stroke, width: 0.75),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -6002,7 +6067,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Task & Habit Dump (Inbox)',
+                  'Kotak masuk kegiatan',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -6010,112 +6075,52 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: tc.accent.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(10),
+              if (tasks.isNotEmpty)
+                Text(
+                  '${tasks.length} kegiatan',
+                  style: TextStyle(fontSize: 12, color: tc.textSecondary),
                 ),
-                child: Text(
-                  compact ? '${tasks.length}' : '${tasks.length} tugas',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: tc.accent,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              InkWell(
-                onTap: () => _openQuickDumpTaskDialog(tc),
-                borderRadius: BorderRadius.circular(8),
-                child: Tooltip(
-                  message: 'Tambah tugas ke Dump',
-                  child: Container(
-                    constraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: tc.cardAlt,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: tc.stroke),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add, color: tc.accent, size: 14),
-                        if (!compact) ...[
-                          const SizedBox(width: 2),
-                          Text(
-                            'Dump',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: tc.accent,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              InkWell(
-                onTap: () => _openScheduleToClockSheet(),
-                borderRadius: BorderRadius.circular(8),
-                child: Tooltip(
-                  message: 'Tambah kegiatan ke Focus Clock',
-                  child: Container(
-                    constraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: tc.accent,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.flash_on_rounded,
-                          color: tc.background,
-                          size: 13,
-                        ),
-                        if (!compact) ...[
-                          const SizedBox(width: 2),
-                          Text(
-                            'Pasang',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: tc.background,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            'Klik "Sekarang" untuk 1-tap instan, atau "Pasang" untuk atur durasi ke Focus Clock',
-            style: TextStyle(fontSize: 11, color: tc.textSecondary),
+            'Catat kegiatan, lalu tentukan waktunya.',
+            style: TextStyle(fontSize: 13, color: tc.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: tc.accent,
+                  foregroundColor: tc.background,
+                  minimumSize: const Size(48, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => _openQuickDumpTaskDialog(tc),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Tambah kegiatan'),
+              ),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: tc.accent,
+                  side: BorderSide(color: tc.stroke),
+                  minimumSize: const Size(48, 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: _openScheduleToClockSheet,
+                icon: const Icon(Icons.schedule_rounded, size: 18),
+                label: const Text('Atur waktu'),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           if (unavailable)
@@ -6128,8 +6133,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'Belum ada tugas di dump inbox. Klik + Dump untuk mencatat cepat.',
-                style: TextStyle(color: tc.textSecondary, fontSize: 12),
+                'Kegiatan yang belum punya waktu akan tersimpan di sini.',
+                style: TextStyle(color: tc.textSecondary, fontSize: 13),
               ),
             )
           else
@@ -6626,9 +6631,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // ── 8. Block Detail Sheet ──
   void _openBlockDetailSheet(BlockItem b) {
+    final tc = _HomeThemeColors.fromPalette(
+      ref.read(launcherSettingsProvider).themePalette,
+    );
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF161A22),
+      backgroundColor: tc.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -6641,10 +6649,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             children: [
               Text(
                 b.name,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFFEDEFF2),
+                  color: tc.textPrimary,
                 ),
               ),
               const SizedBox(height: 4),
@@ -7067,6 +7075,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   void _openThemePickerSheet() {
     final settings = ref.read(launcherSettingsProvider);
     final currentPalette = settings.themePalette;
+    final tc = _HomeThemeColors.fromPalette(currentPalette);
 
     final palettes = [
       {
@@ -7099,16 +7108,16 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       },
       {
         'key': 'full_book',
-        'name': 'Full Book Amber',
-        'desc': 'Hangat & reflektif, warna kertas buku & kopi espresso',
-        'accent': const Color(0xFFE09F3E),
-        'bg': const Color(0xFF181512),
+        'name': 'Bookpaper',
+        'desc': 'Arang Obsidian dengan aksen Bookpaper',
+        'accent': AppPalette.accent,
+        'bg': AppPalette.bg,
       },
     ];
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF161A22),
+      backgroundColor: tc.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -7121,35 +7130,28 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.palette_outlined,
-                    color: Color(0xFFE8C07D),
-                    size: 22,
-                  ),
+                  Icon(Icons.palette_outlined, color: tc.accent, size: 22),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Pilih Tema Tampilan',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFFEDEFF2),
+                        color: tc.textPrimary,
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: Color(0xFF8A93A3),
-                    ),
+                    icon: Icon(Icons.close_rounded, color: tc.textSecondary),
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Warna natural & ramah mata untuk fokus seharian tanpa silau',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8A93A3)),
+                style: TextStyle(fontSize: 12, color: tc.textSecondary),
               ),
               const SizedBox(height: 14),
               ...palettes.map((p) {
@@ -7165,10 +7167,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? accent.withOpacity(0.12)
-                        : const Color(0xFF0E1116),
+                        : tc.background,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isSelected ? accent : const Color(0xFF1E2430),
+                      color: isSelected ? accent : tc.stroke,
                       width: isSelected ? 1.8 : 1.0,
                     ),
                   ),
@@ -7203,15 +7205,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         fontWeight: isSelected
                             ? FontWeight.w700
                             : FontWeight.w600,
-                        color: isSelected ? accent : const Color(0xFFEDEFF2),
+                        color: isSelected ? accent : tc.textPrimary,
                       ),
                     ),
                     subtitle: Text(
                       desc,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF8A93A3),
-                      ),
+                      style: TextStyle(fontSize: 11, color: tc.textSecondary),
                     ),
                     trailing: isSelected
                         ? Icon(
@@ -7244,6 +7243,64 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   // ── 11. Prayer Action Sheet ──
+  void _openPrayerScheduleSheet(
+    List<Map<String, dynamic>> prayers,
+    int nextIndex,
+    _HomeThemeColors tc,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: tc.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Waktu salat',
+                style: TextStyle(
+                  color: tc.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (var i = 0; i < prayers.length; i++)
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  leading: Icon(
+                    Icons.mosque_outlined,
+                    color: i == nextIndex ? tc.accent : tc.textSecondary,
+                  ),
+                  title: Text(
+                    prayers[i]['name'] as String,
+                    style: TextStyle(color: tc.textPrimary),
+                  ),
+                  trailing: Text(
+                    prayers[i]['time'] as String,
+                    style: TextStyle(
+                      color: i == nextIndex ? tc.accent : tc.textSecondary,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _openPrayerActionSheet(i, prayers[i]);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openPrayerActionSheet(int index, Map<String, dynamic> prayer) {
     final name = prayer['name'] as String;
     final time = prayer['time'] as String;

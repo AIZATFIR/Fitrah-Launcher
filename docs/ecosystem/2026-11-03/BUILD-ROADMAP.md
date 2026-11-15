@@ -205,6 +205,8 @@ Verifikasi setelah review: 29 tes launcher/provider/widget/session lulus, analyz
 
 **Gate:** cerita → tujuan terkoreksi → draft → edit → setujui → Home cue → satu aktivitas mulai → actual session/history tetap benar. Provider timeout, malformed output dan user menolak proposal tidak mengubah jadwal existing. Jalur tanpa AI tetap dapat menyelesaikan seluruh alur manual.
 
+**Interim safety slice (14 Nov 2026):** tool AI yang mengubah jadwal kini menjadi kartu usulan dengan aksi Terapkan/Batal; pembacaan jadwal tetap read-only. Ini menutup jalur tulis otomatis pada UI chat dan memberi persetujuan eksplisit sebelum handler jadwal dipanggil. Belum memenuhi AD-17: proposal belum berupa kontrak domain, asumsi/konflik belum dirangkum, batch belum atomic, provider path belum seragam, dan custom backend masih mengembalikan teks opaque. Lihat [checkpoint AI approval](BUILD-CHECKPOINT-2026-11-14-ai-approval.md). Gate E6a tetap terbuka.
+
 ## E7 — Web dan desktop companion
 
 **Hasil:** user dapat memakai domain yang sama di laptop/browser, dengan batas kemampuan yang jujur.
@@ -370,3 +372,7 @@ Android arm64 APK compiled in **218.4s** and Web JavaScript in **67.3s**. APK ve
 **Checkpoint preview 38 (14 Nov 2026):** Per-session focus history, backup v5 and Home summary built from `dab45ba`. Full suite **329 passed serially**; analyzer clean; arm64 release APK and Web JavaScript ZIP rebuilt and verified. Personal preview artifacts and limits are recorded in [checkpoint 38](BUILD-CHECKPOINT-2026-11-14-preview-38.md). Physical install, personal database upgrade and real-browser reload remain unverified; E2 is not closed.
 
 **Checkpoint preview 39 (14 Nov 2026):** Source `107e0fb` adds startup-restore ordering for timer commands; full suite **330 passed serially**, analyzer clean, arm64 APK v0.5.3 (versionCode 39) and Web JavaScript ZIP built, signature/archive/checksums verified. [Checkpoint 39](BUILD-CHECKPOINT-2026-11-14-preview-39.md) records artifacts and limits. Physical install, personal database upgrade and browser reload remain unverified; this is a local preview, not a public release.
+
+**Checkpoint preview 40 (14 Nov 2026):** AI schedule writes now require explicit review; text-only completion claims are guarded; conflicting updates preserve stored state; new chat cancels pending proposals. Full suite **335 passed serially**, focused AI approval suite **5 passed**, analyzer clean. Arm64 APK versionCode 40 and Web JavaScript ZIP built; package signatures, metadata and hashes verified. [Checkpoint 40](BUILD-CHECKPOINT-2026-11-14-preview-40.md) records artifacts and limits. Physical install, browser interaction/reload and personal database upgrade remain unverified. This remains a local preview; E0–E6 and the future sync, WhatsApp, MCP and open-source gates remain open.
+
+**Checkpoint preview 41 (14 Nov 2026):** compact AI chat header fixes a reproduced 320dp overflow; approval widget journey verifies cancel-without-write and apply-after-tap. Full suite **336 passed serially**, focused approval/widget suite **6 passed**, analyzer clean. Arm64 APK versionCode 41 and Web JavaScript ZIP rebuilt and verified. [Checkpoint 41](BUILD-CHECKPOINT-2026-11-14-preview-41.md) records artifacts and limits. Android runtime install, personal database upgrade, browser interaction/reload and TalkBack remain unverified; E0–E6 are still open.

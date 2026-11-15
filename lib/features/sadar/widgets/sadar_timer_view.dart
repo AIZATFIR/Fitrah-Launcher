@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme.dart';
+import '../../../widgets/activity_icon.dart';
 import '../../../models/habit.dart';
 import '../../../providers/sadar_providers.dart';
 import '../../../services/sadar_timer_engine.dart';
@@ -327,9 +328,10 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                widget.habit.iconKey.isNotEmpty ? widget.habit.iconKey : '🎯',
-                style: const TextStyle(fontSize: 20),
+              ActivityIcon(
+                iconKey: widget.habit.iconKey,
+                size: 20,
+                color: color,
               ),
               const SizedBox(width: 10),
               Text(

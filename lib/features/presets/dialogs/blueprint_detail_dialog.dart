@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/time_math.dart';
 import '../../../models/routine_blueprint.dart';
+import '../../../widgets/activity_icon.dart';
 import 'apply_blueprint_dialog.dart';
 
 class BlueprintDetailDialog extends StatelessWidget {
@@ -20,10 +21,8 @@ class BlueprintDetailDialog extends StatelessWidget {
   }) {
     return showDialog(
       context: context,
-      builder: (_) => BlueprintDetailDialog(
-        blueprint: blueprint,
-        onCustomize: onCustomize,
-      ),
+      builder: (_) =>
+          BlueprintDetailDialog(blueprint: blueprint, onCustomize: onCustomize),
     );
   }
 
@@ -54,7 +53,11 @@ class BlueprintDetailDialog extends StatelessWidget {
                     color: const Color(0xFFEAB308).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: Text(b.iconKey, style: const TextStyle(fontSize: 32)),
+                  child: ActivityIcon(
+                    iconKey: b.iconKey,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(width: 18),
                 Expanded(
@@ -65,7 +68,9 @@ class BlueprintDetailDialog extends StatelessWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(20),
@@ -127,8 +132,11 @@ class BlueprintDetailDialog extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.lightbulb_outline_rounded,
-                      color: Color(0xFFEAB308), size: 20),
+                  const Icon(
+                    Icons.lightbulb_outline_rounded,
+                    color: Color(0xFFEAB308),
+                    size: 20,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -197,8 +205,11 @@ class BlueprintDetailDialog extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           alignment: Alignment.center,
-                          child: Text(block.iconKey,
-                              style: const TextStyle(fontSize: 20)),
+                          child: ActivityIcon(
+                            iconKey: block.iconKey,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -259,7 +270,9 @@ class BlueprintDetailDialog extends StatelessWidget {
                     foregroundColor: Colors.white,
                     side: BorderSide(color: Colors.white.withOpacity(0.2)),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 14),
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -277,7 +290,9 @@ class BlueprintDetailDialog extends StatelessWidget {
                     backgroundColor: const Color(0xFFEAB308),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 14),
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

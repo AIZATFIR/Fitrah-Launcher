@@ -192,7 +192,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const _Section(title: 'Mode'),
               SwitchListTile(
                 title: const Text('Simple Mode'),
-                subtitle: const Text('Flat, lightweight UI without glowing effects'),
+                subtitle: const Text(
+                  'Flat, lightweight UI without glowing effects',
+                ),
                 value: curClockFaceTheme >= 5,
                 activeColor: AppPalette.accent,
                 onChanged: (v) {
@@ -220,7 +222,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const _Section(title: 'Time & Display'),
               SwitchListTile(
                 title: const Text('24-hour Time Format'),
-                subtitle: Text((_is24hTime ?? false) ? 'Digital displays show 13:45' : 'Digital displays show 1:45 PM'),
+                subtitle: Text(
+                  (_is24hTime ?? false)
+                      ? 'Digital displays show 13:45'
+                      : 'Digital displays show 1:45 PM',
+                ),
                 value: _is24hTime ?? false,
                 activeColor: AppPalette.accent,
                 onChanged: (v) {
@@ -232,7 +238,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               SwitchListTile(
                 title: const Text('24-hour Clock Dial'),
-                subtitle: Text((_is24hDial ?? false) ? 'Dial shows 0-23 (24h sweep)' : 'Dial shows 1-12 (12h sweep)'),
+                subtitle: Text(
+                  (_is24hDial ?? false)
+                      ? 'Dial shows 0-23 (24h sweep)'
+                      : 'Dial shows 1-12 (12h sweep)',
+                ),
                 value: _is24hDial ?? false,
                 activeColor: AppPalette.accent,
                 onChanged: (v) {
@@ -245,7 +255,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               SwitchListTile(
                 title: const Text('Show Current Time Tip'),
-                subtitle: const Text('Display time bubble at the tip of the hand'),
+                subtitle: const Text(
+                  'Display time bubble at the tip of the hand',
+                ),
                 value: _showCurrentTime ?? true,
                 activeColor: AppPalette.accent,
                 onChanged: (v) {
@@ -258,14 +270,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               if (_showCurrentTime ?? true) ...[
                 ListTile(
                   title: const Text('Current Time Format'),
-                  subtitle: const Text('Choose how detailed the time bubble is'),
+                  subtitle: const Text(
+                    'Choose how detailed the time bubble is',
+                  ),
                   trailing: DropdownButton<String>(
                     value: _currentTimeFormat ?? 'short',
                     dropdownColor: const Color(0xFF1E1F24),
                     items: const [
-                      DropdownMenuItem(value: 'short', child: Text('Hours & Minutes')),
-                      DropdownMenuItem(value: 'seconds', child: Text('Hours, Minutes, Seconds')),
-                      DropdownMenuItem(value: 'detailed', child: Text('Detailed (Date + Time)')),
+                      DropdownMenuItem(
+                        value: 'short',
+                        child: Text('Hours & Minutes'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'seconds',
+                        child: Text('Hours, Minutes, Seconds'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'detailed',
+                        child: Text('Detailed (Date + Time)'),
+                      ),
                     ],
                     onChanged: (v) {
                       if (v != null) {
@@ -279,7 +302,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 SwitchListTile(
                   title: const Text('Floating Time Text'),
-                  subtitle: const Text('Remove background capsule to let the text float'),
+                  subtitle: const Text(
+                    'Remove background capsule to let the text float',
+                  ),
                   value: _floatTimeText ?? false,
                   activeColor: AppPalette.accent,
                   onChanged: (v) {
@@ -455,8 +480,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const Divider(),
               const _Section(title: 'Eye-Friendly Palette'),
               RadioListTile(
-                title: const Text('📖 Full Book / Journal Paper'),
-                subtitle: const Text('Vintage warm paper & ink aesthetic (Anti-Glare & Ultra Eye-Friendly)'),
+                title: const Text('Bookpaper Focus Clock'),
+                subtitle: const Text(
+                  'Vintage warm paper & ink aesthetic (Anti-Glare & Ultra Eye-Friendly)',
+                ),
                 value: 'full_book',
                 groupValue: _themePalette ?? 'executive',
                 activeColor: AppPalette.accent,
@@ -469,7 +496,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               RadioListTile(
                 title: const Text('Warm Sunset Sepia'),
-                subtitle: const Text('Warm amber tones with blue-light reduction'),
+                subtitle: const Text(
+                  'Warm amber tones with blue-light reduction',
+                ),
                 value: 'sepia',
                 groupValue: _themePalette ?? 'executive',
                 activeColor: AppPalette.accent,
@@ -482,7 +511,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               RadioListTile(
                 title: const Text('Soft Sage & Emerald'),
-                subtitle: const Text('Eye-soothing green tones for long work sessions'),
+                subtitle: const Text(
+                  'Eye-soothing green tones for long work sessions',
+                ),
                 value: 'sage',
                 groupValue: _themePalette ?? 'executive',
                 activeColor: AppPalette.accent,
@@ -525,8 +556,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const Divider(),
                 const _Section(title: 'Clock Face Theme'),
                 RadioListTile<int>(
-                  title: const Text('📖 Pastel Book (Parchment & Inked Serif)'),
-                  subtitle: const Text('Calming muted pastel tones, zero glare, ultra lightweight'),
+                  title: const Text('Bookpaper (Parchment & Ink)'),
+                  subtitle: const Text(
+                    'Calming muted pastel tones, zero glare, ultra lightweight',
+                  ),
                   value: 7,
                   groupValue: curClockFaceTheme,
                   activeColor: AppPalette.accent,
@@ -599,7 +632,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const _Section(title: 'Glow Style'),
                 RadioListTile<String>(
                   title: const Text('Default Glow'),
-                  subtitle: const Text('Full glowing aura with background capsule'),
+                  subtitle: const Text(
+                    'Full glowing aura with background capsule',
+                  ),
                   value: 'default',
                   groupValue: _glowStyle ?? 'default',
                   activeColor: AppPalette.accent,
@@ -614,7 +649,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 RadioListTile<String>(
                   title: const Text('Floating Text (No Background)'),
-                  subtitle: const Text('Vibrant floating text with no capsule background'),
+                  subtitle: const Text(
+                    'Vibrant floating text with no capsule background',
+                  ),
                   value: 'floating',
                   groupValue: _glowStyle ?? 'default',
                   activeColor: AppPalette.accent,
@@ -629,7 +666,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 RadioListTile<String>(
                   title: const Text('Subtle Glow'),
-                  subtitle: const Text('Minimal accent glow with background capsule'),
+                  subtitle: const Text(
+                    'Minimal accent glow with background capsule',
+                  ),
                   value: 'subtle',
                   groupValue: _glowStyle ?? 'default',
                   activeColor: AppPalette.accent,
@@ -644,7 +683,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 RadioListTile<String>(
                   title: const Text('Disable Glow'),
-                  subtitle: const Text('Flat hands and markings with no glowing effects'),
+                  subtitle: const Text(
+                    'Flat hands and markings with no glowing effects',
+                  ),
                   value: 'off',
                   groupValue: _glowStyle ?? 'default',
                   activeColor: AppPalette.accent,
@@ -699,8 +740,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 trailing: DropdownButton<int>(
                   value: curNotifLeadMinutes,
                   items: const [1, 5, 10, 15]
-                      .map((v) =>
-                          DropdownMenuItem(value: v, child: Text('$v min')))
+                      .map(
+                        (v) =>
+                            DropdownMenuItem(value: v, child: Text('$v min')),
+                      )
                       .toList(),
                   onChanged: (v) {
                     if (v != null) {
@@ -716,10 +759,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               // ── AI Assistant ─────────────────────────────────────────────────
               const Divider(),
               const _Section(title: 'AI Assistant'),
-              _AiConfigTile(s: s, onSave: (baseUrl, apiKey, model) {
-                _save(s,
-                    aiBaseUrl: baseUrl, aiApiKey: apiKey, aiModel: model);
-              }),
+              _AiConfigTile(
+                s: s,
+                onSave: (baseUrl, apiKey, model) {
+                  _save(
+                    s,
+                    aiBaseUrl: baseUrl,
+                    aiApiKey: apiKey,
+                    aiModel: model,
+                  );
+                },
+              ),
 
               // ── Google Calendar ─────────────────────────────────────────────
               const Divider(),
@@ -734,7 +784,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text('Current shortcut: Ctrl + $curKeyLeftPanel'),
                 trailing: TextButton(
                   onPressed: () {
-                    _recordKeybind('Toggle Left Panel', curKeyLeftPanel, (newKey) {
+                    _recordKeybind('Toggle Left Panel', curKeyLeftPanel, (
+                      newKey,
+                    ) {
                       setState(() {
                         _keyLeftPanel = newKey;
                       });
@@ -749,7 +801,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text('Current shortcut: Ctrl + $curKeyRightPanel'),
                 trailing: TextButton(
                   onPressed: () {
-                    _recordKeybind('Toggle Right Panel', curKeyRightPanel, (newKey) {
+                    _recordKeybind('Toggle Right Panel', curKeyRightPanel, (
+                      newKey,
+                    ) {
                       setState(() {
                         _keyRightPanel = newKey;
                       });
@@ -779,12 +833,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text('Current shortcut: Ctrl + $curKeyPrecisionMode'),
                 trailing: TextButton(
                   onPressed: () {
-                    _recordKeybind('Toggle Precision Mode', curKeyPrecisionMode, (newKey) {
-                      setState(() {
-                        _keyPrecisionMode = newKey;
-                      });
-                      _save(s, keyPrecisionMode: newKey);
-                    });
+                    _recordKeybind(
+                      'Toggle Precision Mode',
+                      curKeyPrecisionMode,
+                      (newKey) {
+                        setState(() {
+                          _keyPrecisionMode = newKey;
+                        });
+                        _save(s, keyPrecisionMode: newKey);
+                      },
+                    );
                   },
                   child: const Text('Change'),
                 ),
@@ -794,7 +852,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text('Current shortcut: Ctrl + $curKeyPlanningMode'),
                 trailing: TextButton(
                   onPressed: () {
-                    _recordKeybind('Toggle Planning Mode', curKeyPlanningMode, (newKey) {
+                    _recordKeybind('Toggle Planning Mode', curKeyPlanningMode, (
+                      newKey,
+                    ) {
                       setState(() {
                         _keyPlanningMode = newKey;
                       });
@@ -824,7 +884,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _recordKeybind(String label, String currentKey, Function(String newKey) onSaved) {
+  void _recordKeybind(
+    String label,
+    String currentKey,
+    Function(String newKey) onSaved,
+  ) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -848,7 +912,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           },
           child: AlertDialog(
             backgroundColor: const Color(0xFF1E1F24),
-            title: Text('Assign Key for $label', style: const TextStyle(color: Colors.white)),
+            title: Text(
+              'Assign Key for $label',
+              style: const TextStyle(color: Colors.white),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -859,11 +926,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 24),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black38,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppPalette.accent.withOpacity(0.3)),
+                    border: Border.all(
+                      color: AppPalette.accent.withOpacity(0.3),
+                    ),
                   ),
                   child: Text(
                     'Current: Ctrl + $currentKey',
@@ -1040,8 +1112,10 @@ class _AiConfigTileState extends State<_AiConfigTile> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Provider selector
-          const Text('Provider',
-              style: TextStyle(fontSize: 13, color: AppPalette.textDim)),
+          const Text(
+            'Provider',
+            style: TextStyle(fontSize: 13, color: AppPalette.textDim),
+          ),
           const SizedBox(height: 6),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -1054,16 +1128,16 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                     duration: const Duration(milliseconds: 150),
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: selected
                           ? AppPalette.accent.withValues(alpha: 0.2)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: selected
-                            ? AppPalette.accent
-                            : AppPalette.stroke,
+                        color: selected ? AppPalette.accent : AppPalette.stroke,
                         width: selected ? 1.5 : 1,
                       ),
                     ),
@@ -1074,8 +1148,7 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                         fontWeight: selected
                             ? FontWeight.w600
                             : FontWeight.w400,
-                        color:
-                            selected ? AppPalette.accent : AppPalette.text,
+                        color: selected ? AppPalette.accent : AppPalette.text,
                       ),
                     ),
                   ),
@@ -1114,31 +1187,34 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                   color: AppPalette.accent.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: AppPalette.accent.withValues(alpha: 0.25)),
+                    color: AppPalette.accent.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '🔗 ${_apiKeyGuides[_selectedPreset]!.$1}',
+                      _apiKeyGuides[_selectedPreset]!.$1,
                       style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppPalette.accent),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppPalette.accent,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     ..._apiKeyGuides[_selectedPreset]!.$2.asMap().entries.map(
-                          (e) => Padding(
-                            padding: const EdgeInsets.only(bottom: 3),
-                            child: Text(
-                              '${e.key + 1}. ${e.value}',
-                              style: const TextStyle(
-                                  fontSize: 11.5,
-                                  height: 1.4,
-                                  color: AppPalette.text),
-                            ),
+                      (e) => Padding(
+                        padding: const EdgeInsets.only(bottom: 3),
+                        child: Text(
+                          '${e.key + 1}. ${e.value}',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            height: 1.4,
+                            color: AppPalette.text,
                           ),
                         ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1147,8 +1223,10 @@ class _AiConfigTileState extends State<_AiConfigTile> {
           const SizedBox(height: 14),
 
           // Base URL
-          const Text('Base URL',
-              style: TextStyle(fontSize: 13, color: AppPalette.textDim)),
+          const Text(
+            'Base URL',
+            style: TextStyle(fontSize: 13, color: AppPalette.textDim),
+          ),
           const SizedBox(height: 4),
           TextField(
             controller: _urlCtrl,
@@ -1156,16 +1234,20 @@ class _AiConfigTileState extends State<_AiConfigTile> {
             decoration: const InputDecoration(
               hintText: 'https://openrouter.ai/api/v1',
               border: OutlineInputBorder(),
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
             ),
           ),
 
           const SizedBox(height: 10),
 
           // API Key
-          const Text('API Key',
-              style: TextStyle(fontSize: 13, color: AppPalette.textDim)),
+          const Text(
+            'API Key',
+            style: TextStyle(fontSize: 13, color: AppPalette.textDim),
+          ),
           const SizedBox(height: 4),
           TextField(
             controller: _keyCtrl,
@@ -1174,14 +1256,17 @@ class _AiConfigTileState extends State<_AiConfigTile> {
             decoration: InputDecoration(
               hintText: 'sk-or-...',
               border: const OutlineInputBorder(),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
               suffixIcon: IconButton(
-                icon: Icon(_obscureKey
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined),
-                onPressed: () =>
-                    setState(() => _obscureKey = !_obscureKey),
+                icon: Icon(
+                  _obscureKey
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                ),
+                onPressed: () => setState(() => _obscureKey = !_obscureKey),
               ),
             ),
           ),
@@ -1189,19 +1274,24 @@ class _AiConfigTileState extends State<_AiConfigTile> {
           const SizedBox(height: 10),
 
           // Model
-          Row(children: [
-            const Text('Model',
-                style: TextStyle(fontSize: 13, color: AppPalette.textDim)),
-            const Spacer(),
-            const Text('💡 Google AI = gratis · Groq = tercepat',
-                style: TextStyle(fontSize: 11, color: AppPalette.textDim)),
-          ]),
+          Row(
+            children: [
+              const Text(
+                'Model',
+                style: TextStyle(fontSize: 13, color: AppPalette.textDim),
+              ),
+              const Spacer(),
+              const Text(
+                'Google AI tersedia gratis · Groq lebih cepat',
+                style: TextStyle(fontSize: 11, color: AppPalette.textDim),
+              ),
+            ],
+          ),
           const SizedBox(height: 4),
           Autocomplete<String>(
             initialValue: TextEditingValue(text: _modelCtrl.text),
             optionsBuilder: (v) => _modelSuggestions
-                .where((m) =>
-                    m.toLowerCase().contains(v.text.toLowerCase()))
+                .where((m) => m.toLowerCase().contains(v.text.toLowerCase()))
                 .toList(),
             onSelected: (v) => _modelCtrl.text = v,
             fieldViewBuilder: (ctx, ctrl, focusNode, onSubmit) {
@@ -1214,8 +1304,10 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                 decoration: const InputDecoration(
                   hintText: 'gemini-2.5-flash',
                   border: OutlineInputBorder(),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
               );
             },
@@ -1239,18 +1331,22 @@ class _AiConfigTileState extends State<_AiConfigTile> {
           Row(
             children: [
               if (saved) ...[
-                const Icon(Icons.check_circle,
-                    size: 14, color: Colors.green),
+                const Icon(Icons.check_circle, size: 14, color: Colors.green),
                 const SizedBox(width: 4),
-                const Text('Connected',
-                    style: TextStyle(fontSize: 12, color: Colors.green)),
+                const Text(
+                  'Connected',
+                  style: TextStyle(fontSize: 12, color: Colors.green),
+                ),
                 const Spacer(),
-              ] else if (const String.fromEnvironment('DEMO_AI_KEY').isNotEmpty) ...[
-                const Icon(Icons.stars,
-                    size: 14, color: AppPalette.accent),
+              ] else if (const String.fromEnvironment(
+                'DEMO_AI_KEY',
+              ).isNotEmpty) ...[
+                const Icon(Icons.stars, size: 14, color: AppPalette.accent),
                 const SizedBox(width: 4),
-                const Text('Demo Mode Active',
-                    style: TextStyle(fontSize: 12, color: AppPalette.accent)),
+                const Text(
+                  'Demo Mode Active',
+                  style: TextStyle(fontSize: 12, color: AppPalette.accent),
+                ),
                 const Spacer(),
               ] else
                 const Spacer(),
@@ -1273,7 +1369,11 @@ class _AiConfigTileState extends State<_AiConfigTile> {
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Pengaturan Aura AI & Voice Berhasil Disimpan!')),
+                      const SnackBar(
+                        content: Text(
+                          'Pengaturan Aura AI & Voice Berhasil Disimpan!',
+                        ),
+                      ),
                     );
                   }
                 },
@@ -1365,8 +1465,9 @@ class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
     try {
       final bytes = recovery
           ? await _service.latestRecoveryBytes()
-          : await ref.read(launcherSettingsProvider.notifier)
-              .exportAfterWrites(_service.exportBytes);
+          : await ref
+                .read(launcherSettingsProvider.notifier)
+                .exportAfterWrites(_service.exportBytes);
       if (bytes == null) {
         if (mounted) _message('Belum ada salinan pemulihan.');
         return;
@@ -1509,8 +1610,12 @@ class _GCalTileState extends ConsumerState<_GCalTile> {
               radius: 14,
               backgroundImage: NetworkImage(user.photoURL!),
             )
-          : const Text('📅', style: TextStyle(fontSize: 22)),
-      title: Text(signedIn ? 'Terhubung: ${user.displayName ?? "Akun Google"}' : 'Hubungkan Google Calendar'),
+          : const Icon(Icons.calendar_month_outlined, size: 22),
+      title: Text(
+        signedIn
+            ? 'Terhubung: ${user.displayName ?? "Akun Google"}'
+            : 'Hubungkan Google Calendar',
+      ),
       subtitle: Text(
         signedIn
             ? '$userEmail • Sinkronisasi Cloud Firestore & Calendar aktif'
@@ -1524,20 +1629,19 @@ class _GCalTileState extends ConsumerState<_GCalTile> {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           : signedIn
-              ? TextButton(
-                  onPressed: _toggle,
-                  style: TextButton.styleFrom(
-                      foregroundColor: AppPalette.danger),
-                  child: const Text('Kelola'),
-                )
-              : FilledButton(
-                  onPressed: _toggle,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppPalette.accent,
-                    foregroundColor: Colors.black,
-                  ),
-                  child: const Text('Connect'),
-                ),
+          ? TextButton(
+              onPressed: _toggle,
+              style: TextButton.styleFrom(foregroundColor: AppPalette.danger),
+              child: const Text('Kelola'),
+            )
+          : FilledButton(
+              onPressed: _toggle,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppPalette.accent,
+                foregroundColor: Colors.black,
+              ),
+              child: const Text('Connect'),
+            ),
     );
   }
 }
@@ -1550,15 +1654,15 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(
-          title.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 11,
-            letterSpacing: 1.5,
-            fontWeight: FontWeight.w600,
-            color: AppPalette.textDim,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+    child: Text(
+      title.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 11,
+        letterSpacing: 1.5,
+        fontWeight: FontWeight.w600,
+        color: AppPalette.textDim,
+      ),
+    ),
+  );
 }

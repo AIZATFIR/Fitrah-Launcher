@@ -4,15 +4,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/theme.dart';
 import '../providers/launcher_settings_provider.dart';
 import '../services/app_launcher_service.dart';
+import '../services/screen_time_service.dart';
 import 'app_icon_widget.dart';
 import 'fitrah_settings_screen.dart';
 import 'niagara_wave_scrubber.dart';
 
-/// Minimalist Niagara-style launcher app drawer that floats directly
-/// over the phone's system wallpaper.
+/// Bookpaper app drawer with warm ink, quiet surfaces, and familiar app icons.
 class MinimalistAppDrawer extends ConsumerStatefulWidget {
   const MinimalistAppDrawer({
     super.key,
@@ -193,6 +195,72 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
 
   void _launchApp(InstalledApp app) {
     HapticFeedback.lightImpact();
+    _launchAfterScreenTimeCheck(app);
+  }
+
+  Future<void> _launchAfterScreenTimeCheck(InstalledApp app) async {
+    final settings = ref.read(launcherSettingsProvider);
+    final screenTime = ScreenTimeService();
+    if (settings.gentleLimitEnabled && screenTime.supported) {
+      final usage = await screenTime.today();
+      if (!mounted) return;
+      if (usage.available &&
+          usage.minutes != null &&
+          usage.minutes! >= settings.dailyLimitMinutes) {
+        var remaining = settings.gentleWaitSeconds;
+        Timer? timer;
+        final shouldContinue = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => StatefulBuilder(
+            builder: (context, refresh) {
+              timer ??= Timer.periodic(const Duration(seconds: 1), (tick) {
+                if (remaining <= 1) {
+                  tick.cancel();
+                  refresh(() => remaining = 0);
+                } else {
+                  refresh(() => remaining--);
+                }
+              });
+              return AlertDialog(
+                title: const Text('Saatnya melihat tujuan'),
+                content: Text(
+                  'Hari ini sudah ${usage.minutes} menit. Ambil jeda singkat sebelum membuka aplikasi berikutnya.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      timer?.cancel();
+                      Navigator.pop(dialogContext, false);
+                    },
+                    child: const Text('Lihat tujuan'),
+                  ),
+                  FilledButton(
+                    onPressed: remaining == 0
+                        ? () {
+                            timer?.cancel();
+                            Navigator.pop(dialogContext, true);
+                          }
+                        : null,
+                    child: Text(
+                      remaining == 0
+                          ? 'Lanjutkan'
+                          : 'Lanjut setelah $remaining dtk',
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+        timer?.cancel();
+        if (shouldContinue != true) {
+          widget.onBackToHome?.call();
+          return;
+        }
+      }
+    }
+    if (!mounted) return;
     runLauncherAction(
       context,
       ref.read(appLauncherServiceProvider),
@@ -205,24 +273,32 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
   }
 
   String _formatHeaderDate(DateTime dt) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const days = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
+    ];
     const months = [
       'Jan',
       'Feb',
       'Mar',
       'Apr',
-      'May',
+      'Mei',
       'Jun',
       'Jul',
-      'Aug',
+      'Agu',
       'Sep',
-      'Oct',
+      'Okt',
       'Nov',
-      'Dec',
+      'Des',
     ];
     final dayName = days[dt.weekday - 1];
     final monthName = months[dt.month - 1];
-    return '$dayName, $monthName ${dt.day}';
+    return '$dayName, ${dt.day} $monthName';
   }
 
   @override
@@ -251,7 +327,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppPalette.bg,
         body: SafeArea(
           child: Stack(
             children: [
@@ -266,16 +342,9 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                           height: 48,
                           margin: const EdgeInsets.fromLTRB(18, 12, 18, 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xCC0D1B2A),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.4),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
+                            color: AppPalette.card,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppPalette.stroke),
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Row(
@@ -283,7 +352,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                               const Icon(
                                 Icons.search_rounded,
                                 size: 20,
-                                color: Colors.white70,
+                                color: AppPalette.accent,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -294,15 +363,15 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                     () =>
                                         _searchQuery = val.trim().toLowerCase(),
                                   ),
-                                  style: const TextStyle(
+                                  style: GoogleFonts.outfit(
                                     fontSize: 15,
-                                    color: Colors.white,
+                                    color: AppPalette.text,
                                   ),
                                   decoration: const InputDecoration(
-                                    hintText: 'Search apps',
+                                    hintText: 'Cari aplikasi',
                                     hintStyle: TextStyle(
                                       fontSize: 15,
-                                      color: Colors.white38,
+                                      color: AppPalette.textDim,
                                     ),
                                     border: InputBorder.none,
                                     isDense: true,
@@ -318,7 +387,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                   child: const Icon(
                                     Icons.clear_rounded,
                                     size: 18,
-                                    color: Colors.white60,
+                                    color: AppPalette.textDim,
                                   ),
                                 )
                               else
@@ -333,7 +402,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                   child: const Icon(
                                     Icons.close_rounded,
                                     size: 18,
-                                    color: Colors.white60,
+                                    color: AppPalette.textDim,
                                   ),
                                 ),
                             ],
@@ -367,7 +436,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                           ? 'Gagal memuat preferensi.'
                                           : 'Memuat preferensi…',
                                       style: const TextStyle(
-                                        color: Colors.white70,
+                                        color: AppPalette.textDim,
                                       ),
                                     ),
                                   ),
@@ -425,7 +494,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                               ? 'Tidak ada aplikasi terpasang yang dapat dibuka.'
                                               : 'Semua aplikasi disembunyikan.',
                                           style: const TextStyle(
-                                            color: Colors.white70,
+                                            color: AppPalette.textDim,
                                           ),
                                         ),
                                       ],
@@ -460,7 +529,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                                 child: Text(
                                                   'Favorit',
                                                   style: TextStyle(
-                                                    color: Colors.white,
+                                                    color: AppPalette.accent,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
@@ -513,14 +582,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                                 style: const TextStyle(
                                                   fontSize: 18,
                                                   fontWeight: FontWeight.w700,
-                                                  color: Colors.white,
-                                                  shadows: [
-                                                    Shadow(
-                                                      color: Colors.black87,
-                                                      blurRadius: 8,
-                                                      offset: Offset(0, 1),
-                                                    ),
-                                                  ],
+                                                  color: AppPalette.accent,
                                                 ),
                                               ),
                                             ),
@@ -534,7 +596,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                 },
                                 loading: () => const Center(
                                   child: CircularProgressIndicator(
-                                    color: Colors.white54,
+                                    color: AppPalette.accent,
                                   ),
                                 ),
                                 error: (e, _) =>
@@ -560,7 +622,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                   ),
                 ),
 
-              // Niagara Blue Circular Search FAB at Bottom Right
+              // Bookpaper search action at Bottom Right
               if (!_isSearchOpen)
                 Positioned(
                   right: 22,
@@ -575,7 +637,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0D64A8),
+                        color: AppPalette.accent,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -588,7 +650,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                       child: const Center(
                         child: Icon(
                           Icons.search_rounded,
-                          color: Colors.white,
+                          color: Color(0xFF2A2115),
                           size: 24,
                         ),
                       ),
@@ -629,19 +691,12 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
             },
             child: Text(
               timeStr,
-              style: const TextStyle(
+              style: GoogleFonts.outfit(
                 fontSize: 54,
                 fontWeight: FontWeight.w300,
-                color: Colors.white,
-                letterSpacing: -1.0,
+                color: AppPalette.text,
+                letterSpacing: -1.4,
                 height: 1.05,
-                shadows: [
-                  Shadow(
-                    color: Colors.black54,
-                    blurRadius: 10,
-                    offset: Offset(0, 2),
-                  ),
-                ],
               ),
             ),
           ),
@@ -658,17 +713,10 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   dateStr,
-                  style: TextStyle(
+                  style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
-                    color: Colors.white.withOpacity(0.85),
-                    shadows: const [
-                      Shadow(
-                        color: Colors.black54,
-                        blurRadius: 8,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
+                    color: AppPalette.textDim,
                   ),
                 ),
               ),
@@ -708,30 +756,20 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                         app.appName,
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.w400,
-                          color: Colors.white,
-                          letterSpacing: 0.2,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black87,
-                              blurRadius: 8,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
+                          color: AppPalette.text,
+                          letterSpacing: 0,
                         ),
                       ),
                       if (_isSearchOpen) ...[
                         const SizedBox(height: 1),
                         Text(
                           isFav ? 'Favorit' : app.packageName,
-                          style: TextStyle(
+                          style: GoogleFonts.outfit(
                             fontSize: 11,
-                            color: Colors.white.withOpacity(0.55),
-                            shadows: const [
-                              Shadow(color: Colors.black87, blurRadius: 6),
-                            ],
+                            color: AppPalette.textDim,
                           ),
                         ),
                       ],
@@ -752,21 +790,14 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(left: 18, bottom: 8),
             child: Text(
               'Fitrah Launcher',
-              style: TextStyle(
+              style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
-                shadows: [
-                  Shadow(
-                    color: Colors.black87,
-                    blurRadius: 8,
-                    offset: Offset(0, 1),
-                  ),
-                ],
+                color: AppPalette.text,
               ),
             ),
           ),
@@ -786,30 +817,23 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
+                      color: AppPalette.cardHigh,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.settings_outlined,
-                      color: Colors.white,
+                      color: AppPalette.accent,
                       size: 22,
                     ),
                   ),
                   const SizedBox(width: 16),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Pengaturan Launcher',
-                      style: TextStyle(
+                      style: GoogleFonts.outfit(
                         fontSize: 15,
                         fontWeight: FontWeight.w400,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black87,
-                            blurRadius: 8,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
+                        color: AppPalette.text,
                       ),
                     ),
                   ),

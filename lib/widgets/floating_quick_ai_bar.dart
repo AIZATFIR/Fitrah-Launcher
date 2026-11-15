@@ -80,7 +80,10 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
             decoration: BoxDecoration(
               color: AppPalette.card,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6), width: 1.5),
+              border: Border.all(
+                color: AppPalette.accent.withValues(alpha: 0.6),
+                width: 1.5,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.4),
@@ -91,18 +94,29 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.auto_awesome_rounded, color: AppPalette.accent, size: 16),
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: AppPalette.accent,
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _statusText!,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, size: 14, color: AppPalette.textDim),
+                  icon: const Icon(
+                    Icons.close,
+                    size: 14,
+                    color: AppPalette.textDim,
+                  ),
                   onPressed: () => setState(() => _statusText = null),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -151,7 +165,10 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
                       setState(() => _isExpanded = !_isExpanded);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -170,7 +187,11 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.black),
+                          const Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 15,
+                            color: Colors.black,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             _isExpanded ? 'Tutup Prompt' : 'Gemini AI Focus',
@@ -192,11 +213,17 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
                       child: TextField(
                         controller: _textCtrl,
                         autofocus: true,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                         onSubmitted: (val) => _submitCommand(val),
                         decoration: const InputDecoration(
                           hintText: 'Tulis prompt... e.g. Fokus 25m nulis',
-                          hintStyle: TextStyle(color: AppPalette.textDim, fontSize: 11),
+                          hintStyle: TextStyle(
+                            color: AppPalette.textDim,
+                            fontSize: 11,
+                          ),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: EdgeInsets.symmetric(vertical: 6),
@@ -204,11 +231,17 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.mic_rounded, size: 18, color: AppPalette.accent),
+                      icon: const Icon(
+                        Icons.mic_rounded,
+                        size: 18,
+                        color: AppPalette.accent,
+                      ),
                       tooltip: 'Suara Input',
                       onPressed: () {
                         HapticFeedback.lightImpact();
-                        final voiceService = ref.read(voiceAssistantServiceProvider);
+                        final voiceService = ref.read(
+                          voiceAssistantServiceProvider,
+                        );
                         voiceService.startListening();
                       },
                     ),
@@ -217,9 +250,16 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
                           ? const SizedBox(
                               width: 14,
                               height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.accent),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppPalette.accent,
+                              ),
                             )
-                          : const Icon(Icons.send_rounded, size: 16, color: AppPalette.accent),
+                          : const Icon(
+                              Icons.send_rounded,
+                              size: 16,
+                              color: AppPalette.accent,
+                            ),
                       onPressed: _isProcessing ? null : () => _submitCommand(),
                     ),
                   ],
@@ -234,18 +274,24 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
                   child: Row(
                     children: [
                       _QuickChip(
-                        label: '⚡ Fokus 25 m',
-                        onTap: () => _submitCommand('Buatkan blok fokus 25 menit sekarang'),
+                        label: 'Fokus 25 mnt',
+                        onTap: () => _submitCommand(
+                          'Buatkan blok fokus 25 menit sekarang',
+                        ),
                       ),
                       const SizedBox(width: 6),
                       _QuickChip(
-                        label: '📅 Rapikan Agenda',
-                        onTap: () => _submitCommand('Rapikan jadwal dan hindari konflik waktu'),
+                        label: 'Rapikan Agenda',
+                        onTap: () => _submitCommand(
+                          'Rapikan jadwal dan hindari konflik waktu',
+                        ),
                       ),
                       const SizedBox(width: 6),
                       _QuickChip(
-                        label: '📊 Insight Hari Ini',
-                        onTap: () => _submitCommand('Beri ringkasan produktivitas saya hari ini'),
+                        label: 'Ringkasan Hari Ini',
+                        onTap: () => _submitCommand(
+                          'Beri ringkasan produktivitas saya hari ini',
+                        ),
                       ),
                     ],
                   ),
@@ -280,7 +326,11 @@ class _QuickChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 10, color: AppPalette.textDim, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            fontSize: 10,
+            color: AppPalette.textDim,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );

@@ -101,21 +101,19 @@ void main() {
       expect(find.text('Restore backup'), findsOneWidget);
     });
 
-    testWidgets('Renders Obsidian Daily Note Card with scratchpad', (
-      tester,
-    ) async {
+    testWidgets('Renders today note card with scratchpad', (tester) async {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
 
       final homeList = find.byType(ListView).first;
       await tester.scrollUntilVisible(
-        find.text('DAILY NOTE'),
+        find.text('Catatan hari ini'),
         300,
         scrollable: find
             .descendant(of: homeList, matching: find.byType(Scrollable))
             .first,
       );
-      expect(find.text('DAILY NOTE'), findsOneWidget);
+      expect(find.text('Catatan hari ini'), findsOneWidget);
       expect(
         find.text('Tulis pemikiran, niat, atau catatan hari ini...'),
         findsOneWidget,
@@ -303,58 +301,57 @@ void main() {
       },
     );
 
-    testWidgets(
-      'Adds a new Identity block dynamically via Tambah Blok Identitas Baru',
-      (tester) async {
-        tester.view.physicalSize = const Size(800, 2400);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets('Adds a new Identity block dynamically via Tambah identitas', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-        await tester.pumpWidget(createWidgetUnderTest());
-        await tester.pump();
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump();
 
-        final addIdentityBtn = find.text('Tambah Blok Identitas Baru');
-        await tester.scrollUntilVisible(
-          addIdentityBtn,
-          400,
-          scrollable: find.byType(Scrollable).first,
+      final addIdentityBtn = find.text('Tambah identitas');
+      await tester.scrollUntilVisible(
+        addIdentityBtn,
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -150));
+      await tester.pumpAndSettle();
+      await tester.tap(addIdentityBtn);
+      await tester.pumpAndSettle();
+
+      // Verify bottom sheet for new identity is open
+      expect(find.text('Identitas Baru'), findsOneWidget);
+      expect(find.text('Buat Identitas'), findsOneWidget);
+
+      // Enter identity name
+      await tester.enterText(
+        find.byKey(const ValueKey('new_identity_name_field')),
+        'Penulis',
+      );
+      await tester.pumpAndSettle();
+
+      // Tap create
+      await tester.tap(find.text('Buat Identitas'));
+      await tester.pumpAndSettle();
+
+      // Scroll up to locate the updated preset section
+      for (int i = 0; i < 8; i++) {
+        if (find.text('Identitas: Penulis').evaluate().isNotEmpty) break;
+        await tester.drag(
+          find.byType(ListView).first,
+          const Offset(0, 300),
+          warnIfMissed: false,
         );
-        await tester.drag(find.byType(Scrollable).first, const Offset(0, -150));
         await tester.pumpAndSettle();
-        await tester.tap(addIdentityBtn);
-        await tester.pumpAndSettle();
+      }
 
-        // Verify bottom sheet for new identity is open
-        expect(find.text('Identitas Baru'), findsOneWidget);
-        expect(find.text('Buat Identitas'), findsOneWidget);
-
-        // Enter identity name
-        await tester.enterText(
-          find.byKey(const ValueKey('new_identity_name_field')),
-          'Penulis',
-        );
-        await tester.pumpAndSettle();
-
-        // Tap create
-        await tester.tap(find.text('Buat Identitas'));
-        await tester.pumpAndSettle();
-
-        // Scroll up to locate the updated preset section
-        for (int i = 0; i < 8; i++) {
-          if (find.text('Identitas: Penulis').evaluate().isNotEmpty) break;
-          await tester.drag(
-            find.byType(ListView).first,
-            const Offset(0, 300),
-            warnIfMissed: false,
-          );
-          await tester.pumpAndSettle();
-        }
-
-        // New identity card block should be rendered
-        expect(find.text('Identitas: Penulis'), findsOneWidget);
-      },
-    );
+      // New identity card block should be rendered
+      expect(find.text('Identitas: Penulis'), findsOneWidget);
+    });
 
     testWidgets(
       'late preview defaults to tomorrow and retains unsupported task',

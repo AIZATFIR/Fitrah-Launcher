@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../models/routine_blueprint.dart';
 import '../../../providers/providers.dart';
+import '../../../widgets/activity_icon.dart';
 
 class ApplyBlueprintDialog extends ConsumerStatefulWidget {
   final RoutineBlueprint blueprint;
@@ -51,7 +52,11 @@ class _ApplyBlueprintDialogState extends ConsumerState<ApplyBlueprintDialog> {
                     color: const Color(0xFFEAB308).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Text(b.iconKey, style: const TextStyle(fontSize: 26)),
+                  child: ActivityIcon(
+                    iconKey: b.iconKey,
+                    size: 26,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -117,7 +122,10 @@ class _ApplyBlueprintDialogState extends ConsumerState<ApplyBlueprintDialog> {
               onTap: () => setState(() => _isDailyRecurring = true),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: _isDailyRecurring
                       ? const Color(0xFFEAB308).withOpacity(0.12)
@@ -154,7 +162,10 @@ class _ApplyBlueprintDialogState extends ConsumerState<ApplyBlueprintDialog> {
                           ),
                           Text(
                             'Otomatis terpasang di jam setiap hari sebagai pola hidup tetap.',
-                            style: TextStyle(color: Colors.white54, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -169,7 +180,10 @@ class _ApplyBlueprintDialogState extends ConsumerState<ApplyBlueprintDialog> {
               onTap: () => setState(() => _isDailyRecurring = false),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: !_isDailyRecurring
                       ? const Color(0xFFEAB308).withOpacity(0.12)
@@ -206,7 +220,10 @@ class _ApplyBlueprintDialogState extends ConsumerState<ApplyBlueprintDialog> {
                           ),
                           const Text(
                             'Terapkan sebagai jadwal mandiri tanpa perulangan otomatis.',
-                            style: TextStyle(color: Colors.white54, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -236,7 +253,10 @@ class _ApplyBlueprintDialogState extends ConsumerState<ApplyBlueprintDialog> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Batal', style: TextStyle(color: Colors.white54)),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: Colors.white54),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
@@ -244,7 +264,10 @@ class _ApplyBlueprintDialogState extends ConsumerState<ApplyBlueprintDialog> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFEAB308),
                     foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -288,8 +311,11 @@ class _ApplyBlueprintDialogState extends ConsumerState<ApplyBlueprintDialog> {
           SnackBar(
             backgroundColor: const Color(0xFF10B981),
             content: Text(
-              '🎉 Berhasil menerapkan $count blok dari "${widget.blueprint.name}" ke jam!',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              '$count blok dari "${widget.blueprint.name}" ditambahkan ke jam.',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         );

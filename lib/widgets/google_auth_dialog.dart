@@ -57,7 +57,7 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '🎉 Terhubung: $email\nSinkronisasi Cloud Firebase & Google Calendar Aktif!',
+                      'Terhubung: $email\nSinkronisasi Google Calendar aktif.',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -96,9 +96,7 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
         setState(() => _isLoading = false);
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Akun Google berhasil terputus.'),
-          ),
+          const SnackBar(content: Text('Akun Google berhasil terputus.')),
         );
       }
     } catch (e) {
@@ -110,7 +108,9 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authStateChangesProvider).valueOrNull ?? ref.watch(firebaseSyncServiceProvider).currentUser;
+    final user =
+        ref.watch(authStateChangesProvider).valueOrNull ??
+        ref.watch(firebaseSyncServiceProvider).currentUser;
     final signedIn = user != null && (user.email?.isNotEmpty ?? false);
 
     return Dialog(
@@ -122,7 +122,10 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
           decoration: BoxDecoration(
             color: AppPalette.card,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4), width: 1.5),
+            border: Border.all(
+              color: AppPalette.accent.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -137,13 +140,35 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
             children: [
               // Google Brand Multi-Color Top Accent Bar
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
                 child: Row(
                   children: [
-                    Expanded(child: Container(height: 5, color: const Color(0xFF4285F4))), // Blue
-                    Expanded(child: Container(height: 5, color: const Color(0xFFEA4335))), // Red
-                    Expanded(child: Container(height: 5, color: const Color(0xFFFBBC05))), // Yellow
-                    Expanded(child: Container(height: 5, color: const Color(0xFF34A853))), // Green
+                    Expanded(
+                      child: Container(
+                        height: 5,
+                        color: const Color(0xFF4285F4),
+                      ),
+                    ), // Blue
+                    Expanded(
+                      child: Container(
+                        height: 5,
+                        color: const Color(0xFFEA4335),
+                      ),
+                    ), // Red
+                    Expanded(
+                      child: Container(
+                        height: 5,
+                        color: const Color(0xFFFBBC05),
+                      ),
+                    ), // Yellow
+                    Expanded(
+                      child: Container(
+                        height: 5,
+                        color: const Color(0xFF34A853),
+                      ),
+                    ), // Green
                   ],
                 ),
               ),
@@ -201,7 +226,10 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded, color: AppPalette.textDim),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: AppPalette.textDim,
+                          ),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
@@ -213,13 +241,20 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF34A853).withValues(alpha: 0.12),
+                          color: const Color(
+                            0xFF34A853,
+                          ).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF34A853).withValues(alpha: 0.4)),
+                          border: Border.all(
+                            color: const Color(
+                              0xFF34A853,
+                            ).withValues(alpha: 0.4),
+                          ),
                         ),
                         child: Row(
                           children: [
-                            if (user.photoURL != null && user.photoURL!.isNotEmpty)
+                            if (user.photoURL != null &&
+                                user.photoURL!.isNotEmpty)
                               CircleAvatar(
                                 radius: 22,
                                 backgroundImage: NetworkImage(user.photoURL!),
@@ -236,8 +271,14 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                                   child: Text(
                                     (user.displayName?.isNotEmpty == true)
                                         ? user.displayName![0].toUpperCase()
-                                        : (user.email?.isNotEmpty == true ? user.email![0].toUpperCase() : 'U'),
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                                        : (user.email?.isNotEmpty == true
+                                              ? user.email![0].toUpperCase()
+                                              : 'U'),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -248,10 +289,16 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(Icons.check_circle_rounded, color: Color(0xFF34A853), size: 14),
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: Color(0xFF34A853),
+                                        size: 14,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        user.displayName?.isNotEmpty == true ? user.displayName! : 'Google Account Connected',
+                                        user.displayName?.isNotEmpty == true
+                                            ? user.displayName!
+                                            : 'Google Account Connected',
                                         style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w900,
@@ -278,7 +325,11 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                       const SizedBox(height: 16),
                       const Text(
                         'Aktivitas Focus Clock tersinkronisasi otomatis secara real-time ke Cloud Firestore & Google Calendar.',
-                        style: TextStyle(fontSize: 12, color: AppPalette.textDim, height: 1.4),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppPalette.textDim,
+                          height: 1.4,
+                        ),
                       ),
                       const SizedBox(height: 24),
                       Row(
@@ -287,7 +338,10 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppPalette.danger,
                               side: const BorderSide(color: AppPalette.danger),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                             ),
                             onPressed: _isLoading ? null : _handleSignOut,
                             icon: const Icon(Icons.logout_rounded, size: 18),
@@ -298,17 +352,27 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppPalette.accent,
                               foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
                             ),
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'Selesai',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ],
                       ),
                     ] else ...[
                       const Text(
                         'Hubungkan akun Google resmi untuk sinkronisasi aktivitas, preset, dan kalender di seluruh perangkat:',
-                        style: TextStyle(fontSize: 13, color: AppPalette.text, height: 1.4),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppPalette.text,
+                          height: 1.4,
+                        ),
                       ),
                       const SizedBox(height: 16),
 
@@ -323,10 +387,17 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const _ScopeItem(title: 'Firebase Authentication & Cloud Storage'),
-                      const _ScopeItem(title: 'Google Calendar API v3 (Read/Write)'),
-                      const _ScopeItem(title: 'Sinkronisasi Otomatis Seluruh Perangkat (Web, Android & Desktop)'),
-                      
+                      const _ScopeItem(
+                        title: 'Firebase Authentication & Cloud Storage',
+                      ),
+                      const _ScopeItem(
+                        title: 'Google Calendar API v3 (Read/Write)',
+                      ),
+                      const _ScopeItem(
+                        title:
+                            'Sinkronisasi Otomatis Seluruh Perangkat (Web, Android & Desktop)',
+                      ),
+
                       if (_errorMessage != null) ...[
                         const SizedBox(height: 12),
                         Container(
@@ -334,11 +405,16 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                           decoration: BoxDecoration(
                             color: AppPalette.danger.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppPalette.danger.withValues(alpha: 0.4)),
+                            border: Border.all(
+                              color: AppPalette.danger.withValues(alpha: 0.4),
+                            ),
                           ),
                           child: Text(
                             _errorMessage!,
-                            style: const TextStyle(color: AppPalette.danger, fontSize: 11),
+                            style: const TextStyle(
+                              color: AppPalette.danger,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
                       ],
@@ -360,16 +436,34 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
                               )
                             : Container(
                                 padding: const EdgeInsets.all(2),
-                                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                                child: const Text('G', style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.w900, fontSize: 13)),
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Text(
+                                  'G',
+                                  style: TextStyle(
+                                    color: Color(0xFF4285F4),
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 13,
+                                  ),
+                                ),
                               ),
                         label: Text(
-                          _isLoading ? 'Membuka Google OAuth...' : 'Lanjutkan dengan Google',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          _isLoading
+                              ? 'Membuka Google OAuth...'
+                              : 'Lanjutkan dengan Google',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ],
@@ -394,12 +488,20 @@ class _ScopeItem extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline_rounded, size: 15, color: Color(0xFF34A853)),
+          const Icon(
+            Icons.check_circle_outline_rounded,
+            size: 15,
+            color: Color(0xFF34A853),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(fontSize: 11, color: AppPalette.text, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppPalette.text,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],

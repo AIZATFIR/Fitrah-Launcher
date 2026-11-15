@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../widgets/activity_icon.dart';
 
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
@@ -33,10 +34,12 @@ class NiagaraUnifiedStreamView extends ConsumerStatefulWidget {
   final bool isActive;
 
   @override
-  ConsumerState<NiagaraUnifiedStreamView> createState() => _NiagaraUnifiedStreamViewState();
+  ConsumerState<NiagaraUnifiedStreamView> createState() =>
+      _NiagaraUnifiedStreamViewState();
 }
 
-class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamView> {
+class _NiagaraUnifiedStreamViewState
+    extends ConsumerState<NiagaraUnifiedStreamView> {
   late Timer _clockTimer;
   late DateTime _currentTime;
   final TextEditingController _searchCtrl = TextEditingController();
@@ -50,8 +53,34 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
   int _focusRevision = 0;
 
   static const List<String> _alphabet = [
-    '★', '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+    '★',
+    '#',
+    'A',
+    'B',
+    'C',
+    'D',
+    'E',
+    'F',
+    'G',
+    'H',
+    'I',
+    'J',
+    'K',
+    'L',
+    'M',
+    'N',
+    'O',
+    'P',
+    'Q',
+    'R',
+    'S',
+    'T',
+    'U',
+    'V',
+    'W',
+    'X',
+    'Y',
+    'Z',
   ];
 
   @override
@@ -139,7 +168,11 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
 
   void _launchApp(InstalledApp app) {
     HapticFeedback.lightImpact();
-    runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchApp(app.packageName));
+    runLauncherAction(
+      context,
+      ref.read(appLauncherServiceProvider),
+      (service) => service.launchApp(app.packageName),
+    );
   }
 
   void _showAppOptions(InstalledApp app) {
@@ -185,10 +218,7 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
     final hours = (diffSec ~/ 3600).toString().padLeft(2, '0');
     final minutes = ((diffSec % 3600) ~/ 60).toString().padLeft(2, '0');
 
-    return {
-      'nextName': nextName,
-      'countdown': '$hours:$minutes',
-    };
+    return {'nextName': nextName, 'countdown': '$hours:$minutes'};
   }
 
   @override
@@ -207,7 +237,9 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
     final timeStr = settings.is24h
         ? DateFormat('HH:mm').format(_currentTime)
         : DateFormat('hh:mm').format(_currentTime);
-    final periodStr = settings.is24h ? '' : DateFormat('a').format(_currentTime);
+    final periodStr = settings.is24h
+        ? ''
+        : DateFormat('a').format(_currentTime);
     final dateStr = DateFormat('EEEE, d MMM').format(_currentTime);
     final hijriStr = HijriCalendarHelper.formatHijri(_currentTime);
     final nextPrayer = _calculateNextPrayer(settings);
@@ -221,17 +253,23 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
             appsAsync.when(
               data: (allApps) {
                 // Filter out hidden bloatware/apps
-                final visibleApps = (ref.read(launcherSettingsProvider.notifier).isLoaded
-                        ? allApps : <InstalledApp>[])
-                    .where((a) => !hiddenPackages.contains(a.packageName))
-                    .toList();
+                final visibleApps =
+                    (ref.read(launcherSettingsProvider.notifier).isLoaded
+                            ? allApps
+                            : <InstalledApp>[])
+                        .where((a) => !hiddenPackages.contains(a.packageName))
+                        .toList();
 
                 // Filtered apps if searching
                 final filtered = _searchQuery.isEmpty
                     ? visibleApps
                     : visibleApps
-                        .where((a) => a.appName.toLowerCase().contains(_searchQuery.toLowerCase()))
-                        .toList();
+                          .where(
+                            (a) => a.appName.toLowerCase().contains(
+                              _searchQuery.toLowerCase(),
+                            ),
+                          )
+                          .toList();
 
                 // Favorite apps
                 final favoriteApps = visibleApps
@@ -250,7 +288,13 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   padding: const EdgeInsets.fromLTRB(20, 16, 44, 100),
                   children: [
                     // Top header: Minimalist Clock & Date
-                    _buildHeader(timeStr, periodStr, dateStr, hijriStr, nextPrayer),
+                    _buildHeader(
+                      timeStr,
+                      periodStr,
+                      dateStr,
+                      hijriStr,
+                      nextPrayer,
+                    ),
                     const SizedBox(height: 8),
 
                     // Strategic Visual Cue Card (Goal Cue)
@@ -272,16 +316,30 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                     const SizedBox(height: 20),
 
                     if (!ref.read(launcherSettingsProvider.notifier).isLoaded)
-                      Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text(ref.read(launcherSettingsProvider.notifier).loadFailed
-                            ? 'Gagal memuat preferensi.' : 'Memuat preferensi…'),
-                        if (ref.read(launcherSettingsProvider.notifier).loadFailed)
-                          TextButton(
-                            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                            onPressed: ref.read(launcherSettingsProvider.notifier).reload,
-                            child: const Text('Coba lagi'),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            ref
+                                    .read(launcherSettingsProvider.notifier)
+                                    .loadFailed
+                                ? 'Gagal memuat preferensi.'
+                                : 'Memuat preferensi…',
                           ),
-                      ]),
+                          if (ref
+                              .read(launcherSettingsProvider.notifier)
+                              .loadFailed)
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                minimumSize: const Size(48, 48),
+                              ),
+                              onPressed: ref
+                                  .read(launcherSettingsProvider.notifier)
+                                  .reload,
+                              child: const Text('Coba lagi'),
+                            ),
+                        ],
+                      ),
 
                     // FAVORITES SECTION (Only if not searching)
                     if (_searchQuery.isEmpty && favoriteApps.isNotEmpty) ...[
@@ -290,7 +348,11 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Row(
                           children: [
-                            const Icon(Icons.star_rounded, size: 14, color: Color(0xFFE5A93C)),
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 14,
+                              color: Color(0xFFE5A93C),
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'FAVORIT (${favoriteApps.length})',
@@ -304,7 +366,9 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                           ],
                         ),
                       ),
-                      ...favoriteApps.map((app) => _buildAppRow(app, isFavorite: true)),
+                      ...favoriteApps.map(
+                        (app) => _buildAppRow(app, isFavorite: true),
+                      ),
                       const SizedBox(height: 28),
                       const Divider(color: Color(0xFF222226), height: 1),
                       const SizedBox(height: 20),
@@ -317,7 +381,10 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                         child: Center(
                           child: Text(
                             'Tidak ada aplikasi ditemukan.',
-                            style: TextStyle(color: Colors.white38, fontSize: 13),
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ),
@@ -353,7 +420,9 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
               right: 0,
               top: 70,
               bottom: 40,
-              width: _isScrubbing ? MediaQuery.of(context).size.width * 0.75 : 44.0,
+              width: _isScrubbing
+                  ? MediaQuery.of(context).size.width * 0.75
+                  : 44.0,
               child: NiagaraWaveScrubber(
                 alphabet: _alphabet,
                 selectedLetter: _selectedLetter,
@@ -377,17 +446,29 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                       widget.onOpenFocusClock();
                     },
                     child: Container(
-                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
                       alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white.withOpacity(0.12)),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.12),
+                        ),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.timer_outlined, size: 13, color: Color(0xFFE5A93C)),
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 13,
+                            color: Color(0xFFE5A93C),
+                          ),
                           SizedBox(width: 4),
                           Text(
                             'CLOCK',
@@ -408,20 +489,36 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchSadar());
+                      runLauncherAction(
+                        context,
+                        ref.read(appLauncherServiceProvider),
+                        (service) => service.launchSadar(),
+                      );
                     },
                     child: Container(
-                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
                       alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white.withOpacity(0.12)),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.12),
+                        ),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.wb_sunny_outlined, size: 13, color: Color(0xFF10B981)),
+                          Icon(
+                            Icons.wb_sunny_outlined,
+                            size: 13,
+                            color: Color(0xFF10B981),
+                          ),
                           SizedBox(width: 4),
                           Text(
                             'SADAR',
@@ -444,7 +541,9 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                       HapticFeedback.selectionClick();
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const FitrahSettingsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const FitrahSettingsScreen(),
+                        ),
                       );
                     },
                     child: Container(
@@ -452,9 +551,15 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.08),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withOpacity(0.12)),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.12),
+                        ),
                       ),
-                      child: const Icon(Icons.settings_outlined, size: 14, color: Colors.white70),
+                      child: const Icon(
+                        Icons.settings_outlined,
+                        size: 14,
+                        color: Colors.white70,
+                      ),
                     ),
                   ),
                 ],
@@ -501,7 +606,11 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchClock());
+              runLauncherAction(
+                context,
+                ref.read(appLauncherServiceProvider),
+                (service) => service.launchClock(),
+              );
             },
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -537,7 +646,11 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchCalendar());
+              runLauncherAction(
+                context,
+                ref.read(appLauncherServiceProvider),
+                (service) => service.launchCalendar(),
+              );
             },
             child: Row(
               children: [
@@ -593,7 +706,11 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.wb_twilight_rounded, size: 12, color: Color(0xFFE5A93C)),
+                  const Icon(
+                    Icons.wb_twilight_rounded,
+                    size: 12,
+                    color: Color(0xFFE5A93C),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '${nextPrayer['nextName']}: ${nextPrayer['countdown']}',
@@ -612,7 +729,10 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
     );
   }
 
-  Widget _buildSearchBar(LauncherSettings settings, List<InstalledApp> filtered) {
+  Widget _buildSearchBar(
+    LauncherSettings settings,
+    List<InstalledApp> filtered,
+  ) {
     return Container(
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -641,7 +761,9 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
               decoration: InputDecoration(
                 hintText: _searchQuery.isEmpty
                     ? 'Cari aplikasi...'
-                    : (filtered.isNotEmpty ? 'Buka ${filtered.first.appName}' : 'Cari aplikasi...'),
+                    : (filtered.isNotEmpty
+                          ? 'Buka ${filtered.first.appName}'
+                          : 'Cari aplikasi...'),
                 hintStyle: const TextStyle(fontSize: 14, color: Colors.white38),
                 border: InputBorder.none,
                 isDense: true,
@@ -654,7 +776,11 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                 _searchCtrl.clear();
                 setState(() => _searchQuery = '');
               },
-              child: const Icon(Icons.clear_rounded, size: 16, color: Colors.white60),
+              child: const Icon(
+                Icons.clear_rounded,
+                size: 16,
+                color: Colors.white60,
+              ),
             ),
           const SizedBox(width: 8),
           // Auto keyboard toggle
@@ -665,16 +791,20 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                 context: context,
                 isScrollControlled: true,
                 backgroundColor: const Color(0xFF161618),
-                builder: (_) => const SafeArea(child: SingleChildScrollView(
-                  padding: EdgeInsets.all(20),
-                  child: DrawerPreferencesControls(keyboardOnly: true),
-                )),
+                builder: (_) => const SafeArea(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(20),
+                    child: DrawerPreferencesControls(keyboardOnly: true),
+                  ),
+                ),
               );
             },
             child: Icon(
               Icons.keyboard_rounded,
               size: 18,
-              color: settings.autoFocusSearch ? const Color(0xFFE5A93C) : Colors.white24,
+              color: settings.autoFocusSearch
+                  ? const Color(0xFFE5A93C)
+                  : Colors.white24,
             ),
           ),
         ],
@@ -754,8 +884,12 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
         final entriesList = entriesAsync.value ?? [];
         final entriesMap = {for (final e in entriesList) e.habitId: e};
 
-        final completedHabits = habits.where((h) => entriesMap[h.id]?.status == HabitStatus.yes).toList();
-        final pendingHabits = habits.where((h) => entriesMap[h.id]?.status != HabitStatus.yes).toList();
+        final completedHabits = habits
+            .where((h) => entriesMap[h.id]?.status == HabitStatus.yes)
+            .toList();
+        final pendingHabits = habits
+            .where((h) => entriesMap[h.id]?.status != HabitStatus.yes)
+            .toList();
         final nextHabit = pendingHabits.isNotEmpty ? pendingHabits.first : null;
 
         final total = habits.length;
@@ -794,7 +928,10 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                 runSpacing: 6,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: isAllDone
                           ? const Color(0xFF10B981).withOpacity(0.15)
@@ -810,18 +947,26 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isAllDone ? Icons.check_circle_rounded : Icons.bolt_rounded,
+                          isAllDone
+                              ? Icons.check_circle_rounded
+                              : Icons.bolt_rounded,
                           size: 12,
-                          color: isAllDone ? const Color(0xFF10B981) : const Color(0xFFF0C987),
+                          color: isAllDone
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFFF0C987),
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          isAllDone ? 'HARI INI TERPENUHI' : 'FOKUS & ARAH HARI INI',
+                          isAllDone
+                              ? 'HARI INI TERPENUHI'
+                              : 'FOKUS & ARAH HARI INI',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.8,
-                            color: isAllDone ? const Color(0xFF10B981) : const Color(0xFFF0C987),
+                            color: isAllDone
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFF0C987),
                           ),
                         ),
                       ],
@@ -830,10 +975,17 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchSadar());
+                      runLauncherAction(
+                        context,
+                        ref.read(appLauncherServiceProvider),
+                        (service) => service.launchSadar(),
+                      );
                     },
                     child: Container(
-                      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
                       alignment: Alignment.center,
                       child: Text(
                         '$done/$total selesai (${(ratio * 100).toInt()}%)',
@@ -857,7 +1009,9 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   minHeight: 5,
                   backgroundColor: Colors.white.withOpacity(0.08),
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    isAllDone ? const Color(0xFF10B981) : const Color(0xFFF0C987),
+                    isAllDone
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFF0C987),
                   ),
                 ),
               ),
@@ -878,7 +1032,11 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(nextHabit.iconKey, style: const TextStyle(fontSize: 24)),
+                    ActivityIcon(
+                      iconKey: nextHabit.iconKey,
+                      size: 24,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -972,14 +1130,20 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.1),
+                          ),
                         ),
                       ),
                       icon: const Icon(Icons.open_in_new_rounded, size: 17),
                       tooltip: 'Buka Sadar',
                       onPressed: () {
                         HapticFeedback.lightImpact();
-                        runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchSadar());
+                        runLauncherAction(
+                          context,
+                          ref.read(appLauncherServiceProvider),
+                          (service) => service.launchSadar(),
+                        );
                       },
                     ),
                   ],
@@ -991,11 +1155,19 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.hourglass_empty_rounded, size: 11, color: Color(0xFF8A8993)),
+                      const Icon(
+                        Icons.hourglass_empty_rounded,
+                        size: 11,
+                        color: Color(0xFF8A8993),
+                      ),
                       const SizedBox(width: 4),
                       const Text(
                         'Kurang:',
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF8A8993)),
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF8A8993),
+                        ),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -1004,20 +1176,35 @@ class _NiagaraUnifiedStreamViewState extends ConsumerState<NiagaraUnifiedStreamV
                           child: Row(
                             children: pendingHabits.skip(1).map((h) {
                               return GestureDetector(
-                                onTap: () => runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.launchSadar()),
+                                onTap: () => runLauncherAction(
+                                  context,
+                                  ref.read(appLauncherServiceProvider),
+                                  (service) => service.launchSadar(),
+                                ),
                                 child: Container(
-                                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 48,
+                                    minHeight: 48,
+                                  ),
                                   alignment: Alignment.center,
                                   margin: const EdgeInsets.only(right: 6),
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2.5,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.08),
+                                    ),
                                   ),
                                   child: Text(
-                                    '${h.iconKey} ${h.name}',
-                                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF9E9DA6)),
+                                    h.name,
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      color: Color(0xFF9E9DA6),
+                                    ),
                                   ),
                                 ),
                               );

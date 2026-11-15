@@ -3,6 +3,7 @@ import 'package:fitrah_launcher/services/secure_storage_service.dart';
 import 'dart:async';
 
 import 'package:fitrah_launcher/features/launcher/widgets/minimalist_app_drawer.dart';
+import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
 import 'package:fitrah_launcher/features/sadar/widgets/allowed_apps_selector_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,11 +25,18 @@ void main() {
         binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null),
   );
 
-  Future<void> showDrawer(WidgetTester tester, {double textScale = 1}) async {
+  Future<void> showDrawer(
+    WidgetTester tester, {
+    double textScale = 1,
+    NoteStorage? storage,
+    VoidCallback? onBackToHome,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          secureStorageServiceProvider.overrideWithValue(NoteStorage()),
+          secureStorageServiceProvider.overrideWithValue(
+            storage ?? NoteStorage(),
+          ),
         ],
         child: MaterialApp(
           builder: (context, child) => MediaQuery(
@@ -37,13 +45,114 @@ void main() {
             ).copyWith(textScaler: TextScaler.linear(textScale)),
             child: child!,
           ),
-          home: const MinimalistAppDrawer(),
+          home: MinimalistAppDrawer(onBackToHome: onBackToHome),
         ),
       ),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
   }
+
+  testWidgets(
+    'daily limit waits before drawer launch and offers immediate goal return',
+    (tester) async {
+      final storage = NoteStorage()
+        ..raw = LauncherSettings(
+          gentleLimitEnabled: true,
+          dailyLimitMinutes: 120,
+          gentleWaitSeconds: 5,
+        ).toJson();
+      var launches = 0;
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        if (call.method == 'getInstalledApps') return realApps;
+        if (call.method == 'getAppIcon') return null;
+        if (call.method == 'checkUsageStatsPermission') return true;
+        if (call.method == 'getTodayScreenTimeMinutes') return 125;
+        if (call.method == 'launchApp') {
+          launches++;
+          return true;
+        }
+        return false;
+      });
+      await showDrawer(tester, storage: storage);
+      await tester.tap(find.text('Real Device App'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('sudah 125 menit'), findsOneWidget);
+      expect(launches, 0);
+      expect(find.text('Lanjut setelah 5 dtk'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump();
+      expect(find.text('Lanjutkan'), findsOneWidget);
+      await tester.tap(find.text('Lanjutkan'));
+      await tester.pumpAndSettle();
+      expect(launches, 1);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'unavailable usage fails open and launches without claiming zero minutes',
+    (tester) async {
+      final storage = NoteStorage()
+        ..raw = LauncherSettings(gentleLimitEnabled: true).toJson();
+      var launches = 0;
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        if (call.method == 'getInstalledApps') return realApps;
+        if (call.method == 'checkUsageStatsPermission') return false;
+        if (call.method == 'launchApp') {
+          launches++;
+          return true;
+        }
+        return null;
+      });
+      await showDrawer(tester, storage: storage);
+      await tester.tap(find.text('Real Device App'));
+      await tester.pumpAndSettle();
+      expect(launches, 1);
+      expect(find.text('Saatnya melihat tujuan'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'goal return closes the limit prompt without launching app',
+    (tester) async {
+      final storage = NoteStorage()
+        ..raw = LauncherSettings(
+          gentleLimitEnabled: true,
+          dailyLimitMinutes: 60,
+          gentleWaitSeconds: 20,
+        ).toJson();
+      var launches = 0;
+      var returnedHome = false;
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        if (call.method == 'getInstalledApps') return realApps;
+        if (call.method == 'checkUsageStatsPermission') return true;
+        if (call.method == 'getTodayScreenTimeMinutes') return 75;
+        if (call.method == 'launchApp') launches++;
+        return null;
+      });
+      await showDrawer(
+        tester,
+        storage: storage,
+        onBackToHome: () => returnedHome = true,
+      );
+      await tester.tap(find.text('Real Device App'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lihat tujuan'));
+      await tester.pumpAndSettle();
+      expect(returnedHome, isTrue);
+      expect(launches, 0);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 
   testWidgets(
     'listing failure retries into actual apps and failed launch is visible',
