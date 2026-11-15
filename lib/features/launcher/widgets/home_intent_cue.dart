@@ -54,14 +54,8 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
         ),
       ),
     );
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: widget.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: widget.secondary.withValues(alpha: .25)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: DefaultTextStyle.merge(
         style: TextStyle(color: widget.foreground),
         child: Column(
@@ -90,8 +84,10 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                           intent.pinnedGoal?.title ??
                               'Apa arah yang ingin kamu jaga?',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w500,
                             height: 1.3,
+                            letterSpacing: -0.25,
                             color: widget.foreground,
                           ),
                         ),
@@ -103,7 +99,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   if (session.$1) ...[
                     Text(
                       '${session.$2 ? 'Sesi dijeda' : 'Sesi berjalan'}: ${session.$3}',
@@ -192,6 +188,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     backgroundColor: widget.accent,
     foregroundColor: widget.surface,
     minimumSize: const Size(48, 48),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
   );
 
   ThemeData _intentDialogTheme(BuildContext context) {

@@ -522,7 +522,7 @@ void main() {
   );
 
   testWidgets(
-    'palette card has one goal editor and one primary action at 320dp and 200 percent text',
+    'unboxed goal cue has one editor and one primary action at 320dp and 200 percent text',
     (tester) async {
       await store.put(
         Habit()
@@ -547,19 +547,18 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byTooltip('Ubah tujuan'), findsOneWidget);
       expect(find.byType(FilledButton), findsOneWidget);
-      final card = tester
-          .widgetList<Container>(
-            find.descendant(
-              of: find.byType(HomeIntentCue),
-              matching: find.byType(Container),
-            ),
-          )
-          .firstWhere(
-            (c) =>
-                c.decoration is BoxDecoration &&
-                (c.decoration as BoxDecoration).color == Colors.white,
-          );
-      expect((card.decoration as BoxDecoration).color, Colors.white);
+      expect(
+        find.descendant(
+          of: find.byType(HomeIntentCue),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Container &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).color == Colors.white,
+          ),
+        ),
+        findsNothing,
+      );
       final button = tester.widget<FilledButton>(find.byType(FilledButton));
       expect(button.style!.backgroundColor!.resolve({}), Colors.green);
       await tester.ensureVisible(find.byTooltip('Ubah tujuan'));

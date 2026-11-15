@@ -1278,7 +1278,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   const SizedBox(height: 8),
                   _buildHomeDateCue(tc),
                 ],
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 // ── Top Header Bar (Now/Next Carousel or Prayer Timeline) ──
                 _buildTopHeaderBar(
                   prayers,
@@ -1289,7 +1289,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   prayerTimesEnabled: settings.showPrayerTimes,
                   showAgendaWidget: settings.showAgendaWidget,
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
 
                 // ── Center Focus Clock Analog Face Dial with AM/PM pill switch ──
                 _isListView
@@ -1302,7 +1302,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         showHeroEvent: settings.showHeroEvent,
                         compact: true,
                       ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
 
                 // Habits stay close to the goal and clock cue.
                 if (settings.showHabitsWidget)
@@ -1318,7 +1318,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       onStartTimer: _openHabitFocusTimer,
                     ),
                   ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
 
                 if (!widget.useSampleData) ...[
                   _buildTodayFocusHistory(tc),
@@ -1326,7 +1326,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 ],
 
                 _buildObsidianDailyNoteCard(tc),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
 
                 // ── Task & Habit Dump Section (Dump Inbox -> Direct Clock Schedule) ──
                 _buildTaskDumpSection(tc),
@@ -2253,10 +2253,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     return Container(
       decoration: BoxDecoration(
         color: tc.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tc.stroke, width: 0.75),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: tc.stroke, width: 0.6),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2294,12 +2294,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           TextField(
             enabled: ref.read(launcherSettingsProvider.notifier).isLoaded,
             controller: _dailyNoteController,
             maxLines: 4,
-            minLines: 2,
+            minLines: 1,
             style: GoogleFonts.outfit(
               fontSize: 13.5,
               height: 1.45,
@@ -6051,8 +6051,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final unavailable =
         !widget.useSampleData && (store == null || !store.isDurable);
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: tc.card,
         borderRadius: BorderRadius.circular(18),
@@ -6069,7 +6069,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 child: Text(
                   'Kotak masuk kegiatan',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: tc.textPrimary,
                   ),
@@ -6082,46 +6082,63 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Catat kegiatan, lalu tentukan waktunya.',
-            style: TextStyle(fontSize: 13, color: tc.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: tc.accent,
-                  foregroundColor: tc.background,
-                  minimumSize: const Size(48, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+          if (tasks.isEmpty &&
+              !unavailable &&
+              state?.hasError != true &&
+              state?.isLoading != true) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: tc.accent,
+                    minimumSize: const Size(48, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
+                  onPressed: () => _openQuickDumpTaskDialog(tc),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Tambah kegiatan'),
                 ),
-                onPressed: () => _openQuickDumpTaskDialog(tc),
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Tambah kegiatan'),
-              ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: tc.accent,
-                  side: BorderSide(color: tc.stroke),
-                  minimumSize: const Size(48, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: tc.accent,
+                    minimumSize: const Size(48, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
+                  onPressed: _openScheduleToClockSheet,
+                  icon: const Icon(Icons.schedule_rounded, size: 18),
+                  label: const Text('Jadwalkan'),
                 ),
-                onPressed: _openScheduleToClockSheet,
-                icon: const Icon(Icons.schedule_rounded, size: 18),
-                label: const Text('Atur waktu'),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ] else if (tasks.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: tc.accent,
+                    minimumSize: const Size(48, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  onPressed: () => _openQuickDumpTaskDialog(tc),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Tambah'),
+                ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: tc.accent,
+                    minimumSize: const Size(48, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  onPressed: _openScheduleToClockSheet,
+                  icon: const Icon(Icons.schedule_rounded, size: 18),
+                  label: const Text('Jadwalkan'),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           if (unavailable)
             const Text('Penyimpanan tugas tidak tersedia.')
@@ -6129,14 +6146,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             const Text('Memuat tugas…')
           else if (state?.hasError == true)
             const Text('Gagal memuat tugas. Coba lagi.')
-          else if (tasks.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Kegiatan yang belum punya waktu akan tersimpan di sini.',
-                style: TextStyle(color: tc.textSecondary, fontSize: 13),
-              ),
-            )
           else
             ...tasks.map((task) => _buildDumpedTaskRow(task, tc)),
         ],
