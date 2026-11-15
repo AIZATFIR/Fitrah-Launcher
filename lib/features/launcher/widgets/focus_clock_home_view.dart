@@ -1905,6 +1905,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }) {
     final effectiveActivities =
         activitiesState.valueOrNull ?? const <Activity>[];
+    final compactDialSize = (MediaQuery.sizeOf(context).width * 0.45)
+        .clamp(148.0, 208.0)
+        .toDouble();
 
     return Container(
       decoration: BoxDecoration(
@@ -1928,8 +1931,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     excludeFromSemantics: true,
                     onTap: widget.onOpenFocusClock,
                     child: SizedBox(
-                      width: 148,
-                      height: 148,
+                      width: compactDialSize,
+                      height: compactDialSize,
                       child: FittedBox(
                         fit: BoxFit.contain,
                         child: SizedBox(

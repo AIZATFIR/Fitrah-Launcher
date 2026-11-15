@@ -256,36 +256,20 @@ class AiService {
   AiExecutionMode get activeMode => _activeMode;
   List<AiActionProposal> get pendingActions => _pendingActions;
 
-  /// Format system prompt for Persona "Aura"
+  /// Guidance for supportive, user-led goal conversations.
   String _buildAuraSystemPrompt(
     String dateStr,
     String timeStr,
     String timezone,
     String presetList,
   ) {
-    return '''Kamu adalah "Aura", seorang AI Time Secretary yang sangat empatik, hangat, efisien, dan ramah.
+    return '''Kamu adalah teman fokus yang hangat dan tidak menghakimi.
 
-ATURAN PERILAKU:
-1. Bersikap profesional namun hangat seperti sekretaris pribadi manusia sungguhan.
-2. Selalu sadar konteks waktu pengguna saat ini: $dateStr $timeStr (Timezone: $timezone).
-3. Buat respon yang ringkas, jelas, dan langsung pada poin utama (maksimal 2-3 kalimat).
-4. Proaktif memberikan perhatian kecil terkait manajemen waktu, jam istirahat, atau pengingat jadwal jika diperlukan.
+Dengarkan dulu tujuan, kekhawatiran, atau curhat pengguna. Tanggapi maksud dan perasaannya sebelum memberi saran. Tanyakan hanya hal yang benar-benar diperlukan untuk memahami situasi. Bantu pengguna memilih langkah berikutnya yang realistis dan milik mereka sendiri; jangan memaksakan rutinitas, durasi kerja/istirahat, metode prioritas, atau hasil kompetisi.
 
-DOKTRIN MANAJEMEN WAKTU (CONCEPT PAPER FOCUS CLOCK):
-- Berdasarkan Perilaku Psikologis Natural Manusia (Fitrah & Identity-Based Habits).
-- Utamakan pembagian waktu seimbang: Deep Work (90-120 menit), Intentional Rest (istirahat total dari gawai/bengong sehat 20 menit), Active Rest/Sosial, Wind Down (45 menit), dan Sleep (siklus kelipatan 90 menit).
-- Gunakan Eisenhower Matrix untuk memprioritaskan tugas ber-deadline.
-- Presets pengguna saat ini: $presetList.
+Gunakan konteks waktu hanya bila relevan: $dateStr $timeStr (Timezone: $timezone). Preset kegiatan yang tersedia: $presetList.
 
-IDENTITAS & ADAPTIVE GOAL SCHEDULING:
-- Bantu pengguna mengurai tujuan jangka panjang dan tanyakan detail yang mengubah jadwal. Jangan mengaku sudah menanamkan latihan berulang; setiap perubahan yang tersedia muncul sebagai usulan terpisah untuk ditinjau.
-- Jangan buat blueprint harian massal atau jadwal adaptif berulang sampai app dapat meninjau konflik dan menerapkan seluruh rencana secara atomik.
-
-PANGGILAN TOOL UNTUK BANTUAN:
-- list_activities: untuk melihat jadwal aktif.
-- Untuk semua perubahan jadwal, minta persetujuan eksplisit pengguna sebelum perubahan diterapkan.
-- Jangan mengklaim perubahan sudah diterapkan sebelum pengguna menyetujuinya.
-''';
+Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinjau. Perubahan jadwal hanya boleh melalui proposal interaktif yang disetujui pengguna; percakapan dan riwayat tidak memberi izin untuk menulis data. Jangan mengklaim perubahan sudah diterapkan sebelum persetujuan.''';
   }
 
   Future<void> _ensureInit() async {
@@ -391,21 +375,35 @@ PANGGILAN TOOL UNTUK BANTUAN:
       final model = GenerativeModel(
         model: 'gemini-1.5-flash',
         apiKey: geminiKey,
+        httpClient: _httpClient,
+        systemInstruction: Content.system(
+          _history.firstWhere((m) => m['role'] == 'system')['content']
+              as String,
+        ),
       );
 
-      final systemPromptObj =
-          _history.firstWhere(
-                (m) => m['role'] == 'system',
-                orElse: () => {'content': ''},
-              )['content']
-              as String;
-
-      final promptText = '$systemPromptObj\n\nUser request: $userMessage';
-      final content = [Content.text(promptText)];
-
-      final response = await model.generateContent(content);
-      final reply =
-          response.text?.trim() ?? 'Halo, Aura di sini. Ada yang bisa dibantu?';
+      final priorTurns = _history
+          .take(_history.length - 1)
+          .where((message) {
+            final role = message['role'];
+            final content = message['content'];
+            return (role == 'user' || role == 'assistant') &&
+                content is String &&
+                content.trim().isNotEmpty;
+          })
+          .map(
+            (message) => Content(
+              message['role'] == 'assistant' ? 'model' : 'user',
+              [TextPart(message['content'] as String)],
+            ),
+          )
+          .toList();
+      final chat = model.startChat(history: priorTurns);
+      final response = await chat.sendMessage(Content.text(userMessage));
+      final reply = response.text?.trim();
+      if (reply == null || reply.isEmpty) {
+        throw StateError('Gemini returned an empty reply');
+      }
 
       _history.add({'role': 'assistant', 'content': reply});
       return reply;
@@ -584,8 +582,9 @@ PANGGILAN TOOL UNTUK BANTUAN:
       if (bulkSchedulingWasRequested) {
         return 'Aku bisa bantu menyusun rencana di chat, tetapi jadwal massal/berulang belum dapat diterapkan dengan aman. Minta satu blok jadwal dulu agar bisa ditinjau sebelum disimpan.';
       }
-      if (writeWasBlocked)
+      if (writeWasBlocked) {
         return 'Permintaan ini hanya dalam mode baca; tidak ada perubahan jadwal diterapkan.';
+      }
     }
 
     return 'Proses penjadwalan selesais.';
@@ -603,8 +602,9 @@ PANGGILAN TOOL UNTUK BANTUAN:
       'messages': _history,
       'tools': _tools.where((tool) {
         final name = (tool['function'] as Map<String, dynamic>)['name'];
-        if (name == 'generate_blueprint' || name == 'schedule_adaptive_goal')
+        if (name == 'generate_blueprint' || name == 'schedule_adaptive_goal') {
           return false;
+        }
         return allowActions || name == 'list_activities';
       }).toList(),
       'tool_choice': 'auto',
@@ -644,8 +644,9 @@ PANGGILAN TOOL UNTUK BANTUAN:
 
     final id = (args['id'] as num?)?.toInt();
     final existing = id == null ? null : await _activityRepo.get(id);
-    if (existing == null)
+    if (existing == null) {
       return '${name.replaceAll('_', ' ')} · aktivitas #$id';
+    }
 
     final initialStart =
         (existing.ampmHalf == AmPmHalf.pm ? 720 : 0) + existing.startMinute;
