@@ -5,6 +5,7 @@ import 'package:fitrah_launcher/providers/sadar_providers.dart';
 import 'package:fitrah_launcher/providers/providers.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/drawer_preferences_controls.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/app_icon_widget.dart';
+import 'package:fitrah_launcher/core/theme.dart';
 import 'package:fitrah_launcher/features/launcher/providers/launcher_settings_provider.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/app_preferences_sheet.dart';
 import 'dart:async';
@@ -29,6 +30,7 @@ class RecordingLauncher extends AppLauncherService {
     launched.add(packageName);
     return true;
   }
+
   @override
   Future<bool> openAppDetails(String packageName) async {
     details.add(packageName);
@@ -88,25 +90,54 @@ void main() {
     return container;
   }
 
-  testWidgets(
-    'icon-free rows still launch apps and expose app details',
-    (tester) async {
-      final launcher = RecordingLauncher();
-      final store = Storage()
-        ..raw = LauncherSettings(showAppIcons: false).toJson();
-      await show(tester, store, launcher: launcher);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Beta'));
-      await tester.pumpAndSettle();
-      expect(launcher.launched, ['org.beta']);
-      await tester.longPress(find.text('Beta'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('App info'));
-      await tester.pumpAndSettle();
-      expect(launcher.details, ['org.beta']);
-      expect(find.byType(AppPreferencesSheet), findsNothing);
-    },
-  );
+  testWidgets('icon-free rows still launch apps and expose app details', (
+    tester,
+  ) async {
+    final launcher = RecordingLauncher();
+    final store = Storage()
+      ..raw = LauncherSettings(showAppIcons: false).toJson();
+    await show(tester, store, launcher: launcher);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Beta'));
+    await tester.pumpAndSettle();
+    expect(launcher.launched, ['org.beta']);
+    await tester.longPress(find.text('Beta'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Info aplikasi'));
+    await tester.pumpAndSettle();
+    expect(launcher.details, ['org.beta']);
+    expect(find.byType(AppPreferencesSheet), findsNothing);
+  });
+
+  testWidgets('app options use localized Bookpaper action labels', (
+    tester,
+  ) async {
+    await show(tester, Storage());
+    await tester.pumpAndSettle();
+    await tester.longPress(find.text('Beta'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<BottomSheet>(find.byType(BottomSheet)).backgroundColor,
+      AppPalette.bg,
+    );
+    expect(find.text('Tambah ke Favorit'), findsOneWidget);
+    expect(find.text('Sembunyikan Aplikasi'), findsOneWidget);
+    expect(find.text('Info aplikasi'), findsOneWidget);
+    expect(find.text('Hapus aplikasi'), findsOneWidget);
+    expect(find.text('App info'), findsNothing);
+    for (final label in [
+      'Tambah ke Favorit',
+      'Sembunyikan Aplikasi',
+      'Info aplikasi',
+      'Hapus aplikasi',
+    ]) {
+      expect(
+        tester.getSize(find.widgetWithText(ListTile, label)).height,
+        greaterThanOrEqualTo(48),
+      );
+    }
+  });
 
   testWidgets(
     'icons hidden in favorite, normal and search rows never request icons',
@@ -161,12 +192,12 @@ void main() {
       await tester.tap(find.text('Coba lagi'));
       await tester.pumpAndSettle();
       store.failWrite = true;
-      await tester.tap(find.text('Show App Icons'));
+      await tester.tap(find.text('Tampilkan ikon aplikasi'));
       await tester.pumpAndSettle();
       expect(
         tester
             .widget<SwitchListTile>(
-              find.widgetWithText(SwitchListTile, 'Show App Icons'),
+              find.widgetWithText(SwitchListTile, 'Tampilkan ikon aplikasi'),
             )
             .value,
         isTrue,
@@ -242,17 +273,23 @@ void main() {
       home: const FitrahSettingsScreen(),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Show App Icons'));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -120));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('App Drawer'));
-    await tester.tap(find.text('App Drawer'));
+    await tester.tap(find.text('Tampilkan ikon aplikasi'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Daftar aplikasi'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Daftar aplikasi'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Geser layar utama ke kiri'), findsOneWidget);
     final tiles = tester.widgetList<SwitchListTile>(
-      find.widgetWithText(SwitchListTile, 'Show App Icons'),
+      find.widgetWithText(SwitchListTile, 'Tampilkan ikon aplikasi'),
     );
     expect(tiles.every((tile) => !tile.value), isTrue);
-    await tester.tap(find.text('Show App Icons').last);
+    await tester.tap(find.text('Tampilkan ikon aplikasi').last);
     await tester.pumpAndSettle();
     expect(container.read(launcherSettingsProvider).showAppIcons, isTrue);
     expect(tester.takeException(), isNull);
@@ -268,14 +305,20 @@ void main() {
       store,
       home: const FitrahSettingsScreen(),
     );
-    await tester.ensureVisible(find.text('Home Screen'));
-    await tester.tap(find.text('Home Screen'));
+    await tester.scrollUntilVisible(
+      find.text('Layar utama'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Layar utama'));
     await tester.pumpAndSettle();
 
-    final prayerOption = find.ancestor(
-      of: find.text('Waktu Sholat'),
-      matching: find.byType(Container),
-    ).first;
+    final prayerOption = find
+        .ancestor(
+          of: find.text('Waktu Sholat'),
+          matching: find.byType(Container),
+        )
+        .first;
     BoxDecoration optionDecoration() =>
         tester.widget<Container>(prayerOption).decoration! as BoxDecoration;
     expect(optionDecoration().border!.top.color, Colors.white24);
@@ -287,10 +330,7 @@ void main() {
       container.read(launcherSettingsProvider).widgetDisplayMode,
       'prayer',
     );
-    expect(
-      LauncherSettings.fromJson(store.raw!).widgetDisplayMode,
-      'prayer',
-    );
+    expect(LauncherSettings.fromJson(store.raw!).widgetDisplayMode, 'prayer');
     expect(optionDecoration().border!.top.color, Colors.white);
     expect(tester.takeException(), isNull);
   });
@@ -302,19 +342,17 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('Version 0.5.3'),
+      find.text('Beri ulasan di Play Store'),
       250,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Version 0.5.3'), findsOneWidget);
-    expect(find.text('Version 5.17'), findsNothing);
     expect(find.text('Use device wallpaper ★'), findsNothing);
     await tester.scrollUntilVisible(
-      find.text('More'),
+      find.text('Lainnya'),
       -250,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('More'));
+    await tester.tap(find.text('Lainnya'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Credits & Open Source Licenses'));
     await tester.pumpAndSettle();
@@ -331,8 +369,13 @@ void main() {
       Storage()..failWrite = true,
       home: const FitrahSettingsScreen(),
     );
-    await tester.ensureVisible(find.text('Tema & Warna Aksen').first);
-    await tester.tap(find.text('Tema & Warna Aksen').first);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Tema dan warna aksen'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Tema dan warna aksen'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sky Blue (Fokus & Jernih)'));
     await tester.pumpAndSettle();
@@ -354,13 +397,15 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Show App Icons'),
+      find.text('Tampilkan ikon aplikasi'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
     expect(
       tester
-          .getSize(find.widgetWithText(SwitchListTile, 'Show App Icons'))
+          .getSize(
+            find.widgetWithText(SwitchListTile, 'Tampilkan ikon aplikasi'),
+          )
           .height,
       greaterThanOrEqualTo(48),
     );
@@ -445,7 +490,9 @@ void main() {
       expect(find.text('Memuat preferensi…'), findsOneWidget);
       expect(find.textContaining(RegExp(r'^\d{2}:\d{2}$')), findsOneWidget);
       expect(
-        find.textContaining(RegExp(r'^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ')),
+        find.textContaining(
+          RegExp(r'^(Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu), '),
+        ),
         findsOneWidget,
       );
       expect(find.text('Pengaturan Launcher'), findsOneWidget);
@@ -456,7 +503,9 @@ void main() {
       expect(find.text('Gagal memuat preferensi.'), findsOneWidget);
       expect(find.textContaining(RegExp(r'^\d{2}:\d{2}$')), findsOneWidget);
       expect(
-        find.textContaining(RegExp(r'^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ')),
+        find.textContaining(
+          RegExp(r'^(Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu), '),
+        ),
         findsOneWidget,
       );
       expect(find.text('Pengaturan Launcher'), findsOneWidget);
@@ -497,6 +546,10 @@ void main() {
     );
     await tester.tap(find.text('Aplikasi tersembunyi'));
     await tester.pumpAndSettle();
+    expect(
+      tester.widget<BottomSheet>(find.byType(BottomSheet)).backgroundColor,
+      AppPalette.bg,
+    );
     await tester.tap(find.text('Tampilkan Alpha'));
     await tester.pumpAndSettle();
     Navigator.of(tester.element(find.text('Aplikasi tersembunyi').last)).pop();

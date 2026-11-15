@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:fitrah_launcher/features/launcher/widgets/default_home_status_control.dart';
 import 'package:fitrah_launcher/features/launcher/services/app_launcher_service.dart';
+import 'package:fitrah_launcher/core/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,8 +55,14 @@ void main() {
     await show(tester);
     expect(find.text('Memeriksa launcher default…'), findsOneWidget);
     expect(
-      tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNull,
+    );
+    expect(
+      tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Periksa lagi'))
+          .onPressed,
+      isNotNull,
     );
     query.complete(true);
     await tester.pumpAndSettle();
@@ -106,7 +113,7 @@ void main() {
       });
       await show(tester);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Pilih launcher default'));
+      await tester.tap(find.text('Pilih Fitrah sebagai launcher default'));
       await tester.pumpAndSettle();
       expect(requests, 1);
       expect(
@@ -153,14 +160,14 @@ void main() {
       await tester.pumpAndSettle();
       for (final failure in [false, PlatformException(code: 'unavailable')]) {
         action = failure;
-        await tester.tap(find.text('Pilih launcher default'));
+        await tester.tap(find.text('Pilih Fitrah sebagai launcher default'));
         await tester.pumpAndSettle();
         expect(
           find.text('Pilihan launcher tidak dapat dibuka. Coba lagi.'),
           findsOneWidget,
         );
         expect(
-          tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+          tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
           isNotNull,
         );
       }
@@ -179,12 +186,12 @@ void main() {
       });
       await show(tester);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Pilih launcher default'));
+      await tester.tap(find.text('Pilih Fitrah sebagai launcher default'));
       await tester.pump();
       await tester.tap(find.text('Membuka pilihan Android…'));
       expect(requests, 1);
       expect(
-        tester.widget<TextButton>(find.byType(TextButton)).onPressed,
+        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
         isNull,
       );
       await tester.pumpWidget(const SizedBox());
@@ -209,6 +216,34 @@ void main() {
     expect(find.byType(TextButton), findsNothing);
   });
 
+  testWidgets('default Home control uses Indonesian Bookpaper hierarchy', (
+    tester,
+  ) async {
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (_) async => false,
+    );
+    await show(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Status Beranda'), findsOneWidget);
+    expect(
+      find.text('Fitrah belum menjadi launcher default Android.'),
+      findsOneWidget,
+    );
+    expect(find.text('Pilih Fitrah sebagai launcher default'), findsOneWidget);
+    expect(find.text('Default Launcher'), findsNothing);
+    expect(tester.widget<Card>(find.byType(Card)).color, AppPalette.card);
+    expect(
+      tester
+          .widget<FilledButton>(find.byType(FilledButton))
+          .style
+          ?.backgroundColor
+          ?.resolve({}),
+      AppPalette.accent,
+    );
+  });
+
   testWidgets('320dp at 200 percent remains scrollable with 48dp controls', (
     tester,
   ) async {
@@ -229,7 +264,14 @@ void main() {
         greaterThanOrEqualTo(48),
       );
     }
-    await tester.scrollUntilVisible(find.text('Pilih launcher default'), 120);
+    expect(
+      tester.getSize(find.byType(FilledButton)).height,
+      greaterThanOrEqualTo(48),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Pilih Fitrah sebagai launcher default'),
+      120,
+    );
     expect(tester.takeException(), isNull);
   });
 }

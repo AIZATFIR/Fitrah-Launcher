@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme.dart';
 import '../providers/launcher_settings_provider.dart';
 import '../services/app_launcher_service.dart';
 import 'launcher_action_feedback.dart';
@@ -10,10 +11,10 @@ Future<void> showAppPreferences(BuildContext context, InstalledApp app) =>
       context: context,
       isScrollControlled: true,
       enableDrag: false,
-      backgroundColor: const Color(0xFF161618),
+      backgroundColor: AppPalette.bg,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        side: BorderSide(color: Color(0xFF26262B)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        side: BorderSide(color: AppPalette.stroke),
       ),
       builder: (_) => AppPreferencesSheet(app: app, feedbackContext: context),
     );
@@ -71,6 +72,7 @@ class _AppPreferencesSheetState extends ConsumerState<AppPreferencesSheet> {
     final settings = ref.watch(launcherSettingsProvider);
     final notifier = ref.read(launcherSettingsProvider.notifier);
     final app = widget.app;
+    final theme = Theme.of(context);
     final favorite = settings.favoritePackages.contains(app.packageName);
     final hidden = settings.hiddenPackages.contains(app.packageName);
     final feedback = widget.feedbackContext;
@@ -90,25 +92,22 @@ class _AppPreferencesSheetState extends ConsumerState<AppPreferencesSheet> {
                     appName: app.appName,
                     size: 46,
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           app.appName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           app.packageName,
-                          style: const TextStyle(
-                            color: Colors.white60,
-                            fontSize: 11,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppPalette.textDim,
                           ),
                         ),
                       ],
@@ -119,28 +118,30 @@ class _AppPreferencesSheetState extends ConsumerState<AppPreferencesSheet> {
               const SizedBox(height: 16),
               const Divider(),
               ListTile(
+                minTileHeight: 48,
                 enabled: !_pending,
                 leading: Icon(
                   favorite ? Icons.star : Icons.star_border,
-                  color: Colors.amber,
+                  color: AppPalette.accent,
                 ),
                 title: Text(
                   favorite ? 'Hapus dari Favorit' : 'Tambah ke Favorit',
-                  style: const TextStyle(color: Colors.white),
+                  style: theme.textTheme.bodyLarge,
                 ),
                 onTap: () => _save(
                   () => notifier.setFavoritePackage(app.packageName, !favorite),
                 ),
               ),
               ListTile(
+                minTileHeight: 48,
                 enabled: !_pending,
                 leading: const Icon(
                   Icons.visibility_off_outlined,
-                  color: Colors.white70,
+                  color: AppPalette.textDim,
                 ),
                 title: Text(
                   hidden ? 'Tampilkan Aplikasi' : 'Sembunyikan Aplikasi',
-                  style: const TextStyle(color: Colors.white),
+                  style: theme.textTheme.bodyLarge,
                 ),
                 onTap: () => _save(
                   () => notifier.setHiddenPackage(app.packageName, !hidden),
@@ -150,41 +151,49 @@ class _AppPreferencesSheetState extends ConsumerState<AppPreferencesSheet> {
                 ),
               ),
               ListTile(
+                minTileHeight: 48,
                 enabled: !_pending,
-                leading: const Icon(Icons.info_outline, color: Colors.white70),
-                title: const Text(
-                  'App info',
-                  style: TextStyle(color: Colors.white),
+                leading: const Icon(
+                  Icons.info_outline,
+                  color: AppPalette.textDim,
                 ),
+                title: const Text('Info aplikasi'),
                 onTap: () => _nativeAction(
                   (service) => service.openAppDetails(app.packageName),
                 ),
               ),
               if (!app.isSystem)
                 ListTile(
+                  minTileHeight: 48,
                   enabled: !_pending,
                   leading: const Icon(
                     Icons.delete_outline,
-                    color: Colors.redAccent,
+                    color: AppPalette.danger,
                   ),
-                  title: const Text(
-                    'Uninstall app',
-                    style: TextStyle(color: Colors.redAccent),
-                  ),
+                  title: const Text('Hapus aplikasi'),
+                  textColor: AppPalette.danger,
+                  iconColor: AppPalette.danger,
                   onTap: () => _nativeAction(
                     (service) => service.uninstallApp(app.packageName),
                   ),
                 ),
               if (_pending)
-                const Padding(
-                  padding: EdgeInsets.all(12),
+                Padding(
+                  padding: const EdgeInsets.all(12),
                   child: Text(
                     'Menyimpan…',
-                    style: TextStyle(color: Colors.white70),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppPalette.textDim,
+                    ),
                   ),
                 ),
               if (_error != null) ...[
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                Text(
+                  _error!,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppPalette.danger,
+                  ),
+                ),
                 TextButton(
                   style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                   onPressed: _pending
@@ -241,7 +250,11 @@ Future<void> showHiddenApps(BuildContext context) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
   enableDrag: false,
-  backgroundColor: const Color(0xFF161618),
+  backgroundColor: AppPalette.bg,
+  shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    side: BorderSide(color: AppPalette.stroke),
+  ),
   builder: (_) => const HiddenAppsSheet(),
 );
 
@@ -277,6 +290,7 @@ class _HiddenAppsSheetState extends ConsumerState<HiddenAppsSheet> {
     final notifier = ref.read(launcherSettingsProvider.notifier);
     final apps = ref.watch(installedAppsFutureProvider).valueOrNull ?? [];
     final names = {for (final app in apps) app.packageName: app.appName};
+    final theme = Theme.of(context);
     return PopScope(
       canPop: _pending == null,
       child: SafeArea(
@@ -288,9 +302,9 @@ class _HiddenAppsSheetState extends ConsumerState<HiddenAppsSheet> {
               const Text(
                 'Aplikasi tersembunyi',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppPalette.text,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               if (!notifier.isLoaded) ...[
@@ -298,7 +312,9 @@ class _HiddenAppsSheetState extends ConsumerState<HiddenAppsSheet> {
                   notifier.loadFailed
                       ? 'Gagal memuat preferensi.'
                       : 'Memuat preferensi…',
-                  style: const TextStyle(color: Colors.white70),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppPalette.textDim,
+                  ),
                 ),
                 if (notifier.loadFailed)
                   TextButton(
@@ -309,11 +325,13 @@ class _HiddenAppsSheetState extends ConsumerState<HiddenAppsSheet> {
                     child: const Text('Coba lagi'),
                   ),
               ] else if (settings.hiddenPackages.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: Text(
                     'Tidak ada aplikasi tersembunyi.',
-                    style: TextStyle(color: Colors.white70),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppPalette.textDim,
+                    ),
                   ),
                 )
               else
@@ -322,13 +340,15 @@ class _HiddenAppsSheetState extends ConsumerState<HiddenAppsSheet> {
                     padding: const EdgeInsets.only(top: 16),
                     child: Text(
                       names[package] ?? package,
-                      style: const TextStyle(color: Colors.white),
+                      style: theme.textTheme.bodyLarge,
                     ),
                   ),
                   if (names[package] == null)
-                    const Text(
+                    Text(
                       'Saat ini tidak terpasang atau tidak tersedia',
-                      style: TextStyle(color: Colors.white54),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppPalette.textDim,
+                      ),
                     ),
                   TextButton(
                     style: TextButton.styleFrom(
@@ -344,9 +364,11 @@ class _HiddenAppsSheetState extends ConsumerState<HiddenAppsSheet> {
                     ),
                   ),
                   if (_failed == package) ...[
-                    const Text(
+                    Text(
                       'Gagal menyimpan preferensi.',
-                      style: TextStyle(color: Colors.redAccent),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppPalette.danger,
+                      ),
                     ),
                     TextButton(
                       style: TextButton.styleFrom(
