@@ -11,6 +11,7 @@ void main() {
   testWidgets('legacy Sadar actions have at least 48dp targets', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     final repo = SadarRepository(null);
     for (final habit in await repo.getHabits()) {
       await repo.deleteHabit(habit.id, hardDelete: true);
@@ -41,18 +42,19 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    for (final label in ['SADAR', '0/2 selesai (0%)', '🎯 Second']) {
-      final target = find.ancestor(
-        of: find.text(label),
-        matching: find.byWidgetPredicate(
-          (widget) =>
-              widget is Container && widget.constraints?.minHeight == 48,
-        ),
-      );
-      expect(target, findsOneWidget, reason: label);
-      expect(tester.getSize(target).height, greaterThanOrEqualTo(48));
-      expect(tester.getSize(target).width, greaterThanOrEqualTo(48));
-    }
+    final start = find.widgetWithText(FilledButton, 'Buka Laptop & Play Timer');
+    expect(start, findsOneWidget);
+    expect(tester.getSemantics(start).rect.height, greaterThanOrEqualTo(48));
+
+    final openSadar = find.byTooltip('Buka Sadar');
+    expect(openSadar, findsOneWidget);
+    expect(
+      tester.getSemantics(openSadar).rect.height,
+      greaterThanOrEqualTo(48),
+    );
+    expect(tester.getSemantics(openSadar).rect.width, greaterThanOrEqualTo(48));
     expect(tester.takeException(), isNull);
+    semantics.dispose();
+    await tester.pumpWidget(const SizedBox());
   });
 }

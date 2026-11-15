@@ -167,6 +167,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
       appBar: AppBar(
         backgroundColor: AppPalette.bg,
         elevation: 0,
+        title: const Text('Pengaturan Launcher'),
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_rounded,
@@ -177,120 +178,112 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
         ),
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          children: [
-            _buildScreenTimeSection(settings),
-            const SizedBox(height: 20),
-            // Top Description
-            const Padding(
-              padding: EdgeInsets.only(bottom: 28),
-              child: Text(
-                'Akses notifikasi belum difilter oleh launcher. Pengaturan izin Android ditampilkan dengan keterangan yang jujur.',
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.45,
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w300,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              children: [
+                _buildScreenTimeSection(settings),
+                const SizedBox(height: 20),
+                const DrawerPreferencesControls(),
+
+                const SizedBox(height: 24),
+
+                // Section dropdown items
+                _buildDropdownTile(
+                  title: 'Kustomisasi',
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const LauncherCustomizationSheet(),
+                    );
+                  },
                 ),
-              ),
-            ),
+                _buildDropdownTile(
+                  title: 'Tema dan warna aksen',
+                  onTap: () =>
+                      _showThemePaletteSheet(context, settings, notifier),
+                ),
+                _buildDropdownTile(
+                  title: 'Layar utama',
+                  onTap: () => _showHomeCustomizationDialog(context),
+                ),
+                _buildDropdownTile(
+                  title: 'Daftar aplikasi',
+                  onTap: () => _showAppDrawerSheet(context),
+                ),
+                _buildDropdownTile(
+                  title: 'Notifikasi',
+                  onTap: () => _showInterruptsSheet(context),
+                ),
+                _buildDropdownTile(
+                  title: 'Mode fokus',
+                  onTap: () => _showFocusModeSheet(context),
+                ),
+                _buildDropdownTile(
+                  title: 'Jenis huruf',
+                  onTap: () => _showFontPicker(context),
+                ),
+                _buildDropdownTile(
+                  title: 'Gestur',
+                  onTap: () => _showGesturesSheet(context),
+                ),
+                _buildDropdownTile(
+                  title: 'Lainnya',
+                  onTap: () => _showMoreSheet(context),
+                ),
 
-            const DrawerPreferencesControls(),
+                const SizedBox(height: 16),
 
-            const SizedBox(height: 24),
+                // Plain Action Items
+                _buildPlainTile(
+                  title: 'Beri ulasan di Play Store',
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Halaman Play Store belum tersedia. Kirim masukan lewat Lainnya > Dukungan via email.',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                _buildPlainTile(
+                  title: 'Pengaturan aplikasi beranda',
+                  onTap: () {
+                    runLauncherAction(
+                      context,
+                      ref.read(appLauncherServiceProvider),
+                      (service) => service.openHomeSettings(),
+                    );
+                  },
+                ),
+                const DefaultHomeStatusControl(),
 
-            // Section dropdown items
-            _buildDropdownTile(
-              title: 'Customization',
-              onTap: () {
-                HapticFeedback.lightImpact();
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => const LauncherCustomizationSheet(),
-                );
-              },
-            ),
-            _buildDropdownTile(
-              title: 'Tema & Warna Aksen',
-              onTap: () => _showThemePaletteSheet(context, settings, notifier),
-            ),
-            _buildDropdownTile(
-              title: 'Home Screen',
-              onTap: () => _showHomeCustomizationDialog(context),
-            ),
-            _buildDropdownTile(
-              title: 'App Drawer',
-              onTap: () => _showAppDrawerSheet(context),
-            ),
-            _buildDropdownTile(
-              title: 'Interrupts',
-              onTap: () => _showInterruptsSheet(context),
-            ),
-            _buildDropdownTile(
-              title: 'Focus Mode',
-              onTap: () => _showFocusModeSheet(context),
-            ),
-            _buildDropdownTile(
-              title: 'Font',
-              onTap: () => _showFontPicker(context),
-            ),
-            _buildDropdownTile(
-              title: 'Gestures',
-              onTap: () => _showGesturesSheet(context),
-            ),
-            _buildDropdownTile(
-              title: 'More',
-              onTap: () => _showMoreSheet(context),
-            ),
+                const SizedBox(height: 40),
 
-            const SizedBox(height: 16),
-
-            // Plain Action Items
-            _buildPlainTile(
-              title: 'Rate us on Play Store',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Halaman Play Store belum tersedia. Kirim masukan lewat More > Support via Email.',
+                // Bottom Right Version
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 24, right: 4),
+                    child: Text(
+                      'Focus Clock',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white38,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ),
-                );
-              },
-            ),
-            _buildPlainTile(
-              title: 'Home App Settings',
-              onTap: () {
-                runLauncherAction(
-                  context,
-                  ref.read(appLauncherServiceProvider),
-                  (service) => service.openHomeSettings(),
-                );
-              },
-            ),
-            const DefaultHomeStatusControl(),
-
-            const SizedBox(height: 40),
-
-            // Bottom Right Version
-            const Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 24, right: 4),
-                child: Text(
-                  'Version 0.5.3',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white38,
-                    fontWeight: FontWeight.w400,
-                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -298,14 +291,10 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
 
   Widget _buildScreenTimeSection(LauncherSettings settings) {
     final android = _screenTime.supported;
-    final usageLabel = !android
-        ? 'Android saja — tidak tersedia di platform ini'
-        : _usageGranted
+    final usageLabel = _usageGranted
         ? 'Usage Access aktif'
         : 'Usage Access belum diizinkan';
-    final overlayLabel = !android
-        ? 'Android saja — tidak tersedia di platform ini'
-        : _overlayGranted
+    final overlayLabel = _overlayGranted
         ? 'Overlay aktif'
         : 'Overlay belum diizinkan';
     return Card(
@@ -333,17 +322,18 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
               ).textTheme.bodySmall?.copyWith(color: AppPalette.textDim),
             ),
             const SizedBox(height: 10),
-            _permissionStatus(usageLabel),
-            _permissionStatus(overlayLabel),
-            _permissionStatus(
-              !android
-                  ? 'Cue Android saja — tidak tersedia di platform ini'
-                  : _cueActive
-                  ? 'Cue aktif'
-                  : _cueWindowFailed
-                  ? 'Android belum dapat menampilkan cue'
-                  : 'Cue tidak aktif',
-            ),
+            if (android) ...[
+              _permissionStatus(usageLabel),
+              _permissionStatus(overlayLabel),
+              _permissionStatus(
+                _cueActive
+                    ? 'Cue aktif'
+                    : _cueWindowFailed
+                    ? 'Android belum dapat menampilkan cue'
+                    : 'Cue tidak aktif',
+              ),
+            ] else
+              _permissionStatus('Fitur waktu layar tersedia di Android.'),
             SwitchListTile.adaptive(
               key: const ValueKey('screen-time-cue-switch'),
               contentPadding: EdgeInsets.zero,

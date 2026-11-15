@@ -422,7 +422,7 @@ class _NiagaraUnifiedStreamViewState
               bottom: 40,
               width: _isScrubbing
                   ? MediaQuery.of(context).size.width * 0.75
-                  : 44.0,
+                  : 48.0,
               child: NiagaraWaveScrubber(
                 alphabet: _alphabet,
                 selectedLetter: _selectedLetter,
@@ -1091,6 +1091,7 @@ class _NiagaraUnifiedStreamViewState
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFF0C987),
                           foregroundColor: const Color(0xFF12100E),
+                          minimumSize: const Size(0, 48),
                           padding: const EdgeInsets.symmetric(vertical: 11),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

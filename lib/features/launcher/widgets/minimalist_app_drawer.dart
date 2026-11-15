@@ -507,7 +507,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                     padding: const EdgeInsets.fromLTRB(
                                       16,
                                       4,
-                                      44,
+                                      48,
                                       90,
                                     ),
                                     itemCount:
@@ -613,8 +613,9 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                 Positioned(
                   right: 0,
                   top: 60,
-                  bottom: 30,
-                  width: 44,
+                  // Keep the final index marker above the floating search action.
+                  bottom: 84,
+                  width: 48,
                   child: NiagaraWaveScrubber(
                     alphabet: _alphabet,
                     selectedLetter: '',

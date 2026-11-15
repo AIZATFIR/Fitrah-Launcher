@@ -181,8 +181,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Android saja — tidak tersedia di platform ini'),
-        findsNWidgets(2),
+        find.text('Fitur waktu layar tersedia di Android.'),
+        findsOneWidget,
       );
       final cueSwitch = tester.widget<SwitchListTile>(
         find.byKey(const ValueKey('screen-time-cue-switch')),
@@ -192,10 +192,7 @@ void main() {
       );
       expect(cueSwitch.onChanged, isNull);
       expect(limitSwitch.onChanged, isNull);
-      expect(
-        find.text('Cue Android saja — tidak tersedia di platform ini'),
-        findsOneWidget,
-      );
+      expect(find.text('Usage Access belum diizinkan'), findsNothing);
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.linux),

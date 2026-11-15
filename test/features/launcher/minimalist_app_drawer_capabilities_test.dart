@@ -3,10 +3,12 @@ import 'package:fitrah_launcher/services/secure_storage_service.dart';
 import 'dart:async';
 
 import 'package:fitrah_launcher/features/launcher/widgets/minimalist_app_drawer.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/niagara_wave_scrubber.dart';
 import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
 import 'package:fitrah_launcher/features/sadar/widgets/allowed_apps_selector_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -249,6 +251,68 @@ void main() {
       expect(retry, findsOneWidget);
       expect(tester.getSize(retry).height, greaterThanOrEqualTo(48));
       expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'active app index fits a 320dp screen with a 48dp touch rail',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        (call) async => call.method == 'getInstalledApps' ? realApps : null,
+      );
+
+      await showDrawer(tester);
+
+      final index = find.byType(NiagaraWaveScrubber);
+      expect(index, findsOneWidget);
+      expect(tester.getSize(index).width, greaterThanOrEqualTo(48));
+      final search = find
+          .ancestor(
+            of: find.byIcon(Icons.search_rounded),
+            matching: find.byWidgetPredicate(
+              (widget) => widget is GestureDetector && widget.onTap != null,
+            ),
+          )
+          .first;
+      expect(tester.getRect(index).overlaps(tester.getRect(search)), isFalse);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'choosing a letter with no installed apps leaves the drawer usable',
+    (tester) async {
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        (call) async => call.method == 'getInstalledApps' ? realApps : null,
+      );
+      final semantics = tester.ensureSemantics();
+      await showDrawer(tester);
+
+      for (var i = 0; i < 2; i++) {
+        final index = tester.getSemantics(
+          find.bySemanticsLabel('Pilih bagian daftar aplikasi'),
+        );
+        index.owner!.performAction(index.id, SemanticsAction.increase);
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text('Real Device App'), findsOneWidget);
+      expect(
+        tester
+            .getSemantics(find.bySemanticsLabel('Pilih bagian daftar aplikasi'))
+            .getSemanticsData()
+            .value,
+        'A',
+      );
+      expect(tester.takeException(), isNull);
+      semantics.dispose();
+      await tester.pumpWidget(const SizedBox());
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
