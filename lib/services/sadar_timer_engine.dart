@@ -25,6 +25,8 @@ class TimerState {
   final String habitName;
   final TimerSessionSourceKind? sourceKind;
   final int? activityId;
+  final String? goalId;
+  final String? goalTitleSnapshot;
   final int targetSeconds;
   final int remainingSeconds;
   final int actualDurationSeconds;
@@ -40,6 +42,8 @@ class TimerState {
     this.habitName = '',
     this.sourceKind,
     this.activityId,
+    this.goalId,
+    this.goalTitleSnapshot,
     this.targetSeconds = 0,
     this.remainingSeconds = 0,
     this.actualDurationSeconds = 0,
@@ -100,16 +104,22 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   String? _sourceIdentity;
   int? _sourceColorValue;
   String? _sessionId;
+  String? _goalId;
+  String? _goalTitleSnapshot;
 
   Future<void> _restoreSavedSession() async {
     final saved = await _repo.getActiveTimerSession();
     if (saved == null || saved.status == TimerStateStatus.idle) return;
+    _goalId = saved.goalId;
+    _goalTitleSnapshot = saved.goalTitleSnapshot;
 
     if (!saved.hasValidSourceKind) {
       state = TimerState(
         habitId: saved.habitId,
         habitTargetSnapshot: saved.habitTargetSnapshot,
         habitName: saved.habitName,
+        goalId: saved.goalId,
+        goalTitleSnapshot: saved.goalTitleSnapshot,
         targetSeconds: saved.targetSeconds,
         remainingSeconds:
             (saved.targetSeconds - saved.accumulatedDurationSeconds).clamp(
@@ -163,6 +173,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           habitName: saved.habitName,
           sourceKind: sourceKind,
           activityId: saved.activityId,
+          goalId: saved.goalId,
+          goalTitleSnapshot: saved.goalTitleSnapshot,
           targetSeconds: saved.targetSeconds,
           remainingSeconds: remaining,
           actualDurationSeconds: _accumulatedSeconds,
@@ -197,6 +209,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             habitName: saved.habitName,
             sourceKind: sourceKind,
             activityId: saved.activityId,
+            goalId: saved.goalId,
+            goalTitleSnapshot: saved.goalTitleSnapshot,
             targetSeconds: saved.targetSeconds,
             remainingSeconds: 0,
             actualDurationSeconds: totalElapsed,
@@ -212,6 +226,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           habitName: saved.habitName,
           sourceKind: sourceKind,
           activityId: saved.activityId,
+          goalId: saved.goalId,
+          goalTitleSnapshot: saved.goalTitleSnapshot,
           targetSeconds: saved.targetSeconds,
           remainingSeconds: 0,
           actualDurationSeconds: totalElapsed,
@@ -241,6 +257,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           habitName: saved.habitName,
           sourceKind: sourceKind,
           activityId: saved.activityId,
+          goalId: saved.goalId,
+          goalTitleSnapshot: saved.goalTitleSnapshot,
           targetSeconds: saved.targetSeconds,
           remainingSeconds: remaining,
           actualDurationSeconds: totalElapsed,
@@ -259,6 +277,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         habitName: saved.habitName,
         sourceKind: sourceKind,
         activityId: saved.activityId,
+        goalId: saved.goalId,
+        goalTitleSnapshot: saved.goalTitleSnapshot,
         targetSeconds: saved.targetSeconds,
         remainingSeconds: remaining,
         actualDurationSeconds: _accumulatedSeconds,
@@ -271,6 +291,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         habitName: saved.habitName,
         sourceKind: sourceKind,
         activityId: saved.activityId,
+        goalId: saved.goalId,
+        goalTitleSnapshot: saved.goalTitleSnapshot,
         targetSeconds: saved.targetSeconds,
         remainingSeconds: 0,
         actualDurationSeconds: saved.accumulatedDurationSeconds,
@@ -294,16 +316,23 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
   Future<void> waitUntilRestored() => _restoreFuture;
 
-  Future<bool> start(Habit habit) =>
-      _startHabit(habit, TimerSessionSourceKind.habit);
+  Future<bool> start(Habit habit, {String? goalId, String? goalTitle}) =>
+      _startHabit(
+        habit,
+        TimerSessionSourceKind.habit,
+        goalId: goalId,
+        goalTitle: goalTitle,
+      );
 
   Future<bool> startYpt(Habit habit) =>
       _startHabit(habit, TimerSessionSourceKind.yptHabit);
 
   Future<bool> _startHabit(
     Habit habit,
-    TimerSessionSourceKind sourceKind,
-  ) async {
+    TimerSessionSourceKind sourceKind, {
+    String? goalId,
+    String? goalTitle,
+  }) async {
     await _restoreFuture;
     if (state.isActive) {
       return state.habitId == habit.id && state.sourceKind == sourceKind;
@@ -311,6 +340,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     if (state.isSavePending || _isCompleting) return false;
 
     final previousState = state;
+    final previousGoalId = _goalId;
+    final previousGoalTitle = _goalTitleSnapshot;
     final targetSec = (habit.target > 0 ? habit.target : 20) * 60;
     _androidClockSnapshot = await _readAndroidClockSnapshot();
     _startedAt = DateTime.now();
@@ -320,6 +351,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _accumulatedSeconds = 0;
     _sourceIdentity = null;
     _sourceColorValue = null;
+    _goalId = goalId;
+    _goalTitleSnapshot = goalId == null ? null : goalTitle;
     _sessionId = const Uuid().v4();
 
     state = TimerState(
@@ -330,6 +363,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           : null,
       habitName: habit.name,
       sourceKind: sourceKind,
+      goalId: _goalId,
+      goalTitleSnapshot: _goalTitleSnapshot,
       targetSeconds: targetSec,
       remainingSeconds: targetSec,
       status: TimerStateStatus.running,
@@ -344,6 +379,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _sessionStartedAt = null;
       _attributionLocalDate = null;
       _accumulatedSeconds = 0;
+      _goalId = previousGoalId;
+      _goalTitleSnapshot = previousGoalTitle;
       state = previousState;
       rethrow;
     }
@@ -371,6 +408,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     final previousState = state;
     final previousIdentity = _sourceIdentity;
     final previousColorValue = _sourceColorValue;
+    final previousGoalId = _goalId;
+    final previousGoalTitle = _goalTitleSnapshot;
     _androidClockSnapshot = await _readAndroidClockSnapshot();
     _startedAt = DateTime.now();
     _segmentClock = Stopwatch()..start();
@@ -379,6 +418,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _accumulatedSeconds = 0;
     _sourceIdentity = sourceIdentity;
     _sourceColorValue = sourceColorValue;
+    _goalId = null;
+    _goalTitleSnapshot = null;
     _sessionId = const Uuid().v4();
     state = TimerState(
       habitName: title,
@@ -428,6 +469,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _accumulatedSeconds = 0;
       _sourceIdentity = previousIdentity;
       _sourceColorValue = previousColorValue;
+      _goalId = previousGoalId;
+      _goalTitleSnapshot = previousGoalTitle;
       state = previousState;
       rethrow;
     }
@@ -452,6 +495,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             habitTargetSnapshot: state.habitTargetSnapshot,
             habitName: state.habitName,
             sourceKind: state.sourceKind,
+            activityId: state.activityId,
+            goalId: state.goalId,
+            goalTitleSnapshot: state.goalTitleSnapshot,
             targetSeconds: state.targetSeconds,
             remainingSeconds: 0,
             actualDurationSeconds: elapsed,
@@ -466,6 +512,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             habitName: state.habitName,
             sourceKind: state.sourceKind,
             activityId: state.activityId,
+            goalId: state.goalId,
+            goalTitleSnapshot: state.goalTitleSnapshot,
             targetSeconds: state.targetSeconds,
             remainingSeconds: 0,
             actualDurationSeconds: elapsed,
@@ -489,6 +537,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             habitName: state.habitName,
             sourceKind: state.sourceKind,
             activityId: state.activityId,
+            goalId: state.goalId,
+            goalTitleSnapshot: state.goalTitleSnapshot,
             targetSeconds: state.targetSeconds,
             remainingSeconds: remaining,
             actualDurationSeconds: elapsed,
@@ -520,6 +570,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       habitName: state.habitName,
       sourceKind: state.sourceKind,
       activityId: state.activityId,
+      goalId: state.goalId,
+      goalTitleSnapshot: state.goalTitleSnapshot,
       targetSeconds: state.targetSeconds,
       remainingSeconds: (state.targetSeconds - _accumulatedSeconds).clamp(
         0,
@@ -561,6 +613,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       habitName: state.habitName,
       sourceKind: state.sourceKind,
       activityId: state.activityId,
+      goalId: state.goalId,
+      goalTitleSnapshot: state.goalTitleSnapshot,
       targetSeconds: state.targetSeconds,
       remainingSeconds: state.remainingSeconds,
       actualDurationSeconds: _accumulatedSeconds,
@@ -595,6 +649,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       habitName: state.habitName,
       sourceKind: state.sourceKind,
       activityId: state.activityId,
+      goalId: state.goalId,
+      goalTitleSnapshot: state.goalTitleSnapshot,
       targetSeconds: state.targetSeconds + seconds,
       remainingSeconds: state.remainingSeconds + seconds,
       actualDurationSeconds: state.actualDurationSeconds,
@@ -624,6 +680,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       habitName: state.habitName,
       sourceKind: state.sourceKind,
       activityId: state.activityId,
+      goalId: state.goalId,
+      goalTitleSnapshot: state.goalTitleSnapshot,
       targetSeconds: state.targetSeconds,
       remainingSeconds: 0,
       actualDurationSeconds: actualDurationSeconds,
@@ -675,6 +733,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _accumulatedSeconds = 0;
     _sourceIdentity = null;
     _sourceColorValue = null;
+    _goalId = null;
+    _goalTitleSnapshot = null;
     state = const TimerState();
 
     if (wasFloating) {
@@ -746,6 +806,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         habitName: state.habitName,
         sourceKind: state.sourceKind,
         activityId: state.activityId,
+        goalId: state.goalId,
+        goalTitleSnapshot: state.goalTitleSnapshot,
         targetSeconds: state.targetSeconds,
         remainingSeconds: state.remainingSeconds,
         actualDurationSeconds: state.actualDurationSeconds,
@@ -758,6 +820,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _pendingActualDurationSeconds = null;
       _sourceIdentity = null;
       _sourceColorValue = null;
+      _goalId = null;
+      _goalTitleSnapshot = null;
       _sessionId = null;
 
       try {
@@ -814,6 +878,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     ..activityId = state.activityId
     ..sourceIdentity = _sourceIdentity
     ..sourceColorValue = _sourceColorValue
+    ..goalId = _goalId
+    ..goalTitleSnapshot = _goalTitleSnapshot
     ..targetSeconds = state.targetSeconds
     ..startedAt = _sessionStartedAt ?? _startedAt
     ..attributionLocalDate = _attributionLocalDate
@@ -860,6 +926,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         habitName: state.habitName,
         sourceKind: state.sourceKind,
         activityId: state.activityId,
+        goalId: state.goalId,
+        goalTitleSnapshot: state.goalTitleSnapshot,
         actualDurationSeconds: state.actualDurationSeconds,
         restoreError: state.restoreError,
         isSavePending: state.isSavePending,
@@ -890,6 +958,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         habitName: state.habitName,
         sourceKind: state.sourceKind,
         activityId: state.activityId,
+        goalId: state.goalId,
+        goalTitleSnapshot: state.goalTitleSnapshot,
         actualDurationSeconds: state.actualDurationSeconds,
         restoreError: state.restoreError,
         isSavePending: state.isSavePending,

@@ -36,6 +36,8 @@ class TimerSession {
       sourceKindIndex = value?.index;
   String? sourceIdentity;
   int? sourceColorValue;
+  String? goalId;
+  String? goalTitleSnapshot;
   int targetSeconds = 0;
   DateTime? startedAt;
   String? attributionLocalDate;

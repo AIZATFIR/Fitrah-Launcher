@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/time_math.dart';
 import '../../models/routine_blueprint.dart';
@@ -156,7 +157,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.90,
       decoration: const BoxDecoration(
-        color: Color(0xFF13131F),
+        color: AppPalette.bg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
@@ -168,7 +169,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: AppPalette.outline,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -180,14 +181,14 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
               children: [
                 const Icon(
                   Icons.auto_stories_rounded,
-                  color: Color(0xFFEAB308),
+                  color: AppPalette.accent,
                   size: 22,
                 ),
                 const SizedBox(width: 10),
                 const Text(
                   'Template Maker Studio',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppPalette.text,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -195,324 +196,411 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                 const Spacer(),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppPalette.textDim,
+                  ),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1, color: Colors.white10),
+          const Divider(height: 1, color: AppPalette.stroke),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left Panel: Form & Block List
-                Expanded(
-                  flex: 3,
-                  child: ListView(
-                    padding: const EdgeInsets.all(24),
-                    children: [
-                      // Blueprint Name
-                      TextField(
-                        controller: _nameController,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Nama Blueprint / Rutinitas',
-                          labelStyle: const TextStyle(color: Colors.white60),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.04),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      // Tagline
-                      TextField(
-                        controller: _taglineController,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Tagline Singkat',
-                          labelStyle: const TextStyle(color: Colors.white60),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.04),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      // Philosophy / Description
-                      TextField(
-                        controller: _descController,
-                        maxLines: 2,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                        ),
-                        decoration: InputDecoration(
-                          labelText:
-                              'Filosofi & Tujuan Rutinitas (Recipe to a Good Life)',
-                          labelStyle: const TextStyle(color: Colors.white60),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.04),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Category & Icon Selector
-                      Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 700;
+                return Flex(
+                  direction: compact ? Axis.vertical : Axis.horizontal,
+                  crossAxisAlignment: compact
+                      ? CrossAxisAlignment.stretch
+                      : CrossAxisAlignment.start,
+                  children: [
+                    // Left Panel: Form & Block List
+                    Expanded(
+                      flex: 3,
+                      child: ListView(
+                        padding: const EdgeInsets.all(24),
                         children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: _category,
-                              dropdownColor: const Color(0xFF1E1E2E),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Kategori',
-                                labelStyle: const TextStyle(
-                                  color: Colors.white60,
-                                ),
-                                filled: true,
-                                fillColor: Colors.white.withOpacity(0.04),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              items: _categories
-                                  .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c,
-                                      child: Text(c),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) {
-                                if (v != null) setState(() => _category = v);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: _iconKey,
-                              dropdownColor: const Color(0xFF1E1E2E),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                              decoration: InputDecoration(
-                                labelText: 'Ikon Utama',
-                                labelStyle: const TextStyle(
-                                  color: Colors.white60,
-                                ),
-                                filled: true,
-                                fillColor: Colors.white.withOpacity(0.04),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              items: _icons
-                                  .map(
-                                    (ic) => DropdownMenuItem(
-                                      value: ic,
-                                      child: ActivityIcon(
-                                        iconKey: ic,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) {
-                                if (v != null) setState(() => _iconKey = v);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      // Blocks Section Header
-                      Row(
-                        children: [
-                          const Text(
-                            'Blok Waktu Rutinitas',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
+                          // Blueprint Name
+                          TextField(
+                            controller: _nameController,
+                            style: const TextStyle(
+                              color: AppPalette.text,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
-                          ),
-                          const Spacer(),
-                          OutlinedButton.icon(
-                            onPressed: _addBlock,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFEAB308),
-                              side: const BorderSide(color: Color(0xFFEAB308)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                            decoration: InputDecoration(
+                              labelText: 'Nama Blueprint / Rutinitas',
+                              labelStyle: const TextStyle(
+                                color: AppPalette.textDim,
+                              ),
+                              filled: true,
+                              fillColor: AppPalette.bookpaperFieldBg,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide.none,
                               ),
                             ),
-                            icon: const Icon(Icons.add_rounded, size: 16),
-                            label: const Text('Tambah Blok'),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Reorderable / Editable Blocks List
-                      ...List.generate(_blocks.length, (index) {
-                        final b = _blocks[index];
-                        final timeStr =
-                            '${formatMinute(b.startMinute, b.ampmHalf)} – ${formatMinute(b.endMinute, b.ampmHalf)}';
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.04),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: Color(b.colorValue).withOpacity(0.4),
+                          const SizedBox(height: 14),
+                          // Tagline
+                          TextField(
+                            controller: _taglineController,
+                            style: const TextStyle(
+                              color: AppPalette.text,
+                              fontSize: 13,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: 'Tagline Singkat',
+                              labelStyle: const TextStyle(
+                                color: AppPalette.textDim,
+                              ),
+                              filled: true,
+                              fillColor: AppPalette.bookpaperFieldBg,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
-                          child: Row(
+                          const SizedBox(height: 14),
+                          // Philosophy / Description
+                          TextField(
+                            controller: _descController,
+                            maxLines: 2,
+                            style: const TextStyle(
+                              color: AppPalette.text,
+                              fontSize: 13,
+                            ),
+                            decoration: InputDecoration(
+                              labelText:
+                                  'Filosofi & Tujuan Rutinitas (Recipe to a Good Life)',
+                              labelStyle: const TextStyle(
+                                color: AppPalette.textDim,
+                              ),
+                              filled: true,
+                              fillColor: AppPalette.bookpaperFieldBg,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Category & Icon Selector
+                          Row(
                             children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: Color(b.colorValue).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                alignment: Alignment.center,
-                                child: ActivityIcon(
-                                  iconKey: b.iconKey,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      b.title,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                child: DropdownButtonFormField<String>(
+                                  value: _category,
+                                  dropdownColor: AppPalette.cardHigh,
+                                  style: const TextStyle(
+                                    color: AppPalette.text,
+                                    fontSize: 13,
+                                  ),
+                                  decoration: InputDecoration(
+                                    labelText: 'Kategori',
+                                    labelStyle: const TextStyle(
+                                      color: AppPalette.textDim,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      timeStr,
-                                      style: TextStyle(
-                                        color: Color(b.colorValue),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    filled: true,
+                                    fillColor: AppPalette.bookpaperFieldBg,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide.none,
                                     ),
-                                  ],
+                                  ),
+                                  items: _categories
+                                      .map(
+                                        (c) => DropdownMenuItem(
+                                          value: c,
+                                          child: Text(c),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v != null)
+                                      setState(() => _category = v);
+                                  },
                                 ),
                               ),
-                              IconButton(
-                                onPressed: () => _editBlock(index),
-                                icon: const Icon(
-                                  Icons.edit_outlined,
-                                  color: Colors.white70,
-                                  size: 18,
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: _iconKey,
+                                  dropdownColor: AppPalette.cardHigh,
+                                  style: const TextStyle(
+                                    color: AppPalette.text,
+                                    fontSize: 16,
+                                  ),
+                                  decoration: InputDecoration(
+                                    labelText: 'Ikon Utama',
+                                    labelStyle: const TextStyle(
+                                      color: AppPalette.textDim,
+                                    ),
+                                    filled: true,
+                                    fillColor: AppPalette.bookpaperFieldBg,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                  items: _icons
+                                      .map(
+                                        (ic) => DropdownMenuItem(
+                                          value: ic,
+                                          child: ActivityIcon(
+                                            iconKey: ic,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v != null) setState(() => _iconKey = v);
+                                  },
                                 ),
-                                tooltip: 'Edit Blok',
-                              ),
-                              IconButton(
-                                onPressed: () => _deleteBlock(index),
-                                icon: const Icon(
-                                  Icons.delete_outline_rounded,
-                                  color: Colors.redAccent,
-                                  size: 18,
-                                ),
-                                tooltip: 'Hapus Blok',
                               ),
                             ],
                           ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-                // Right Panel: Live Dial Preview & Summary
-                Container(
-                  width: 280,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.02),
-                    border: const Border(
-                      left: BorderSide(color: Colors.white10),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Live Dial Preview',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // Realtime Mini Clock Preview
-                      BlueprintClockPreview(blocks: _blocks, size: 160),
-                      const SizedBox(height: 16),
-                      Text(
-                        '${_blocks.length} Blok Waktu Terpasang',
-                        style: const TextStyle(
-                          color: Color(0xFFEAB308),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      ElevatedButton.icon(
-                        onPressed: _saveBlueprint,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEAB308),
-                          foregroundColor: Colors.black,
-                          minimumSize: const Size.fromHeight(48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          const SizedBox(height: 24),
+                          // Blocks Section Header
+                          Row(
+                            children: [
+                              const Text(
+                                'Blok Waktu Rutinitas',
+                                style: TextStyle(
+                                  color: AppPalette.text,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              OutlinedButton.icon(
+                                onPressed: _addBlock,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppPalette.accent,
+                                  side: const BorderSide(
+                                    color: AppPalette.accent,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.add_rounded, size: 16),
+                                label: const Text('Tambah Blok'),
+                              ),
+                            ],
                           ),
-                        ),
-                        icon: const Icon(Icons.save_rounded, size: 18),
-                        label: const Text(
-                          'Simpan Blueprint',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          const SizedBox(height: 12),
+                          // Reorderable / Editable Blocks List
+                          ...List.generate(_blocks.length, (index) {
+                            final b = _blocks[index];
+                            final timeStr =
+                                '${formatMinute(b.startMinute, b.ampmHalf)} – ${formatMinute(b.endMinute, b.ampmHalf)}';
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppPalette.bookpaperFieldBg,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: Color(b.colorValue).withOpacity(0.4),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: Color(
+                                        b.colorValue,
+                                      ).withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: ActivityIcon(
+                                      iconKey: b.iconKey,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          b.title,
+                                          style: const TextStyle(
+                                            color: AppPalette.text,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          timeStr,
+                                          style: TextStyle(
+                                            color: Color(b.colorValue),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    onPressed: () => _editBlock(index),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      color: AppPalette.textDim,
+                                      size: 18,
+                                    ),
+                                    tooltip: 'Edit Blok',
+                                  ),
+                                  IconButton(
+                                    onPressed: () => _deleteBlock(index),
+                                    icon: const Icon(
+                                      Icons.delete_outline_rounded,
+                                      color: Colors.redAccent,
+                                      size: 18,
+                                    ),
+                                    tooltip: 'Hapus Blok',
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                    // Right Panel: Live Dial Preview & Summary
+                    Container(
+                      width: compact ? double.infinity : 280,
+                      height: compact ? 136 : null,
+                      padding: EdgeInsets.all(compact ? 12 : 24),
+                      decoration: BoxDecoration(
+                        color: AppPalette.card,
+                        border: Border(
+                          top: compact
+                              ? const BorderSide(color: AppPalette.stroke)
+                              : BorderSide.none,
+                          left: compact
+                              ? BorderSide.none
+                              : const BorderSide(color: AppPalette.stroke),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
+                      child: compact
+                          ? Row(
+                              children: [
+                                BlueprintClockPreview(
+                                  blocks: _blocks,
+                                  size: 108,
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Pratinjau jam',
+                                        style: TextStyle(
+                                          color: AppPalette.textDim,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${_blocks.length} blok waktu',
+                                        style: const TextStyle(
+                                          color: AppPalette.accent,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: FilledButton.icon(
+                                          onPressed: _saveBlueprint,
+                                          icon: const Icon(
+                                            Icons.save_outlined,
+                                            size: 16,
+                                          ),
+                                          label: const Text('Simpan'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              children: [
+                                const Text(
+                                  'Pratinjau jam',
+                                  style: TextStyle(
+                                    color: AppPalette.textDim,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                // Realtime Mini Clock Preview
+                                BlueprintClockPreview(
+                                  blocks: _blocks,
+                                  size: 160,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '${_blocks.length} Blok Waktu Terpasang',
+                                  style: const TextStyle(
+                                    color: AppPalette.accent,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Spacer(),
+                                ElevatedButton.icon(
+                                  onPressed: _saveBlueprint,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppPalette.accent,
+                                    foregroundColor: Colors.black,
+                                    minimumSize: const Size.fromHeight(48),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.save_rounded,
+                                    size: 18,
+                                  ),
+                                  label: const Text(
+                                    'Simpan Blueprint',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -536,13 +624,13 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A28),
+          backgroundColor: AppPalette.cardHigh,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
           title: const Text(
             'Edit Blok Waktu',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: AppPalette.text),
           ),
           content: SizedBox(
             width: 400,
@@ -551,19 +639,19 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
               children: [
                 TextField(
                   controller: titleCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppPalette.text),
                   decoration: const InputDecoration(
                     labelText: 'Nama Aktivitas',
-                    labelStyle: TextStyle(color: Colors.white60),
+                    labelStyle: TextStyle(color: AppPalette.textDim),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: philCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppPalette.text),
                   decoration: const InputDecoration(
                     labelText: 'Mengapa Blok Ini Ada (Filosofi)',
-                    labelStyle: TextStyle(color: Colors.white60),
+                    labelStyle: TextStyle(color: AppPalette.textDim),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -572,7 +660,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                   children: [
                     const Text(
                       'Bagian Hari:',
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(color: AppPalette.textDim),
                     ),
                     const Spacer(),
                     ChoiceChip(
@@ -596,7 +684,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                   children: [
                     Text(
                       'Mulai: ${formatMinute(start, half)}',
-                      style: const TextStyle(color: Colors.white70),
+                      style: const TextStyle(color: AppPalette.textDim),
                     ),
                     Expanded(
                       child: Slider(
@@ -618,7 +706,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
                   children: [
                     Text(
                       'Selesai: ${formatMinute(end, half)}',
-                      style: const TextStyle(color: Colors.white70),
+                      style: const TextStyle(color: AppPalette.textDim),
                     ),
                     Expanded(
                       child: Slider(
@@ -692,10 +780,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
     Navigator.of(context).pop();
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF10B981),
-        content: Text('✨ Blueprint "$name" berhasil disimpan!'),
-      ),
+      SnackBar(content: Text('Blueprint "$name" berhasil disimpan.')),
     );
   }
 }

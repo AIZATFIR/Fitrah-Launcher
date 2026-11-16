@@ -66,9 +66,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
                     HapticFeedback.lightImpact();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text(
-                          'Ringkasan minggu disalin.',
-                        ),
+                        content: Text('Ringkasan minggu disalin.'),
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -111,7 +109,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       setState(() => _aiReview = reply);
       _scrollToAiCard();
     } catch (e) {
-      setState(() => _aiReview = '❌ Error: $e');
+      setState(() => _aiReview = 'Tidak bisa memuat ulasan: $e');
     } finally {
       if (mounted) setState(() => _aiLoading = false);
     }

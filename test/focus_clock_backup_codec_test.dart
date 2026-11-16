@@ -138,6 +138,8 @@ void main() {
           ..sessionId = 'stable-session-id'
           ..sourceKind = 'free'
           ..titleSnapshot = 'Focus snapshot'
+          ..goalId = '22222222-2222-4222-8222-222222222222'
+          ..goalTitleSnapshot = 'Win nationals'
           ..startedAt = DateTime.utc(2026, 11, 5, 9)
           ..completedAt = DateTime.utc(2026, 11, 5, 9, 15)
           ..actualDurationSeconds = 900
@@ -160,6 +162,8 @@ void main() {
         ).data.terminalFocusSessions.single;
         expect(restored.sessionId, 'stable-session-id');
         expect(restored.actualDurationSeconds, 900);
+        expect(restored.goalId, '22222222-2222-4222-8222-222222222222');
+        expect(restored.goalTitleSnapshot, 'Win nationals');
       final missingLedger = jsonDecode(
         utf8.decode(FocusClockBackupCodec.encode(base)),
       ) as Map<String, dynamic>;

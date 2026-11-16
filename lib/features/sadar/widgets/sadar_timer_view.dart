@@ -11,9 +11,17 @@ import '../../../providers/sadar_providers.dart';
 import '../../../services/sadar_timer_engine.dart';
 
 class SadarTimerView extends ConsumerStatefulWidget {
-  const SadarTimerView({super.key, required this.habit, required this.onClose});
+  const SadarTimerView({
+    super.key,
+    required this.habit,
+    required this.onClose,
+    this.goalId,
+    this.goalTitle,
+  });
 
   final Habit habit;
+  final String? goalId;
+  final String? goalTitle;
   final VoidCallback onClose;
 
   @override
@@ -52,7 +60,11 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
     }
     try {
       final engine = ref.read(timerEngineProvider.notifier);
-      final attached = await engine.start(widget.habit);
+      final attached = await engine.start(
+        widget.habit,
+        goalId: widget.goalId,
+        goalTitle: widget.goalTitle,
+      );
       if (!mounted) return;
       setState(() {
         _isLoadingSession = false;
@@ -239,7 +251,11 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                     HapticFeedback.selectionClick();
                     final messenger = ScaffoldMessenger.of(context);
                     final engine = ref.read(timerEngineProvider.notifier);
-                    final started = await engine.start(widget.habit);
+                    final started = await engine.start(
+                      widget.habit,
+                      goalId: widget.goalId,
+                      goalTitle: widget.goalTitle,
+                    );
                     if (!started) {
                       if (mounted) {
                         messenger.showSnackBar(

@@ -1143,11 +1143,25 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   }
 
   void _openHabitFocusTimer(Habit habit) {
+    _pushHabitFocusTimer(habit);
+  }
+
+  void _openAttributedHabitFocusTimer(
+    Habit habit,
+    String? goalId,
+    String? goalTitle,
+  ) {
+    _pushHabitFocusTimer(habit, goalId: goalId, goalTitle: goalTitle);
+  }
+
+  void _pushHabitFocusTimer(Habit habit, {String? goalId, String? goalTitle}) {
     unawaited(
       Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (routeContext) => SadarTimerView(
             habit: habit,
+            goalId: goalId,
+            goalTitle: goalTitle,
             onClose: () => Navigator.of(routeContext).pop(),
           ),
         ),
@@ -1260,6 +1274,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
               children: [
+                if (settings.showDate) ...[
+                  _buildHomeDateCue(tc),
+                  const SizedBox(height: 12),
+                ],
                 widget.useSampleData
                     ? _buildFocusGoalCue(settings.focusGoal, tc)
                     : HomeIntentCue(
@@ -1268,16 +1286,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         accent: tc.accent,
                         surface: tc.card,
                         onHabitTimer: _openHabitFocusTimer,
+                        onAttributedHabitTimer: _openAttributedHabitFocusTimer,
                         onHabitSchedule: (habit) =>
                             _openScheduleToClockSheet(initialHabit: habit),
                         onTaskSchedule: _openIntentTask,
+                        onAddTask: () => _openQuickDumpTaskDialog(tc),
                         onSession: () =>
                             setState(() => _currentScreen = 'timer'),
                       ),
-                if (settings.showDate) ...[
-                  const SizedBox(height: 8),
-                  _buildHomeDateCue(tc),
-                ],
                 const SizedBox(height: 14),
                 // ── Top Header Bar (Now/Next Carousel or Prayer Timeline) ──
                 _buildTopHeaderBar(
@@ -1286,7 +1302,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   tc,
                   activitiesState,
                   showPrayerSchedule: showPrayerSchedule,
-                  prayerTimesEnabled: settings.showPrayerTimes,
                   showAgendaWidget: settings.showAgendaWidget,
                 ),
                 const SizedBox(height: 14),
@@ -1306,17 +1321,23 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
                 // Habits stay close to the goal and clock cue.
                 if (settings.showHabitsWidget)
-                  Container(
+                  Column(
                     key: const ValueKey('home-habit-grid'),
-                    decoration: BoxDecoration(
-                      color: tc.card,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: tc.stroke, width: 0.5),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: LoopHabitGridWidget(
-                      onStartTimer: _openHabitFocusTimer,
-                    ),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 4),
+                        child: Text(
+                          'Kebiasaan hari ini',
+                          style: TextStyle(
+                            color: tc.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      LoopHabitGridWidget(onStartTimer: _openHabitFocusTimer),
+                    ],
                   ),
                 const SizedBox(height: 14),
 
@@ -1340,9 +1361,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   _buildUnifiedHabitSection(tc),
                   const SizedBox(height: 14),
                 ],
-
-                // ── (+) Tambah Blok Identitas Baru Button ──
-                _buildAddIdentityButton(tc),
               ],
             ),
 
@@ -1475,11 +1493,26 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       ),
                       const SizedBox(width: 7),
                       Expanded(
-                        child: Text(
-                          session.titleSnapshot,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: tc.textPrimary),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              session.titleSnapshot,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: tc.textPrimary),
+                            ),
+                            if (session.goalTitleSnapshot != null)
+                              Text(
+                                'Tujuan: ${session.goalTitleSnapshot}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: tc.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       Text(
@@ -1543,22 +1576,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     _HomeThemeColors tc,
     AsyncValue<List<Activity>> activitiesState, {
     required bool showPrayerSchedule,
-    required bool prayerTimesEnabled,
     required bool showAgendaWidget,
   }) {
-    Future<void> togglePrayerSchedule() async {
-      HapticFeedback.selectionClick();
-      if (!prayerTimesEnabled) {
-        _showToast('Aktifkan baris waktu sholat di Pengaturan Home.');
-        return;
-      }
-      final saved = await ref
-          .read(launcherSettingsProvider.notifier)
-          .setWidgetDisplayMode(showPrayerSchedule ? 'focus_clock' : 'prayer');
-      if (!mounted) return;
-      if (!saved) _showToast('Pilihan belum tersimpan. Coba lagi.');
-    }
-
     return Row(
       children: [
         // Hamburger Menu Button
@@ -1641,63 +1660,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   child: _buildAgendaCarousel(activitiesState, tc),
                 )
               : const SizedBox.shrink(),
-        ),
-        const SizedBox(width: 6),
-
-        // Theme Quick Selector Button
-        InkWell(
-          onTap: _openThemePickerSheet,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: tc.card,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: tc.stroke),
-            ),
-            child: Icon(Icons.palette_outlined, color: tc.accent, size: 20),
-          ),
-        ),
-        const SizedBox(width: 6),
-
-        // Toggle Switch Button: Agenda vs Prayer Timeline
-        Semantics(
-          key: const ValueKey('home-prayer-focus-toggle'),
-          button: true,
-          toggled: showPrayerSchedule,
-          label: showPrayerSchedule
-              ? 'Tampilkan Focus Events'
-              : prayerTimesEnabled
-              ? 'Tampilkan waktu sholat'
-              : 'Waktu sholat nonaktif. Aktifkan di Pengaturan Home',
-          onTap: togglePrayerSchedule,
-          child: ExcludeSemantics(
-            child: InkWell(
-              onTap: togglePrayerSchedule,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: showPrayerSchedule
-                      ? tc.accent.withOpacity(0.18)
-                      : tc.card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: showPrayerSchedule ? tc.accent : tc.stroke,
-                  ),
-                ),
-                child: Icon(
-                  showPrayerSchedule
-                      ? Icons.mosque_rounded
-                      : Icons.schedule_rounded,
-                  color: showPrayerSchedule ? tc.accent : tc.textSecondary,
-                  size: 20,
-                ),
-              ),
-            ),
-          ),
         ),
       ],
     );
@@ -2002,8 +1964,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             ),
           ] else ...[
             // Keep every labeled action visible on narrow phone screens.
-            LayoutBuilder(
-              builder: (context, constraints) {
+            Builder(
+              builder: (context) {
                 final amPmSelector = Container(
                   decoration: BoxDecoration(
                     color: tc.cardElevated,
@@ -2025,20 +1987,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     ],
                   ),
                 );
-                final searchTool = _buildHeaderToolPill(
-                  icon: Icons.search_rounded,
-                  label: 'Cari',
-                  isActive: false,
-                  onTap: _openSearchSheet,
-                  tc: tc,
-                );
-                final listTool = _buildHeaderToolPill(
-                  icon: Icons.format_list_bulleted_rounded,
-                  label: 'Daftar',
-                  isActive: _isListView,
-                  onTap: () => setState(() => _isListView = !_isListView),
-                  tc: tc,
-                );
                 final timerTool = _buildHeaderToolPill(
                   icon: Icons.timer_outlined,
                   label: 'Timer',
@@ -2047,37 +1995,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   tc: tc,
                 );
 
-                if (constraints.maxWidth < 400) {
-                  return Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [amPmSelector, timerTool],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [searchTool, listTool],
-                      ),
-                    ],
-                  );
-                }
-
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    amPmSelector,
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        searchTool,
-                        const SizedBox(width: 6),
-                        listTool,
-                        const SizedBox(width: 6),
-                        timerTool,
-                      ],
-                    ),
-                  ],
+                  children: [amPmSelector, timerTool],
                 );
               },
             ),
@@ -2843,7 +2763,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   void _openHabitFilterSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF161A22),
+      backgroundColor: AppPalette.bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -2871,7 +2791,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 title: const Text(
                   'Semua',
                   style: TextStyle(
-                    color: Color(0xFFEDEFF2),
+                    color: AppPalette.text,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -3149,23 +3069,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     }
   }
 
-  // ── (+) Tambah Identitas Baru Button ──
-  Widget _buildAddIdentityButton(_HomeThemeColors tc) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: TextButton.icon(
-        style: TextButton.styleFrom(
-          foregroundColor: tc.accent,
-          minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-        ),
-        onPressed: _openCreateNewIdentityDialog,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah identitas'),
-      ),
-    );
-  }
-
   Widget _buildHomeDateCue(_HomeThemeColors tc) {
     const weekdays = [
       'Senin',
@@ -3201,9 +3104,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       label: '$gregorian. Hijriah $hijri.',
       child: ExcludeSemantics(
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Icon(Icons.calendar_today_rounded, color: tc.textMuted, size: 13),
+            Icon(Icons.calendar_today_rounded, color: tc.textMuted, size: 15),
             const SizedBox(width: 7),
             Flexible(
               child: Column(
@@ -3215,7 +3118,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: tc.textSecondary,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -3223,7 +3126,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     'Hijriah · $hijri',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: tc.textMuted, fontSize: 10),
+                    style: TextStyle(color: tc.textMuted, fontSize: 11),
                   ),
                 ],
               ),
@@ -6053,14 +5956,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final store = widget.useSampleData ? null : ref.read(taskRepoProvider).isar;
     final unavailable =
         !widget.useSampleData && (store == null || !store.isDurable);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: tc.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: tc.stroke, width: 0.75),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -6161,12 +6058,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         MediaQuery.sizeOf(context).width < 380 ||
         MediaQuery.textScalerOf(context).scale(14) > 18;
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: tc.cardAlt,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: tc.stroke.withOpacity(0.5)),
+        border: Border(bottom: BorderSide(color: tc.stroke.withOpacity(0.65))),
       ),
       child: Row(
         children: [
@@ -6974,10 +6868,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   // ── 10. Menu Sheet ──
   void _openMenuSheet() {
+    final settings = ref.read(launcherSettingsProvider);
+    final showPrayer = settings.widgetDisplayMode == 'prayer';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF161A22),
+      backgroundColor: AppPalette.bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -6994,7 +6890,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFFEDEFF2),
+                    color: AppPalette.text,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -7002,8 +6898,22 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   Navigator.pop(ctx);
                   setState(() => _currentScreen = 'home');
                 }),
+                _buildMenuRow(Icons.search_rounded, 'Cari jadwal', () {
+                  Navigator.pop(ctx);
+                  _openSearchSheet();
+                }),
                 _buildMenuRow(
-                  Icons.auto_awesome_outlined,
+                  _isListView
+                      ? Icons.schedule_rounded
+                      : Icons.format_list_bulleted_rounded,
+                  _isListView ? 'Lihat jam analog' : 'Lihat daftar jadwal',
+                  () {
+                    Navigator.pop(ctx);
+                    setState(() => _isListView = !_isListView);
+                  },
+                ),
+                _buildMenuRow(
+                  Icons.center_focus_strong_outlined,
                   'Jelas: visual dan syukur',
                   () {
                     Navigator.pop(ctx);
@@ -7032,6 +6942,39 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   () {
                     Navigator.pop(ctx);
                     _openThemePickerSheet();
+                  },
+                ),
+                _buildMenuRow(
+                  !settings.showPrayerTimes
+                      ? Icons.settings_outlined
+                      : showPrayer
+                      ? Icons.schedule_rounded
+                      : Icons.mosque_outlined,
+                  !settings.showPrayerTimes
+                      ? 'Atur tampilan waktu salat'
+                      : showPrayer
+                      ? 'Tampilkan agenda Focus Clock'
+                      : 'Tampilkan waktu salat',
+                  () async {
+                    Navigator.pop(ctx);
+                    if (!settings.showPrayerTimes) {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const FitrahSettingsScreen(),
+                        ),
+                      );
+                      return;
+                    }
+                    HapticFeedback.selectionClick();
+                    final saved = await ref
+                        .read(launcherSettingsProvider.notifier)
+                        .setWidgetDisplayMode(
+                          showPrayer ? 'focus_clock' : 'prayer',
+                        );
+                    if (!mounted) return;
+                    if (!saved) {
+                      _showToast('Pilihan belum tersimpan. Coba lagi.');
+                    }
                   },
                 ),
                 _buildMenuRow(Icons.apps_rounded, 'Buka Apps Drawer', () {
@@ -7070,15 +7013,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
   Widget _buildMenuRow(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFFE8C07D)),
+      leading: Icon(icon, color: AppPalette.accent),
       title: Text(
         title,
         style: const TextStyle(
-          color: Color(0xFFEDEFF2),
+          color: AppPalette.text,
           fontWeight: FontWeight.w600,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: Color(0xFF8A93A3)),
+      trailing: const Icon(Icons.chevron_right, color: AppPalette.textDim),
       onTap: onTap,
     );
   }

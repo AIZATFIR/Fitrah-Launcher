@@ -8,6 +8,7 @@ const _seedAmber = Color(0xFFF0C987);
 
 /// Shared Focus Clock palette for the launcher and its supporting screens.
 class AppPalette {
+  // Match the running Focus Clock Obsidian Bookpaper surface and accent.
   static const bg = Color(0xFF18181F);
   static const card = Color(0xFF23222B);
   static const cardHigh = Color(0xFF2B2933);

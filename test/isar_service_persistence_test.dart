@@ -150,6 +150,66 @@ void main() {
     },
   );
 
+  test('goal attribution schema preserves old property IDs and reopens', () async {
+    final timerIds = TimerSessionSchema.properties.map(
+      (name, property) => MapEntry(name, property.id),
+    );
+    expect(timerIds['habitId'], 5);
+    expect(timerIds['habitName'], 6);
+    expect(timerIds['updatedAt'], 17);
+    expect(timerIds['goalId'], 18);
+    expect(timerIds['goalTitleSnapshot'], 19);
+    final terminalIds = TerminalFocusSessionSchema.properties.map(
+      (name, property) => MapEntry(name, property.id),
+    );
+    expect(terminalIds['habitId'], 3);
+    expect(terminalIds['titleSnapshot'], 9);
+    expect(terminalIds['goalId'], 10);
+    expect(terminalIds['goalTitleSnapshot'], 11);
+
+    final directory = await Directory.systemTemp.createTemp(
+      'focus_clock_goal_attribution_schema_',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final first = await IsarService.openAt(directory.path);
+    final now = DateTime(2026, 11, 16, 9);
+    await first.isar!.writeTxn(() async {
+      await first.isar!.timerSessions.put(
+        TimerSession()
+          ..sessionId = 'attributed-active'
+          ..goalId = '22222222-2222-4222-8222-222222222222'
+          ..goalTitleSnapshot = 'Win nationals'
+          ..habitName = 'LKS'
+          ..startedAt = now
+          ..status = TimerStateStatus.paused
+          ..updatedAt = now,
+      );
+      final terminal = TerminalFocusSession()
+        ..sessionId = 'attributed-terminal'
+        ..sourceKind = 'habit'
+        ..titleSnapshot = 'LKS'
+        ..goalId = '22222222-2222-4222-8222-222222222222'
+        ..goalTitleSnapshot = 'Win nationals'
+        ..startedAt = now
+        ..completedAt = now
+        ..actualDurationSeconds = 60
+        ..status = TerminalSessionStatus.completed;
+      await first.isar!.terminalFocusSessions.put(terminal);
+    });
+    await first.isar!.close();
+
+    final reopened = await IsarService.openAt(directory.path);
+    addTearDown(() => reopened.isar!.close());
+    final active = await reopened.isar!.timerSessions.get(1);
+    expect(active?.goalId, '22222222-2222-4222-8222-222222222222');
+    expect(active?.goalTitleSnapshot, 'Win nationals');
+    final terminal = await reopened.isar!.terminalFocusSessions
+        .where()
+        .findFirst();
+    expect(terminal?.goalId, active?.goalId);
+    expect(terminal?.goalTitleSnapshot, active?.goalTitleSnapshot);
+  });
+
   test('unavailable store keeps timer session for recovery', () async {
     final directory = await Directory.systemTemp.createTemp(
       'focus_clock_failed_timer_',

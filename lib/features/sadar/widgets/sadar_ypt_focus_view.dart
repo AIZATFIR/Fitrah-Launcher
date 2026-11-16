@@ -12,6 +12,8 @@ import '../../../providers/sadar_providers.dart';
 import '../../launcher/services/app_launcher_service.dart';
 import '../../../services/chime_service.dart';
 import '../../../services/sadar_timer_engine.dart';
+import '../../../core/theme.dart';
+import '../../../widgets/activity_icon.dart';
 
 class SadarYptFocusView extends ConsumerStatefulWidget {
   const SadarYptFocusView({
@@ -31,9 +33,7 @@ class SadarYptFocusView extends ConsumerStatefulWidget {
   ConsumerState<SadarYptFocusView> createState() => _SadarYptFocusViewState();
 }
 
-class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseCtrl;
+class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView> {
   bool _isStarting = true;
   bool _hasSessionConflict = false;
   bool _needsUsageAccess = false;
@@ -53,11 +53,6 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat(reverse: true);
-
     _attachSharedTimer();
   }
 
@@ -69,7 +64,6 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
         .catchError((_) => null);
     _appGuardTimer?.cancel();
     _holdTimer?.cancel();
-    _pulseCtrl.dispose();
     super.dispose();
   }
 
@@ -167,11 +161,14 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
               HapticFeedback.lightImpact();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  backgroundColor: const Color(0xFF1F1F24),
+                  backgroundColor: AppPalette.card,
                   duration: const Duration(seconds: 2),
                   content: Text(
-                    'Mode YPT Aktif: Tetap fokus pada ${widget.habit.name}',
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    'Mode fokus aktif: ${widget.habit.name}',
+                    style: const TextStyle(
+                      color: AppPalette.text,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               );
@@ -310,7 +307,6 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
 
   @override
   Widget build(BuildContext context) {
-    final habitColor = Color(widget.habit.colorValue);
     final timer = ref.watch(timerEngineProvider);
     ref.listen<TimerState>(timerEngineProvider, (previous, next) {
       if (previous?.remainingSeconds != 0 && next.isOverdue && !_hasChimed) {
@@ -331,13 +327,13 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
 
     if (_isStarting) {
       return const Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppPalette.bg,
         body: Center(child: CircularProgressIndicator()),
       );
     }
     if (_needsUsageAccess) {
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppPalette.bg,
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -349,7 +345,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                   children: [
                     const Icon(
                       Icons.shield_outlined,
-                      color: Color(0xFF8BAE9A),
+                      color: AppPalette.accent,
                       size: 40,
                     ),
                     const SizedBox(height: 16),
@@ -357,7 +353,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                       'Akses penggunaan belum aktif',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppPalette.text,
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
                       ),
@@ -366,7 +362,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                     const Text(
                       'Android memerlukan Usage Access agar Fitrah bisa membatasi aplikasi yang kamu pilih selama sesi fokus. Fitrah hanya memeriksa aplikasi aktif ketika sesi ini berjalan.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, height: 1.5),
+                      style: TextStyle(color: AppPalette.textDim, height: 1.5),
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
@@ -393,7 +389,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                       Text(
                         _actionError!,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.orangeAccent),
+                        style: const TextStyle(color: AppPalette.accent),
                       ),
                     ],
                   ],
@@ -410,7 +406,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
             !timer.isSavePending &&
             !timer.isCompleted)) {
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppPalette.bg,
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -423,7 +419,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                         timer.restoreError ??
                         'Sesi lain sedang berjalan. Selesaikan atau jeda dulu.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white70),
+                    style: const TextStyle(color: AppPalette.textDim),
                   ),
                   TextButton(
                     onPressed: widget.onClose,
@@ -438,36 +434,10 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppPalette.bg,
       body: SafeArea(
         child: Stack(
           children: [
-            // Ambient Radial Glow
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _pulseCtrl,
-                builder: (context, child) {
-                  final scale = 0.8 + (_pulseCtrl.value * 0.4);
-                  return Center(
-                    child: Container(
-                      width: 320 * scale,
-                      height: 320 * scale,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            habitColor.withOpacity(0.18),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Main Content
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 520),
@@ -497,18 +467,19 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF141416),
+                                    color: AppPalette.card,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: habitColor.withOpacity(0.4),
+                                      color: AppPalette.stroke,
                                     ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(
-                                        widget.habit.iconKey,
-                                        style: const TextStyle(fontSize: 16),
+                                      ActivityIcon(
+                                        iconKey: widget.habit.iconKey,
+                                        size: 18,
+                                        color: AppPalette.accent,
                                       ),
                                       const SizedBox(width: 8),
                                       Flexible(
@@ -517,7 +488,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                           style: const TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
-                                            color: Colors.white,
+                                            color: AppPalette.text,
                                           ),
                                         ),
                                       ),
@@ -532,7 +503,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                     vertical: 5,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF27272A),
+                                    color: AppPalette.cardHigh,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Row(
@@ -540,16 +511,16 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                     children: [
                                       Icon(
                                         Icons.lock_clock_rounded,
-                                        color: Color(0xFFF59E0B),
+                                        color: AppPalette.accent,
                                         size: 14,
                                       ),
                                       SizedBox(width: 5),
                                       Text(
-                                        'YPT LOCK',
+                                        'MODE FOKUS',
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w800,
-                                          color: Color(0xFFF59E0B),
+                                          color: AppPalette.accent,
                                           letterSpacing: 1.0,
                                         ),
                                       ),
@@ -559,7 +530,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                               ],
                             ),
 
-                            // Center: Huge Digital Clock with Pulse
+                            // Center: remaining session time
                             Column(
                               children: [
                                 if (timer.recoveryUncertain) ...[
@@ -567,7 +538,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                     timerRecoveryNotice,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: Color(0xFFF2D7A0),
+                                      color: AppPalette.bookpaperText,
                                       height: 1.4,
                                     ),
                                   ),
@@ -581,8 +552,8 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                     fontSize: 76,
                                     fontWeight: FontWeight.w800,
                                     color: timer.isOverdue
-                                        ? const Color(0xFFF59E0B)
-                                        : Colors.white,
+                                        ? AppPalette.accent
+                                        : AppPalette.text,
                                     fontFeatures: const [
                                       FontFeature.tabularFigures(),
                                     ],
@@ -601,8 +572,8 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: timer.isOverdue
-                                        ? const Color(0xFFFBBF24)
-                                        : Colors.white54,
+                                        ? AppPalette.accent
+                                        : AppPalette.textDim,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -620,11 +591,11 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                       bottom: 8,
                                     ),
                                     child: Text(
-                                      'APLIKASI DIIZINKAN (ALLOWED)',
+                                      'APLIKASI YANG DAPAT DIBUKA',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
-                                        color: Colors.white38,
+                                        color: AppPalette.textDim,
                                         letterSpacing: 1.2,
                                       ),
                                     ),
@@ -642,7 +613,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                         return const Text(
                                           'Aplikasi yang diizinkan tidak tersedia di perangkat ini. Pilihan tersimpan tetap aman.',
                                           style: TextStyle(
-                                            color: Colors.white70,
+                                            color: AppPalette.textDim,
                                           ),
                                         );
                                       }
@@ -678,13 +649,11 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                                       vertical: 8,
                                                     ),
                                                 decoration: BoxDecoration(
-                                                  color: const Color(
-                                                    0xFF1C1C20,
-                                                  ),
+                                                  color: AppPalette.card,
                                                   borderRadius:
                                                       BorderRadius.circular(14),
                                                   border: Border.all(
-                                                    color: Colors.white24,
+                                                    color: AppPalette.stroke,
                                                   ),
                                                 ),
                                                 child: Row(
@@ -692,14 +661,14 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                                     const Icon(
                                                       Icons.open_in_new_rounded,
                                                       size: 14,
-                                                      color: Colors.white70,
+                                                      color: AppPalette.textDim,
                                                     ),
                                                     const SizedBox(width: 8),
                                                     Text(
                                                       app.appName,
                                                       style: const TextStyle(
                                                         fontSize: 13,
-                                                        color: Colors.white,
+                                                        color: AppPalette.text,
                                                       ),
                                                     ),
                                                   ],
@@ -738,12 +707,12 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                           ),
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF1E1E22),
+                                            color: AppPalette.card,
                                             borderRadius: BorderRadius.circular(
                                               16,
                                             ),
                                             border: Border.all(
-                                              color: Colors.white24,
+                                              color: AppPalette.stroke,
                                             ),
                                           ),
                                           child: Center(
@@ -755,7 +724,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                                   timer.isPaused
                                                       ? Icons.play_arrow_rounded
                                                       : Icons.pause_rounded,
-                                                  color: Colors.white,
+                                                  color: AppPalette.text,
                                                   size: 22,
                                                 ),
                                                 const SizedBox(width: 8),
@@ -768,7 +737,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                                       fontSize: 15,
                                                       fontWeight:
                                                           FontWeight.w600,
-                                                      color: Colors.white,
+                                                      color: AppPalette.text,
                                                     ),
                                                   ),
                                                 ),
@@ -793,8 +762,8 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                           decoration: BoxDecoration(
                                             gradient: LinearGradient(
                                               colors: [
-                                                habitColor,
-                                                habitColor.withOpacity(0.8),
+                                                AppPalette.accent,
+                                                AppPalette.accentDim,
                                               ],
                                             ),
                                             borderRadius: BorderRadius.circular(
@@ -808,7 +777,9 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                               children: [
                                                 Icon(
                                                   Icons.check_rounded,
-                                                  color: Colors.black,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.onPrimary,
                                                   size: 22,
                                                 ),
                                                 SizedBox(width: 8),
@@ -821,7 +792,9 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                                       fontSize: 15,
                                                       fontWeight:
                                                           FontWeight.w700,
-                                                      color: Colors.black,
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.onPrimary,
                                                     ),
                                                   ),
                                                 ),
@@ -839,7 +812,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                     _actionError!,
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
-                                      color: Colors.orangeAccent,
+                                      color: AppPalette.accent,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -860,7 +833,9 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                       color: Colors.transparent,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color: Colors.red.withOpacity(0.35),
+                                        color: AppPalette.danger.withOpacity(
+                                          0.35,
+                                        ),
                                       ),
                                     ),
                                     child: Stack(
@@ -872,9 +847,8 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                               widthFactor: _holdProgress,
                                               child: Container(
                                                 decoration: BoxDecoration(
-                                                  color: Colors.red.withOpacity(
-                                                    0.3,
-                                                  ),
+                                                  color: AppPalette.danger
+                                                      .withOpacity(0.3),
                                                   borderRadius:
                                                       BorderRadius.circular(12),
                                                 ),
@@ -889,7 +863,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                               const Icon(
                                                 Icons.shield_outlined,
                                                 size: 16,
-                                                color: Color(0xFFEF4444),
+                                                color: AppPalette.danger,
                                               ),
                                               const SizedBox(width: 8),
                                               Flexible(
@@ -900,7 +874,7 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView>
                                                   style: const TextStyle(
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.w500,
-                                                    color: Color(0xFFEF4444),
+                                                    color: AppPalette.danger,
                                                   ),
                                                 ),
                                               ),

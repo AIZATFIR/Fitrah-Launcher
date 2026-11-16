@@ -99,7 +99,7 @@ class AppLauncherService {
 
   Future<bool> launchSadar() => launchApp('com.aizatfir.sadar');
 
-  Future<bool> launchFocusClock() => launchApp('com.aizatfir.focusclock');
+  Future<bool> launchFocusClock() => launchApp('com.aizatfir.focus_clock');
 
   Future<bool> openAppDetails(String packageName) =>
       _invokeAction('openAppDetails', {'packageName': packageName});

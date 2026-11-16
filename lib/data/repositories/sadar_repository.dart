@@ -724,6 +724,8 @@ class SadarRepository {
           ? 'Fokus bebas'
           : session.habitName
       ..sourceIdentity = session.sourceIdentity
+      ..goalId = session.goalId
+      ..goalTitleSnapshot = session.goalTitleSnapshot
       ..habitId = session.habitId > 0 ? session.habitId : null
       ..activityId = session.activityId
       ..startedAt = session.startedAt ?? completedAt

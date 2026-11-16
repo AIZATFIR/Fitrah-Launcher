@@ -24,6 +24,11 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
     super.dispose();
   }
 
+  void _toggleExpanded() {
+    HapticFeedback.selectionClick();
+    setState(() => _isExpanded = !_isExpanded);
+  }
+
   Future<void> _submitCommand([String? overrideText]) async {
     final text = (overrideText ?? _textCtrl.text).trim();
     if (text.isEmpty) return;
@@ -95,7 +100,7 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.auto_awesome_rounded,
+                  Icons.chat_bubble_outline_rounded,
                   color: AppPalette.accent,
                   size: 16,
                 ),
@@ -125,31 +130,28 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
             ),
           ),
 
-        // Quick Floating Action Pill / Gemini Prompt Ambient Bar
+        // A quiet entry point that stays secondary to today's goal.
         AnimatedContainer(
           duration: GeminiMotion.medium,
           curve: GeminiMotion.springCurve,
-          width: _isExpanded ? 440 : 210,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          width: _isExpanded
+              ? (MediaQuery.sizeOf(context).width - 32).clamp(240, 440)
+              : 112,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
           decoration: BoxDecoration(
             color: AppPalette.card,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: _isExpanded
-                  ? AppPalette.accent.withValues(alpha: 0.8)
-                  : AppPalette.accent.withValues(alpha: 0.35),
-              width: 1.5,
+                  ? AppPalette.accent.withValues(alpha: 0.65)
+                  : AppPalette.stroke,
+              width: 1,
             ),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
-                color: AppPalette.accent.withValues(alpha: 0.20),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-              const BoxShadow(
-                color: Colors.black45,
-                blurRadius: 10,
-                offset: Offset(0, 4),
+                color: Colors.black26,
+                blurRadius: 12,
+                offset: Offset(0, 3),
               ),
             ],
           ),
@@ -159,50 +161,43 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
               Row(
                 children: [
                   // Collapsed Toggle / Preset Pill
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _isExpanded = !_isExpanded);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppPalette.accent,
-                            AppPalette.accent.withValues(alpha: 0.85),
-                          ],
+                  Semantics(
+                    button: true,
+                    expanded: _isExpanded,
+                    label: _isExpanded ? 'Tutup tanya AI' : 'Tanya AI',
+                    onTap: _toggleExpanded,
+                    child: ExcludeSemantics(
+                      child: GestureDetector(
+                        onTap: _toggleExpanded,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppPalette.accent.withValues(alpha: 0.13),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 16,
+                                color: AppPalette.accent,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _isExpanded ? 'Tutup' : 'Tanya',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppPalette.text,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppPalette.accent.withValues(alpha: 0.4),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.auto_awesome_rounded,
-                            size: 15,
-                            color: Colors.black,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _isExpanded ? 'Tutup Prompt' : 'Gemini AI Focus',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ),
@@ -219,7 +214,7 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
                         ),
                         onSubmitted: (val) => _submitCommand(val),
                         decoration: const InputDecoration(
-                          hintText: 'Tulis prompt... e.g. Fokus 25m nulis',
+                          hintText: 'Ceritakan tujuan atau kegiatanmu',
                           hintStyle: TextStyle(
                             color: AppPalette.textDim,
                             fontSize: 11,

@@ -206,9 +206,9 @@ void main() {
       await showDrawer(tester);
       await tester.longPress(find.text('Real Device App'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('App info'));
+      await tester.tap(find.text('Info aplikasi'));
       await tester.pumpAndSettle();
-      expect(find.text('App info'), findsNothing);
+      expect(find.text('Info aplikasi'), findsNothing);
       details.complete(false);
       await tester.pumpAndSettle();
       expect(
@@ -216,6 +216,40 @@ void main() {
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'native app details action releases search keyboard before dispatch',
+    (tester) async {
+      var dispatched = false;
+      var keyboardFocusedAtDispatch = true;
+      FocusNode? searchFocus;
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        if (call.method == 'getInstalledApps') return realApps;
+        if (call.method == 'openAppDetails') {
+          dispatched = true;
+          keyboardFocusedAtDispatch = searchFocus?.hasFocus ?? false;
+          return true;
+        }
+        return null;
+      });
+      await showDrawer(tester);
+      await tester.tap(find.byIcon(Icons.search_rounded));
+      await tester.pumpAndSettle();
+      searchFocus = tester.widget<TextField>(find.byType(TextField)).focusNode;
+      await tester.enterText(find.byType(TextField), 'Real');
+      await tester.pumpAndSettle();
+      await tester.longPress(find.text('Real Device App'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Info aplikasi'));
+      await tester.pumpAndSettle();
+
+      expect(dispatched, isTrue);
+      expect(keyboardFocusedAtDispatch, isFalse);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );

@@ -19,15 +19,20 @@ class HomeIntentCue extends ConsumerStatefulWidget {
     required this.accent,
     required this.surface,
     required this.onHabitTimer,
+    this.onAttributedHabitTimer,
     this.onHabitSchedule,
     required this.onTaskSchedule,
     required this.onSession,
+    this.onAddTask,
   });
   final Color foreground, secondary, accent, surface;
   final void Function(Habit) onHabitTimer;
+  final void Function(Habit, String? goalId, String? goalTitle)?
+  onAttributedHabitTimer;
   final void Function(Habit)? onHabitSchedule;
   final Future<void> Function(Task) onTaskSchedule;
   final VoidCallback onSession;
+  final VoidCallback? onAddTask;
   @override
   ConsumerState<HomeIntentCue> createState() => _HomeIntentCueState();
 }
@@ -51,11 +56,18 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
           s.habitName,
           s.restoreError,
           s.recoveryUncertain,
+          s.goalTitleSnapshot,
         ),
       ),
     );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: widget.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: widget.secondary.withValues(alpha: 0.28)),
+      ),
       child: DefaultTextStyle.merge(
         style: TextStyle(color: widget.foreground),
         child: Column(
@@ -72,11 +84,22 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
               data: (intent) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Tujuan jangka panjang',
-                    style: TextStyle(color: widget.secondary),
+                  Row(
+                    children: [
+                      Icon(Icons.flag_outlined, size: 15, color: widget.accent),
+                      const SizedBox(width: 7),
+                      Text(
+                        'TUJUAN UTAMA',
+                        style: TextStyle(
+                          color: widget.secondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.65,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 5),
                   Row(
                     children: [
                       Expanded(
@@ -84,26 +107,42 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                           intent.pinnedGoal?.title ??
                               'Apa arah yang ingin kamu jaga?',
                           style: TextStyle(
-                            fontSize: 21,
-                            fontWeight: FontWeight.w500,
-                            height: 1.3,
-                            letterSpacing: -0.25,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w600,
+                            height: 1.28,
+                            letterSpacing: -0.2,
                             color: widget.foreground,
                           ),
                         ),
                       ),
                       IconButton(
                         tooltip: 'Ubah tujuan',
+                        visualDensity: VisualDensity.compact,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 44,
+                          height: 44,
+                        ),
+                        padding: EdgeInsets.zero,
                         onPressed: () => _goals(intent),
-                        icon: Icon(Icons.edit_outlined, color: widget.accent),
+                        icon: Icon(
+                          Icons.edit_outlined,
+                          size: 19,
+                          color: widget.accent,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
+                  Divider(
+                    height: 1,
+                    color: widget.secondary.withValues(alpha: 0.22),
+                  ),
+                  const SizedBox(height: 10),
                   if (session.$1) ...[
                     Text(
                       '${session.$2 ? 'Sesi dijeda' : 'Sesi berjalan'}: ${session.$3}',
                     ),
+                    if (session.$6 != null) Text('Tujuan sesi: ${session.$6}'),
                     if (session.$5)
                       const Padding(
                         padding: EdgeInsets.only(top: 6),
@@ -142,9 +181,23 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                           (choice == null ||
                               choice.completed ||
                               choice.kind == IntentActionKind.unavailable);
+                      final hasAvailableSource =
+                          data.hasValue &&
+                          (data.requireValue.habits.any((h) => !h.isArchived) ||
+                              data.requireValue.tasks.any(
+                                (t) => !t.isCompleted,
+                              ));
                       final action = data.hasValue
                           ? () => _choose(intent, data.requireValue, date)
                           : null;
+                      if (primary && !hasAvailableSource) {
+                        return FilledButton.icon(
+                          style: _primaryStyle,
+                          onPressed: widget.onAddTask,
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Tambah kegiatan'),
+                        );
+                      }
                       return primary
                           ? FilledButton.icon(
                               style: _primaryStyle,
@@ -344,14 +397,18 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
             style: _primaryStyle,
             onPressed: _busy || choice.kind == IntentActionKind.unavailable
                 ? null
-                : () => _act(choice, date),
+                : () => _act(choice, date, state),
             child: Text(label),
           ),
       ],
     );
   }
 
-  Future<void> _act(TodayIntentProjection choice, String date) async {
+  Future<void> _act(
+    TodayIntentProjection choice,
+    String date,
+    IntentState state,
+  ) async {
     setState(() {
       _busy =
           choice.kind != IntentActionKind.count &&
@@ -365,7 +422,22 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
       }
       switch (choice.kind) {
         case IntentActionKind.timed:
-          widget.onHabitTimer(choice.habit!);
+          final selectedSourceId = state.selectionFor(date)?.sourceId;
+          final link = state.links
+              .where((item) => item.sourceId == selectedSourceId)
+              .firstOrNull;
+          final goal = state.goals
+              .where((item) => item.id == link?.goalId)
+              .firstOrNull;
+          if (widget.onAttributedHabitTimer != null) {
+            widget.onAttributedHabitTimer!(
+              choice.habit!,
+              goal?.id,
+              goal?.title,
+            );
+          } else {
+            widget.onHabitTimer(choice.habit!);
+          }
         case IntentActionKind.task:
           await widget.onTaskSchedule(choice.task!);
         case IntentActionKind.binary:
@@ -509,6 +581,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                 ],
                 onChanged: (v) => update(() => key = v),
               ),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: goalId,
                 isExpanded: true,

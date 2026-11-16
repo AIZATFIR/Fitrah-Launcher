@@ -11,6 +11,8 @@ void main() {
       ..sessionId = 'a-stable-session-uuid'
       ..sourceKind = 'free'
       ..titleSnapshot = 'Study'
+      ..goalId = '22222222-2222-4222-8222-222222222222'
+      ..goalTitleSnapshot = 'Win nationals'
       ..startedAt = DateTime(2026, 11, 14, 10)
       ..completedAt = DateTime(2026, 11, 14, 10, 15)
       ..actualDurationSeconds = 900
@@ -20,6 +22,32 @@ void main() {
     );
     expect(decoded.sessionId, row.sessionId);
     expect(decoded.actualDurationSeconds, 900);
+    expect(decoded.goalId, row.goalId);
+    expect(decoded.goalTitleSnapshot, row.goalTitleSnapshot);
+
+    final active = TimerSession()
+      ..sessionId = 'active-session'
+      ..goalId = row.goalId
+      ..goalTitleSnapshot = row.goalTitleSnapshot
+      ..startedAt = row.startedAt
+      ..status = TimerStateStatus.paused
+      ..updatedAt = row.completedAt;
+    final encodedActive = LiveModelCodec.encode(active);
+    final decodedActive = LiveModelCodec.decode<TimerSession>(encodedActive);
+    expect(decodedActive.goalId, active.goalId);
+    expect(decodedActive.goalTitleSnapshot, active.goalTitleSnapshot);
+    final legacyEnvelope =
+        LiveModelCodec.encode(TimerSession()
+          ..startedAt = row.startedAt
+          ..status = TimerStateStatus.paused
+          ..updatedAt = row.completedAt);
+    (legacyEnvelope['data'] as Map<String, Object?>).remove('goalId');
+    (legacyEnvelope['data'] as Map<String, Object?>).remove(
+      'goalTitleSnapshot',
+    );
+    final legacy = LiveModelCodec.decode<TimerSession>(legacyEnvelope);
+    expect(legacy.goalId, isNull);
+    expect(legacy.goalTitleSnapshot, isNull);
   });
 
   test(
@@ -31,6 +59,8 @@ void main() {
         ..sessionId = 'session-1'
         ..habitId = 1
         ..habitName = 'Focus snapshot'
+        ..goalId = '22222222-2222-4222-8222-222222222222'
+        ..goalTitleSnapshot = 'Win nationals'
         ..sourceKind = TimerSessionSourceKind.habit
         ..startedAt = started
         ..attributionLocalDate =
@@ -52,6 +82,8 @@ void main() {
       );
       expect(rows, hasLength(1));
       expect(rows.single.titleSnapshot, 'Focus snapshot');
+      expect(rows.single.goalId, session.goalId);
+      expect(rows.single.goalTitleSnapshot, session.goalTitleSnapshot);
       expect(rows.single.actualDurationSeconds, 211);
       expect(rows.single.status, TerminalSessionStatus.completed);
       await repository.completeTimerSession(

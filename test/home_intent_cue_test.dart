@@ -33,6 +33,7 @@ void main() {
     WidgetTester tester, {
     IntentState? state,
     void Function(Habit)? habitAction,
+    void Function(Habit, String?, String?)? attributedHabitAction,
     void Function(Habit)? habitSchedule,
     Future<void> Function(Task)? taskAction,
     Stream<IntentState>? intentStream,
@@ -83,6 +84,7 @@ void main() {
                 accent: accent,
                 surface: surface,
                 onHabitTimer: habitAction ?? (_) {},
+                onAttributedHabitTimer: attributedHabitAction,
                 onHabitSchedule: habitSchedule,
                 onTaskSchedule: taskAction ?? (_) async {},
                 onSession: () {},
@@ -130,6 +132,48 @@ void main() {
   });
   tearDown(() async {
     unawaited(store.close());
+  });
+
+  testWidgets('timed daily choice passes its explicitly linked goal snapshot', (
+    tester,
+  ) async {
+    await store.put(
+      Habit()
+        ..id = 7
+        ..name = 'LKS'
+        ..unit = HabitUnit.min
+        ..habitType = 'timed'
+        ..target = 45
+        ..colorValue = 0xff123456
+        ..createdAt = now,
+    );
+    String? goalId;
+    String? goalTitle;
+    await show(
+      tester,
+      state: selected(
+        IntentSourceType.habit,
+        goals: const [
+          IntentGoal(
+            id: '22222222-2222-4222-8222-222222222222',
+            title: 'Win nationals',
+          ),
+        ],
+        links: const [
+          IntentLink(
+            sourceId: sourceId,
+            goalId: '22222222-2222-4222-8222-222222222222',
+          ),
+        ],
+      ),
+      attributedHabitAction: (_, id, title) {
+        goalId = id;
+        goalTitle = title;
+      },
+    );
+    await tester.tap(find.text('Mulai fokus'));
+    expect(goalId, '22222222-2222-4222-8222-222222222222');
+    expect(goalTitle, 'Win nationals');
   });
 
   testWidgets('loading and failed intent differ from empty and expose retry', (
@@ -344,6 +388,15 @@ void main() {
   testWidgets('choice editor modal follows each active Home palette', (
     tester,
   ) async {
+    await store.put(
+      Habit()
+        ..id = 7
+        ..name = 'Palette action'
+        ..unit = HabitUnit.binary
+        ..habitType = 'binary'
+        ..colorValue = 0xff123456
+        ..createdAt = now,
+    );
     for (final palette in [
       (
         foreground: const Color(0xffeff5f8),
@@ -543,6 +596,7 @@ void main() {
         state: selected(IntentSourceType.habit, goals: [goal]),
         width: 320,
         textScale: 2,
+        surface: const Color(0xff23222b),
       );
       expect(tester.takeException(), isNull);
       expect(find.byTooltip('Ubah tujuan'), findsOneWidget);

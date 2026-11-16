@@ -222,6 +222,8 @@ class LiveModelCodec {
         'sourceColorValue': x.sourceColorValue == null
             ? null
             : _integer(x.sourceColorValue!),
+        'goalId': x.goalId,
+        'goalTitleSnapshot': x.goalTitleSnapshot,
         'habitTargetSnapshot': x.habitTargetSnapshot == null
             ? null
             : _integer(x.habitTargetSnapshot!),
@@ -242,6 +244,8 @@ class LiveModelCodec {
         'sourceKind': x.sourceKind,
         'titleSnapshot': x.titleSnapshot,
         'sourceIdentity': x.sourceIdentity,
+        'goalId': x.goalId,
+        'goalTitleSnapshot': x.goalTitleSnapshot,
         'habitId': x.habitId,
         'activityId': x.activityId,
         'startedAt': _date(x.startedAt, false),
@@ -433,6 +437,10 @@ class LiveModelCodec {
           ..sourceColorValue = m['sourceColorValue'] == null
               ? null
               : _readInt(m['sourceColorValue'])
+          ..goalId = m['goalId'] == null ? null : m['goalId'] as String
+          ..goalTitleSnapshot = m['goalTitleSnapshot'] == null
+              ? null
+              : m['goalTitleSnapshot'] as String
           ..habitTargetSnapshot = m['habitTargetSnapshot'] == null
               ? null
               : _readInt(m['habitTargetSnapshot'])
@@ -461,6 +469,8 @@ class LiveModelCodec {
           ..sourceKind = m['sourceKind'] as String
           ..titleSnapshot = m['titleSnapshot'] as String
           ..sourceIdentity = m['sourceIdentity'] as String?
+          ..goalId = m['goalId'] as String?
+          ..goalTitleSnapshot = m['goalTitleSnapshot'] as String?
           ..habitId = m['habitId'] as int?
           ..activityId = m['activityId'] as int?
           ..startedAt = _readDate(m['startedAt'], false)

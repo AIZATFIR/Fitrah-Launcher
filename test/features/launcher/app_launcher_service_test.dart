@@ -89,6 +89,20 @@ void main() {
     );
   });
 
+  test('Focus Clock launch targets the installed app package', () async {
+    Map<Object?, Object?>? arguments;
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      expect(call.method, 'launchApp');
+      arguments = Map<Object?, Object?>.from(call.arguments as Map);
+      return true;
+    });
+
+    expect(await service.launchFocusClock(), isTrue);
+    expect(arguments, {'packageName': 'com.aizatfir.focus_clock'});
+  });
+
   test('all action wrappers accept only a true dispatch result', () async {
     final actions = <Future<bool> Function()>[
       () => service.launchApp('real.a'),

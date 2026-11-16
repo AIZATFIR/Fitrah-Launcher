@@ -440,6 +440,30 @@ void main() {
       expect(await repo.getActiveTimerSession(), isNotNull);
     });
 
+    test('goal snapshot survives pause, reopen, and terminal history', () async {
+      const goalId = '22222222-2222-4222-8222-222222222222';
+      await engine.start(habit, goalId: goalId, goalTitle: 'Win nationals');
+      await engine.pause();
+      expect(
+        (await repo.getActiveTimerSession())?.goalTitleSnapshot,
+        'Win nationals',
+      );
+
+      engine.dispose();
+      engine = SadarTimerEngine(repo);
+      await engine.waitUntilRestored();
+      expect(engine.state.goalId, goalId);
+      expect(engine.state.goalTitleSnapshot, 'Win nationals');
+
+      await engine.finishEarly();
+      final now = DateTime.now();
+      final date =
+          '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final row = (await repo.getTerminalFocusSessionsForDate(date)).single;
+      expect(row.goalId, goalId);
+      expect(row.goalTitleSnapshot, 'Win nationals');
+    });
+
     test('a failed start write does not leave a running timer', () async {
       final failingEngine = SadarTimerEngine(_FailingTimerSessionRepository());
       addTearDown(failingEngine.dispose);

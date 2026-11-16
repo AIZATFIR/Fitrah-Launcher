@@ -33,6 +33,12 @@ const TerminalFocusSessionSchema = CollectionSchema(
       name: r'completedAt',
       type: IsarType.dateTime,
     ),
+    r'goalId': PropertySchema(id: 10, name: r'goalId', type: IsarType.string),
+    r'goalTitleSnapshot': PropertySchema(
+      id: 11,
+      name: r'goalTitleSnapshot',
+      type: IsarType.string,
+    ),
     r'habitId': PropertySchema(id: 3, name: r'habitId', type: IsarType.long),
     r'sessionId': PropertySchema(
       id: 4,
@@ -102,6 +108,18 @@ int _terminalFocusSessionEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.goalId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.goalTitleSnapshot;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.sessionId.length * 3;
   {
     final value = object.sourceIdentity;
@@ -123,13 +141,15 @@ void _terminalFocusSessionSerialize(
   writer.writeLong(offsets[0], object.activityId);
   writer.writeLong(offsets[1], object.actualDurationSeconds);
   writer.writeDateTime(offsets[2], object.completedAt);
-  writer.writeLong(offsets[3], object.habitId);
-  writer.writeString(offsets[4], object.sessionId);
-  writer.writeString(offsets[5], object.sourceIdentity);
-  writer.writeString(offsets[6], object.sourceKind);
-  writer.writeDateTime(offsets[7], object.startedAt);
-  writer.writeByte(offsets[8], object.status.index);
-  writer.writeString(offsets[9], object.titleSnapshot);
+  writer.writeString(offsets[3], object.goalId);
+  writer.writeString(offsets[4], object.goalTitleSnapshot);
+  writer.writeLong(offsets[5], object.habitId);
+  writer.writeString(offsets[6], object.sessionId);
+  writer.writeString(offsets[7], object.sourceIdentity);
+  writer.writeString(offsets[8], object.sourceKind);
+  writer.writeDateTime(offsets[9], object.startedAt);
+  writer.writeByte(offsets[10], object.status.index);
+  writer.writeString(offsets[11], object.titleSnapshot);
 }
 
 TerminalFocusSession _terminalFocusSessionDeserialize(
@@ -142,18 +162,20 @@ TerminalFocusSession _terminalFocusSessionDeserialize(
   object.activityId = reader.readLongOrNull(offsets[0]);
   object.actualDurationSeconds = reader.readLong(offsets[1]);
   object.completedAt = reader.readDateTime(offsets[2]);
-  object.habitId = reader.readLongOrNull(offsets[3]);
+  object.goalId = reader.readStringOrNull(offsets[3]);
+  object.goalTitleSnapshot = reader.readStringOrNull(offsets[4]);
+  object.habitId = reader.readLongOrNull(offsets[5]);
   object.id = id;
-  object.sessionId = reader.readString(offsets[4]);
-  object.sourceIdentity = reader.readStringOrNull(offsets[5]);
-  object.sourceKind = reader.readString(offsets[6]);
-  object.startedAt = reader.readDateTime(offsets[7]);
+  object.sessionId = reader.readString(offsets[6]);
+  object.sourceIdentity = reader.readStringOrNull(offsets[7]);
+  object.sourceKind = reader.readString(offsets[8]);
+  object.startedAt = reader.readDateTime(offsets[9]);
   object.status =
       _TerminalFocusSessionstatusValueEnumMap[reader.readByteOrNull(
-        offsets[8],
+        offsets[10],
       )] ??
       TerminalSessionStatus.completed;
-  object.titleSnapshot = reader.readString(offsets[9]);
+  object.titleSnapshot = reader.readString(offsets[11]);
   return object;
 }
 
@@ -170,6 +192,10 @@ P _terminalFocusSessionDeserializeProp<P>(
       return (reader.readLong(offset)) as P;
     case 2:
       return (reader.readDateTime(offset)) as P;
+    case 10:
+      return (reader.readStringOrNull(offset)) as P;
+    case 11:
+      return (reader.readStringOrNull(offset)) as P;
     case 3:
       return (reader.readLongOrNull(offset)) as P;
     case 4:
@@ -658,6 +684,420 @@ extension TerminalFocusSessionQueryFilter
           upper: upper,
           includeUpper: includeUpper,
         ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'goalId'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'goalId'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'goalId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'goalId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'goalId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'goalId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'goalId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'goalId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'goalId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'goalId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'goalId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'goalId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'goalTitleSnapshot'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'goalTitleSnapshot'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'goalTitleSnapshot',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'goalTitleSnapshot',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'goalTitleSnapshot',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'goalTitleSnapshot',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'goalTitleSnapshot',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'goalTitleSnapshot',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'goalTitleSnapshot',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'goalTitleSnapshot',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'goalTitleSnapshot', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    TerminalFocusSession,
+    TerminalFocusSession,
+    QAfterFilterCondition
+  >
+  goalTitleSnapshotIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'goalTitleSnapshot', value: ''),
       );
     });
   }
@@ -1784,6 +2224,34 @@ extension TerminalFocusSessionQuerySortBy
   }
 
   QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
+  sortByGoalId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'goalId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
+  sortByGoalIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'goalId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
+  sortByGoalTitleSnapshot() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'goalTitleSnapshot', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
+  sortByGoalTitleSnapshotDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'goalTitleSnapshot', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
   sortByHabitId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'habitId', Sort.asc);
@@ -1927,6 +2395,34 @@ extension TerminalFocusSessionQuerySortThenBy
   }
 
   QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
+  thenByGoalId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'goalId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
+  thenByGoalIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'goalId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
+  thenByGoalTitleSnapshot() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'goalTitleSnapshot', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
+  thenByGoalTitleSnapshotDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'goalTitleSnapshot', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QAfterSortBy>
   thenByHabitId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'habitId', Sort.asc);
@@ -2063,6 +2559,23 @@ extension TerminalFocusSessionQueryWhereDistinct
   }
 
   QueryBuilder<TerminalFocusSession, TerminalFocusSession, QDistinct>
+  distinctByGoalId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'goalId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QDistinct>
+  distinctByGoalTitleSnapshot({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'goalTitleSnapshot',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, TerminalFocusSession, QDistinct>
   distinctByHabitId() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'habitId');
@@ -2149,6 +2662,20 @@ extension TerminalFocusSessionQueryProperty
   completedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'completedAt');
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, String?, QQueryOperations>
+  goalIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'goalId');
+    });
+  }
+
+  QueryBuilder<TerminalFocusSession, String?, QQueryOperations>
+  goalTitleSnapshotProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'goalTitleSnapshot');
     });
   }
 

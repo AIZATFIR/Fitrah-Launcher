@@ -14,6 +14,8 @@ class TerminalFocusSession {
   late String sourceKind;
   late String titleSnapshot;
   String? sourceIdentity;
+  String? goalId;
+  String? goalTitleSnapshot;
   int? habitId;
   int? activityId;
   late DateTime startedAt;
@@ -27,6 +29,8 @@ class TerminalFocusSession {
         sourceKind.trim().isEmpty ||
         titleSnapshot.trim().isEmpty ||
         actualDurationSeconds < 0 ||
+        (goalId == null) != (goalTitleSnapshot == null) ||
+        (goalTitleSnapshot != null && goalTitleSnapshot!.trim().isEmpty) ||
         (status == TerminalSessionStatus.cancelled &&
             actualDurationSeconds != 0)) {
       throw ArgumentError('Invalid terminal focus session.');

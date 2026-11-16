@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions"/>
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <application
         android:label="${appName}"
@@ -65,6 +66,6 @@
             <data android:mimeType="text/plain"/>
         </intent>
         <package android:name="com.aizatfir.sadar" />
-        <package android:name="com.aizatfir.focusclock" />
+        <package android:name="com.aizatfir.focus_clock" />
     </queries>
 </manifest>

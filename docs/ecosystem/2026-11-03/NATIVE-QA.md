@@ -78,6 +78,8 @@ This is x86_64 emulator upgrade evidence, not an arm64 install or physical-phone
 
 The isolated API36 x86_64 `FocusClock_QA_API36` AVD upgraded in place through versionCodes48–50 with the existing app data retained. Legacy settings opened with both screen-time switches off. With the permissions already present on the QA AVD, enabling only the cue showed a compact amber/charcoal `13 mnt · Tujuan` action below the status bar, without covering the goal text. Opening Launcher Settings and tapping the cue returned to the goal Home within the existing HOME task (`Task #25`, `type=home`); pressing Android Home afterward still showed that same root Home task, not a second standard task. The cue was then disabled; both switches were false and the app-owned overlay window was absent. Build 50 compiled and installed successfully. The daily wait/countdown behavior, unavailable usage statistics, TalkBack, and physical-phone behavior were not exercised in this follow-up.
 
+**Focused widget verification on current source (15 Nov):** drawer and screen-time settings suites pass. Coverage includes both switches off by default, persisted opt-in and threshold, reaching the configured limit, preventing launch during the countdown, launch after waiting, returning to goal without launch, unavailable Usage Access failing open without reporting zero, and revoked/disabled cue removal. This verifies dialog/settings logic with a controlled Usage Stats response; it does not prove the device's real daily total crosses the threshold or an actual wait on a physical phone.
+
 
 ## Bookpaper app-drawer styling preview — 15 November
 
@@ -86,3 +88,21 @@ The drawer now uses the shared charcoal/amber Bookpaper palette, Outfit type, lo
 ## Preview53 visual runtime — 15 November
 
 The same isolated `FocusClock_QA_API36` x86_64 AVD upgraded from its prior installation to the v53 x86_64 release build (versionName `0.5.3`, ABI-specific versionCode `4053`) with `adb install -r`. Android still reports `com.aizatfir.fitrah_launcher` as the HOME role holder; cold start returned `Status: ok`. Screenshots under ignored `.dart_tool/android-qa/2026-11-15-v53/` show the Home goal cue and the Bookpaper app drawer. This is current-release x86_64 emulator evidence, not arm64 installation or a physical-phone check. The drawer still presents a large clock, alphabet rail and floating search action; those remain candidates for a usability simplification pass based on the owner's feedback.
+
+## Current launcher HOME loop — 15 November
+
+The isolated API36 x86_64 `FocusClock_QA_API36` AVD upgraded from v53/versionCode4053 to release versionCode4060 (`0.5.3`, targetSDK35, compileSDK36) with `adb install -r`; Android Debug signing matched. `cmd role get-role-holders android.app.role.HOME` returned `com.aizatfir.fitrah_launcher`, and Android's Default home app screen visibly selected Fitrah. The user flow was exercised: add a goal, pin it to Home, open the app drawer, launch Android Clock, press Home, and confirm the same pinned goal remains on Fitrah Home. Returning from Android Home settings also landed on that goal Home. Last 3,000 logcat lines had no `FATAL EXCEPTION`, `E/flutter` or `FlutterError`. The disposable AVD was shut down; `Medium_Phone` was not used.
+
+QA APK: `.dart_tool/android-qa/2026-11-15-v60/FocusClock_Fitrah_v0.5.3-v4060-android-x64-QA.apk` (SHA-256 `054a67d0328c28e7774a6181b8824fee3ee1a0833c76cf91a4995bf76f71cbee`). Screenshots and UI hierarchy are beside it. This proves the launcher HOME/task loop and one successful app launch on an x86_64 emulator. It does not close E5: refresh after install/uninstall, unavailable-app feedback, search/Back/keyboard, favorites/order durability, permission audit, reboot, font scale/TalkBack, physical-device and daily-use checks remain open. E0–E4, E6 and ecosystem milestones also remain open.
+
+## Drawer search and Back smoke — 15 November
+
+On the same v4060 x86_64 AVD, the drawer search button opened a focused field and keyboard. Typing `clock` filtered the real package list to Android Clock; clear restored the list; Back first dismissed the keyboard while retaining the drawer, then returned to Home with the pinned goal visible. Screenshot and UI hierarchy captures are under `.dart_tool/android-qa/2026-11-15-v60/`. This covers a basic search/clear/Back journey only; scrubber accuracy, large-font/TalkBack operation and physical-device behavior remain unverified.
+
+**Alphabet scrubber runtime follow-up:** On the same installed v4060 x86_64 AVD, dragging the alphabet rail to `T` selected T and navigated the installed-app list to the real T group (`TMobile` visible), with the `T` marker highlighted. Screenshot: `.dart_tool/android-qa/2026-11-15-v60/drawer-index-end.png`. This closes the basic actual-section-jump check on emulator; large-font/TalkBack and physical-device interaction remain open.
+
+**Android app-info runtime follow-up:** From the drawer, long-pressing Calendar and selecting `Info aplikasi` opened Android Settings for `com.google.android.calendar`. Android Back returned to the existing Fitrah `MainActivity` drawer task. This confirms the system app-info dispatch/return path on API36; uninstall confirmation, package add/remove refresh, and physical-device behavior remain open. UI hierarchy captures are beside the v60 QA screenshots.
+
+## Personal phone APK — 15 November
+
+Built a split-per-ABI arm64 release APK from current source: `release_dist/2026-11-15-fitrah-phone-6061/Fitrah_Launcher_0.5.3_arm64_v6061.apk`. Metadata: package `com.aizatfir.fitrah_launcher`, versionName `0.5.3`, versionCode `6061`, minSDK24, targetSDK35, and only `arm64-v8a`. APK v2 signature verifies with this workstation's Android Debug certificate; APK zip alignment check passes for 16 KB, and ELF LOAD alignment is 16 KB or higher for each bundled arm64 library. SHA-256 and install steps are in the same directory. No Android device was connected, so physical install, upgrade/data retention and phone HOME behavior are still unverified. This is a personal preview, not a public signing/release build.

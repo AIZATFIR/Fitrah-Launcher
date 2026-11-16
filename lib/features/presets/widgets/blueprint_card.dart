@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme.dart';
 import '../../../widgets/activity_icon.dart';
 import '../../../models/routine_blueprint.dart';
 import '../dialogs/apply_blueprint_dialog.dart';
@@ -21,9 +22,11 @@ class BlueprintCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF161622),
+        color: AppPalette.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.2),
+        border: const Border.fromBorderSide(
+          BorderSide(color: AppPalette.stroke),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.25),
@@ -41,7 +44,7 @@ class BlueprintCard extends StatelessWidget {
             onCustomize: onCustomize,
           ),
           borderRadius: BorderRadius.circular(20),
-          hoverColor: Colors.white.withOpacity(0.02),
+          hoverColor: AppPalette.accent.withValues(alpha: 0.06),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -56,13 +59,13 @@ class BlueprintCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEAB308).withOpacity(0.15),
+                        color: AppPalette.accent.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         b.category,
                         style: const TextStyle(
-                          color: Color(0xFFEAB308),
+                          color: AppPalette.accent,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -75,13 +78,13 @@ class BlueprintCard extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
+                        color: AppPalette.cardHigh,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         b.author,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
+                          color: AppPalette.textDim,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
@@ -91,7 +94,7 @@ class BlueprintCard extends StatelessWidget {
                     Text(
                       '${b.blocks.length} Blok',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.4),
+                        color: AppPalette.textDim,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -119,7 +122,7 @@ class BlueprintCard extends StatelessWidget {
                                 child: Text(
                                   b.name,
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppPalette.text,
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -133,7 +136,7 @@ class BlueprintCard extends StatelessWidget {
                           Text(
                             b.tagline,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.65),
+                              color: AppPalette.text.withOpacity(0.65),
                               fontSize: 12,
                               height: 1.4,
                             ),
@@ -149,7 +152,7 @@ class BlueprintCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                const Divider(height: 1, color: Colors.white10),
+                const Divider(height: 1, color: AppPalette.stroke),
                 const SizedBox(height: 14),
                 // Bottom Action Buttons
                 Row(
@@ -163,19 +166,22 @@ class BlueprintCard extends StatelessWidget {
                       icon: const Icon(
                         Icons.menu_book_rounded,
                         size: 16,
-                        color: Colors.white70,
+                        color: AppPalette.textDim,
                       ),
                       label: const Text(
                         'Baca Panduan',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                        style: TextStyle(
+                          color: AppPalette.textDim,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                     const Spacer(),
                     OutlinedButton.icon(
                       onPressed: onCustomize,
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: BorderSide(color: Colors.white.withOpacity(0.15)),
+                        foregroundColor: AppPalette.textDim,
+                        side: const BorderSide(color: AppPalette.stroke),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 8,
@@ -191,7 +197,7 @@ class BlueprintCard extends StatelessWidget {
                     ElevatedButton.icon(
                       onPressed: () => ApplyBlueprintDialog.show(context, b),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEAB308),
+                        backgroundColor: AppPalette.accent,
                         foregroundColor: Colors.black,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,

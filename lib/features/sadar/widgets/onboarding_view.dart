@@ -20,21 +20,16 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
 
-  final Set<String> _selectedTopics = {'Fokus', 'Olahraga', 'Membaca'};
+  final Set<String> _selectedTopics = {'Ibadah', 'Belajar', 'Olahraga'};
 
   static const List<({String title, String icon, int target, int color})>
   _inspirations = [
-    (title: 'Fokus / Deep Work', icon: '💻', target: 45, color: 0xFF10B981),
-    (title: 'Olahraga / Health', icon: '🏃', target: 30, color: 0xFFF97316),
-    (title: 'Membaca / Reading', icon: '📚', target: 20, color: 0xFF8B5CF6),
-    (
-      title: 'Meditasi / Mindfulness',
-      icon: '🧘',
-      target: 15,
-      color: 0xFF06B6D4,
-    ),
-    (title: 'Belajar Bahasa', icon: '🌐', target: 20, color: 0xFF3B82F6),
-    (title: 'Menulis / Journaling', icon: '✍️', target: 15, color: 0xFFF59E0B),
+    (title: 'Fokus', icon: '💻', target: 45, color: 0xFFF0C987),
+    (title: 'Olahraga', icon: '🏃', target: 30, color: 0xFFF0C987),
+    (title: 'Membaca', icon: '📚', target: 20, color: 0xFFF0C987),
+    (title: 'Meditasi', icon: '🧘', target: 15, color: 0xFFF0C987),
+    (title: 'Belajar bahasa', icon: '🌐', target: 20, color: 0xFFF0C987),
+    (title: 'Menulis jurnal', icon: '✍️', target: 15, color: 0xFFF0C987),
   ];
 
   void _nextPage() {
@@ -147,7 +142,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Become conscious of how you live.',
+          'Lihat tujuanmu. Pilih satu langkah untuk hari ini.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 15,
@@ -167,7 +162,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
           ),
           onPressed: _nextPage,
           child: const Text(
-            'Begin',
+            'Mulai',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
         ),
@@ -181,7 +176,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
       children: [
         const Spacer(),
         const Text(
-          'What matters to you?',
+          'Apa yang ingin kamu jaga?',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -190,7 +185,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Choose a few things you genuinely want to make space for every day.',
+          'Pilih hal yang ingin kamu beri ruang dalam hari ini.',
           style: TextStyle(
             fontSize: 14,
             color: AppPalette.textDim,
@@ -203,13 +198,13 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
           runSpacing: 10,
           children:
               [
-                'Quran',
-                'Learning',
-                'Exercise',
-                'Language',
-                'Creative Work',
-                'Family',
-                'Reflection',
+                'Ibadah',
+                'Belajar',
+                'Olahraga',
+                'Bahasa',
+                'Kreativitas',
+                'Keluarga',
+                'Refleksi',
               ].map((topic) {
                 final isSel = _selectedTopics.contains(topic);
                 return FilterChip(
@@ -268,7 +263,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Kamu memegang kendali penuh atas waktumu.',
+          'Mulai dari contoh kecil. Target bisa diubah kapan saja.',
           style: TextStyle(fontSize: 13, color: AppPalette.textDim),
         ),
         const SizedBox(height: 20),
@@ -344,7 +339,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
       children: [
         const Spacer(),
         const Text(
-          'How much is realistic?',
+          'Target yang masuk akal',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -353,7 +348,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Start small. Repetition is more powerful than occasional intensity.\n15 minutes practiced 100 times shapes your life.',
+          'Mulai dengan ringan. Kebiasaan bisa tumbuh seiring waktu.',
           style: TextStyle(
             fontSize: 14,
             color: AppPalette.textDim,
@@ -373,14 +368,8 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Fokus / Deep Work',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '45 minutes',
-                    style: TextStyle(color: AppPalette.accent),
-                  ),
+                  Text('Fokus', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('45 menit', style: TextStyle(color: AppPalette.accent)),
                 ],
               ),
               Divider(height: 20, color: AppPalette.stroke),
@@ -388,13 +377,10 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Olahraga / Exercise',
+                    'Olahraga',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  Text(
-                    '30 minutes',
-                    style: TextStyle(color: AppPalette.accent),
-                  ),
+                  Text('30 menit', style: TextStyle(color: AppPalette.accent)),
                 ],
               ),
               Divider(height: 20, color: AppPalette.stroke),
@@ -402,13 +388,10 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Membaca / Reading',
+                    'Membaca',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  Text(
-                    '20 minutes',
-                    style: TextStyle(color: AppPalette.accent),
-                  ),
+                  Text('20 menit', style: TextStyle(color: AppPalette.accent)),
                 ],
               ),
             ],
@@ -442,11 +425,11 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         const Icon(
           Icons.check_circle_outline_rounded,
           size: 64,
-          color: Color(0xFF22C55E),
+          color: AppPalette.accent,
         ),
         const SizedBox(height: 24),
         const Text(
-          "That's enough.",
+          'Siap mulai',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,
@@ -455,7 +438,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Start living your day intentionally.\none fulfilled action at a time.',
+          'Tujuanmu tersimpan. Pilih satu tindakan untuk memulainya.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 15,
@@ -475,7 +458,7 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
           ),
           onPressed: _finishOnboarding,
           child: const Text(
-            'Enter Sadar',
+            'Buka Sadar',
             style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
           ),
         ),

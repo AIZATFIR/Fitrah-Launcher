@@ -61,10 +61,18 @@ class _AppPreferencesSheetState extends ConsumerState<AppPreferencesSheet> {
     }
   }
 
-  void _nativeAction(Future<bool> Function(AppLauncherService) action) {
+  Future<void> _nativeAction(
+    Future<bool> Function(AppLauncherService) action,
+  ) async {
     final feedback = widget.feedbackContext ?? context;
-    runLauncherAction(feedback, ref.read(appLauncherServiceProvider), action);
-    Navigator.pop(context);
+    final service = ref.read(appLauncherServiceProvider);
+    final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context);
+    navigator.pop(context);
+    await route?.completed;
+    FocusManager.instance.primaryFocus?.unfocus();
+    await WidgetsBinding.instance.endOfFrame;
+    await runLauncherAction(feedback, service, action);
   }
 
   @override

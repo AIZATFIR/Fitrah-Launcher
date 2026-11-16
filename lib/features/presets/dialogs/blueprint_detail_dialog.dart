@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme.dart';
 import '../../../core/time_math.dart';
 import '../../../models/routine_blueprint.dart';
 import '../../../widgets/activity_icon.dart';
@@ -31,10 +32,10 @@ class BlueprintDetailDialog extends StatelessWidget {
     final b = blueprint;
 
     return Dialog(
-      backgroundColor: const Color(0xFF14141E),
+      backgroundColor: AppPalette.card,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: Colors.white.withOpacity(0.12)),
+        side: const BorderSide(color: AppPalette.stroke),
       ),
       child: Container(
         width: 640,
@@ -50,7 +51,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEAB308).withOpacity(0.15),
+                    color: AppPalette.accent.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: ActivityIcon(
@@ -72,13 +73,13 @@ class BlueprintDetailDialog extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.08),
+                              color: AppPalette.card,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
                               b.category,
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: AppPalette.text,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -88,7 +89,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                           Text(
                             'oleh ${b.author}',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.4),
+                              color: AppPalette.textDim,
                               fontSize: 11,
                             ),
                           ),
@@ -98,7 +99,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                       Text(
                         b.name,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppPalette.text,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
@@ -107,7 +108,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                       Text(
                         b.tagline,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.65),
+                          color: AppPalette.textDim,
                           fontSize: 13,
                         ),
                       ),
@@ -116,7 +117,10 @@ class BlueprintDetailDialog extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppPalette.textDim,
+                  ),
                 ),
               ],
             ),
@@ -125,16 +129,16 @@ class BlueprintDetailDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E2E),
+                color: AppPalette.cardHigh,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: AppPalette.stroke),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(
                     Icons.lightbulb_outline_rounded,
-                    color: Color(0xFFEAB308),
+                    color: AppPalette.accent,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -145,7 +149,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                         const Text(
                           'Filosofi & Tujuan Rutinitas:',
                           style: TextStyle(
-                            color: Color(0xFFEAB308),
+                            color: AppPalette.accent,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -154,7 +158,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                         Text(
                           b.description,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.85),
+                            color: AppPalette.text,
                             fontSize: 13,
                             height: 1.45,
                           ),
@@ -169,7 +173,7 @@ class BlueprintDetailDialog extends StatelessWidget {
             const Text(
               'Rangkaian Blok Waktu 24 Jam:',
               style: TextStyle(
-                color: Colors.white,
+                color: AppPalette.text,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -188,7 +192,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.03),
+                      color: AppPalette.card,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: Color(block.colorValue).withOpacity(0.35),
@@ -221,7 +225,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                                   Text(
                                     block.title,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: AppPalette.text,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -242,7 +246,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                                 Text(
                                   block.philosophy,
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.55),
+                                    color: AppPalette.textDim,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -267,8 +271,8 @@ class BlueprintDetailDialog extends StatelessWidget {
                     onCustomize();
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                    foregroundColor: AppPalette.text,
+                    side: const BorderSide(color: AppPalette.stroke),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
                       vertical: 14,
@@ -287,7 +291,7 @@ class BlueprintDetailDialog extends StatelessWidget {
                     ApplyBlueprintDialog.show(context, b);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEAB308),
+                    backgroundColor: AppPalette.accent,
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,

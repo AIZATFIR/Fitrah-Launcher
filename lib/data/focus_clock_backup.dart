@@ -312,6 +312,8 @@ class FocusClockBackupCodec {
             'activityId': x.activityId,
             'sourceIdentity': x.sourceIdentity,
             'sourceColorValue': x.sourceColorValue,
+            'goalId': x.goalId,
+            'goalTitleSnapshot': x.goalTitleSnapshot,
             'habitTargetSnapshot': x.habitTargetSnapshot,
             'targetSeconds': x.targetSeconds,
             'startedAt': _dateString(x.startedAt),
@@ -332,6 +334,8 @@ class FocusClockBackupCodec {
             'sourceKind': x.sourceKind,
             'titleSnapshot': x.titleSnapshot,
             'sourceIdentity': x.sourceIdentity,
+            'goalId': x.goalId,
+            'goalTitleSnapshot': x.goalTitleSnapshot,
             'habitId': x.habitId,
             'activityId': x.activityId,
             'startedAt': _dateString(x.startedAt),
@@ -432,6 +436,14 @@ class FocusClockBackupCodec {
                 ..sourceIdentity = _nullableString(
                   m['sourceIdentity'],
                   'terminalFocusSessions.sourceIdentity',
+                )
+                ..goalId = _nullableString(
+                  m['goalId'],
+                  'terminalFocusSessions.goalId',
+                )
+                ..goalTitleSnapshot = _nullableString(
+                  m['goalTitleSnapshot'],
+                  'terminalFocusSessions.goalTitleSnapshot',
                 )
                 ..habitId = _nullableInt(
                   m['habitId'],
@@ -678,6 +690,11 @@ class FocusClockBackupCodec {
       ..sourceColorValue = _nullableInt(
         m['sourceColorValue'],
         'timerSessions.sourceColorValue',
+      )
+      ..goalId = _nullableString(m['goalId'], 'timerSessions.goalId')
+      ..goalTitleSnapshot = _nullableString(
+        m['goalTitleSnapshot'],
+        'timerSessions.goalTitleSnapshot',
       )
       ..habitTargetSnapshot = _nullableInt(
         m['habitTargetSnapshot'],

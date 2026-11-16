@@ -387,6 +387,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final activities = activitiesAsync.valueOrNull ?? const <Activity>[];
     final schedulingTask = ref.watch(schedulingTaskProvider);
     final isInstant = ref.watch(isInstantModeProvider);
+    final isCompactHeader = MediaQuery.sizeOf(context).width < 600;
 
     ref.listen<bool>(precisionModeProvider, (prev, next) {
       if (next != _isPrecisionMode) {
@@ -756,6 +757,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                               left: 16,
                               right: 16,
                               child: Container(
+                                constraints: const BoxConstraints(minHeight: 44),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 12,
@@ -932,16 +934,21 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                         ),
                       ],
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
+                        width: isCompactHeader ? 44 : null,
+                        height: isCompactHeader ? 44 : null,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isCompactHeader ? 0 : 10,
+                          vertical: isCompactHeader ? 0 : 6,
                         ),
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: AppPalette.card,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppPalette.stroke),
                         ),
-                        child: const Row(
+                        child: isCompactHeader
+                            ? const Icon(Icons.menu_book_outlined, size: 20, color: AppPalette.accent)
+                            : const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
@@ -979,7 +986,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        GestureDetector(
+                        Semantics(
+                          button: true,
+                          label: 'Pilih tanggal ${date.day} ${_monthName(date.month)} ${date.year}',
+                          child: GestureDetector(
                           onTap: () {
                             HapticFeedback.mediumImpact();
                             _showLargeCalendarBatchPicker(context, date);
@@ -1006,7 +1016,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  '${date.day} ${_monthName(date.month)} ${date.year}',
+                                  isCompactHeader
+                                      ? '${date.day} ${_monthName(date.month)}'
+                                      : '${date.day} ${_monthName(date.month)} ${date.year}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -1015,6 +1027,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 ),
                               ],
                             ),
+                          ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -1494,8 +1507,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       _dragClickMinute = null;
       return;
     }
-    if (_dragStartNotifier.value == null || _dragEndNotifier.value == null)
+    if (_dragStartNotifier.value == null || _dragEndNotifier.value == null) {
       return;
+    }
     final start = _dragStartNotifier.value!;
     final endVal = _dragEndNotifier.value!;
     final end = (endVal - start) < 5 ? start + 5 : endVal;

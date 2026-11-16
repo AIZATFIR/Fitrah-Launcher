@@ -31,9 +31,9 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
           child: Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: AppPalette.card,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: AppPalette.stroke),
             ),
             child: Row(
               children: [
@@ -45,12 +45,12 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                         color: _selectedSegment == 0
-                            ? const Color(0xFFEAB308).withOpacity(0.18)
+                            ? AppPalette.accent.withOpacity(0.18)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: _selectedSegment == 0
-                              ? const Color(0xFFEAB308).withOpacity(0.5)
+                              ? AppPalette.accent.withOpacity(0.5)
                               : Colors.transparent,
                         ),
                       ),
@@ -62,16 +62,16 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                             Icons.auto_stories_rounded,
                             size: 16,
                             color: _selectedSegment == 0
-                                ? const Color(0xFFEAB308)
-                                : Colors.white60,
+                                ? AppPalette.accent
+                                : AppPalette.textDim,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Routine Blueprints',
                             style: TextStyle(
                               color: _selectedSegment == 0
-                                  ? Colors.white
-                                  : Colors.white60,
+                                  ? AppPalette.text
+                                  : AppPalette.textDim,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -89,12 +89,12 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                         color: _selectedSegment == 1
-                            ? const Color(0xFFEAB308).withOpacity(0.18)
+                            ? AppPalette.accent.withOpacity(0.18)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: _selectedSegment == 1
-                              ? const Color(0xFFEAB308).withOpacity(0.5)
+                              ? AppPalette.accent.withOpacity(0.5)
                               : Colors.transparent,
                         ),
                       ),
@@ -106,16 +106,16 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                             Icons.label_outline_rounded,
                             size: 16,
                             color: _selectedSegment == 1
-                                ? const Color(0xFFEAB308)
-                                : Colors.white60,
+                                ? AppPalette.accent
+                                : AppPalette.textDim,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Category Tags',
                             style: TextStyle(
                               color: _selectedSegment == 1
-                                  ? Colors.white
-                                  : Colors.white60,
+                                  ? AppPalette.text
+                                  : AppPalette.textDim,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -155,7 +155,7 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                   children: [
                     const Icon(
                       Icons.star_rounded,
-                      color: Color(0xFFEAB308),
+                      color: AppPalette.accent,
                       size: 18,
                     ),
                     const SizedBox(width: 6),
@@ -165,7 +165,7 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                         fontSize: 11,
                         letterSpacing: 1.2,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white.withOpacity(0.6),
+                        color: AppPalette.textDim,
                       ),
                     ),
                   ],
@@ -188,7 +188,7 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                   children: [
                     const Icon(
                       Icons.palette_outlined,
-                      color: Color(0xFF06B6D4),
+                      color: AppPalette.accent,
                       size: 18,
                     ),
                     const SizedBox(width: 6),
@@ -198,7 +198,7 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                         fontSize: 11,
                         letterSpacing: 1.2,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white.withOpacity(0.6),
+                        color: AppPalette.textDim,
                       ),
                     ),
                   ],
@@ -208,10 +208,10 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.02),
+                      color: AppPalette.card,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.06),
+                        color: AppPalette.stroke,
                         style: BorderStyle.solid,
                       ),
                     ),
@@ -220,14 +220,14 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                       children: [
                         const Icon(
                           Icons.auto_stories_outlined,
-                          color: Colors.white30,
+                          color: AppPalette.textDim,
                           size: 36,
                         ),
                         const SizedBox(height: 10),
                         const Text(
                           'Belum ada Blueprint Kustom',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: AppPalette.textDim,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
@@ -237,7 +237,7 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                           'Buat pola rutinitas harian Anda sendiri dengan menekan tombol "+ Buat Blueprint".',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.4),
+                            color: AppPalette.textDim,
                             fontSize: 12,
                           ),
                         ),
@@ -267,7 +267,7 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
           right: 16,
           bottom: 16,
           child: FloatingActionButton.extended(
-            backgroundColor: const Color(0xFFEAB308),
+            backgroundColor: AppPalette.accent,
             foregroundColor: Colors.black,
             icon: const Icon(Icons.add_rounded),
             label: const Text(

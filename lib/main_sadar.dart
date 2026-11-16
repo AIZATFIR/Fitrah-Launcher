@@ -86,7 +86,7 @@ class SadarStandaloneApp extends StatelessWidget {
           primary: AppPalette.accent,
           surface: AppPalette.card,
         ),
-        textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+        textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
       ),
       home: const SadarHomeScreen(),
     );
