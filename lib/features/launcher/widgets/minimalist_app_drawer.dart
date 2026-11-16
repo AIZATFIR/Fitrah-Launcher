@@ -673,7 +673,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     final dateStr = _formatHeaderDate(now);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -693,15 +693,15 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
             child: Text(
               timeStr,
               style: GoogleFonts.outfit(
-                fontSize: 54,
+                fontSize: 32,
                 fontWeight: FontWeight.w300,
                 color: AppPalette.text,
-                letterSpacing: -1.4,
-                height: 1.05,
+                letterSpacing: -0.6,
+                height: 1.1,
               ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           GestureDetector(
             onTap: () => runLauncherAction(
               context,

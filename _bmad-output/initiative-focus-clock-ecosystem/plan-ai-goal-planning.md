@@ -76,8 +76,8 @@ context:
 
 - Focused suite: 34 tests passed across goal-plan application, AI provider proposals, schedule service, and intent repository.
 - Focused analyzer: no issues across the 10 changed feature files.
-- Android release APK and web release build both completed. App identity remains `0.5.3+7`.
-- Manual install/session persistence check deferred: `adb devices -l` reported no connected Android device.
+- Android release APK and web release build completed. The Android base build number is advanced to `8066`: this exceeds both the existing `0.5.3+6064` personal preview and the prior split-ABI `8065` artifact, so a later universal build can still upgrade it.
+- API36 x86_64 AVD upgrade/Home smoke passed (v9076 → v9080; pinned goal persisted). Physical-phone install and session persistence remain unverified.
 
 
 ## Plan Change Log
