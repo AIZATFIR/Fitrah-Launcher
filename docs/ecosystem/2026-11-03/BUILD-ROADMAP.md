@@ -171,6 +171,8 @@ Verifikasi setelah review: 29 tes launcher/provider/widget/session lulus, analyz
 
 **Upgrade dan Home smoke v9080 (16 Nov 2026):** build source terbaru terpasang dengan `adb install -r` di AVD QA API36 dari versionCode9076 ke 9080 dengan signature yang sama. Fitrah tetap memegang Android HOME role; tujuan LKS yang sudah ada bertahan setelah force-stop dan relaunch; Apps Drawer membuka aplikasi sistem dan tombol Home kembali ke task Fitrah. Bukti screenshot/hierarchy dan batas QA ada di [NATIVE-QA](NATIVE-QA.md#current-source-upgrade-and-home-smoke--16-november). Ini belum menguji HP fisik dan tidak menutup checklist/gate E5.
 
+**Runtime drawer/HOME v9081 (16 Nov 2026):** APK x86_64 v9081 meng-upgrade v9080; Fitrah tetap menjadi Home, tujuan LKS bertahan, drawer Bookpaper tampil, Files terbuka dan tombol Home kembali ke tujuan yang sama. Bukti dan batas ada di [NATIVE-QA](NATIVE-QA.md#current-drawer-build-and-home-return--16-november). AVD khusus dimatikan; AVD harian tidak dipakai.
+
 **Paket phone preview universal:** APK universal versionCode8066 dan checksum ada di `release_dist/2026-11-16-fitrah-goal-plan-preview/`; package/signature cocok dengan preview v6064 dan bisa meng-upgrade-nya. Build terbaru memuat jam drawer yang lebih ringkas. Tidak ada perangkat fisik tersambung, jadi paket belum di-install di HP; E5 tidak ditutup oleh build artifact.
 
 - [ ] App list Android asli, refresh ketika app ditambah/dihapus atau launcher resume, label serta icon yang benar. Listing failure menghasilkan error/retry, bukan daftar simulasi.
