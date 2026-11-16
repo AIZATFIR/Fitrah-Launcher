@@ -228,7 +228,7 @@ class VoiceAssistantService {
 
     final activity = Activity()
       ..title = title
-      ..iconKey = '🎙️'
+      ..iconKey = 'record'
       ..startMinute = dbStart
       ..endMinute = dbEnd
       ..ampmHalf = dbHalf

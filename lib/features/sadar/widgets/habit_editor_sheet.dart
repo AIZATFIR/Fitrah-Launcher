@@ -33,18 +33,17 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   late int _selectedColor;
 
   static const List<String> _popularIcons = [
-    '📖',
-    '💻',
-    '🏋️',
-    '🏃',
-    '🇫🇷',
-    '🧘',
-    '📚',
-    '✍️',
-    '💧',
-    '🥗',
-    '🎯',
-    '⚡',
+    'book',
+    'computer',
+    'strength',
+    'running',
+    'language',
+    'meditate',
+    'writing',
+    'water',
+    'nutrition',
+    'target',
+    'bolt',
   ];
 
   static const List<int> _colorOptions = [
@@ -69,7 +68,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     _hybridSecsCtrl = TextEditingController(
       text: (h?.hybridDurationSeconds ?? 60).toString(),
     );
-    _selectedIcon = h?.iconKey.isNotEmpty == true ? h!.iconKey : '🎯';
+    _selectedIcon = h?.iconKey.isNotEmpty == true ? h!.iconKey : 'target';
     _selectedUnit = h?.unit ?? HabitUnit.min;
     _habitType = h?.effectiveHabitType ?? 'timed';
     _allowedPackages = List.from(h?.allowedPackages ?? []);
@@ -229,8 +228,8 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    width: 40,
-                    height: 40,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppPalette.accent.withValues(alpha: 0.25)

@@ -74,13 +74,16 @@ class FocusClockBackupService {
 
     final oldData = await readCurrentData();
     final oldBytes = FocusClockBackupCodec.encode(oldData);
+    final currentSettings = oldData.appSettings.single;
+    await secureStorage.migrateAiProviderApiKey(
+      legacyAppSettingsKey: currentSettings.aiApiKey,
+    );
     final recoveryPath = db is RecoveryJournal
         ? await (db as RecoveryJournal).saveRecovery(oldBytes)
         : (await _writeRecoveryFile(oldBytes)).path;
     final oldLauncherRaw = await secureStorage.readCustomKey(
       launcherSettingsKey,
     );
-    final currentSettings = oldData.appSettings.single;
     final incoming = backup.data;
     // Old backups predate the aggregate. Import their own cue atomically so an
     // already mounted Home cannot import the pre-restore preference value.
@@ -123,8 +126,9 @@ class FocusClockBackupService {
     // the file. Keep the current install's values when restoring preferences.
     final restoredAppSettings =
         FocusClockBackupCodec.copySettings(incoming.appSettings.single)
-          ..aiApiKey = currentSettings.aiApiKey
-          ..aiBaseUrl = currentSettings.aiBaseUrl;
+          ..aiApiKey = ''
+          ..aiBaseUrl = currentSettings.aiBaseUrl
+          ..aiModel = currentSettings.aiModel;
 
     var databaseCommitted = false;
     try {

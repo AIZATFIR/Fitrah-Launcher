@@ -90,43 +90,43 @@ class PresetRepository {
       ..id = 1
       ..name = 'Deepwork'
       ..colorValue = presetColors[11]
-      ..iconKey = '💻'
+      ..iconKey = 'computer'
       ..createdAt = DateTime.now(),
     Preset()
       ..id = 2
       ..name = 'Intentional Rest'
       ..colorValue = presetColors[15]
-      ..iconKey = '🧘'
+      ..iconKey = 'meditate'
       ..createdAt = DateTime.now(),
     Preset()
       ..id = 3
       ..name = 'Social activity'
       ..colorValue = presetColors[2]
-      ..iconKey = '🤝'
+      ..iconKey = 'meeting'
       ..createdAt = DateTime.now(),
     Preset()
       ..id = 4
       ..name = 'Hobbies'
       ..colorValue = presetColors[14]
-      ..iconKey = '🎨'
+      ..iconKey = 'art'
       ..createdAt = DateTime.now(),
     Preset()
       ..id = 5
       ..name = 'Exercise'
       ..colorValue = presetColors[7]
-      ..iconKey = '🏃'
+      ..iconKey = 'running'
       ..createdAt = DateTime.now(),
     Preset()
       ..id = 6
       ..name = 'Wind down'
       ..colorValue = presetColors[13]
-      ..iconKey = '💆'
+      ..iconKey = 'relax'
       ..createdAt = DateTime.now(),
     Preset()
       ..id = 7
       ..name = 'Sleep'
       ..colorValue = presetColors[16]
-      ..iconKey = '😴'
+      ..iconKey = 'sleep'
       ..createdAt = DateTime.now(),
   ];
 }

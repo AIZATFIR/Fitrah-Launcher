@@ -24,12 +24,12 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
 
   static const List<({String title, String icon, int target, int color})>
   _inspirations = [
-    (title: 'Fokus', icon: '💻', target: 45, color: 0xFFF0C987),
-    (title: 'Olahraga', icon: '🏃', target: 30, color: 0xFFF0C987),
-    (title: 'Membaca', icon: '📚', target: 20, color: 0xFFF0C987),
-    (title: 'Meditasi', icon: '🧘', target: 15, color: 0xFFF0C987),
-    (title: 'Belajar bahasa', icon: '🌐', target: 20, color: 0xFFF0C987),
-    (title: 'Menulis jurnal', icon: '✍️', target: 15, color: 0xFFF0C987),
+    (title: 'Fokus', icon: 'computer', target: 45, color: 0xFFF0C987),
+    (title: 'Olahraga', icon: 'running', target: 30, color: 0xFFF0C987),
+    (title: 'Membaca', icon: 'book', target: 20, color: 0xFFF0C987),
+    (title: 'Meditasi', icon: 'meditate', target: 15, color: 0xFFF0C987),
+    (title: 'Belajar bahasa', icon: 'language', target: 20, color: 0xFFF0C987),
+    (title: 'Menulis jurnal', icon: 'writing', target: 15, color: 0xFFF0C987),
   ];
 
   void _nextPage() {

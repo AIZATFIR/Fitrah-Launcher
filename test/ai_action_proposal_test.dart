@@ -15,7 +15,46 @@ import 'package:http/testing.dart';
 
 void main() {
   test(
-    'Gemini receives goal-first guidance and prior turns exactly once',
+    'configured provider uses its exact URL and model regardless of key prefix',
+    () async {
+      Uri? requestedUri;
+      Map<String, dynamic>? requestedBody;
+      final client = MockClient((request) async {
+        requestedUri = request.url;
+        requestedBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'role': 'assistant', 'content': 'Provider reply'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      final ai = AiService(
+        baseUrl: 'https://provider.test/custom/v1',
+        apiKey: '',
+        model: 'chosen-model-v7',
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ConfiguredProviderStorage(),
+        httpClient: client,
+      );
+
+      await ai.send('Hello');
+
+      expect(
+        requestedUri,
+        Uri.parse('https://provider.test/custom/v1/chat/completions'),
+      );
+      expect(requestedBody?['model'], 'chosen-model-v7');
+    },
+  );
+
+  test(
+    'configured Google endpoint receives goal-first guidance and prior turns once',
     () async {
       final requests = <Map<String, dynamic>>[];
       final client = MockClient((request) async {
@@ -23,13 +62,11 @@ void main() {
         requests.add(body);
         return http.Response(
           jsonEncode({
-            'candidates': [
+            'choices': [
               {
-                'content': {
-                  'role': 'model',
-                  'parts': [
-                    {'text': 'Mari pilih satu langkah kecil.'},
-                  ],
+                'message': {
+                  'role': 'assistant',
+                  'content': 'Mari pilih satu langkah kecil.',
                 },
               },
             ],
@@ -38,7 +75,7 @@ void main() {
         );
       });
       final ai = AiService(
-        baseUrl: 'https://model.test/v1',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
         apiKey: '',
         model: 'test-model',
         activityRepo: ActivityRepository(null, NotificationService()),
@@ -50,33 +87,30 @@ void main() {
       await ai.send('Aku ingin menang LKS nasional');
       await ai.send('Aku kewalahan dengan latihan');
 
-      final firstContents = requests[0]['contents'] as List;
-      expect(firstContents, hasLength(1));
-      expect((firstContents.single as Map)['parts'], [
-        {'text': 'Aku ingin menang LKS nasional'},
-      ]);
-      final firstGuidance =
-          ((requests[0]['systemInstruction'] as Map)['parts'] as List).single
-              as Map;
-      final guidance = (firstGuidance['text'] as String).toLowerCase();
+      final firstContents = requests[0]['messages'] as List;
+      expect(firstContents, hasLength(2));
+      expect(
+        (firstContents.last as Map)['content'],
+        'Aku ingin menang LKS nasional',
+      );
+      expect(requests[0]['model'], 'test-model');
+      final guidance = ((firstContents.first as Map)['content'] as String)
+          .toLowerCase();
       expect(guidance, contains('dengarkan'));
       expect(guidance, contains('langkah berikutnya'));
       expect(guidance, isNot(contains('90-120 menit')));
 
-      final followUp = requests[1]['contents'] as List;
+      final followUp = requests[1]['messages'] as List;
       expect(followUp.map((item) => (item as Map)['role']).toList(), [
+        'system',
         'user',
-        'model',
+        'assistant',
         'user',
       ]);
-      expect((followUp.last as Map)['parts'], [
-        {'text': 'Aku kewalahan dengan latihan'},
-      ]);
+      expect((followUp.last as Map)['content'], 'Aku kewalahan dengan latihan');
       expect(
         followUp.where(
-          (item) => ((item as Map)['parts'] as List).any(
-            (part) => (part as Map)['text'] == 'Aku kewalahan dengan latihan',
-          ),
+          (item) => (item as Map)['content'] == 'Aku kewalahan dengan latihan',
         ),
         hasLength(1),
       );
@@ -84,40 +118,54 @@ void main() {
   );
 
   test(
-    'Gemini history skips tool records and empty assistant content',
+    'configured provider returns an inert typed goal plan and keeps readable history',
     () async {
-      final geminiRequests = <Map<String, dynamic>>[];
+      var calls = 0;
+      final requests = <Map<String, dynamic>>[];
       final client = MockClient((request) async {
-        if (request.url.host == 'generativelanguage.googleapis.com') {
-          final body = jsonDecode(request.body) as Map<String, dynamic>;
-          geminiRequests.add(body);
-          return http.Response(
-            jsonEncode({
-              'candidates': [
-                {
-                  'content': {
-                    'role': 'model',
-                    'parts': [
-                      {'text': 'Kita bisa mulai dari satu langkah.'},
-                    ],
-                  },
-                },
-              ],
-            }),
-            200,
-          );
-        }
-
         final body = jsonDecode(request.body) as Map<String, dynamic>;
-        final messages = body['messages'] as List;
-        if (messages.any((message) => (message as Map)['role'] == 'tool')) {
+        requests.add(body);
+        calls++;
+        if (calls == 1) {
+          final tools = (body['tools'] as List).cast<Map<String, dynamic>>();
+          expect(
+            tools.any(
+              (tool) =>
+                  (tool['function'] as Map)['name'] == 'propose_goal_plan',
+            ),
+            isTrue,
+          );
           return http.Response(
             jsonEncode({
               'choices': [
                 {
                   'message': {
                     'role': 'assistant',
-                    'content': 'Jadwalmu kosong.',
+                    'content': 'Rencana sudah disimpan.',
+                    'tool_calls': [
+                      {
+                        'id': 'plan-1',
+                        'type': 'function',
+                        'function': {
+                          'name': 'propose_goal_plan',
+                          'arguments': jsonEncode({
+                            'goal': {
+                              'title': 'Win the LKS',
+                              'why': 'Practice consistently',
+                              'targetDate': '2027-07-15',
+                            },
+                            'assumptions': ['School mornings are unavailable.'],
+                            'blocks': [
+                              {
+                                'weekday': 1,
+                                'startMinute': 1080,
+                                'durationMinutes': 60,
+                              },
+                            ],
+                          }),
+                        },
+                      },
+                    ],
                   },
                 },
               ],
@@ -129,16 +177,71 @@ void main() {
           jsonEncode({
             'choices': [
               {
+                'message': {'role': 'assistant', 'content': 'Mari lanjutkan.'},
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      final activityRepo = ActivityRepository(null, NotificationService());
+      final ai = AiService(
+        baseUrl: 'https://provider.test/v1',
+        apiKey: '',
+        model: 'chosen-model',
+        activityRepo: activityRepo,
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ConfiguredProviderStorage(),
+        httpClient: client,
+      );
+
+      final reply = await ai.send(
+        'Bantu susun latihan mingguan.',
+        allowActions: true,
+      );
+      final pending = ai.pendingGoalPlan!;
+      expect(reply, contains('Belum ada perubahan yang diterapkan'));
+      expect(pending.proposal.goal.title, 'Win the LKS');
+      expect(pending.proposal.blocks.single.startMinute, 1080);
+      expect(await activityRepo.getByDate(DateTime.now()), isEmpty);
+
+      await ai.send('Kita bisa mulai kecil?', allowActions: true);
+      expect(pending.isPending, isFalse);
+      final secondTurns = requests[1]['messages'] as List;
+      final assistantTurns = secondTurns
+          .where((turn) => (turn as Map)['role'] == 'assistant')
+          .cast<Map>()
+          .toList();
+      expect(assistantTurns.last['content'], contains('Belum ada perubahan'));
+      expect(secondTurns.map((turn) => (turn as Map)['role']).toList(), [
+        'system',
+        'user',
+        'assistant',
+        'tool',
+        'assistant',
+        'user',
+      ]);
+    },
+  );
+
+  test(
+    'malformed structured goal output creates no pending proposal',
+    () async {
+      final client = MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'choices': [
+              {
                 'message': {
                   'role': 'assistant',
                   'content': null,
                   'tool_calls': [
                     {
-                      'id': 'call-list',
+                      'id': 'plan-bad',
                       'type': 'function',
                       'function': {
-                        'name': 'list_activities',
-                        'arguments': '{}',
+                        'name': 'propose_goal_plan',
+                        'arguments': '{not valid json',
                       },
                     },
                   ],
@@ -147,37 +250,108 @@ void main() {
             ],
           }),
           200,
-        );
-      });
-      final storage = _SwitchableGeminiStorage();
+        ),
+      );
       final ai = AiService(
-        baseUrl: 'https://model.test/v1',
+        baseUrl: 'https://provider.test/v1',
         apiKey: '',
-        model: 'test-model',
+        model: 'chosen-model',
         activityRepo: ActivityRepository(null, NotificationService()),
         presetRepo: PresetRepository.store(null),
-        secureStorage: storage,
+        secureStorage: _ConfiguredProviderStorage(),
         httpClient: client,
       );
 
-      await ai.send('Lihat jadwalku', allowActions: true);
-      storage.useGemini = true;
-      await ai.send('Aku perlu langkah berikutnya');
-
-      final turns = geminiRequests.single['contents'] as List;
-      expect(turns.map((turn) => (turn as Map)['role']).toList(), [
-        'user',
-        'model',
-        'user',
-      ]);
-      expect(
-        turns.map(
-          (turn) => (((turn as Map)['parts'] as List).single as Map)['text'],
-        ),
-        ['Lihat jadwalku', 'Jadwalmu kosong.', 'Aku perlu langkah berikutnya'],
-      );
+      final reply = await ai.send('Buat rencana latihan.', allowActions: true);
+      expect(reply, contains('belum bisa dibaca'));
+      expect(ai.pendingGoalPlan, isNull);
+      expect(ai.pendingActions, isEmpty);
     },
   );
+
+  test('Gemini history preserves tool calls and their results', () async {
+    final geminiRequests = <Map<String, dynamic>>[];
+    final client = MockClient((request) async {
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      if (request.url.host == 'generativelanguage.googleapis.com') {
+        geminiRequests.add(body);
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'role': 'assistant',
+                  'content': 'Kita bisa mulai dari satu langkah.',
+                },
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      final messages = body['messages'] as List;
+      if (messages.any((message) => (message as Map)['role'] == 'tool')) {
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'role': 'assistant', 'content': 'Jadwalmu kosong.'},
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response(
+        jsonEncode({
+          'choices': [
+            {
+              'message': {
+                'role': 'assistant',
+                'content': null,
+                'tool_calls': [
+                  {
+                    'id': 'call-list',
+                    'type': 'function',
+                    'function': {'name': 'list_activities', 'arguments': '{}'},
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        200,
+      );
+    });
+    final storage = _SwitchableGeminiStorage();
+    final ai = AiService(
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+      apiKey: '',
+      model: 'test-model',
+      activityRepo: ActivityRepository(null, NotificationService()),
+      presetRepo: PresetRepository.store(null),
+      secureStorage: storage,
+      httpClient: client,
+    );
+
+    await ai.send('Lihat jadwalku', allowActions: true);
+    storage.useGemini = true;
+    await ai.send('Aku perlu langkah berikutnya');
+
+    final turns = geminiRequests.single['messages'] as List;
+    expect(turns.map((turn) => (turn as Map)['role']).toList(), [
+      'system',
+      'user',
+      'assistant',
+      'tool',
+      'assistant',
+      'user',
+    ]);
+    expect((turns[2] as Map)['tool_calls'], isA<List>());
+    expect((turns[3] as Map)['content'], contains('activities'));
+    expect((turns[4] as Map)['content'], 'Jadwalmu kosong.');
+    expect((turns.last as Map)['content'], 'Aku perlu langkah berikutnya');
+  });
 
   test(
     'a proposed action stays unapplied until the user approves it',
@@ -447,6 +621,8 @@ class _TestSecureStorage extends SecureStorageService {
   @override
   Future<String?> getGeminiApiKey() async => null;
   @override
+  Future<String?> getAiProviderApiKey() async => null;
+  @override
   Future<String> getBackendServerUrl() async => 'http://model.test';
   @override
   Future<String?> getOpenRouterKey() async => 'test-openrouter-key';
@@ -457,6 +633,21 @@ class _GeminiSecureStorage extends SecureStorageService {
 
   @override
   Future<String?> getGeminiApiKey() async => 'AIza-test-key';
+  @override
+  Future<String?> getAiProviderApiKey() async => 'AIza-test-key';
+  @override
+  Future<String> getBackendServerUrl() async => 'http://model.test';
+  @override
+  Future<String?> getOpenRouterKey() async => null;
+}
+
+class _ConfiguredProviderStorage extends SecureStorageService {
+  _ConfiguredProviderStorage() : super(storage: const FlutterSecureStorage());
+
+  @override
+  Future<String?> getGeminiApiKey() async => null;
+  @override
+  Future<String?> getAiProviderApiKey() async => 'sk-custom-provider-key';
   @override
   Future<String> getBackendServerUrl() async => 'http://model.test';
   @override
@@ -471,6 +662,9 @@ class _SwitchableGeminiStorage extends SecureStorageService {
   @override
   Future<String?> getGeminiApiKey() async => useGemini ? 'AIza-test-key' : null;
   @override
+  Future<String?> getAiProviderApiKey() async =>
+      useGemini ? 'AIza-test-key' : null;
+  @override
   Future<String> getBackendServerUrl() async => 'http://model.test';
   @override
   Future<String?> getOpenRouterKey() async => 'test-openrouter-key';
@@ -481,6 +675,8 @@ class _ReadOnlyBackendStorage extends SecureStorageService {
 
   @override
   Future<String?> getGeminiApiKey() async => null;
+  @override
+  Future<String?> getAiProviderApiKey() async => null;
   @override
   Future<String> getBackendServerUrl() async => 'http://model.test';
   @override

@@ -71,22 +71,22 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   final _focusNode = FocusNode();
 
   static const List<String> _availableIcons = [
-    '🎯',
-    '💻',
-    '📖',
-    '🏃',
-    '🎨',
-    '🎵',
-    '✍️',
-    '🧠',
-    '☕',
-    '🧘',
-    '🔥',
-    '🚀',
-    '💡',
-    '📌',
-    '⚡',
-    '🏋️',
+    'target',
+    'computer',
+    'book',
+    'running',
+    'art',
+    'music',
+    'writing',
+    'thinking',
+    'coffee',
+    'meditate',
+    'fire',
+    'launch',
+    'idea',
+    'pin',
+    'bolt',
+    'strength',
   ];
 
   @override
@@ -114,7 +114,9 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     _startDt = toDateTime(a.date, a.ampmHalf, a.startMinute);
     _endDt = toDateTime(a.date, a.ampmHalf, a.endMinute);
     _color = a.colorValue;
-    _iconKey = (a.iconKey != null && a.iconKey!.isNotEmpty) ? a.iconKey! : '🎯';
+    _iconKey = (a.iconKey != null && a.iconKey!.isNotEmpty)
+        ? a.iconKey!
+        : 'target';
     _recurrence = a.recurrence;
     _importance = a.importance;
     _isLocked = a.isLocked;
@@ -593,7 +595,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
             if (!readOnly) ...[
               const SizedBox(height: 12),
               const Text(
-                'Simbol',
+                'Ikon kegiatan',
                 style: TextStyle(
                   color: AppPalette.textDim,
                   fontSize: 13,
@@ -613,11 +615,9 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                         setState(() => _iconKey = iconKey);
                       },
                       child: Container(
+                        width: 48,
+                        height: 48,
                         margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppPalette.accent.withValues(alpha: 0.2)
@@ -630,11 +630,14 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                             width: isSelected ? 2 : 1,
                           ),
                         ),
-                        child: ActivityIcon(
-                          iconKey: iconKey,
-                          color: isSelected
-                              ? AppPalette.accent
-                              : AppPalette.textDim,
+                        child: Center(
+                          child: ActivityIcon(
+                            iconKey: iconKey,
+                            size: 21,
+                            color: isSelected
+                                ? AppPalette.accent
+                                : AppPalette.textDim,
+                          ),
                         ),
                       ),
                     );

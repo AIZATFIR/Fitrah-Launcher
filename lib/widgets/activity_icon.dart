@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Renders legacy emoji icon keys with one consistent Material icon style.
+/// Renders semantic icon keys and legacy emoji keys with one Material style.
 class ActivityIcon extends StatelessWidget {
   const ActivityIcon({super.key, this.iconKey, this.size = 20, this.color});
 
@@ -9,7 +9,54 @@ class ActivityIcon extends StatelessWidget {
   final Color? color;
 
   static const _icons = <String, IconData>{
+    // Stable keys used by current UI and stored activities.
+    'target': Icons.track_changes_rounded,
+    'computer': Icons.computer_rounded,
+    'book': Icons.menu_book_rounded,
+    'running': Icons.directions_run_rounded,
+    'art': Icons.palette_outlined,
+    'music': Icons.music_note_rounded,
+    'writing': Icons.edit_note_rounded,
+    'thinking': Icons.psychology_alt_rounded,
+    'coffee': Icons.local_cafe_rounded,
+    'meditate': Icons.self_improvement_rounded,
+    'fire': Icons.local_fire_department_rounded,
+    'launch': Icons.rocket_launch_rounded,
+    'idea': Icons.lightbulb_outline_rounded,
+    'pin': Icons.push_pin_rounded,
+    'bolt': Icons.bolt_rounded,
+    'strength': Icons.fitness_center_rounded,
+    'sleep': Icons.bedtime_rounded,
+    'meal': Icons.restaurant_rounded,
+    'gaming': Icons.sports_esports_rounded,
+    'home': Icons.home_rounded,
+    'relax': Icons.spa_rounded,
+    'driving': Icons.directions_car_rounded,
+    'meeting': Icons.handshake_rounded,
+    'call': Icons.call_rounded,
+    'shopping': Icons.shopping_cart_outlined,
+    'cleaning': Icons.cleaning_services_rounded,
+    'record': Icons.mic_none_rounded,
+    'prayer': Icons.mosque_rounded,
+    'nature': Icons.spa_outlined,
+    'nutrition': Icons.restaurant_menu_rounded,
+    'language': Icons.translate_rounded,
+    'water': Icons.water_drop_outlined,
+    'star': Icons.star_outline_rounded,
+    'cloud': Icons.cloud_outlined,
+    'rain': Icons.cloudy_snowing,
+    'sunrise': Icons.wb_twilight_rounded,
+    'moon': Icons.nightlight_round,
+    'study': Icons.school_rounded,
+    'reflection': Icons.light_mode_outlined,
+    'plan': Icons.assignment_outlined,
+    'lunch': Icons.lunch_dining_rounded,
+
+    // Existing records keep rendering correctly after the icon key cleanup.
     '🎯': Icons.track_changes_rounded,
+    '😇': Icons.sentiment_satisfied_alt_rounded,
+    '💪': Icons.fitness_center_rounded,
+    '🎬': Icons.movie_outlined,
     '💻': Icons.computer_rounded,
     '📖': Icons.menu_book_rounded,
     '📚': Icons.menu_book_rounded,

@@ -46,16 +46,16 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
   ];
 
   final List<String> _icons = [
-    '🕌',
-    '⚡',
-    '🌿',
-    '🎯',
-    '💻',
-    '🎨',
-    '🚀',
-    '🏃',
-    '📚',
-    '☕',
+    'prayer',
+    'bolt',
+    'nature',
+    'target',
+    'computer',
+    'art',
+    'launch',
+    'running',
+    'book',
+    'coffee',
   ];
 
   @override
@@ -74,7 +74,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
       text: b?.description ?? 'Alasan dan filosofi di balik rutinitas ini.',
     );
     _category = b?.category ?? 'Balance & Wellness';
-    _iconKey = b?.iconKey ?? '⚡';
+    _iconKey = b?.iconKey ?? 'bolt';
     _blocks = b != null ? List.from(b.blocks) : _defaultSeedBlocks();
   }
 
@@ -84,7 +84,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
       startMinute: 360, // 06:00 AM
       endMinute: 540, // 09:00 AM
       ampmHalf: AmPmHalf.am,
-      iconKey: '💻',
+      iconKey: 'computer',
       colorValue: 0xFF3B82F6,
       philosophy: 'Fokus mendalam tanpa gangguan.',
       category: 'Deepwork',
@@ -94,7 +94,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
       startMinute: 0, // 12:00 PM
       endMinute: 90, // 01:30 PM
       ampmHalf: AmPmHalf.pm,
-      iconKey: '🥗',
+      iconKey: 'nutrition',
       colorValue: 0xFFEAB308,
       philosophy: 'Makan bergizi dan istirahat sejenak.',
       category: 'Rest',
@@ -104,7 +104,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
       startMinute: 300, // 05:00 PM
       endMinute: 420, // 07:00 PM
       ampmHalf: AmPmHalf.pm,
-      iconKey: '🏃',
+      iconKey: 'running',
       colorValue: 0xFF10B981,
       philosophy: 'Aktivitas fisik menjaga kebugaran.',
       category: 'Exercise',
@@ -127,7 +127,7 @@ class _BlueprintEditorSheetState extends ConsumerState<BlueprintEditorSheet> {
           startMinute: 480, // 08:00 AM
           endMinute: 600, // 10:00 AM
           ampmHalf: AmPmHalf.am,
-          iconKey: '⚡',
+          iconKey: 'bolt',
           colorValue: 0xFF8B5CF6,
           philosophy: 'Tujuan blok ini.',
           category: 'General',

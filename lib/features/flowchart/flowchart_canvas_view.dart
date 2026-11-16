@@ -12,7 +12,7 @@ class FlowchartNode {
     required this.position,
     this.durationMinutes = 30,
     this.color = const Color(0xFFE6B800),
-    this.icon = '🎯',
+    this.icon = 'target',
     this.isCompleted = false,
   });
 

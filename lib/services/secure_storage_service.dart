@@ -7,12 +7,13 @@ final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {
 
 class SecureStorageService {
   SecureStorageService({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 
   static const _keyGeminiApiKey = 'gemini_api_key';
   static const _keyOpenRouterKey = 'openrouter_api_key';
+  static const _keyAiProviderApiKey = 'ai_provider_api_key';
   static const _keyBackendUrl = 'backend_server_url';
   static const _keyVoiceEnabled = 'voice_enabled';
 
@@ -45,10 +46,63 @@ class SecureStorageService {
     }
   }
 
+  /// Current credential shared by all OpenAI-compatible and Gemini providers.
+  Future<String?> getAiProviderApiKey() async {
+    for (final key in [
+      _keyAiProviderApiKey,
+      _keyGeminiApiKey,
+      _keyOpenRouterKey,
+    ]) {
+      final value = await _storage.read(key: key);
+      if (value != null && value.trim().isNotEmpty) return value.trim();
+    }
+    return null;
+  }
+
+  /// Moves an existing credential to the unified entry before removing old
+  /// secure-storage copies. A failed write leaves every legacy copy intact.
+  Future<String?> migrateAiProviderApiKey({
+    String? legacyAppSettingsKey,
+  }) async {
+    final current = await _storage.read(key: _keyAiProviderApiKey);
+    if (current != null && current.trim().isNotEmpty) return current.trim();
+
+    final gemini = await _storage.read(key: _keyGeminiApiKey);
+    final openRouter = await _storage.read(key: _keyOpenRouterKey);
+    final value = [gemini, openRouter, legacyAppSettingsKey]
+        .whereType<String>()
+        .map((entry) => entry.trim())
+        .firstWhere((entry) => entry.isNotEmpty, orElse: () => '');
+    if (value.isEmpty) return null;
+
+    await _storage.write(key: _keyAiProviderApiKey, value: value);
+    await _deleteLegacyAiKeys();
+    return value;
+  }
+
+  /// Persists a configured provider key before clearing any compatibility copy.
+  Future<void> setAiProviderApiKey(String? key) async {
+    final value = key?.trim() ?? '';
+    if (value.isEmpty) {
+      await _storage.delete(key: _keyAiProviderApiKey);
+      await _deleteLegacyAiKeys();
+      return;
+    }
+    await _storage.write(key: _keyAiProviderApiKey, value: value);
+    await _deleteLegacyAiKeys();
+  }
+
+  Future<void> _deleteLegacyAiKeys() async {
+    await _storage.delete(key: _keyGeminiApiKey);
+    await _storage.delete(key: _keyOpenRouterKey);
+  }
+
   // ── Backend Server URL ─────────────────────────────────────────────────────
   Future<String> getBackendServerUrl() async {
     final url = await _storage.read(key: _keyBackendUrl);
-    return (url != null && url.trim().isNotEmpty) ? url.trim() : defaultBackendUrl;
+    return (url != null && url.trim().isNotEmpty)
+        ? url.trim()
+        : defaultBackendUrl;
   }
 
   Future<void> setBackendServerUrl(String? url) async {

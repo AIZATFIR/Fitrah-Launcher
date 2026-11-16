@@ -61,7 +61,7 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
 
     final activity = Activity()
       ..title = title
-      ..iconKey = '🎯'
+      ..iconKey = 'target'
       ..startMinute = dbStart
       ..endMinute = dbEnd
       ..ampmHalf = dbHalf

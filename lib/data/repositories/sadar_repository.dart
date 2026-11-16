@@ -1129,7 +1129,7 @@ class SadarRepository {
     Habit()
       ..id = 1
       ..name = 'Fokus / Deep Work'
-      ..iconKey = '💻'
+      ..iconKey = 'computer'
       ..target = 45
       ..unit = HabitUnit.min
       ..timerEnabled = true
@@ -1140,7 +1140,7 @@ class SadarRepository {
     Habit()
       ..id = 2
       ..name = 'Olahraga / Exercise'
-      ..iconKey = '🏃'
+      ..iconKey = 'running'
       ..target = 30
       ..unit = HabitUnit.min
       ..timerEnabled = true
@@ -1150,7 +1150,7 @@ class SadarRepository {
     Habit()
       ..id = 3
       ..name = '1 ayat Al quran (smkdutalib, jalan yg benar, pencerahan)'
-      ..iconKey = '😇 🕌'
+      ..iconKey = 'prayer'
       ..target = 10
       ..unit = HabitUnit.min
       ..timerEnabled = true
@@ -1160,7 +1160,7 @@ class SadarRepository {
     Habit()
       ..id = 4
       ..name = '10 min Open Laptop and throw my phone'
-      ..iconKey = '💻'
+      ..iconKey = 'computer'
       ..target = 10
       ..unit = HabitUnit.min
       ..timerEnabled = true
@@ -1171,7 +1171,7 @@ class SadarRepository {
       ..id = 5
       ..name =
           '1 module AI 50% - Dicoding - Portofolio, skill, knowledge, advantage'
-      ..iconKey = '🎓'
+      ..iconKey = 'study'
       ..target = 45
       ..unit = HabitUnit.min
       ..timerEnabled = true
@@ -1181,7 +1181,7 @@ class SadarRepository {
     Habit()
       ..id = 6
       ..name = 'Grind Physique (abs, shoulder, Hand group, back)'
-      ..iconKey = '💪'
+      ..iconKey = 'strength'
       ..target = 30
       ..unit = HabitUnit.min
       ..timerEnabled = true
@@ -1191,7 +1191,7 @@ class SadarRepository {
     Habit()
       ..id = 7
       ..name = '1 Kalaam harian (Paham Rahmat tuhan)'
-      ..iconKey = '🪶 😇'
+      ..iconKey = 'reflection'
       ..target = 15
       ..unit = HabitUnit.min
       ..timerEnabled = true
@@ -1201,7 +1201,7 @@ class SadarRepository {
     Habit()
       ..id = 8
       ..name = 'Baca 5 halaman (growth, lebih pintar)'
-      ..iconKey = '🧠 📖'
+      ..iconKey = 'study'
       ..target = 20
       ..unit = HabitUnit.min
       ..timerEnabled = true
@@ -1211,7 +1211,7 @@ class SadarRepository {
     Habit()
       ..id = 9
       ..name = 'Tonton 2 Watch later edukasi (growth, lebih pintar)'
-      ..iconKey = '🧠 🎬'
+      ..iconKey = 'thinking'
       ..target = 25
       ..unit = HabitUnit.min
       ..timerEnabled = true

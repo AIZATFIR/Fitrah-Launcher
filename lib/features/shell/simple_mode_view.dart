@@ -45,7 +45,7 @@ class SimpleModeView extends ConsumerWidget {
 
     final activity = Activity()
       ..title = '$initialMinutes Min Focused Work'
-      ..iconKey = '🎯'
+      ..iconKey = 'target'
       ..startMinute = dbStart
       ..endMinute = dbEnd
       ..ampmHalf = dbHalf
@@ -262,7 +262,7 @@ class SimpleModeView extends ConsumerWidget {
                           _QuickPresetCard(
                             title: '15 Menit',
                             subtitle: 'Quick Focus',
-                            icon: '⚡',
+                            icon: 'bolt',
                             onTap: () => _openCreateSheet(
                               context,
                               ref,
@@ -272,7 +272,7 @@ class SimpleModeView extends ConsumerWidget {
                           _QuickPresetCard(
                             title: '30 Menit',
                             subtitle: 'Standard Focus',
-                            icon: '🎯',
+                            icon: 'target',
                             onTap: () => _openCreateSheet(
                               context,
                               ref,
@@ -282,7 +282,7 @@ class SimpleModeView extends ConsumerWidget {
                           _QuickPresetCard(
                             title: '45 Menit',
                             subtitle: 'Deep Work',
-                            icon: '💻',
+                            icon: 'computer',
                             onTap: () => _openCreateSheet(
                               context,
                               ref,
@@ -292,7 +292,7 @@ class SimpleModeView extends ConsumerWidget {
                           _QuickPresetCard(
                             title: '60 Menit (1j)',
                             subtitle: 'Full Session',
-                            icon: '🚀',
+                            icon: 'launch',
                             onTap: () => _openCreateSheet(
                               context,
                               ref,
@@ -302,7 +302,7 @@ class SimpleModeView extends ConsumerWidget {
                           _QuickPresetCard(
                             title: '90 Menit (1.5j)',
                             subtitle: 'Extended Work',
-                            icon: '🔥',
+                            icon: 'fire',
                             onTap: () => _openCreateSheet(
                               context,
                               ref,

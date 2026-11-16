@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
@@ -8,6 +7,9 @@ import '../data/repositories/activity_repository.dart';
 import '../data/repositories/preset_repository.dart';
 import '../models/activity.dart';
 import 'ai_action_proposal.dart';
+import 'ai_goal_plan_proposal.dart';
+import '../domain/goal_plan_proposal.dart';
+import 'goal_plan_application_service.dart';
 import 'secure_storage_service.dart';
 
 /// Enum representing the active AI execution mode
@@ -204,6 +206,60 @@ const _tools = [
       },
     },
   },
+  {
+    'type': 'function',
+    'function': {
+      'name': 'propose_goal_plan',
+      'description':
+          'Return an editable weekly practice proposal only after the user has shared enough constraints. Ask a short clarifying question instead when a missing fact changes the schedule. Never claim it is applied or promise an outcome.',
+      'parameters': {
+        'type': 'object',
+        'required': ['goal', 'assumptions', 'blocks'],
+        'properties': {
+          'goal': {
+            'type': 'object',
+            'required': ['title'],
+            'properties': {
+              'title': {'type': 'string', 'maxLength': 120},
+              'why': {'type': 'string', 'maxLength': 500},
+              'targetDate': {
+                'type': 'string',
+                'description': 'Optional local date YYYY-MM-DD',
+              },
+            },
+          },
+          'assumptions': {
+            'type': 'array',
+            'minItems': 1,
+            'maxItems': 12,
+            'items': {'type': 'string', 'minLength': 1, 'maxLength': 200},
+          },
+          'blocks': {
+            'type': 'array',
+            'minItems': 1,
+            'maxItems': 14,
+            'items': {
+              'type': 'object',
+              'required': ['weekday', 'startMinute', 'durationMinutes'],
+              'properties': {
+                'weekday': {'type': 'integer', 'minimum': 1, 'maximum': 7},
+                'startMinute': {
+                  'type': 'integer',
+                  'minimum': 0,
+                  'maximum': 1439,
+                },
+                'durationMinutes': {
+                  'type': 'integer',
+                  'minimum': 15,
+                  'maximum': 360,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
 ];
 
 // ── Chat message ──────────────────────────────────────────────────────────────
@@ -215,12 +271,14 @@ class ChatMessage {
     this.isLoading = false,
     this.modeLabel,
     this.proposals = const [],
+    this.goalPlanProposal,
   });
   final String role; // 'user' | 'model'
   final String text;
   final bool isLoading;
   final String? modeLabel;
   final List<AiActionProposal> proposals;
+  final AiGoalPlanProposal? goalPlanProposal;
 }
 
 // ── AiService ─────────────────────────────────────────────────────────────────
@@ -232,10 +290,12 @@ class AiService {
     required this.model,
     required ActivityRepository activityRepo,
     required PresetRepository presetRepo,
+    GoalPlanApplicationService? goalPlanApplicationService,
     SecureStorageService? secureStorage,
     http.Client? httpClient,
   }) : _activityRepo = activityRepo,
        _presetRepo = presetRepo,
+       _goalPlanApplicationService = goalPlanApplicationService,
        _secureStorage = secureStorage ?? SecureStorageService(),
        _httpClient = httpClient ?? http.Client();
 
@@ -244,6 +304,7 @@ class AiService {
   final String model;
   final ActivityRepository _activityRepo;
   final PresetRepository _presetRepo;
+  final GoalPlanApplicationService? _goalPlanApplicationService;
   final SecureStorageService _secureStorage;
   final http.Client _httpClient;
 
@@ -252,9 +313,11 @@ class AiService {
   bool _initialized = false;
   AiExecutionMode _activeMode = AiExecutionMode.demoFallback;
   List<AiActionProposal> _pendingActions = const [];
+  AiGoalPlanProposal? _pendingGoalPlan;
 
   AiExecutionMode get activeMode => _activeMode;
   List<AiActionProposal> get pendingActions => _pendingActions;
+  AiGoalPlanProposal? get pendingGoalPlan => _pendingGoalPlan;
 
   /// Guidance for supportive, user-led goal conversations.
   String _buildAuraSystemPrompt(
@@ -305,22 +368,28 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
       action.dismiss();
     }
     _pendingActions = const [];
+    _pendingGoalPlan?.dismiss();
+    _pendingGoalPlan = null;
     await _ensureInit();
     _history.add({'role': 'user', 'content': userMessage});
 
-    final userGeminiKey = (await _secureStorage.getGeminiApiKey()) ?? apiKey;
+    final userGeminiKey =
+        await _secureStorage.getAiProviderApiKey() ??
+        await _secureStorage.getGeminiApiKey() ??
+        apiKey;
 
-    // Determine Mode
-    if (userGeminiKey.isNotEmpty && userGeminiKey.startsWith('AIza')) {
-      _activeMode = AiExecutionMode.byokGeminiDirect;
+    if (userGeminiKey.isNotEmpty) {
+      _activeMode = baseUrl.contains('generativelanguage.googleapis.com')
+          ? AiExecutionMode.byokGeminiDirect
+          : AiExecutionMode.serverOpenRouter;
       try {
-        final reply = await _sendGeminiDirect(
-          userMessage,
+        final reply = await _callOpenRouterDirect(
           userGeminiKey,
           allowActions: allowActions,
+          configuredProvider: true,
         );
         if (allowActions && _pendingActions.isEmpty) {
-          return '${_guardUnapprovedActionClaim(reply)}\n\nMode Gemini belum bisa meninjau aksi interaktif; belum ada perubahan jadwal diterapkan.';
+          return '${_guardUnapprovedActionClaim(reply)}\n\nBelum ada perubahan jadwal diterapkan.';
         }
         return reply;
       } catch (e) {
@@ -363,54 +432,6 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
       return 'Aku belum menerapkan perubahan. Minta satu perubahan jadwal, lalu tinjau dan setujui sebelum disimpan.';
     }
     return reply;
-  }
-
-  // ── Mode 1: BYOK Client-Side via Google Generative AI SDK ────────────────
-  Future<String> _sendGeminiDirect(
-    String userMessage,
-    String geminiKey, {
-    required bool allowActions,
-  }) async {
-    try {
-      final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
-        apiKey: geminiKey,
-        httpClient: _httpClient,
-        systemInstruction: Content.system(
-          _history.firstWhere((m) => m['role'] == 'system')['content']
-              as String,
-        ),
-      );
-
-      final priorTurns = _history
-          .take(_history.length - 1)
-          .where((message) {
-            final role = message['role'];
-            final content = message['content'];
-            return (role == 'user' || role == 'assistant') &&
-                content is String &&
-                content.trim().isNotEmpty;
-          })
-          .map(
-            (message) => Content(
-              message['role'] == 'assistant' ? 'model' : 'user',
-              [TextPart(message['content'] as String)],
-            ),
-          )
-          .toList();
-      final chat = model.startChat(history: priorTurns);
-      final response = await chat.sendMessage(Content.text(userMessage));
-      final reply = response.text?.trim();
-      if (reply == null || reply.isEmpty) {
-        throw StateError('Gemini returned an empty reply');
-      }
-
-      _history.add({'role': 'assistant', 'content': reply});
-      return reply;
-    } catch (e) {
-      // Fall back to HTTP endpoint if SDK fails
-      return await _sendServerFallback(userMessage, allowActions: allowActions);
-    }
   }
 
   // ── Mode 2: Server-Side Fallback via OpenRouter / Backend ─────────────────
@@ -465,6 +486,7 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
   Future<String> _callOpenRouterDirect(
     String? openRouterKey, {
     required bool allowActions,
+    bool configuredProvider = false,
   }) async {
     const demoUrl = String.fromEnvironment(
       'DEMO_AI_URL',
@@ -476,13 +498,19 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
       defaultValue: 'gemini-2.5-flash',
     );
 
-    final effectiveKey = (openRouterKey != null && openRouterKey.isNotEmpty)
+    final effectiveKey = configuredProvider
+        ? (openRouterKey ?? '')
+        : (openRouterKey != null && openRouterKey.isNotEmpty)
         ? openRouterKey
         : (apiKey.isNotEmpty ? apiKey : demoKey);
-    final effectiveUrl = (openRouterKey != null && openRouterKey.isNotEmpty)
+    final effectiveUrl = configuredProvider
+        ? baseUrl
+        : (openRouterKey != null && openRouterKey.isNotEmpty)
         ? 'https://openrouter.ai/api/v1'
         : (apiKey.isNotEmpty ? baseUrl : demoUrl);
-    final effectiveModel = (openRouterKey != null && openRouterKey.isNotEmpty)
+    final effectiveModel = configuredProvider
+        ? model
+        : (openRouterKey != null && openRouterKey.isNotEmpty)
         ? 'google/gemini-2.0-flash-exp:free'
         : (model.isNotEmpty ? model : demoModel);
 
@@ -492,11 +520,26 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
 
     // Agentic loop
     for (int loop = 0; loop < 5; loop++) {
+      final requestHistory =
+          configuredProvider &&
+              effectiveUrl.contains('generativelanguage.googleapis.com')
+          ? _history.where((message) {
+              final role = message['role'];
+              if (role == 'tool') return true;
+              if (role != 'system' && role != 'user' && role != 'assistant') {
+                return false;
+              }
+              final content = message['content'];
+              return (content is String && content.trim().isNotEmpty) ||
+                  message['tool_calls'] is List;
+            }).toList()
+          : _history.toList();
       final response = await _callOpenAiFormatApi(
         effectiveUrl,
         effectiveKey,
         effectiveModel,
         allowActions: allowActions,
+        messages: requestHistory,
       );
       final choice = response['choices'][0];
       final msg = choice['message'] as Map<String, dynamic>;
@@ -510,13 +553,29 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
       }
 
       final proposals = <AiActionProposal>[];
+      var malformedGoalPlan = false;
       var bulkSchedulingWasRequested = false;
       var writeWasBlocked = false;
       for (final tc in toolCalls) {
         final name = tc['function']['name'] as String;
-        final args =
-            jsonDecode(tc['function']['arguments'] as String)
-                as Map<String, dynamic>;
+        Map<String, dynamic> args;
+        try {
+          args =
+              jsonDecode(tc['function']['arguments'] as String)
+                  as Map<String, dynamic>;
+        } catch (error) {
+          if (name != 'propose_goal_plan') rethrow;
+          malformedGoalPlan = true;
+          writeWasBlocked = true;
+          _history.add({
+            'role': 'tool',
+            'tool_call_id': tc['id'],
+            'content': jsonEncode({
+              'error': 'Malformed structured goal plan: $error',
+            }),
+          });
+          continue;
+        }
         if (name == 'generate_blueprint' || name == 'schedule_adaptive_goal') {
           bulkSchedulingWasRequested = true;
           _history.add({
@@ -527,6 +586,61 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
                   'Bulk schedule needs atomic review and is not available yet.',
             }),
           });
+          continue;
+        }
+        if (name == 'propose_goal_plan') {
+          if (!allowActions || _pendingGoalPlan != null) {
+            writeWasBlocked = true;
+            _history.add({
+              'role': 'tool',
+              'tool_call_id': tc['id'],
+              'content': jsonEncode({
+                'error':
+                    'Structured plan review is unavailable; keep planning in chat or use manual scheduling.',
+              }),
+            });
+            continue;
+          }
+          try {
+            final proposal = PlanProposal.fromJson(
+              args,
+              provider: effectiveUrl,
+              model: effectiveModel,
+            );
+            final applier = _goalPlanApplicationService;
+            final operationId = const Uuid().v4();
+            _pendingGoalPlan = AiGoalPlanProposal(
+              proposal: proposal,
+              apply: (edited) {
+                if (applier == null) {
+                  throw StateError(
+                    'Penyimpanan durable tidak tersedia. Gunakan jadwal manual.',
+                  );
+                }
+                return applier.apply(
+                  operationId: operationId,
+                  proposal: edited,
+                );
+              },
+            );
+            _history.add({
+              'role': 'tool',
+              'tool_call_id': tc['id'],
+              'content': jsonEncode({
+                'status': 'awaiting_user_review_and_approval',
+              }),
+            });
+          } catch (error) {
+            malformedGoalPlan = true;
+            writeWasBlocked = true;
+            _history.add({
+              'role': 'tool',
+              'tool_call_id': tc['id'],
+              'content': jsonEncode({
+                'error': 'Invalid goal plan proposal: $error',
+              }),
+            });
+          }
           continue;
         }
         if (name == 'list_activities') {
@@ -571,13 +685,17 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
           'content': jsonEncode({'status': 'awaiting_user_approval'}),
         });
       }
-      if (proposals.isNotEmpty) {
+      if (proposals.isNotEmpty || _pendingGoalPlan != null) {
         _pendingActions = List.unmodifiable(proposals);
+        // A function-call response may include an inaccurate “already applied” claim.
+        msg['content'] = null;
         const reply =
-            'Aura menyiapkan perubahan untuk ditinjau. Belum ada perubahan yang diterapkan.';
-        return bulkSchedulingWasRequested
-            ? '$reply\n\nRencana berulang/massal belum dapat diterapkan dengan aman; usulan satuan di bawah bisa kamu tinjau.'
-            : reply;
+            'Aura menyiapkan usulan untuk ditinjau. Belum ada perubahan yang diterapkan.';
+        _history.add({'role': 'assistant', 'content': reply});
+        return reply;
+      }
+      if (malformedGoalPlan) {
+        return 'Jawaban rencana belum bisa dibaca sebagai data yang aman. Percakapan tetap tersimpan; coba minta rencana lagi atau lanjutkan dengan jadwal manual.';
       }
       if (bulkSchedulingWasRequested) {
         return 'Aku bisa bantu menyusun rencana di chat, tetapi jadwal massal/berulang belum dapat diterapkan dengan aman. Minta satu blok jadwal dulu agar bisa ditinjau sebelum disimpan.';
@@ -595,11 +713,14 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
     String key,
     String modelName, {
     required bool allowActions,
+    List<Map<String, dynamic>>? messages,
   }) async {
-    final uri = Uri.parse('$url/chat/completions');
+    final uri = Uri.parse(
+      '${url.replaceFirst(RegExp(r'/+$'), '')}/chat/completions',
+    );
     final body = jsonEncode({
       'model': modelName,
-      'messages': _history,
+      'messages': messages ?? _history,
       'tools': _tools.where((tool) {
         final name = (tool['function'] as Map<String, dynamic>)['name'];
         if (name == 'generate_blueprint' || name == 'schedule_adaptive_goal') {
@@ -1175,5 +1296,7 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
       action.dismiss();
     }
     _pendingActions = const [];
+    _pendingGoalPlan?.dismiss();
+    _pendingGoalPlan = null;
   }
 }

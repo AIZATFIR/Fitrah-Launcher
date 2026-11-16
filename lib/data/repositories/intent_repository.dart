@@ -116,6 +116,8 @@ class IntentRepository {
     final goal = IntentGoal(
       id: id,
       title: title.trim(),
+      why: existing?.why,
+      targetDate: existing?.targetDate,
       pinned: (archived ?? existing?.archived ?? false)
           ? false
           : (pinned ?? existing?.pinned ?? false),
@@ -130,6 +132,8 @@ class IntentRepository {
                   ? IntentGoal(
                       id: g.id,
                       title: g.title,
+                      why: g.why,
+                      targetDate: g.targetDate,
                       archived: g.archived,
                       revision: g.revision + 1,
                     )

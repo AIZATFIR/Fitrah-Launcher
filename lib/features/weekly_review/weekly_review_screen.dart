@@ -439,7 +439,7 @@ class _StatsRow extends StatelessWidget {
     return Row(
       children: [
         _StatChip(
-          icon: '🎯',
+          icon: 'target',
           label: 'Deep Work',
           value: '${deepWork ~/ 60}h ${deepWork % 60}m',
         ),

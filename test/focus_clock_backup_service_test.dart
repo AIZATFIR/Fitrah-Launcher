@@ -142,7 +142,8 @@ void main() {
     final localSettings = await db.appSettings.get(0);
     localSettings!
       ..aiApiKey = 'local-secret'
-      ..aiBaseUrl = 'https://local-provider.example';
+      ..aiBaseUrl = 'https://local-provider.example'
+      ..aiModel = 'local-model';
     final oldHabit = Habit()
       ..id = 4
       ..name = 'Old habit'
@@ -160,7 +161,8 @@ void main() {
       ).encode();
     final incomingSettings = AppSettings()
       ..aiApiKey = 'should-not-import'
-      ..aiBaseUrl = 'https://remote-provider.example';
+      ..aiBaseUrl = 'https://remote-provider.example'
+      ..aiModel = 'remote-model';
     final backupData = FocusClockBackupData(
       intentDocuments: [intentRow],
       presets: [],
@@ -208,8 +210,10 @@ void main() {
     expect(File(recoveryPath).existsSync(), isTrue);
     expect((await db.habits.where().findAll()).map((x) => x.id), [8]);
     final restoredSettings = await db.appSettings.get(0);
-    expect(restoredSettings!.aiApiKey, 'local-secret');
+    expect(restoredSettings!.aiApiKey, isEmpty);
     expect(restoredSettings.aiBaseUrl, 'https://local-provider.example');
+    expect(restoredSettings.aiModel, 'local-model');
+    expect(secureStorage.values['ai_provider_api_key'], 'local-secret');
     expect(
       LauncherSettings.fromJson(
         secureStorage.values[FocusClockBackupService.launcherSettingsKey]!,
@@ -370,6 +374,22 @@ void main() {
 class _MemorySecureStorage extends SecureStorageService {
   final Map<String, String> values = {};
   bool failNextLauncherWrite = false;
+
+  @override
+  Future<String?> migrateAiProviderApiKey({
+    String? legacyAppSettingsKey,
+  }) async {
+    final current = values['ai_provider_api_key'];
+    if (current != null && current.isNotEmpty) return current;
+    final key = (legacyAppSettingsKey?.isNotEmpty ?? false)
+        ? legacyAppSettingsKey!
+        : values['gemini_api_key'] ?? values['openrouter_api_key'];
+    if (key == null || key.isEmpty) return null;
+    values['ai_provider_api_key'] = key;
+    values.remove('gemini_api_key');
+    values.remove('openrouter_api_key');
+    return key;
+  }
 
   @override
   Future<String?> readCustomKey(String key) async => values[key];

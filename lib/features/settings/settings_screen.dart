@@ -761,11 +761,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const _Section(title: 'AI Assistant'),
               _AiConfigTile(
                 s: s,
-                onSave: (baseUrl, apiKey, model) {
-                  _save(
+                storage: ref.read(secureStorageServiceProvider),
+                onSave: (baseUrl, model) async {
+                  await _save(
                     s,
                     aiBaseUrl: baseUrl,
-                    aiApiKey: apiKey,
+                    aiApiKey: '',
                     aiModel: model,
                   );
                 },
@@ -959,7 +960,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _save(
+  Future<void> _save(
     AppSettings s, {
     bool? is24h,
     int? clockHandsMode,
@@ -1014,16 +1015,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ..currentTimeFormat = currentTimeFormat ?? s.currentTimeFormat
       ..floatTimeText = floatTimeText ?? s.floatTimeText
       ..glowStyle = glowStyle ?? s.glowStyle;
-    ref.read(settingsRepoProvider).update(next);
+    return ref.read(settingsRepoProvider).update(next);
   }
 }
 
 // ── AI Config tile ────────────────────────────────────────────────────────────
 
 class _AiConfigTile extends StatefulWidget {
-  const _AiConfigTile({required this.s, required this.onSave});
+  const _AiConfigTile({
+    required this.s,
+    required this.storage,
+    required this.onSave,
+  });
   final AppSettings s;
-  final void Function(String baseUrl, String apiKey, String model) onSave;
+  final SecureStorageService storage;
+  final Future<void> Function(String baseUrl, String model) onSave;
 
   @override
   State<_AiConfigTile> createState() => _AiConfigTileState();
@@ -1038,6 +1044,8 @@ class _AiConfigTileState extends State<_AiConfigTile> {
   String _selectedPreset = 'Google AI';
 
   bool _voiceEnabled = true;
+  bool _saving = false;
+  String _savedApiKey = '';
 
   @override
   void initState() {
@@ -1045,6 +1053,7 @@ class _AiConfigTileState extends State<_AiConfigTile> {
     _urlCtrl = TextEditingController(text: widget.s.aiBaseUrl);
     _keyCtrl = TextEditingController(text: widget.s.aiApiKey);
     _modelCtrl = TextEditingController(text: widget.s.aiModel);
+    _savedApiKey = widget.s.aiApiKey;
 
     final match = _providerPresets
         .where((p) => p.$2 == widget.s.aiBaseUrl)
@@ -1054,21 +1063,27 @@ class _AiConfigTileState extends State<_AiConfigTile> {
   }
 
   Future<void> _loadSecureStorage() async {
-    final storage = SecureStorageService();
-    final geminiKey = await storage.getGeminiApiKey();
-    final serverUrl = await storage.getBackendServerUrl();
-    final vEnabled = await storage.isVoiceEnabled();
+    try {
+      final apiKey = await widget.storage.migrateAiProviderApiKey(
+        legacyAppSettingsKey: widget.s.aiApiKey,
+      );
+      final vEnabled = await widget.storage.isVoiceEnabled();
 
-    if (mounted) {
+      if (!mounted) return;
       setState(() {
-        if (geminiKey != null && geminiKey.isNotEmpty) {
-          _keyCtrl.text = geminiKey;
-        }
-        if (serverUrl.isNotEmpty) {
-          _urlCtrl.text = serverUrl;
-        }
+        _savedApiKey = apiKey ?? '';
+        if (apiKey != null && apiKey.isNotEmpty) _keyCtrl.text = apiKey;
         _voiceEnabled = vEnabled;
       });
+      if (widget.s.aiApiKey.isNotEmpty) {
+        await widget.onSave(widget.s.aiBaseUrl, widget.s.aiModel);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('API key migration failed: $error')),
+        );
+      }
     }
   }
 
@@ -1105,7 +1120,7 @@ class _AiConfigTileState extends State<_AiConfigTile> {
 
   @override
   Widget build(BuildContext context) {
-    final saved = widget.s.aiApiKey.isNotEmpty;
+    final saved = _savedApiKey.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Column(
@@ -1355,29 +1370,40 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                   backgroundColor: AppPalette.accent,
                   foregroundColor: Colors.black,
                 ),
-                onPressed: () async {
-                  final key = _keyCtrl.text.trim();
-                  final url = _urlCtrl.text.trim();
-                  final model = _modelCtrl.text.trim();
+                onPressed: _saving
+                    ? null
+                    : () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final key = _keyCtrl.text.trim();
+                        final url = _urlCtrl.text.trim();
+                        final model = _modelCtrl.text.trim();
 
-                  final storage = SecureStorageService();
-                  await storage.setGeminiApiKey(key);
-                  await storage.setBackendServerUrl(url);
-                  await storage.setVoiceEnabled(_voiceEnabled);
-
-                  widget.onSave(url, key, model);
-
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Pengaturan Aura AI & Voice Berhasil Disimpan!',
-                        ),
-                      ),
-                    );
-                  }
-                },
-                child: const Text('Save'),
+                        setState(() => _saving = true);
+                        try {
+                          await widget.storage.setAiProviderApiKey(key);
+                          await widget.storage.setVoiceEnabled(_voiceEnabled);
+                          await widget.onSave(url, model);
+                          if (mounted) {
+                            setState(() => _savedApiKey = key);
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Pengaturan AI berhasil disimpan.',
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (error) {
+                          if (mounted) {
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Save failed: $error')),
+                            );
+                          }
+                        } finally {
+                          if (mounted) setState(() => _saving = false);
+                        }
+                      },
+                child: Text(_saving ? 'Saving…' : 'Save'),
               ),
             ],
           ),

@@ -16,6 +16,7 @@ import '../models/preset.dart';
 import '../models/routine_blueprint.dart';
 import '../models/task.dart';
 import '../services/ai_service.dart';
+import '../services/goal_plan_application_service.dart';
 import '../services/blueprint_applier_service.dart';
 import '../services/gcal_service.dart';
 import '../services/notification_service.dart';
@@ -167,6 +168,13 @@ final aiTranscriptProvider = StateProvider<List<ChatMessage>>(
   (_) => <ChatMessage>[],
 );
 
+final goalPlanApplicationServiceProvider =
+    Provider<GoalPlanApplicationService?>((ref) {
+      final store = ref.watch(focusStoreProvider);
+      if (store == null || !store.isDurable) return null;
+      return GoalPlanApplicationService(store);
+    });
+
 // ── Planning Mode & App Mode State ───────────────────────────────────────
 
 /// Initial mode based on build flag (--dart-define=APP_MODE=...) or web URL parameter (?app=...)
@@ -244,6 +252,7 @@ final aiServiceProvider = Provider<AiService>((ref) {
     model: settings?.aiModel ?? 'google/gemini-2.0-flash-exp:free',
     activityRepo: ref.watch(activityRepoProvider),
     presetRepo: ref.watch(presetRepoProvider),
+    goalPlanApplicationService: ref.watch(goalPlanApplicationServiceProvider),
     secureStorage: ref.watch(secureStorageServiceProvider),
   );
 });

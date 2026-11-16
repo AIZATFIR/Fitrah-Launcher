@@ -32,18 +32,24 @@ class IntentGoal {
   const IntentGoal({
     required this.id,
     required this.title,
+    this.why,
+    this.targetDate,
     this.pinned = false,
     this.archived = false,
     this.revision = 1,
   });
   final String id;
   final String title;
+  final String? why;
+  final String? targetDate;
   final bool pinned;
   final bool archived;
   final int revision;
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
+    'why': why,
+    'targetDate': targetDate,
     'pinned': pinned,
     'archived': archived,
     'revision': revision,
@@ -51,10 +57,49 @@ class IntentGoal {
   factory IntentGoal.fromJson(Map<String, dynamic> m) => IntentGoal(
     id: _uuid(m['id']),
     title: _title(m['title']),
+    why: m['why'] == null ? null : _optionalText(m['why'], 500),
+    targetDate: m['targetDate'] == null
+        ? null
+        : validLocalDate(m['targetDate']),
     pinned: _bool(m['pinned']),
     archived: _bool(m['archived']),
     revision: _positive(m['revision']),
   );
+}
+
+class IntentPlanReceipt {
+  const IntentPlanReceipt({
+    required this.operationId,
+    required this.fingerprint,
+    required this.goalId,
+    required this.habitId,
+    required this.activityIds,
+  });
+  final String operationId;
+  final String fingerprint;
+  final String goalId;
+  final int habitId;
+  final List<int> activityIds;
+  Map<String, dynamic> toJson() => {
+    'operationId': operationId,
+    'fingerprint': fingerprint,
+    'goalId': goalId,
+    'habitId': habitId,
+    'activityIds': activityIds,
+  };
+  factory IntentPlanReceipt.fromJson(Map<String, dynamic> m) {
+    final activities = m['activityIds'];
+    if (activities is! List) {
+      throw const FormatException('Invalid plan receipt');
+    }
+    return IntentPlanReceipt(
+      operationId: _text(m['operationId']),
+      fingerprint: _text(m['fingerprint']),
+      goalId: _uuid(m['goalId']),
+      habitId: _integer(m['habitId']),
+      activityIds: List.unmodifiable(activities.map(_integer)),
+    );
+  }
 }
 
 class IntentLink {
@@ -142,11 +187,13 @@ class IntentState {
     List<IntentSource> sources = const [],
     List<IntentLink> links = const [],
     List<TodaySelection> selections = const [],
+    List<IntentPlanReceipt> planReceipts = const [],
   }) : legacyMappings = List.unmodifiable(legacyMappings),
        goals = List.unmodifiable(goals),
        sources = List.unmodifiable(sources),
        links = List.unmodifiable(links),
-       selections = List.unmodifiable(selections);
+       selections = List.unmodifiable(selections),
+       planReceipts = List.unmodifiable(planReceipts);
   final String sourceStoreId;
   final int revision;
   final bool legacyImported;
@@ -155,6 +202,7 @@ class IntentState {
   final List<IntentSource> sources;
   final List<IntentLink> links;
   final List<TodaySelection> selections;
+  final List<IntentPlanReceipt> planReceipts;
   IntentGoal? get pinnedGoal =>
       goals.where((g) => g.pinned && !g.archived).firstOrNull;
   TodaySelection? selectionFor(String localDate) =>
@@ -169,6 +217,7 @@ class IntentState {
     List<IntentSource>? sources,
     List<IntentLink>? links,
     List<TodaySelection>? selections,
+    List<IntentPlanReceipt>? planReceipts,
   }) => IntentState(
     sourceStoreId: sourceStoreId,
     revision: revision ?? this.revision,
@@ -178,6 +227,7 @@ class IntentState {
     sources: sources ?? this.sources,
     links: links ?? this.links,
     selections: selections ?? this.selections,
+    planReceipts: planReceipts ?? this.planReceipts,
   );
   Map<String, dynamic> toJson() => {
     'version': 1,
@@ -189,6 +239,7 @@ class IntentState {
     'sources': sources.map((s) => s.toJson()).toList(),
     'links': links.map((l) => l.toJson()).toList(),
     'selections': selections.map((s) => s.toJson()).toList(),
+    'planReceipts': planReceipts.map((r) => r.toJson()).toList(),
   };
   String encode() => jsonEncode(toJson());
   factory IntentState.decode(String raw) {
@@ -213,6 +264,9 @@ class IntentState {
       sources: _rows(m['sources'], IntentSource.fromJson),
       links: _rows(m['links'], IntentLink.fromJson),
       selections: _rows(m['selections'], TodaySelection.fromJson),
+      planReceipts: m['planReceipts'] == null
+          ? const []
+          : _rows(m['planReceipts'], IntentPlanReceipt.fromJson),
     );
     if (state.revision < 0) throw const FormatException('Invalid revision');
     _unique(
@@ -234,6 +288,7 @@ class IntentState {
     );
     _unique(state.links.map((l) => l.sourceId));
     _unique(state.selections.map((s) => s.localDate));
+    _unique(state.planReceipts.map((r) => r.operationId));
     if (state.goals.where((g) => g.pinned).length > 1 ||
         state.goals.any((g) => g.pinned && g.archived)) {
       throw const FormatException('Invalid pinned goal');
@@ -280,6 +335,12 @@ String _title(Object? v) {
     throw const FormatException('Goal title must be 1–120 characters');
   }
   return s;
+}
+
+String _optionalText(Object? value, int maxLength) {
+  final text = _text(value).trim();
+  if (text.length > maxLength) throw const FormatException('Text is too long');
+  return text;
 }
 
 String _uuid(Object? v) {

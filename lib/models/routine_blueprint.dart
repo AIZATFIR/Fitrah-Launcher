@@ -37,7 +37,7 @@ class BlueprintBlock {
         startMinute: json['startMinute'] as int? ?? 0,
         endMinute: json['endMinute'] as int? ?? 60,
         ampmHalf: json['ampmHalf'] == 'pm' ? AmPmHalf.pm : AmPmHalf.am,
-        iconKey: json['iconKey'] as String? ?? '⚡',
+        iconKey: json['iconKey'] as String? ?? 'bolt',
         colorValue: json['colorValue'] as int? ?? 0xFF3B82F6,
         philosophy: json['philosophy'] as String? ?? '',
         category: json['category'] as String? ?? 'General',
@@ -111,7 +111,7 @@ class RoutineBlueprint {
         description: json['description'] as String? ?? '',
         author: json['author'] as String? ?? 'Custom',
         category: json['category'] as String? ?? 'General',
-        iconKey: json['iconKey'] as String? ?? '📋',
+        iconKey: json['iconKey'] as String? ?? 'plan',
         blocks: (json['blocks'] as List<dynamic>?)
                 ?.map((b) => BlueprintBlock.fromJson(b as Map<String, dynamic>))
                 .toList() ??
@@ -155,14 +155,14 @@ class RoutineBlueprint {
             'A life rhythm anchored to the 5 prayer stations. Morning barakah is devoted to deep work, midday to joyful reflection & reset, afternoon to health & family, dusk to dinner & connection, and night to gratitude & restorative sleep.',
         author: 'Official Dev',
         category: 'Spiritual & Focus',
-        iconKey: '🕌',
+        iconKey: 'prayer',
         blocks: const [
           BlueprintBlock(
             title: 'Subuh & Barakah Deep Work',
             startMinute: 300, // 05:00
             endMinute: 510,   // 08:30
             ampmHalf: AmPmHalf.am,
-            iconKey: '🌅',
+            iconKey: 'sunrise',
             colorValue: 0xFF3B82F6, // Blue
             philosophy:
                 'Peak morning cognitive output and creative focus before the noise of the day starts.',
@@ -184,7 +184,7 @@ class RoutineBlueprint {
             startMinute: 210, // 15:30 PM
             endMinute: 330,   // 17:30 PM
             ampmHalf: AmPmHalf.pm,
-            iconKey: '🏃',
+            iconKey: 'running',
             colorValue: 0xFF10B981, // Emerald
             philosophy:
                 'Ashar prayer, sports, physical workout, hobbies, and spending active time with family.',
@@ -195,7 +195,7 @@ class RoutineBlueprint {
             startMinute: 360, // 18:00 PM
             endMinute: 450,   // 19:30 PM
             ampmHalf: AmPmHalf.pm,
-            iconKey: '🌙',
+            iconKey: 'moon',
             colorValue: 0xFFF97316, // Orange
             philosophy:
                 'Maghrib prayer, warm family meal, digital detox, and relaxing transition to evening.',
@@ -206,7 +206,7 @@ class RoutineBlueprint {
             startMinute: 450, // 19:30 PM
             endMinute: 570,   // 21:30 PM
             ampmHalf: AmPmHalf.pm,
-            iconKey: '📖',
+            iconKey: 'book',
             colorValue: 0xFF8B5CF6, // Purple
             philosophy:
                 'Isya prayer, daily gratitude reflection, planning tomorrow, and preparing mind for sleep.',
@@ -217,7 +217,7 @@ class RoutineBlueprint {
             startMinute: 570, // 21:30 PM (to 04:30 AM)
             endMinute: 720,   // 24:00
             ampmHalf: AmPmHalf.pm,
-            iconKey: '😴',
+            iconKey: 'sleep',
             colorValue: 0xFF64748B, // Slate
             philosophy:
                 '7 hours of undisturbed deep sleep to recharge body and soul for dawn prayer.',
@@ -235,14 +235,14 @@ class RoutineBlueprint {
             'Designed for professionals, engineers, and creators who need uninterrupted morning focus, structured afternoon collaboration, and deliberate evening recovery.',
         author: 'Official Dev',
         category: 'High Performance',
-        iconKey: '⚡',
+        iconKey: 'bolt',
         blocks: const [
           BlueprintBlock(
             title: 'Morning Ritual & Mindful Movement',
             startMinute: 360, // 06:00 AM
             endMinute: 450,   // 07:30 AM
             ampmHalf: AmPmHalf.am,
-            iconKey: '🌅',
+            iconKey: 'sunrise',
             colorValue: 0xFF06B6D4, // Cyan
             philosophy:
                 'Hydration, sunlight exposure, gentle stretching, and mental preparation.',
@@ -253,7 +253,7 @@ class RoutineBlueprint {
             startMinute: 480, // 08:00 AM
             endMinute: 690,   // 11:30 AM
             ampmHalf: AmPmHalf.am,
-            iconKey: '🎯',
+            iconKey: 'target',
             colorValue: 0xFF3B82F6, // Blue
             philosophy:
                 'Zero-distraction high-leverage problem solving, coding, or strategy.',
@@ -264,7 +264,7 @@ class RoutineBlueprint {
             startMinute: 0,   // 12:00 PM
             endMinute: 90,    // 13:30 PM
             ampmHalf: AmPmHalf.pm,
-            iconKey: '🥗',
+            iconKey: 'nutrition',
             colorValue: 0xFFF59E0B, // Amber
             philosophy: 'Nutritious lunch, walking, stepping away from screens.',
             category: 'Intentional Rest',
@@ -274,7 +274,7 @@ class RoutineBlueprint {
             startMinute: 120, // 14:00 PM
             endMinute: 270,   // 16:30 PM
             ampmHalf: AmPmHalf.pm,
-            iconKey: '🤝',
+            iconKey: 'meeting',
             colorValue: 0xFF8B5CF6, // Purple
             philosophy:
                 'Meetings, communication, email processing, and administrative execution.',
@@ -285,7 +285,7 @@ class RoutineBlueprint {
             startMinute: 300, // 17:00 PM
             endMinute: 420,   // 19:00 PM
             ampmHalf: AmPmHalf.pm,
-            iconKey: '🏃',
+            iconKey: 'running',
             colorValue: 0xFF10B981, // Emerald
             philosophy:
                 'Strength training, cardio, outdoor exercise, or creative hobby.',
@@ -296,7 +296,7 @@ class RoutineBlueprint {
             startMinute: 480, // 20:00 PM
             endMinute: 600,   // 22:00 PM
             ampmHalf: AmPmHalf.pm,
-            iconKey: '🕯️',
+            iconKey: 'reflection',
             colorValue: 0xFFEC4899, // Pink
             philosophy:
                 'Dinner with loved ones, reading fiction or non-screen book, dimming lights.',
@@ -307,7 +307,7 @@ class RoutineBlueprint {
             startMinute: 600, // 22:00 PM
             endMinute: 720,   // 24:00
             ampmHalf: AmPmHalf.pm,
-            iconKey: '🛌',
+            iconKey: 'sleep',
             colorValue: 0xFF64748B, // Slate
             philosophy: 'High quality deep sleep in a cool, dark room.',
             category: 'Sleep',

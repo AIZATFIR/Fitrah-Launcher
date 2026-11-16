@@ -62,7 +62,7 @@ class Habit {
   Id id = Isar.autoIncrement;
 
   late String name;
-  String iconKey = '🎯'; // emoji symbol
+  String iconKey = 'target'; // emoji symbol
   int target = 20; // target quantity (e.g. 20 for 20m, 1 for 1 session)
 
   @enumerated
