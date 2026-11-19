@@ -94,8 +94,6 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                       Expanded(
                         child: Text(
                           'TUJUAN UTAMA',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: widget.secondary,
                             fontSize: 11,

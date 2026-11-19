@@ -1837,8 +1837,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
 
     final hr = _hourNow();
 
+    final textScaler = MediaQuery.textScalerOf(context);
+    final agendaItemHeight = math.max(
+      44.0,
+      textScaler.scale(12) * 1.5 + textScaler.scale(10) * 1.5 + 10,
+    );
+
     return SizedBox(
-      height: 44,
+      height: agendaItemHeight,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: nonSleep.length,
@@ -3262,8 +3268,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 children: [
                   Text(
                     gregorian,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: tc.textSecondary,
                       fontSize: 12,
@@ -3272,8 +3276,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ),
                   Text(
                     'Hijriah · $hijri',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: tc.textMuted, fontSize: 11),
                   ),
                 ],

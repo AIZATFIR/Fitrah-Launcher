@@ -5,6 +5,7 @@ import 'package:fitrah_launcher/models/timer_session.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitrah_launcher/data/repositories/intent_repository.dart';
@@ -190,6 +191,37 @@ void main() {
 
     expect(find.text('Menang LKS'), findsOneWidget);
     expect(find.text('Tanya AI'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('goal heading wraps at 200% text scale without truncation', (
+    tester,
+  ) async {
+    await show(
+      tester,
+      width: 320,
+      textScale: 2,
+      state: IntentState(
+        sourceStoreId: storeId,
+        legacyImported: true,
+        goals: const [
+          IntentGoal(
+            id: '22222222-2222-4222-8222-222222222222',
+            title: 'Menang LKS',
+            pinned: true,
+          ),
+        ],
+      ),
+      assistantAction: (_) {},
+    );
+
+    expect(find.text('Tanya AI'), findsOneWidget);
+    expect(
+      tester
+          .renderObject<RenderParagraph>(find.text('TUJUAN UTAMA'))
+          .didExceedMaxLines,
+      isFalse,
+    );
     expect(tester.takeException(), isNull);
   });
 

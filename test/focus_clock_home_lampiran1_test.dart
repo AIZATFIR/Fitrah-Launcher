@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
@@ -32,6 +33,7 @@ void main() {
     Widget createWidgetUnderTest({
       bool useSampleData = true,
       bool emptyTasks = false,
+      double textScale = 1,
       SadarRepository? sadarRepository,
     }) {
       final storage = NoteStorage()
@@ -57,6 +59,12 @@ void main() {
             sadarRepoProvider.overrideWithValue(sadarRepository),
         ],
         child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
           home: FocusClockHomeView(
             onOpenFocusClock: () {},
             onOpenAppDrawer: () {},
@@ -212,6 +220,24 @@ void main() {
         findsOneWidget,
       );
       await expandSupportTools(tester);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Home Hijri date wraps at 200% text scale', (tester) async {
+      tester.view.physicalSize = const Size(360, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(createWidgetUnderTest(textScale: 2));
+      await tester.pump();
+
+      final hijriDate = find.textContaining('Hijriah ·');
+      expect(hijriDate, findsOneWidget);
+      expect(
+        tester.renderObject<RenderParagraph>(hijriDate).didExceedMaxLines,
+        isFalse,
+      );
       expect(tester.takeException(), isNull);
     });
 
