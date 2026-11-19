@@ -78515,7 +78515,7 @@ p=q.i("x.E")
 m=A.Q(new A.ad(n,new A.bf_(j,r),q),p)
 l=A.Q(new A.ad(n,new A.bf0(r),q),p)
 q=m.length
-if(q===0){r=A.b([],t.p)
+if(q===0&&l.length===0){r=A.b([],t.p)
 if(!j.as)r.push(j.RH())
 if(j.Q.length!==0)j="Tidak ada aplikasi yang cocok dengan pencarian."
 else j=s.gaa(a)?u.L:"Semua aplikasi disembunyikan."

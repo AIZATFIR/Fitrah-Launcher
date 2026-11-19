@@ -497,7 +497,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                             favorites.contains(a.packageName),
                                       )
                                       .toList();
-                                  if (filtered.isEmpty) {
+                                  if (filtered.isEmpty && shortcuts.isEmpty) {
                                     return ListView(
                                       padding: const EdgeInsets.all(24),
                                       children: [
