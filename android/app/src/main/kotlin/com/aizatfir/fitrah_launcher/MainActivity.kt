@@ -182,7 +182,13 @@ class MainActivity : FlutterActivity() {
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 android.graphics.PixelFormat.TRANSLUCENT
-            ).apply { gravity = Gravity.TOP or Gravity.END; x = 8; y = 88 }
+            ).apply {
+                gravity = Gravity.TOP or Gravity.END
+                x = (resources.displayMetrics.density * 8).toInt()
+                // Keep the cue below the launcher header instead of covering its
+                // clock/prayer action on devices with different screen densities.
+                y = (resources.displayMetrics.density * 88).toInt()
+            }
             var startY = 0
             var touchX = 0f
             var touchY = 0f

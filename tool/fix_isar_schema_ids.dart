@@ -4,6 +4,21 @@ const _wideIdRadix = 10000;
 final _maxSafeJavascriptInteger = BigInt.parse('9007199254740991');
 final _schemaIdPattern = RegExp(r'(\bid:\s*)(-?\d+)(\s*,)');
 const _preservedPropertyIds = <String, Map<String, int>>{
+  'habit_entry.g.dart': {
+    'actualDurationMinutes': 0,
+    'actualDurationSeconds': 1,
+    'completedAt': 2,
+    'createdAt': 3,
+    'dateString': 4,
+    'habitId': 5,
+    'note': 6,
+    'source': 7,
+    'status': 8,
+    'targetSnapshot': 9,
+    'updatedAt': 10,
+    'valueCompleted': 11,
+    'progressionCompletionSnapshotJson': 12,
+  },
   'timer_session.g.dart': {
     'accumulatedDurationSeconds': 0,
     'activityId': 1,
@@ -25,6 +40,10 @@ const _preservedPropertyIds = <String, Map<String, int>>{
     'updatedAt': 17,
     'goalId': 18,
     'goalTitleSnapshot': 19,
+    'hybridRestSeconds': 20,
+    'hybridSetCount': 21,
+    'hybridWorkSeconds': 22,
+    'revision': 23,
   },
   'terminal_focus_session.g.dart': {
     'activityId': 0,
@@ -95,9 +114,11 @@ String transformPreservedPropertyIds(String source, String fileName) {
       properties +
       source.substring(propertiesEnd);
 
-  final functionName = fileName == 'timer_session.g.dart'
-      ? '_timerSessionDeserializeProp'
-      : '_terminalFocusSessionDeserializeProp';
+  final functionName = switch (fileName) {
+    'habit_entry.g.dart' => '_habitEntryDeserializeProp',
+    'timer_session.g.dart' => '_timerSessionDeserializeProp',
+    _ => '_terminalFocusSessionDeserializeProp',
+  };
   final functionStart = transformed.indexOf('P $functionName<P>');
   if (functionStart < 0) return transformed;
   final functionEnd = transformed.indexOf('\n}\n', functionStart) + 2;

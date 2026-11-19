@@ -21,7 +21,8 @@ class HomeIntentCue extends ConsumerStatefulWidget {
     required this.onHabitTimer,
     this.onAttributedHabitTimer,
     this.onHabitSchedule,
-    required this.onTaskSchedule,
+    this.onAssistant,
+    required this.onTaskAction,
     required this.onSession,
     this.onAddTask,
   });
@@ -30,7 +31,9 @@ class HomeIntentCue extends ConsumerStatefulWidget {
   final void Function(Habit, String? goalId, String? goalTitle)?
   onAttributedHabitTimer;
   final void Function(Habit)? onHabitSchedule;
-  final Future<void> Function(Task) onTaskSchedule;
+  final ValueChanged<IntentGoal?>? onAssistant;
+  final Future<void> Function(Task, {String? goalId, String? goalTitle})
+  onTaskAction;
   final VoidCallback onSession;
   final VoidCallback? onAddTask;
   @override
@@ -88,15 +91,43 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                     children: [
                       Icon(Icons.flag_outlined, size: 15, color: widget.accent),
                       const SizedBox(width: 7),
-                      Text(
-                        'TUJUAN UTAMA',
-                        style: TextStyle(
-                          color: widget.secondary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.65,
+                      Expanded(
+                        child: Text(
+                          'TUJUAN UTAMA',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: widget.secondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.65,
+                          ),
                         ),
                       ),
+                      if (widget.onAssistant != null)
+                        Tooltip(
+                          message: 'Bicarakan tujuan dengan AI',
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: widget.accent,
+                              minimumSize: const Size(48, 44),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                              ),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () =>
+                                widget.onAssistant?.call(intent.pinnedGoal),
+                            icon: const Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              size: 16,
+                            ),
+                            label: const Text(
+                              'Tanya AI',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 5),
@@ -181,6 +212,10 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                           (choice == null ||
                               choice.completed ||
                               choice.kind == IntentActionKind.unavailable);
+                      final actionLabel =
+                          !primary && data.hasValue && choice != null
+                          ? 'Ganti tindakan'
+                          : 'Pilih tindakan hari ini';
                       final hasAvailableSource =
                           data.hasValue &&
                           (data.requireValue.habits.any((h) => !h.isArchived) ||
@@ -203,8 +238,8 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                               style: _primaryStyle,
                               onPressed: action,
                               icon: const Icon(Icons.today_outlined),
-                              label: const Text(
-                                'Pilih tindakan hari ini',
+                              label: Text(
+                                actionLabel,
                                 textAlign: TextAlign.center,
                               ),
                             )
@@ -215,8 +250,8 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                               ),
                               onPressed: action,
                               icon: const Icon(Icons.today_outlined),
-                              label: const Text(
-                                'Pilih tindakan hari ini',
+                              label: Text(
+                                actionLabel,
                                 textAlign: TextAlign.center,
                               ),
                             );
@@ -319,6 +354,8 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     );
     if (choice == null || choice.completed) {
       final agenda = ref.watch(intentAgendaProvider);
+      final progressionSnapshot =
+          choice?.habitEntry?.progressionCompletionSnapshot;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -328,6 +365,28 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                 : 'Belum ada tindakan yang dipilih hari ini',
             style: TextStyle(color: widget.secondary),
           ),
+          if (choice?.habit?.effectiveHabitType == 'progression' &&
+              progressionSnapshot != null) ...[
+            Text(
+              'Langkah tercatat: ${progressionSnapshot.step.isRest ? 'Istirahat' : progressionSnapshot.step.title}',
+              style: TextStyle(color: widget.secondary),
+            ),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: widget.accent,
+                minimumSize: const Size(48, 48),
+              ),
+              onPressed: _busy
+                  ? null
+                  : () => _undoProgression(
+                      choice!.habit!,
+                      date,
+                      progressionSnapshot,
+                    ),
+              icon: const Icon(Icons.undo_rounded),
+              label: const Text('Batalkan langkah'),
+            ),
+          ],
           agenda.when(
             loading: () => const Text('Memuat agenda…'),
             error: (e, _) =>
@@ -360,10 +419,14 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     }
     final label = switch (choice.kind) {
       IntentActionKind.timed => 'Mulai fokus',
+      IntentActionKind.hybrid => 'Mulai rangkaian',
+      IntentActionKind.progression => 'Catat langkah',
       IntentActionKind.binary => 'Tandai dilakukan',
       IntentActionKind.count => 'Catat jumlah',
       IntentActionKind.task =>
-        choice.task?.activityId != null || choice.task?.startMinute != null
+        choice.task?.activityId != null
+            ? 'Mulai fokus'
+            : choice.task?.startMinute != null
             ? 'Buka jadwal tugas'
             : 'Jadwalkan tugas',
       IntentActionKind.unsupported => 'Lihat rincian',
@@ -384,6 +447,14 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
               child: const Text('Atur waktu'),
             ),
         Text(choice.title, style: const TextStyle(fontSize: 16)),
+        if (choice.kind == IntentActionKind.progression)
+          if (choice.habit case final habit?)
+            Text(
+              habit.currentStep.isRest
+                  ? '${habit.currentStep.dayName} · Hari istirahat'
+                  : '${habit.currentStep.dayName} · ${habit.currentStep.title} · ${habit.currentStep.target} ${habit.currentStep.unit}',
+              style: TextStyle(color: widget.secondary),
+            ),
         if (state.links
                 .where((l) => l.sourceId == state.selectionFor(date)?.sourceId)
                 .firstOrNull
@@ -412,6 +483,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     setState(() {
       _busy =
           choice.kind != IntentActionKind.count &&
+          choice.kind != IntentActionKind.progression &&
           choice.kind != IntentActionKind.unsupported;
       _error = null;
     });
@@ -422,6 +494,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
       }
       switch (choice.kind) {
         case IntentActionKind.timed:
+        case IntentActionKind.hybrid:
           final selectedSourceId = state.selectionFor(date)?.sourceId;
           final link = state.links
               .where((item) => item.sourceId == selectedSourceId)
@@ -438,8 +511,21 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
           } else {
             widget.onHabitTimer(choice.habit!);
           }
+        case IntentActionKind.progression:
+          await _progression(choice.habit!, date);
         case IntentActionKind.task:
-          await widget.onTaskSchedule(choice.task!);
+          final sourceId = state.selectionFor(date)?.sourceId;
+          final link = state.links
+              .where((item) => item.sourceId == sourceId)
+              .firstOrNull;
+          final goal = state.goals
+              .where((item) => item.id == link?.goalId)
+              .firstOrNull;
+          await widget.onTaskAction(
+            choice.task!,
+            goalId: goal?.id,
+            goalTitle: goal?.title,
+          );
         case IntentActionKind.binary:
           await ref
               .read(sadarRepoProvider)
@@ -480,6 +566,54 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     }
   }
 
+  Future<void> _progression(Habit habit, String date) async {
+    final step = habit.currentStep;
+    final detail = step.isRest
+        ? '${step.dayName}: hari pemulihan dan istirahat.'
+        : '${step.dayName}: ${step.title}, ${step.target} ${step.unit}.';
+    await _showIntentDialog(
+      context: context,
+      theme: _intentDialogTheme(context),
+      builder: (_) => HabitActionSaveDialog(
+        title: 'Catat langkah hari ini?',
+        body: Text(detail),
+        onSave: () async {
+          await ref
+              .read(sadarRepoProvider)
+              .completeProgressionStep(habitId: habit.id, dateString: date);
+        },
+      ),
+    );
+  }
+
+  Future<void> _undoProgression(
+    Habit habit,
+    String date,
+    ProgressionCompletionSnapshot snapshot,
+  ) async {
+    await _showIntentDialog(
+      context: context,
+      theme: _intentDialogTheme(context),
+      builder: (_) => HabitActionSaveDialog(
+        title: 'Batalkan langkah hari ini?',
+        body: Text(
+          'Urutan kembali ke ${snapshot.step.dayName}: ${snapshot.step.title}. Catatan dan durasi yang sudah ada tetap disimpan.',
+        ),
+        saveLabel: 'Batalkan',
+        onSave: () async {
+          final undone = await ref
+              .read(sadarRepoProvider)
+              .undoProgressionStep(habitId: habit.id, dateString: date);
+          if (!undone) {
+            throw StateError(
+              'Urutan sudah berubah; langkah ini bukan catatan terbaru.',
+            );
+          }
+        },
+      ),
+    );
+  }
+
   Future<void> _count(Habit habit, String date) async {
     final controller = TextEditingController();
     final sources = ref.read(intentSourceDataProvider).requireValue;
@@ -515,6 +649,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (c) => _GoalEditor(foreground: widget.foreground),
     );
   }
@@ -635,10 +770,13 @@ class _GoalEditor extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => SafeArea(
     child: Padding(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 20),
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * .65,
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * .65,
+        ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
@@ -655,37 +793,63 @@ class _GoalEditor extends ConsumerWidget {
                 ),
               ],
             ),
-            Expanded(
-              child: ref
-                  .watch(intentStateProvider)
-                  .when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Text('$e'),
-                    data: (state) => ListView(
-                      children: [
-                        for (final goal in state.goals.where(
-                          (g) => !g.archived,
-                        ))
-                          ListTile(
-                            title: Text(goal.title),
-                            subtitle: Text(
-                              goal.pinned ? 'Disematkan di Home' : 'Tujuan',
-                            ),
-                            onTap: () => _edit(context, ref, goal),
-                            trailing: const Icon(Icons.edit_outlined),
-                          ),
-                        if (state.goals.where((g) => !g.archived).isEmpty)
-                          const Text('Tujuan boleh kosong.'),
-                        TextButton.icon(
-                          onPressed: () => _edit(context, ref, null),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Tambah tujuan'),
-                        ),
-                      ],
-                    ),
+            ref
+                .watch(intentStateProvider)
+                .when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: CircularProgressIndicator(),
                   ),
-            ),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text('$e'),
+                  ),
+                  data: (state) {
+                    final goals = state.goals
+                        .where((g) => !g.archived)
+                        .toList();
+                    final addGoal = TextButton.icon(
+                      onPressed: () => _edit(context, ref, null),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Tambah tujuan'),
+                    );
+                    if (goals.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Tujuan boleh kosong.',
+                              style: TextStyle(
+                                color: foreground.withOpacity(.75),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            addGoal,
+                          ],
+                        ),
+                      );
+                    }
+                    return Flexible(
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: [
+                          for (final goal in goals)
+                            ListTile(
+                              title: Text(goal.title),
+                              subtitle: Text(
+                                goal.pinned ? 'Disematkan di Home' : 'Tujuan',
+                              ),
+                              onTap: () => _edit(context, ref, goal),
+                              trailing: const Icon(Icons.edit_outlined),
+                            ),
+                          addGoal,
+                        ],
+                      ),
+                    );
+                  },
+                ),
           ],
         ),
       ),
@@ -731,6 +895,9 @@ class _GoalEditor extends ConsumerWidget {
             ],
           ),
           onSave: () async {
+            if (title.text.trim().isEmpty) {
+              throw const FormatException('Tulis tujuan agar bisa disimpan.');
+            }
             await ref
                 .read(intentRepositoryProvider)
                 .saveGoal(

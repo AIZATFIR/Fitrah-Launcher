@@ -142,6 +142,190 @@ void main() {
           throwsStateError,
         );
       });
+      test(
+        'progression completion commits once per date and preserves its step target',
+        () async {
+          final habit = Habit()
+            ..name = 'Progression race'
+            ..habitType = 'progression'
+            ..target = 99
+            ..progressionPlanJson = jsonEncode([
+              {
+                'dayName': 'Senin',
+                'title': 'Push Up',
+                'target': 20,
+                'unit': 'reps',
+                'isRest': false,
+              },
+              {
+                'dayName': 'Selasa',
+                'title': 'Pull Up',
+                'target': 15,
+                'unit': 'reps',
+                'isRest': false,
+              },
+            ])
+            ..createdAt = DateTime.now()
+            ..colorValue = 0;
+          final id = await repo.upsertHabit(habit);
+
+          final results = await Future.wait([
+            repo.completeProgressionStep(habitId: id, dateString: '2026-11-17'),
+            repo.completeProgressionStep(habitId: id, dateString: '2026-11-17'),
+          ]);
+
+          expect(results.where((advanced) => advanced), hasLength(1));
+          expect((await repo.getHabitById(id))?.currentProgressionIndex, 1);
+          var entry = (await repo.getEntriesForDateRange(
+            '2026-11-17',
+            '2026-11-17',
+          )).single;
+          expect(entry.status, HabitStatus.yes);
+          expect(entry.valueCompleted, 20);
+          expect(entry.targetSnapshot, 20);
+
+          if (native) {
+            await db!.close();
+            db = (await IsarService.openAt(directory!.path)).isar!;
+            repo = SadarRepository(db);
+            expect((await repo.getHabitById(id))?.currentProgressionIndex, 1);
+            entry = (await repo.getEntriesForDateRange(
+              '2026-11-17',
+              '2026-11-17',
+            )).single;
+            expect(entry.targetSnapshot, 20);
+            expect(entry.progressionCompletionSnapshot?.step.title, 'Push Up');
+            expect(
+              await repo.undoProgressionStep(
+                habitId: id,
+                dateString: '2026-11-17',
+              ),
+              true,
+            );
+            expect((await repo.getHabitById(id))?.currentProgressionIndex, 0);
+            entry = (await repo.getEntriesForDateRange(
+              '2026-11-17',
+              '2026-11-17',
+            )).single;
+            expect(entry.status, HabitStatus.unmarked);
+            expect(entry.progressionCompletionSnapshot, isNull);
+          }
+        },
+      );
+      test(
+        'progression undo restores the cursor and previous entry state',
+        () async {
+          final habit = Habit()
+            ..name = 'Progression undo'
+            ..habitType = 'progression'
+            ..target = 99
+            ..progressionPlanJson = jsonEncode([
+              {
+                'dayName': 'Senin',
+                'title': 'Push Up',
+                'target': 20,
+                'unit': 'reps',
+                'isRest': false,
+              },
+              {
+                'dayName': 'Selasa',
+                'title': 'Pull Up',
+                'target': 15,
+                'unit': 'reps',
+                'isRest': false,
+              },
+            ])
+            ..createdAt = DateTime.now()
+            ..colorValue = 0;
+          final id = await repo.upsertHabit(habit);
+          final date = '2026-11-17';
+          final before = await repo.recordEntryStatus(
+            habitId: id,
+            dateString: date,
+            status: HabitStatus.unmarked,
+            note: 'keep this note',
+          );
+          expect(
+            await repo.completeProgressionStep(habitId: id, dateString: date),
+            true,
+          );
+          final completed = (await repo.getEntriesForDateRange(
+            date,
+            date,
+          )).single;
+          final snapshot = completed.progressionCompletionSnapshot;
+          expect(snapshot?.step.title, 'Push Up');
+          expect(snapshot?.previousTargetSnapshot, 99);
+          await repo.updateHabitEntryNote(
+            habitId: id,
+            dateString: date,
+            note: 'updated note',
+          );
+
+          expect(
+            await repo.undoProgressionStep(habitId: id, dateString: date),
+            true,
+          );
+          expect((await repo.getHabitById(id))?.currentProgressionIndex, 0);
+          final undone = (await repo.getEntriesForDateRange(date, date)).single;
+          expect(undone.status, HabitStatus.unmarked);
+          expect(undone.valueCompleted, before.valueCompleted);
+          expect(undone.targetSnapshot, before.targetSnapshot);
+          expect(undone.note, 'updated note');
+          expect(undone.progressionCompletionSnapshot, isNull);
+        },
+      );
+      test(
+        'progression undo refuses an older step after a newer completion',
+        () async {
+          final habit = Habit()
+            ..name = 'Progression history guard'
+            ..habitType = 'progression'
+            ..progressionPlanJson = jsonEncode([
+              {
+                'dayName': 'Senin',
+                'title': 'A',
+                'target': 1,
+                'unit': 'rep',
+                'isRest': false,
+              },
+              {
+                'dayName': 'Selasa',
+                'title': 'B',
+                'target': 2,
+                'unit': 'rep',
+                'isRest': false,
+              },
+            ])
+            ..createdAt = DateTime.now()
+            ..colorValue = 0;
+          final id = await repo.upsertHabit(habit);
+          await repo.completeProgressionStep(
+            habitId: id,
+            dateString: '2026-11-16',
+          );
+          await repo.completeProgressionStep(
+            habitId: id,
+            dateString: '2026-11-17',
+          );
+
+          expect(
+            await repo.undoProgressionStep(
+              habitId: id,
+              dateString: '2026-11-16',
+            ),
+            false,
+          );
+          expect((await repo.getHabitById(id))?.currentProgressionIndex, 0);
+          expect(
+            (await repo.getEntriesForDateRange(
+              '2026-11-16',
+              '2026-11-17',
+            )).where((e) => e.status == HabitStatus.yes),
+            hasLength(2),
+          );
+        },
+      );
       test('manual status never infers time from target or count', () async {
         final entry = await repo.recordEntryStatus(
           habitId: 1,

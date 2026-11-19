@@ -62,6 +62,46 @@ void main() {
     expect(find.text('JEDA'), findsOneWidget);
   });
 
+  testWidgets('restored hybrid timer shows its current set and rest phase', (
+    tester,
+  ) async {
+    await repository.saveTimerSession(
+      TimerSession()
+        ..habitId = habit.id
+        ..habitName = habit.name
+        ..sourceKind = TimerSessionSourceKind.habit
+        ..targetSeconds = 25
+        ..hybridSetCount = 3
+        ..hybridWorkSeconds = 5
+        ..hybridRestSeconds = 5
+        ..startedAt = DateTime.now()
+        ..accumulatedDurationSeconds = 5
+        ..status = TimerStateStatus.paused
+        ..updatedAt = DateTime.now(),
+    );
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: SadarTimerView(habit: habit, onClose: () {}),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(find.text('JEDA · SET 1/3 · ISTIRAHAT'), findsOneWidget);
+    expect(find.text('00:05'), findsOneWidget);
+    final state = container.read(timerEngineProvider);
+    expect(state.hybridIsRest, isTrue);
+    expect(state.hybridCompletedSetCount, 1);
+    expect(
+      await repository.getEntriesForDateRange(
+        DateTime.now().toIso8601String().substring(0, 10),
+        DateTime.now().toIso8601String().substring(0, 10),
+      ),
+      isEmpty,
+    );
+  });
+
   testWidgets('finishing the view writes the shared habit entry', (
     tester,
   ) async {

@@ -55,8 +55,8 @@ class Activity {
   /// Excluded dates for single-day deletions of a recurring activity series.
   List<DateTime> excludedDates = [];
 
-  late DateTime createdAt;
-  late DateTime updatedAt;
+  DateTime createdAt = DateTime.now();
+  DateTime updatedAt = DateTime.now();
 
   /// Urgency: true if deadline is within 3 days or already past.
   bool get isUrgent {

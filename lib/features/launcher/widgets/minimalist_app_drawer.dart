@@ -209,51 +209,60 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
           usage.minutes! >= settings.dailyLimitMinutes) {
         var remaining = settings.gentleWaitSeconds;
         Timer? timer;
-        final shouldContinue = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogContext) => StatefulBuilder(
-            builder: (context, refresh) {
-              timer ??= Timer.periodic(const Duration(seconds: 1), (tick) {
-                if (remaining <= 1) {
-                  tick.cancel();
-                  refresh(() => remaining = 0);
-                } else {
-                  refresh(() => remaining--);
-                }
-              });
-              return AlertDialog(
-                title: const Text('Saatnya melihat tujuan'),
-                content: Text(
-                  'Hari ini sudah ${usage.minutes} menit. Ambil jeda singkat sebelum membuka aplikasi berikutnya.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      timer?.cancel();
-                      Navigator.pop(dialogContext, false);
-                    },
-                    child: const Text('Lihat tujuan'),
+        // Android draws this overlay above Flutter dialogs, so suspend it for
+        // the limit prompt and restore the user's opt-in in every exit path.
+        await screenTime.sync(cueEnabled: false);
+        bool? shouldContinue;
+        try {
+          if (!mounted) return;
+          shouldContinue = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) => StatefulBuilder(
+              builder: (context, refresh) {
+                timer ??= Timer.periodic(const Duration(seconds: 1), (tick) {
+                  if (remaining <= 1) {
+                    tick.cancel();
+                    refresh(() => remaining = 0);
+                  } else {
+                    refresh(() => remaining--);
+                  }
+                });
+                return AlertDialog(
+                  title: const Text('Saatnya melihat tujuan'),
+                  content: Text(
+                    'Hari ini sudah ${usage.minutes} menit. Ambil jeda singkat sebelum membuka aplikasi berikutnya.',
                   ),
-                  FilledButton(
-                    onPressed: remaining == 0
-                        ? () {
-                            timer?.cancel();
-                            Navigator.pop(dialogContext, true);
-                          }
-                        : null,
-                    child: Text(
-                      remaining == 0
-                          ? 'Lanjutkan'
-                          : 'Lanjut setelah $remaining dtk',
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        timer?.cancel();
+                        Navigator.pop(dialogContext, false);
+                      },
+                      child: const Text('Lihat tujuan'),
                     ),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-        timer?.cancel();
+                    FilledButton(
+                      onPressed: remaining == 0
+                          ? () {
+                              timer?.cancel();
+                              Navigator.pop(dialogContext, true);
+                            }
+                          : null,
+                      child: Text(
+                        remaining == 0
+                            ? 'Lanjutkan'
+                            : 'Lanjut setelah $remaining dtk',
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        } finally {
+          timer?.cancel();
+          await screenTime.sync(cueEnabled: settings.screenTimeCueEnabled);
+        }
         if (shouldContinue != true) {
           widget.onBackToHome?.call();
           return;
@@ -471,9 +480,15 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                       });
                                   final filtered = visible
                                       .where(
-                                        (a) => a.appName.toLowerCase().contains(
-                                          _searchQuery,
-                                        ),
+                                        (app) =>
+                                            app.appName.toLowerCase().contains(
+                                              _searchQuery,
+                                            ) &&
+                                            (_isSearchOpen ||
+                                                _searchQuery.isNotEmpty ||
+                                                !favorites.contains(
+                                                  app.packageName,
+                                                )),
                                       )
                                       .toList();
                                   final shortcuts = visible

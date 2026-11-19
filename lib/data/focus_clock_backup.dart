@@ -282,6 +282,8 @@ class FocusClockBackupCodec {
             'completedAt': _dateString(x.completedAt),
             'source': x.source,
             'note': x.note,
+            'progressionCompletionSnapshotJson':
+                x.progressionCompletionSnapshotJson,
             'createdAt': _dateString(x.createdAt),
             'updatedAt': _dateString(x.updatedAt),
           },
@@ -316,6 +318,10 @@ class FocusClockBackupCodec {
             'goalTitleSnapshot': x.goalTitleSnapshot,
             'habitTargetSnapshot': x.habitTargetSnapshot,
             'targetSeconds': x.targetSeconds,
+            'hybridSetCount': x.hybridSetCount,
+            'hybridWorkSeconds': x.hybridWorkSeconds,
+            'hybridRestSeconds': x.hybridRestSeconds,
+            'revision': x.revision,
             'startedAt': _dateString(x.startedAt),
             'attributionLocalDate': x.attributionLocalDate,
             'runningSince': _dateString(x.runningSince),
@@ -652,6 +658,10 @@ class FocusClockBackupCodec {
     ..completedAt = _nullableDate(m['completedAt'], 'habitEntries.completedAt')
     ..source = _string(m['source'], 'habitEntries.source')
     ..note = _nullableString(m['note'], 'habitEntries.note')
+    ..progressionCompletionSnapshotJson = _nullableString(
+      m['progressionCompletionSnapshotJson'],
+      'habitEntries.progressionCompletionSnapshotJson',
+    )
     ..createdAt = _nullableDate(m['createdAt'], 'habitEntries.createdAt')
     ..updatedAt = _date(m['updatedAt'], 'habitEntries.updatedAt');
 
@@ -701,6 +711,18 @@ class FocusClockBackupCodec {
         'timerSessions.habitTargetSnapshot',
       )
       ..targetSeconds = _int(m['targetSeconds'], 'timerSessions.targetSeconds')
+      ..hybridSetCount = m['hybridSetCount'] == null
+          ? 0
+          : _int(m['hybridSetCount'], 'timerSessions.hybridSetCount')
+      ..hybridWorkSeconds = m['hybridWorkSeconds'] == null
+          ? 0
+          : _int(m['hybridWorkSeconds'], 'timerSessions.hybridWorkSeconds')
+      ..hybridRestSeconds = m['hybridRestSeconds'] == null
+          ? 0
+          : _int(m['hybridRestSeconds'], 'timerSessions.hybridRestSeconds')
+      ..revision = m['revision'] == null
+          ? 0
+          : _int(m['revision'], 'timerSessions.revision')
       ..startedAt = _nullableDate(m['startedAt'], 'timerSessions.startedAt')
       ..attributionLocalDate = _nullableString(
         m['attributionLocalDate'],
@@ -814,6 +836,11 @@ class FocusClockBackupCodec {
       }
     }
     for (final x in d.habitEntries) {
+      if (x.progressionCompletionSnapshotJson != null) {
+        ProgressionCompletionSnapshot.decode(
+          x.progressionCompletionSnapshotJson!,
+        );
+      }
       if (x.habitId <= 0) {
         throw FormatException(
           'Riwayat habit ${x.id} memiliki ID habit yang tidak valid.',

@@ -69,7 +69,7 @@ context:
 
 Implementation adds goal snapshots to the active timer and terminal session models, carries them through timer restore/state transitions and repository commits, and serializes them in browser and portable backups. Home resolves the explicitly linked goal for its selected timed habit and shows the snapshot with active/history cues. Isar generated schemas preserve prior property IDs; the schema fixer now reapplies that mapping after generation.
 
-Verification: 63 focused timer/repository/session/backup tests, Home goal-dispatch test, native Isar reopen test, scoped code generation, analyzer, web release build and `git diff --check` passed. Two Home widget tests still fail independently: palette test cannot locate its expected action label; narrow layout overflows by 3.8 px. These are existing UI issues outside this plan and remain open. Analyzer has five info-only lints in other files.
+Verification at implementation: 63 focused timer/repository/session/backup tests, Home goal-dispatch test, native Isar reopen test, scoped code generation, analyzer, web release build and `git diff --check` passed. The two Home widget failures seen during that intermediate run (stale palette action label and 3.8 px narrow-layout overflow) were subsequently resolved; the full randomized v8100 suite passed **438 tests**. Full analyzer retains five info-only lints in unrelated files.
 
 
 ## Plan Change Log
@@ -81,6 +81,6 @@ Verification: 63 focused timer/repository/session/backup tests, Home goal-dispat
 ## Verification
 
 **Commands:**
-- Focused timer/repository/codec/backup tests covering every matrix row -- expected: pass.
-- `dart run build_runner build` (scoped where safe) and schema-ID fixer -- expected: existing schema IDs preserved.
-- `flutter analyze --no-pub` and `flutter build web --no-pub --no-wasm-dry-run --output=/tmp/focus-clock-goal-attribution-web --release` -- expected: success.
+- Full randomized v8100 suite -- **438 passed**; includes goal attribution, Home layout and feature regressions.
+- Native Isar persistence and schema IDs were verified in the focused suites; the repository generator still needs its unrelated annotation-resolution cleanup for a clean whole-command exit.
+- Production web build, fresh Chrome runtime, five browser storage journeys, `git diff --check`, and release checksums passed for v8100.

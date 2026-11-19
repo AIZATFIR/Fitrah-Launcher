@@ -16,6 +16,7 @@ import '../models/preset.dart';
 import '../models/routine_blueprint.dart';
 import '../models/task.dart';
 import '../services/ai_service.dart';
+import '../services/ai_provider_probe.dart';
 import '../services/goal_plan_application_service.dart';
 import '../services/blueprint_applier_service.dart';
 import '../services/gcal_service.dart';
@@ -31,6 +32,12 @@ final focusStoreProvider = Provider<FocusStore?>((ref) {
 final notificationServiceProvider = Provider<NotificationService>(
   (_) => throw UnimplementedError(),
 );
+
+final aiProviderProbeProvider = Provider<AiProviderProbe>((ref) {
+  final probe = AiProviderProbe();
+  ref.onDispose(probe.close);
+  return probe;
+});
 
 final presetRepoProvider = Provider<PresetRepository>(
   (ref) => PresetRepository.store(ref.watch(focusStoreProvider)),
@@ -250,6 +257,11 @@ final aiServiceProvider = Provider<AiService>((ref) {
     baseUrl: settings?.aiBaseUrl ?? 'https://openrouter.ai/api/v1',
     apiKey: settings?.aiApiKey ?? '',
     model: settings?.aiModel ?? 'google/gemini-2.0-flash-exp:free',
+    allowUnauthenticatedProvider: settings != null &&
+        settings.aiBaseUrl.trim().isNotEmpty &&
+        settings.aiBaseUrl !=
+            'https://generativelanguage.googleapis.com/v1beta/openai' &&
+        settings.aiBaseUrl != 'https://openrouter.ai/api/v1',
     activityRepo: ref.watch(activityRepoProvider),
     presetRepo: ref.watch(presetRepoProvider),
     goalPlanApplicationService: ref.watch(goalPlanApplicationServiceProvider),

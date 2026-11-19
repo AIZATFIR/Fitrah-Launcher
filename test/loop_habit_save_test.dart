@@ -54,7 +54,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Tambah habit'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Tambah'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'Latihan LKS');
     await tester.tap(find.text('Simpan'));
@@ -88,7 +88,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Tambah habit'));
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Tambah'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'Latihan LKS');
       await tester.tap(find.text('Simpan'));
@@ -97,12 +97,12 @@ void main() {
       await tester.tapAt(const Offset(5, 5));
       await tester.binding.handlePopRoute();
       await tester.pump();
-      expect(find.text('Habit baru'), findsOneWidget);
+      expect(find.text('Kebiasaan baru'), findsOneWidget);
       expect(repo.writes, 1);
 
       repo.pending.complete();
       await tester.pumpAndSettle();
-      expect(find.text('Habit baru'), findsNothing);
+      expect(find.text('Kebiasaan baru'), findsNothing);
       expect((await repo.getHabits()).single.name, 'Latihan LKS');
     },
   );

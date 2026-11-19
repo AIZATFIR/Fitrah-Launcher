@@ -61,10 +61,12 @@ void main() {
       final storage = NoteStorage()
         ..raw = LauncherSettings(
           gentleLimitEnabled: true,
+          screenTimeCueEnabled: true,
           dailyLimitMinutes: 120,
           gentleWaitSeconds: 5,
         ).toJson();
       var launches = 0;
+      final cueStates = <bool>[];
       binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
         call,
       ) async {
@@ -72,6 +74,10 @@ void main() {
         if (call.method == 'getAppIcon') return null;
         if (call.method == 'checkUsageStatsPermission') return true;
         if (call.method == 'getTodayScreenTimeMinutes') return 125;
+        if (call.method == 'syncScreenTimeCue') {
+          cueStates.add((call.arguments as Map)['enabled'] as bool);
+          return true;
+        }
         if (call.method == 'launchApp') {
           launches++;
           return true;
@@ -83,6 +89,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('sudah 125 menit'), findsOneWidget);
       expect(launches, 0);
+      expect(cueStates.last, isFalse);
       expect(find.text('Lanjut setelah 5 dtk'), findsOneWidget);
       await tester.pump(const Duration(seconds: 5));
       await tester.pump();
@@ -90,6 +97,7 @@ void main() {
       await tester.tap(find.text('Lanjutkan'));
       await tester.pumpAndSettle();
       expect(launches, 1);
+      expect(cueStates.last, isTrue);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
@@ -127,17 +135,23 @@ void main() {
       final storage = NoteStorage()
         ..raw = LauncherSettings(
           gentleLimitEnabled: true,
+          screenTimeCueEnabled: true,
           dailyLimitMinutes: 60,
           gentleWaitSeconds: 20,
         ).toJson();
       var launches = 0;
       var returnedHome = false;
+      final cueStates = <bool>[];
       binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
         call,
       ) async {
         if (call.method == 'getInstalledApps') return realApps;
         if (call.method == 'checkUsageStatsPermission') return true;
         if (call.method == 'getTodayScreenTimeMinutes') return 75;
+        if (call.method == 'syncScreenTimeCue') {
+          cueStates.add((call.arguments as Map)['enabled'] as bool);
+          return true;
+        }
         if (call.method == 'launchApp') launches++;
         return null;
       });
@@ -152,6 +166,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(returnedHome, isTrue);
       expect(launches, 0);
+      expect(cueStates, [false, true]);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );

@@ -3,19 +3,30 @@ import '../models/habit.dart';
 import '../models/habit_entry.dart';
 import '../models/task.dart';
 
-enum IntentActionKind { timed, binary, count, task, unsupported, unavailable }
+enum IntentActionKind {
+  timed,
+  hybrid,
+  progression,
+  binary,
+  count,
+  task,
+  unsupported,
+  unavailable,
+}
 
 class TodayIntentProjection {
   const TodayIntentProjection({
     required this.title,
     required this.kind,
     this.habit,
+    this.habitEntry,
     this.task,
     this.completed = false,
   });
   final String title;
   final IntentActionKind kind;
   final Habit? habit;
+  final HabitEntry? habitEntry;
   final Task? task;
   final bool completed;
   static TodayIntentProjection? calculate({
@@ -66,8 +77,10 @@ class TodayIntentProjection {
                     ? entry!.targetSnapshot
                     : habit.target));
     final type = habit.habitType;
-    final kind = type == 'progression' || type == 'hybrid'
-        ? IntentActionKind.unsupported
+    final kind = type == 'hybrid'
+        ? IntentActionKind.hybrid
+        : type == 'progression'
+        ? IntentActionKind.progression
         : (type == 'binary' || habit.unit == HabitUnit.binary)
         ? IntentActionKind.binary
         : (type == 'count' || habit.unit == HabitUnit.count)
@@ -79,6 +92,7 @@ class TodayIntentProjection {
       title: habit.name,
       kind: kind,
       habit: habit,
+      habitEntry: entry,
       completed: completed,
     );
   }

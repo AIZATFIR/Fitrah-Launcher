@@ -42,14 +42,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    for (
-      var i = 0;
-      i < 6 && find.text('Task & Habit Dump (Inbox)').evaluate().isEmpty;
-      i++
-    ) {
-      await tester.drag(find.byType(ListView).first, const Offset(0, -400));
-      await tester.pumpAndSettle();
-    }
+    await tester.ensureVisible(find.text('Catatan & alat'));
+    await tester.tap(find.text('Catatan & alat'));
+    await tester.pumpAndSettle();
   }
 
   testWidgets('creates persisted task and deletes the exact duplicate ID', (
@@ -62,7 +57,7 @@ void main() {
       ..createdAt = DateTime(2026);
     store.nextId = 2;
     await showHome(tester, store);
-    await tester.tap(find.text('Dump'));
+    await tester.tap(find.widgetWithText(TextButton, 'Tambah').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Sama');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Simpan'));
@@ -97,7 +92,7 @@ void main() {
   testWidgets('save locks dialog until write succeeds', (tester) async {
     final store = _Store()..gate = Completer<void>();
     await showHome(tester, store);
-    await tester.tap(find.text('Dump'));
+    await tester.tap(find.widgetWithText(TextButton, 'Tambah kegiatan').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Tertahan');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Simpan'));
@@ -130,7 +125,7 @@ void main() {
   testWidgets('failed save retains input and enables retry', (tester) async {
     final store = _Store()..failTaskWrite = true;
     await showHome(tester, store);
-    await tester.tap(find.text('Dump'));
+    await tester.tap(find.widgetWithText(TextButton, 'Tambah kegiatan').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Coba lagi');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Simpan'));

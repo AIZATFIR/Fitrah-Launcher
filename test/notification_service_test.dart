@@ -92,4 +92,94 @@ void main() {
     expect(calls, isNot(contains('requestNotificationsPermission')));
     expect(calls, contains('zonedSchedule'));
   });
+
+  test(
+    'running timer does not request permission when notifications are disabled',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      const channel = MethodChannel(
+        'dexterous.com/flutter/local_notifications',
+      );
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            return call.method == 'areNotificationsEnabled' ? false : true;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+
+      final service = NotificationService();
+      await service.init();
+      await service.scheduleTimerCompletion(remainingSeconds: 900);
+
+      expect(
+        calls.map((call) => call.method),
+        contains('areNotificationsEnabled'),
+      );
+      expect(
+        calls.map((call) => call.method),
+        isNot(contains('requestNotificationsPermission')),
+      );
+      expect(
+        calls.map((call) => call.method),
+        isNot(contains('zonedSchedule')),
+      );
+
+      await service.cancelTimerCompletion();
+    },
+  );
+
+  test(
+    'running timer schedules its reminder when notifications are enabled',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      const channel = MethodChannel(
+        'dexterous.com/flutter/local_notifications',
+      );
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            return true;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+
+      final service = NotificationService();
+      await service.init();
+      await service.scheduleTimerCompletion(remainingSeconds: 900);
+
+      expect(calls.map((call) => call.method), contains('zonedSchedule'));
+      expect(
+        calls.map((call) => call.method),
+        isNot(contains('requestNotificationsPermission')),
+      );
+      final scheduled = calls.singleWhere(
+        (call) => call.method == 'zonedSchedule',
+      );
+      final arguments = Map<Object?, Object?>.from(scheduled.arguments as Map);
+      expect(
+        arguments['id'],
+        NotificationService.timerCompletionNotificationId,
+      );
+      expect(arguments['title'], 'Waktu sesi tercapai');
+      expect(arguments['body'], 'Buka Focus Clock untuk meninjau sesi.');
+
+      await service.cancelTimerCompletion();
+      final cancelled = calls.lastWhere((call) => call.method == 'cancel');
+      expect(
+        (cancelled.arguments as Map)['id'],
+        NotificationService.timerCompletionNotificationId,
+      );
+    },
+  );
 }

@@ -822,7 +822,11 @@ class _ClockPainter extends CustomPainter {
           textDirection: TextDirection.ltr,
         )..layout();
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
-        if (label != null && label.isNotEmpty && sweep > 0.22) {
+        final labelMaxWidth = math.min(outer - inner - 4, midR * sweep - 10);
+        if (label != null &&
+            label.isNotEmpty &&
+            sweep > 0.22 &&
+            labelMaxWidth >= 36) {
           final lp = TextPainter(
             text: TextSpan(
               text: label,
@@ -835,13 +839,15 @@ class _ClockPainter extends CustomPainter {
             textDirection: TextDirection.ltr,
             maxLines: 1,
             ellipsis: '…',
-          )..layout(maxWidth: outer - inner - 4);
+          )..layout(maxWidth: labelMaxWidth);
           lp.paint(
             canvas,
             Offset(pos.dx - lp.width / 2, pos.dy + tp.height / 2),
           );
         }
-      } else if (label != null && label.isNotEmpty && sweep > 0.12) {
+      } else if (label != null && label.isNotEmpty) {
+        final labelMaxWidth = math.min(outer - inner - 8, midR * sweep - 10);
+        if (labelMaxWidth < 36) return;
         final tp = TextPainter(
           text: TextSpan(
             text: label,
@@ -854,7 +860,7 @@ class _ClockPainter extends CustomPainter {
           textDirection: TextDirection.ltr,
           maxLines: 1,
           ellipsis: '…',
-        )..layout(maxWidth: outer - inner - 8);
+        )..layout(maxWidth: labelMaxWidth);
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
       }
     }

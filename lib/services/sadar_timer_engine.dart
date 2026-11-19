@@ -28,6 +28,9 @@ class TimerState {
   final String? goalId;
   final String? goalTitleSnapshot;
   final int targetSeconds;
+  final int hybridSetCount;
+  final int hybridWorkSeconds;
+  final int hybridRestSeconds;
   final int remainingSeconds;
   final int actualDurationSeconds;
   final TimerStateStatus status;
@@ -45,6 +48,9 @@ class TimerState {
     this.goalId,
     this.goalTitleSnapshot,
     this.targetSeconds = 0,
+    this.hybridSetCount = 0,
+    this.hybridWorkSeconds = 0,
+    this.hybridRestSeconds = 0,
     this.remainingSeconds = 0,
     this.actualDurationSeconds = 0,
     this.status = TimerStateStatus.idle,
@@ -62,7 +68,59 @@ class TimerState {
       sourceKind == TimerSessionSourceKind.yptHabit &&
       remainingSeconds == 0 &&
       actualDurationSeconds >= targetSeconds &&
+      (!isHybrid || actualDurationSeconds > targetSeconds) &&
       isActive;
+
+  bool get isHybrid => hybridSetCount > 0 && hybridWorkSeconds > 0;
+
+  bool get hybridRoutineComplete =>
+      isHybrid && actualDurationSeconds >= targetSeconds;
+
+  int get hybridCurrentSet {
+    if (!isHybrid) return 0;
+    if (actualDurationSeconds >= targetSeconds) return hybridSetCount;
+    final cycle = hybridWorkSeconds + hybridRestSeconds;
+    return (actualDurationSeconds ~/ cycle + 1).clamp(1, hybridSetCount);
+  }
+
+  int get hybridCompletedSetCount {
+    if (!isHybrid || actualDurationSeconds <= 0) return 0;
+    if (actualDurationSeconds >= targetSeconds) return hybridSetCount;
+    final cycle = hybridWorkSeconds + hybridRestSeconds;
+    final completed = actualDurationSeconds ~/ cycle;
+    final position = actualDurationSeconds % cycle;
+    return (completed + (position >= hybridWorkSeconds ? 1 : 0)).clamp(
+      0,
+      hybridSetCount,
+    );
+  }
+
+  int get hybridWorkElapsedSeconds {
+    if (!isHybrid) return actualDurationSeconds;
+    if (hybridCompletedSetCount >= hybridSetCount) {
+      return hybridSetCount * hybridWorkSeconds;
+    }
+    final cycle = hybridWorkSeconds + hybridRestSeconds;
+    final phaseSeconds = actualDurationSeconds % cycle;
+    final partialWork = phaseSeconds < hybridWorkSeconds ? phaseSeconds : 0;
+    return hybridCompletedSetCount * hybridWorkSeconds + partialWork;
+  }
+
+  bool get hybridIsRest {
+    if (!isHybrid || hybridRestSeconds == 0) return false;
+    final set = hybridCurrentSet;
+    return set < hybridSetCount &&
+        actualDurationSeconds % (hybridWorkSeconds + hybridRestSeconds) >=
+            hybridWorkSeconds;
+  }
+
+  int get hybridPhaseRemainingSeconds {
+    if (!isHybrid || actualDurationSeconds >= targetSeconds) return 0;
+    final cycle = hybridWorkSeconds + hybridRestSeconds;
+    final cyclePosition = actualDurationSeconds % cycle;
+    final isRest = hybridIsRest;
+    return isRest ? cycle - cyclePosition : hybridWorkSeconds - cyclePosition;
+  }
 
   double get progress => targetSeconds > 0
       ? ((targetSeconds - remainingSeconds) / targetSeconds).clamp(0.0, 1.0)
@@ -104,12 +162,19 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   String? _sourceIdentity;
   int? _sourceColorValue;
   String? _sessionId;
+  int _sessionRevision = 0;
   String? _goalId;
   String? _goalTitleSnapshot;
+  Completer<void>? _startReservation;
+  String? _startReservationKey;
 
   Future<void> _restoreSavedSession() async {
     final saved = await _repo.getActiveTimerSession();
-    if (saved == null || saved.status == TimerStateStatus.idle) return;
+    if (saved == null || saved.status == TimerStateStatus.idle) {
+      await _syncTimerReminder();
+      return;
+    }
+    _sessionRevision = saved.revision;
     _goalId = saved.goalId;
     _goalTitleSnapshot = saved.goalTitleSnapshot;
 
@@ -121,6 +186,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         goalId: saved.goalId,
         goalTitleSnapshot: saved.goalTitleSnapshot,
         targetSeconds: saved.targetSeconds,
+        hybridSetCount: saved.hybridSetCount,
+        hybridWorkSeconds: saved.hybridWorkSeconds,
+        hybridRestSeconds: saved.hybridRestSeconds,
         remainingSeconds:
             (saved.targetSeconds - saved.accumulatedDurationSeconds).clamp(
               0,
@@ -132,6 +200,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         restoreError:
             'Timer ini memakai sumber yang tidak dikenali. Data sesi tetap disimpan; mulai timer baru dinonaktifkan.',
       );
+      await _syncTimerReminder();
       return;
     }
 
@@ -176,11 +245,15 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           goalId: saved.goalId,
           goalTitleSnapshot: saved.goalTitleSnapshot,
           targetSeconds: saved.targetSeconds,
+          hybridSetCount: saved.hybridSetCount,
+          hybridWorkSeconds: saved.hybridWorkSeconds,
+          hybridRestSeconds: saved.hybridRestSeconds,
           remainingSeconds: remaining,
           actualDurationSeconds: _accumulatedSeconds,
           status: TimerStateStatus.paused,
           recoveryUncertain: true,
         );
+        await _syncTimerReminder();
         return;
       }
       final elapsedSinceStart = validSameBootSnapshot
@@ -212,10 +285,14 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             goalId: saved.goalId,
             goalTitleSnapshot: saved.goalTitleSnapshot,
             targetSeconds: saved.targetSeconds,
+            hybridSetCount: saved.hybridSetCount,
+            hybridWorkSeconds: saved.hybridWorkSeconds,
+            hybridRestSeconds: saved.hybridRestSeconds,
             remainingSeconds: 0,
             actualDurationSeconds: totalElapsed,
             status: TimerStateStatus.running,
           );
+          await _syncTimerReminder();
           _startTicker();
           return;
         }
@@ -229,6 +306,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           goalId: saved.goalId,
           goalTitleSnapshot: saved.goalTitleSnapshot,
           targetSeconds: saved.targetSeconds,
+          hybridSetCount: saved.hybridSetCount,
+          hybridWorkSeconds: saved.hybridWorkSeconds,
+          hybridRestSeconds: saved.hybridRestSeconds,
           remainingSeconds: 0,
           actualDurationSeconds: totalElapsed,
           status: TimerStateStatus.completed,
@@ -260,10 +340,14 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           goalId: saved.goalId,
           goalTitleSnapshot: saved.goalTitleSnapshot,
           targetSeconds: saved.targetSeconds,
+          hybridSetCount: saved.hybridSetCount,
+          hybridWorkSeconds: saved.hybridWorkSeconds,
+          hybridRestSeconds: saved.hybridRestSeconds,
           remainingSeconds: remaining,
           actualDurationSeconds: totalElapsed,
           status: TimerStateStatus.running,
         );
+        await _syncTimerReminder();
         _startTicker();
       }
     } else if (saved.status == TimerStateStatus.paused) {
@@ -280,10 +364,14 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         goalId: saved.goalId,
         goalTitleSnapshot: saved.goalTitleSnapshot,
         targetSeconds: saved.targetSeconds,
+        hybridSetCount: saved.hybridSetCount,
+        hybridWorkSeconds: saved.hybridWorkSeconds,
+        hybridRestSeconds: saved.hybridRestSeconds,
         remainingSeconds: remaining,
         actualDurationSeconds: _accumulatedSeconds,
         status: TimerStateStatus.paused,
       );
+      await _syncTimerReminder();
     } else if (saved.status == TimerStateStatus.completed) {
       state = TimerState(
         habitId: saved.habitId,
@@ -294,6 +382,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         goalId: saved.goalId,
         goalTitleSnapshot: saved.goalTitleSnapshot,
         targetSeconds: saved.targetSeconds,
+        hybridSetCount: saved.hybridSetCount,
+        hybridWorkSeconds: saved.hybridWorkSeconds,
+        hybridRestSeconds: saved.hybridRestSeconds,
         remainingSeconds: 0,
         actualDurationSeconds: saved.accumulatedDurationSeconds,
         status: TimerStateStatus.completed,
@@ -315,6 +406,30 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> waitUntilRestored() => _restoreFuture;
+
+  Future<bool> _reserveStart(
+    String requestKey,
+    Future<bool> Function() operation,
+    bool Function() isSameActiveSession,
+  ) async {
+    final pending = _startReservation;
+    if (pending != null) {
+      if (_startReservationKey != requestKey) return false;
+      await pending.future;
+      return isSameActiveSession();
+    }
+
+    final reservation = Completer<void>();
+    _startReservation = reservation;
+    _startReservationKey = requestKey;
+    try {
+      return await operation();
+    } finally {
+      _startReservation = null;
+      _startReservationKey = null;
+      reservation.complete();
+    }
+  }
 
   Future<bool> start(Habit habit, {String? goalId, String? goalTitle}) =>
       _startHabit(
@@ -339,10 +454,48 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     }
     if (state.isSavePending || _isCompleting) return false;
 
+    final requestKey = 'habit:${sourceKind.index}:${habit.id}';
+    return _reserveStart(
+      requestKey,
+      () => _startHabitReserved(
+        habit,
+        sourceKind,
+        goalId: goalId,
+        goalTitle: goalTitle,
+      ),
+      () =>
+          state.isActive &&
+          state.habitId == habit.id &&
+          state.sourceKind == sourceKind,
+    );
+  }
+
+  Future<bool> _startHabitReserved(
+    Habit habit,
+    TimerSessionSourceKind sourceKind, {
+    String? goalId,
+    String? goalTitle,
+  }) async {
+    if (state.isActive) {
+      return state.habitId == habit.id && state.sourceKind == sourceKind;
+    }
+    if (state.isSavePending || _isCompleting) return false;
+
     final previousState = state;
     final previousGoalId = _goalId;
     final previousGoalTitle = _goalTitleSnapshot;
-    final targetSec = (habit.target > 0 ? habit.target : 20) * 60;
+    final isHybrid = habit.effectiveHabitType == 'hybrid';
+    final hybridSetCount = isHybrid ? habit.hybridSets.clamp(1, 100) : 0;
+    final hybridWorkSeconds = isHybrid
+        ? habit.hybridDurationSeconds.clamp(5, 3600)
+        : 0;
+    final hybridRestSeconds = isHybrid
+        ? habit.hybridRestSeconds.clamp(0, 3600)
+        : 0;
+    final targetSec = isHybrid
+        ? hybridSetCount * hybridWorkSeconds +
+              (hybridSetCount - 1) * hybridRestSeconds
+        : (habit.target > 0 ? habit.target : 20) * 60;
     _androidClockSnapshot = await _readAndroidClockSnapshot();
     _startedAt = DateTime.now();
     _segmentClock = Stopwatch()..start();
@@ -354,6 +507,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _goalId = goalId;
     _goalTitleSnapshot = goalId == null ? null : goalTitle;
     _sessionId = const Uuid().v4();
+    _sessionRevision = 0;
 
     state = TimerState(
       habitId: habit.id,
@@ -366,6 +520,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       goalId: _goalId,
       goalTitleSnapshot: _goalTitleSnapshot,
       targetSeconds: targetSec,
+      hybridSetCount: hybridSetCount,
+      hybridWorkSeconds: hybridWorkSeconds,
+      hybridRestSeconds: hybridRestSeconds,
       remainingSeconds: targetSec,
       status: TimerStateStatus.running,
     );
@@ -379,12 +536,14 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _sessionStartedAt = null;
       _attributionLocalDate = null;
       _accumulatedSeconds = 0;
+      _sessionRevision = 0;
       _goalId = previousGoalId;
       _goalTitleSnapshot = previousGoalTitle;
       state = previousState;
       rethrow;
     }
     _startTicker();
+    await _syncTimerReminder();
     return true;
   }
 
@@ -393,6 +552,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     required int targetSeconds,
     required TimerSessionSourceKind sourceKind,
     int? activityId,
+    String? goalId,
+    String? goalTitle,
     String? sourceIdentity,
     int? sourceColorValue,
     Activity? activityToCreate,
@@ -403,6 +564,56 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       );
     }
     await _restoreFuture;
+    if (state.isActive || state.isSavePending || _isCompleting) return false;
+
+    final activityDraftKey = activityToCreate == null
+        ? null
+        : '${activityToCreate.title}|${activityToCreate.date.toIso8601String()}|${activityToCreate.startMinute}|${activityToCreate.endMinute}|${activityToCreate.recurrence}';
+    final requestKey = <Object?>[
+      'non-habit',
+      sourceKind.index,
+      activityId,
+      sourceIdentity,
+      title,
+      targetSeconds,
+      goalId,
+      goalTitle,
+      activityDraftKey,
+    ].join('\u001f');
+    return _reserveStart(
+      requestKey,
+      () => _startNonHabitReserved(
+        title: title,
+        targetSeconds: targetSeconds,
+        sourceKind: sourceKind,
+        activityId: activityId,
+        goalId: goalId,
+        goalTitle: goalTitle,
+        sourceIdentity: sourceIdentity,
+        sourceColorValue: sourceColorValue,
+        activityToCreate: activityToCreate,
+      ),
+      () =>
+          state.isActive &&
+          state.habitName == title &&
+          state.targetSeconds == targetSeconds &&
+          state.sourceKind == sourceKind &&
+          state.activityId == activityId &&
+          state.goalId == goalId,
+    );
+  }
+
+  Future<bool> _startNonHabitReserved({
+    required String title,
+    required int targetSeconds,
+    required TimerSessionSourceKind sourceKind,
+    int? activityId,
+    String? goalId,
+    String? goalTitle,
+    String? sourceIdentity,
+    int? sourceColorValue,
+    Activity? activityToCreate,
+  }) async {
     if (state.isActive || state.isSavePending || _isCompleting) return false;
 
     final previousState = state;
@@ -418,9 +629,10 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _accumulatedSeconds = 0;
     _sourceIdentity = sourceIdentity;
     _sourceColorValue = sourceColorValue;
-    _goalId = null;
-    _goalTitleSnapshot = null;
+    _goalId = goalId;
+    _goalTitleSnapshot = goalId == null ? null : goalTitle;
     _sessionId = const Uuid().v4();
+    _sessionRevision = 0;
     state = TimerState(
       habitName: title,
       targetSeconds: targetSeconds,
@@ -428,11 +640,14 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       status: TimerStateStatus.running,
       sourceKind: sourceKind,
       activityId: activityId,
+      goalId: goalId,
+      goalTitleSnapshot: _goalTitleSnapshot,
     );
     try {
       if (activityToCreate == null) {
         final session = _buildSession();
         await _repo.saveTimerSession(session);
+        _sessionRevision = session.revision;
         state = TimerState(
           habitId: session.habitId,
           habitTargetSnapshot: session.habitTargetSnapshot,
@@ -442,6 +657,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           status: TimerStateStatus.running,
           sourceKind: sourceKind,
           activityId: activityId,
+          goalId: session.goalId,
+          goalTitleSnapshot: session.goalTitleSnapshot,
         );
       } else {
         final session = _buildSession();
@@ -449,6 +666,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           activityToCreate,
           session,
         );
+        _sessionRevision = session.revision;
         state = TimerState(
           habitId: session.habitId,
           habitTargetSnapshot: session.habitTargetSnapshot,
@@ -458,6 +676,8 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
           status: TimerStateStatus.running,
           sourceKind: sourceKind,
           activityId: activityId,
+          goalId: session.goalId,
+          goalTitleSnapshot: session.goalTitleSnapshot,
         );
       }
     } catch (_) {
@@ -475,6 +695,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       rethrow;
     }
     _startTicker();
+    await _syncTimerReminder();
     return true;
   }
 
@@ -499,6 +720,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             goalId: state.goalId,
             goalTitleSnapshot: state.goalTitleSnapshot,
             targetSeconds: state.targetSeconds,
+            hybridSetCount: state.hybridSetCount,
+            hybridWorkSeconds: state.hybridWorkSeconds,
+            hybridRestSeconds: state.hybridRestSeconds,
             remainingSeconds: 0,
             actualDurationSeconds: elapsed,
             status: TimerStateStatus.running,
@@ -515,6 +739,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             goalId: state.goalId,
             goalTitleSnapshot: state.goalTitleSnapshot,
             targetSeconds: state.targetSeconds,
+            hybridSetCount: state.hybridSetCount,
+            hybridWorkSeconds: state.hybridWorkSeconds,
+            hybridRestSeconds: state.hybridRestSeconds,
             remainingSeconds: 0,
             actualDurationSeconds: elapsed,
             status: TimerStateStatus.completed,
@@ -540,6 +767,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
             goalId: state.goalId,
             goalTitleSnapshot: state.goalTitleSnapshot,
             targetSeconds: state.targetSeconds,
+            hybridSetCount: state.hybridSetCount,
+            hybridWorkSeconds: state.hybridWorkSeconds,
+            hybridRestSeconds: state.hybridRestSeconds,
             remainingSeconds: remaining,
             actualDurationSeconds: elapsed,
             status: TimerStateStatus.running,
@@ -573,6 +803,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       goalId: state.goalId,
       goalTitleSnapshot: state.goalTitleSnapshot,
       targetSeconds: state.targetSeconds,
+      hybridSetCount: state.hybridSetCount,
+      hybridWorkSeconds: state.hybridWorkSeconds,
+      hybridRestSeconds: state.hybridRestSeconds,
       remainingSeconds: (state.targetSeconds - _accumulatedSeconds).clamp(
         0,
         state.targetSeconds,
@@ -594,6 +827,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _startTicker();
       rethrow;
     }
+    await _syncTimerReminder();
   }
 
   Future<void> resume() async {
@@ -616,6 +850,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       goalId: state.goalId,
       goalTitleSnapshot: state.goalTitleSnapshot,
       targetSeconds: state.targetSeconds,
+      hybridSetCount: state.hybridSetCount,
+      hybridWorkSeconds: state.hybridWorkSeconds,
+      hybridRestSeconds: state.hybridRestSeconds,
       remainingSeconds: state.remainingSeconds,
       actualDurationSeconds: _accumulatedSeconds,
       status: TimerStateStatus.running,
@@ -632,6 +869,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       state = previousState;
       rethrow;
     }
+    await _syncTimerReminder();
     _startTicker();
   }
 
@@ -664,6 +902,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       state = previousState;
       rethrow;
     }
+    await _syncTimerReminder();
   }
 
   Future<void> finishEarly() async {
@@ -683,6 +922,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       goalId: state.goalId,
       goalTitleSnapshot: state.goalTitleSnapshot,
       targetSeconds: state.targetSeconds,
+      hybridSetCount: state.hybridSetCount,
+      hybridWorkSeconds: state.hybridWorkSeconds,
+      hybridRestSeconds: state.hybridRestSeconds,
       remainingSeconds: 0,
       actualDurationSeconds: actualDurationSeconds,
       status: TimerStateStatus.completed,
@@ -735,7 +977,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _sourceColorValue = null;
     _goalId = null;
     _goalTitleSnapshot = null;
+    _sessionRevision = 0;
     state = const TimerState();
+    await _syncTimerReminder();
 
     if (wasFloating) {
       await restoreNormalWindow();
@@ -765,17 +1009,25 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         final now = DateTime.now();
         // Attribute the session to the date it was started, including pauses.
         final dateStr = _attributionLocalDate ?? _formatLocalDate(now);
+        final totalElapsed =
+            actualDurationSeconds ?? state.actualDurationSeconds;
+        final workSeconds = _hybridWorkElapsed(totalElapsed);
         final actualMinutes = actualDurationSeconds == null
-            ? (state.targetSeconds / 60).ceil()
-            : (actualDurationSeconds / 60).floor();
-        final targetMinutes = (state.targetSeconds / 60).ceil();
+            ? (workSeconds / 60).ceil()
+            : (workSeconds / 60).floor();
+        final targetMinutes = state.isHybrid
+            ? state.hybridSetCount
+            : (state.targetSeconds / 60).ceil();
         await _repo.completeTimerSession(
           habitId: state.habitId,
           sessionId: _sessionId,
           dateString: dateStr,
           actualDurationMinutes: actualMinutes,
-          actualDurationSeconds: actualDurationSeconds,
+          actualDurationSeconds: workSeconds,
           targetSnapshot: state.habitTargetSnapshot ?? targetMinutes,
+          completedUnitCount: state.isHybrid
+              ? _hybridCompletedSets(totalElapsed)
+              : null,
           completedAt: now,
         );
       } else if (autoRecord &&
@@ -809,12 +1061,16 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         goalId: state.goalId,
         goalTitleSnapshot: state.goalTitleSnapshot,
         targetSeconds: state.targetSeconds,
+        hybridSetCount: state.hybridSetCount,
+        hybridWorkSeconds: state.hybridWorkSeconds,
+        hybridRestSeconds: state.hybridRestSeconds,
         remainingSeconds: state.remainingSeconds,
         actualDurationSeconds: state.actualDurationSeconds,
         status: state.status,
         isFloating: state.isFloating,
         isSavePending: false,
       );
+      await _syncTimerReminder();
       _sessionStartedAt = null;
       _attributionLocalDate = null;
       _pendingActualDurationSeconds = null;
@@ -823,6 +1079,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _goalId = null;
       _goalTitleSnapshot = null;
       _sessionId = null;
+      _sessionRevision = 0;
 
       try {
         SystemSound.play(SystemSoundType.alert);
@@ -842,7 +1099,28 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   }
 
   Future<void> _persistState() async {
-    await _repo.saveTimerSession(_buildSession());
+    final session = _buildSession();
+    await _repo.saveTimerSession(session);
+    _sessionRevision = session.revision;
+  }
+
+  Future<void> _syncTimerReminder() async {
+    final notifier = _notifier;
+    if (notifier == null) return;
+    try {
+      if (state.isRunning &&
+          state.sourceKind != TimerSessionSourceKind.yptHabit &&
+          state.remainingSeconds > 0) {
+        await notifier.scheduleTimerCompletion(
+          remainingSeconds: state.remainingSeconds,
+        );
+      } else {
+        await notifier.cancelTimerCompletion();
+      }
+    } catch (error) {
+      // Notification failure must never roll back timer state or recording.
+      debugPrint('Timer reminder sync failed: $error');
+    }
   }
 
   int _elapsedSeconds() =>
@@ -881,6 +1159,10 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     ..goalId = _goalId
     ..goalTitleSnapshot = _goalTitleSnapshot
     ..targetSeconds = state.targetSeconds
+    ..hybridSetCount = state.hybridSetCount
+    ..hybridWorkSeconds = state.hybridWorkSeconds
+    ..hybridRestSeconds = state.hybridRestSeconds
+    ..revision = _sessionRevision
     ..startedAt = _sessionStartedAt ?? _startedAt
     ..attributionLocalDate = _attributionLocalDate
     ..runningSince = state.isRunning ? _startedAt : null
@@ -888,6 +1170,22 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     ..clockElapsedRealtimeMillis = _androidClockSnapshot?.elapsedRealtimeMillis
     ..accumulatedDurationSeconds = _accumulatedSeconds
     ..status = state.status;
+
+  int _hybridCompletedSets(int elapsedSeconds) {
+    return _hybridStateAt(elapsedSeconds).hybridCompletedSetCount;
+  }
+
+  int _hybridWorkElapsed(int elapsedSeconds) {
+    return _hybridStateAt(elapsedSeconds).hybridWorkElapsedSeconds;
+  }
+
+  TimerState _hybridStateAt(int elapsedSeconds) => TimerState(
+    targetSeconds: state.targetSeconds,
+    actualDurationSeconds: elapsedSeconds,
+    hybridSetCount: state.hybridSetCount,
+    hybridWorkSeconds: state.hybridWorkSeconds,
+    hybridRestSeconds: state.hybridRestSeconds,
+  );
 
   String _formatLocalDate(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
@@ -932,6 +1230,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         restoreError: state.restoreError,
         isSavePending: state.isSavePending,
         targetSeconds: state.targetSeconds,
+        hybridSetCount: state.hybridSetCount,
+        hybridWorkSeconds: state.hybridWorkSeconds,
+        hybridRestSeconds: state.hybridRestSeconds,
         remainingSeconds: state.remainingSeconds,
         status: state.status,
         isFloating: true,
@@ -964,6 +1265,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
         restoreError: state.restoreError,
         isSavePending: state.isSavePending,
         targetSeconds: state.targetSeconds,
+        hybridSetCount: state.hybridSetCount,
+        hybridWorkSeconds: state.hybridWorkSeconds,
+        hybridRestSeconds: state.hybridRestSeconds,
         remainingSeconds: state.remainingSeconds,
         status: state.status,
         isFloating: false,

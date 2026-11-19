@@ -9,6 +9,7 @@ import '../core/time_math.dart';
 import '../models/activity.dart';
 
 class NotificationService {
+  static const int timerCompletionNotificationId = 0x7ffffffe;
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _ready = false;
   bool _requestedNotificationPermission = false;
@@ -48,6 +49,92 @@ class NotificationService {
     linux: LinuxNotificationDetails(),
   );
 
+  static const _timerDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      'focus_clock_timer',
+      'Focus session reminders',
+      channelDescription:
+          'A private reminder when a focus session reaches its planned time',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      visibility: NotificationVisibility.private,
+    ),
+    linux: LinuxNotificationDetails(),
+  );
+
+  Future<void> _ensureNotificationPermission() async {
+    if (defaultTargetPlatform != TargetPlatform.android ||
+        _requestedNotificationPermission) {
+      return;
+    }
+    final androidImpl = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (await androidImpl?.areNotificationsEnabled() != true) {
+      _requestedNotificationPermission = true;
+      await androidImpl?.requestNotificationsPermission();
+    }
+  }
+
+  /// Schedule a generic reminder; goal and habit names stay off the lock screen.
+  Future<void> scheduleTimerCompletion({required int remainingSeconds}) async {
+    if (!_ready || remainingSeconds <= 0) return;
+    try {
+      await cancelTimerCompletion();
+      // A focus session must start without a notification prompt. The reminder
+      // is a convenience; schedule it only when Android notifications are
+      // already enabled. Activity reminders can still request permission from
+      // their explicit scheduling flow below.
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final androidImpl = _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        if (await androidImpl?.areNotificationsEnabled() != true) return;
+      }
+      final fire = DateTime.now().add(Duration(seconds: remainingSeconds));
+      if (_useTimerFallback) {
+        _timers[timerCompletionNotificationId] = Timer(
+          Duration(seconds: remainingSeconds),
+          () {
+            _timers.remove(timerCompletionNotificationId);
+            _plugin.show(
+              timerCompletionNotificationId,
+              'Waktu sesi tercapai',
+              'Buka Focus Clock untuk meninjau sesi.',
+              _timerDetails,
+            );
+          },
+        );
+        return;
+      }
+      if (kIsWeb) return;
+      await _plugin.zonedSchedule(
+        timerCompletionNotificationId,
+        'Waktu sesi tercapai',
+        'Buka Focus Clock untuk meninjau sesi.',
+        tz.TZDateTime.from(fire, tz.local),
+        _timerDetails,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (error) {
+      if (kDebugMode) debugPrint('timer reminder schedule failed: $error');
+    }
+  }
+
+  Future<void> cancelTimerCompletion() async {
+    if (!_ready) return;
+    _timers.remove(timerCompletionNotificationId)?.cancel();
+    try {
+      await _plugin.cancel(timerCompletionNotificationId);
+    } catch (error) {
+      if (kDebugMode) debugPrint('timer reminder cancel failed: $error');
+    }
+  }
+
   Future<void> scheduleForActivity(Activity a, {int leadMinutes = 1}) async {
     if (!_ready) return;
     try {
@@ -56,17 +143,7 @@ class NotificationService {
       final fire = start.subtract(Duration(minutes: leadMinutes));
       if (fire.isBefore(DateTime.now())) return;
 
-      if (defaultTargetPlatform == TargetPlatform.android &&
-          !_requestedNotificationPermission) {
-        final androidImpl = _plugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
-        if (await androidImpl?.areNotificationsEnabled() != true) {
-          _requestedNotificationPermission = true;
-          await androidImpl?.requestNotificationsPermission();
-        }
-      }
+      await _ensureNotificationPermission();
 
       final title = a.title.isEmpty ? 'Activity' : a.title;
       final body = 'Mulai $leadMinutes menit lagi';

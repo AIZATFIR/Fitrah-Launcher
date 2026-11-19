@@ -321,6 +321,14 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
   Widget _buildActiveTimer(Color color, TimerState timer) {
     final isPaused = timer.isPaused;
     final progress = timer.progress;
+    final phaseLabel = timer.isHybrid
+        ? '${isPaused ? 'JEDA · ' : ''}SET ${timer.hybridCurrentSet}/${timer.hybridSetCount} · ${timer.hybridIsRest ? 'ISTIRAHAT' : 'FOKUS'}'
+        : isPaused
+        ? 'JEDA'
+        : 'SADAR';
+    final displayedSeconds = timer.isHybrid
+        ? timer.hybridPhaseRemainingSeconds
+        : timer.remainingSeconds;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -413,7 +421,7 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          _formatTime(timer.remainingSeconds),
+                          _formatTime(displayedSeconds),
                           style: TextStyle(
                             fontSize: 54,
                             fontWeight: FontWeight.w300,
@@ -423,11 +431,11 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          isPaused ? 'JEDA' : 'SADAR',
+                          phaseLabel,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: timer.isHybrid ? 9 : 10,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 3.0,
+                            letterSpacing: timer.isHybrid ? 0.8 : 3.0,
                             color: isPaused ? AppPalette.textDim : color,
                           ),
                         ),
@@ -496,6 +504,9 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
   }
 
   Widget _buildCompletionView(Color color, TimerState timer) {
+    final completionSummary = timer.isHybrid
+        ? 'Selesai ${timer.hybridCompletedSetCount} dari ${timer.hybridSetCount} set.\nWaktu fokus ${_formatTime(timer.hybridWorkElapsedSeconds)} dari ${_formatTime(timer.hybridSetCount * timer.hybridWorkSeconds)}; istirahat tidak dihitung sebagai fokus.'
+        : 'Kamu fokus selama ${_formatTime(timer.actualDurationSeconds)} dari target ${_formatTime(timer.targetSeconds)}.';
     return Container(
       constraints: const BoxConstraints(maxWidth: 420),
       padding: const EdgeInsets.all(32),
@@ -527,7 +538,7 @@ class _SadarTimerViewState extends ConsumerState<SadarTimerView>
           ),
           const SizedBox(height: 8),
           Text(
-            'Kamu fokus selama ${_formatTime(timer.actualDurationSeconds)} dari target ${_formatTime(timer.targetSeconds)}.\nCatatan ini sudah tersimpan.',
+            '$completionSummary\nCatatan ini sudah tersimpan.',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 14,

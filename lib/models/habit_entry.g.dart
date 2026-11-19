@@ -44,6 +44,11 @@ const HabitEntrySchema = CollectionSchema(
     ),
     r'habitId': PropertySchema(id: 5, name: r'habitId', type: IsarType.long),
     r'note': PropertySchema(id: 6, name: r'note', type: IsarType.string),
+    r'progressionCompletionSnapshotJson': PropertySchema(
+      id: 12,
+      name: r'progressionCompletionSnapshotJson',
+      type: IsarType.string,
+    ),
     r'source': PropertySchema(id: 7, name: r'source', type: IsarType.string),
     r'status': PropertySchema(
       id: 8,
@@ -123,6 +128,12 @@ int _habitEntryEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  {
+    final value = object.progressionCompletionSnapshotJson;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.source.length * 3;
   return bytesCount;
 }
@@ -140,11 +151,12 @@ void _habitEntrySerialize(
   writer.writeString(offsets[4], object.dateString);
   writer.writeLong(offsets[5], object.habitId);
   writer.writeString(offsets[6], object.note);
-  writer.writeString(offsets[7], object.source);
-  writer.writeByte(offsets[8], object.status.index);
-  writer.writeLong(offsets[9], object.targetSnapshot);
-  writer.writeDateTime(offsets[10], object.updatedAt);
-  writer.writeLong(offsets[11], object.valueCompleted);
+  writer.writeString(offsets[7], object.progressionCompletionSnapshotJson);
+  writer.writeString(offsets[8], object.source);
+  writer.writeByte(offsets[9], object.status.index);
+  writer.writeLong(offsets[10], object.targetSnapshot);
+  writer.writeDateTime(offsets[11], object.updatedAt);
+  writer.writeLong(offsets[12], object.valueCompleted);
 }
 
 HabitEntry _habitEntryDeserialize(
@@ -162,13 +174,16 @@ HabitEntry _habitEntryDeserialize(
   object.habitId = reader.readLong(offsets[5]);
   object.id = id;
   object.note = reader.readStringOrNull(offsets[6]);
-  object.source = reader.readString(offsets[7]);
+  object.progressionCompletionSnapshotJson = reader.readStringOrNull(
+    offsets[7],
+  );
+  object.source = reader.readString(offsets[8]);
   object.status =
-      _HabitEntrystatusValueEnumMap[reader.readByteOrNull(offsets[8])] ??
+      _HabitEntrystatusValueEnumMap[reader.readByteOrNull(offsets[9])] ??
       HabitStatus.unmarked;
-  object.targetSnapshot = reader.readLong(offsets[9]);
-  object.updatedAt = reader.readDateTime(offsets[10]);
-  object.valueCompleted = reader.readLong(offsets[11]);
+  object.targetSnapshot = reader.readLong(offsets[10]);
+  object.updatedAt = reader.readDateTime(offsets[11]);
+  object.valueCompleted = reader.readLong(offsets[12]);
   return object;
 }
 
@@ -192,6 +207,8 @@ P _habitEntryDeserializeProp<P>(
     case 5:
       return (reader.readLong(offset)) as P;
     case 6:
+      return (reader.readStringOrNull(offset)) as P;
+    case 12:
       return (reader.readStringOrNull(offset)) as P;
     case 7:
       return (reader.readString(offset)) as P;
@@ -1170,6 +1187,190 @@ extension HabitEntryQueryFilter
     });
   }
 
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'progressionCompletionSnapshotJson',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'progressionCompletionSnapshotJson',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'progressionCompletionSnapshotJson',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'progressionCompletionSnapshotJson',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'progressionCompletionSnapshotJson',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'progressionCompletionSnapshotJson',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'progressionCompletionSnapshotJson',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'progressionCompletionSnapshotJson',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonContains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'progressionCompletionSnapshotJson',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonMatches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'progressionCompletionSnapshotJson',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'progressionCompletionSnapshotJson',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition>
+  progressionCompletionSnapshotJsonIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'progressionCompletionSnapshotJson',
+          value: '',
+        ),
+      );
+    });
+  }
+
   QueryBuilder<HabitEntry, HabitEntry, QAfterFilterCondition> sourceEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1640,6 +1841,20 @@ extension HabitEntryQuerySortBy
     });
   }
 
+  QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy>
+  sortByProgressionCompletionSnapshotJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'progressionCompletionSnapshotJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy>
+  sortByProgressionCompletionSnapshotJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'progressionCompletionSnapshotJson', Sort.desc);
+    });
+  }
+
   QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy> sortBySource() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'source', Sort.asc);
@@ -1805,6 +2020,20 @@ extension HabitEntryQuerySortThenBy
     });
   }
 
+  QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy>
+  thenByProgressionCompletionSnapshotJson() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'progressionCompletionSnapshotJson', Sort.asc);
+    });
+  }
+
+  QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy>
+  thenByProgressionCompletionSnapshotJsonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'progressionCompletionSnapshotJson', Sort.desc);
+    });
+  }
+
   QueryBuilder<HabitEntry, HabitEntry, QAfterSortBy> thenBySource() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'source', Sort.asc);
@@ -1918,6 +2147,16 @@ extension HabitEntryQueryWhereDistinct
     });
   }
 
+  QueryBuilder<HabitEntry, HabitEntry, QDistinct>
+  distinctByProgressionCompletionSnapshotJson({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'progressionCompletionSnapshotJson',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
   QueryBuilder<HabitEntry, HabitEntry, QDistinct> distinctBySource({
     bool caseSensitive = true,
   }) {
@@ -2000,6 +2239,13 @@ extension HabitEntryQueryProperty
   QueryBuilder<HabitEntry, String?, QQueryOperations> noteProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'note');
+    });
+  }
+
+  QueryBuilder<HabitEntry, String?, QQueryOperations>
+  progressionCompletionSnapshotJsonProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'progressionCompletionSnapshotJson');
     });
   }
 

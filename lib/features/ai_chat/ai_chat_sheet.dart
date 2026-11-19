@@ -14,9 +14,21 @@ import '../../services/voice_assistant_service.dart';
 /// Embeddable chat panel — lives in the pull-up sheet under the Clock tab.
 /// Transcript is provider-backed: conversation continues across open/close.
 class AiChatPanel extends ConsumerStatefulWidget {
-  const AiChatPanel({super.key, this.scrollController, this.onExpandSheet});
+  const AiChatPanel({
+    super.key,
+    this.scrollController,
+    this.onExpandSheet,
+    this.initialGoal,
+    this.goalId,
+    this.expectedGoalRevision,
+    this.onOpenAiSettings,
+  });
   final ScrollController? scrollController;
   final VoidCallback? onExpandSheet;
+  final String? initialGoal;
+  final String? goalId;
+  final int? expectedGoalRevision;
+  final VoidCallback? onOpenAiSettings;
 
   @override
   ConsumerState<AiChatPanel> createState() => _AiChatPanelState();
@@ -62,7 +74,13 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
 
     try {
       final ai = ref.read(aiServiceProvider);
-      final reply = await ai.send(text, allowActions: true);
+      final reply = await ai.send(
+        text,
+        allowActions: true,
+        goalContext: widget.initialGoal,
+        goalId: widget.goalId,
+        expectedGoalRevision: widget.expectedGoalRevision,
+      );
       final modeLabel = ai.activeMode.label;
 
       _replaceLast(
@@ -317,6 +335,16 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                       ),
                     ),
                   ),
+                  if (widget.onOpenAiSettings != null)
+                    IconButton(
+                      tooltip: 'Pengaturan AI',
+                      onPressed: widget.onOpenAiSettings,
+                      icon: const Icon(Icons.tune_rounded, size: 20),
+                      constraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
+                    ),
                   if (compact)
                     IconButton(
                       tooltip: 'Chat baru',
@@ -348,7 +376,11 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
         // Messages
         Expanded(
           child: messages.isEmpty
-              ? _EmptyState(onPrompt: _send)
+              ? _EmptyState(
+                  onPrompt: _send,
+                  initialGoal: widget.initialGoal,
+                  onOpenAiSettings: widget.onOpenAiSettings,
+                )
               : ListView.builder(
                   controller: _listCtrl,
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
@@ -806,7 +838,10 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
       return;
     }
     try {
-      final conflicts = await service.previewConflicts(_draft());
+      final conflicts = await service.previewConflicts(
+        _draft(),
+        goalId: widget.proposal.goalId,
+      );
       if (mounted) setState(() => _conflicts = conflicts);
     } catch (error) {
       if (mounted) setState(() => _conflicts = [error.toString()]);
@@ -820,7 +855,10 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
     });
     try {
       final edited = _draft();
-      final conflicts = await widget.service!.previewConflicts(edited);
+      final conflicts = await widget.service!.previewConflicts(
+        edited,
+        goalId: widget.proposal.goalId,
+      );
       if (conflicts.isNotEmpty) {
         setState(() => _conflicts = conflicts);
         throw StateError('Perbaiki bentrok yang tercantum sebelum menerapkan.');
@@ -862,6 +900,13 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
                 : 'Rencana dibatalkan',
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
+          if (proposal.goalId != null) ...[
+            const SizedBox(height: 3),
+            const Text(
+              'Ini akan memperbarui tujuan dan jadwal latihan yang sudah tersimpan.',
+              style: TextStyle(fontSize: 12, color: AppPalette.textDim),
+            ),
+          ],
           const SizedBox(height: 8),
           TextField(
             controller: _title,
@@ -1116,8 +1161,14 @@ class _ThreeDotsState extends State<_ThreeDots>
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onPrompt});
+  const _EmptyState({
+    required this.onPrompt,
+    this.initialGoal,
+    this.onOpenAiSettings,
+  });
   final ValueChanged<String> onPrompt;
+  final String? initialGoal;
+  final VoidCallback? onOpenAiSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -1142,27 +1193,64 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            ...const [
-              'Aku ingin menang LKS nasional IT Software Solution',
-              'Aku kewalahan. Bantu pilih satu langkah hari ini',
-            ].map(
-              (s) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: TextButton(
-                  onPressed: () => onPrompt(s),
+            if (initialGoal != null && initialGoal!.trim().isNotEmpty) ...[
+              Text(
+                'Tujuanmu: ${initialGoal!.trim()}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppPalette.textDim,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () => onPrompt(
+                  'Bantu aku memahami langkah realistis yang bisa kupilih hari ini. '
+                  'Tanyakan dulu jika ada informasi penting yang kamu perlukan. '
+                  'Jangan menyimpan atau mengubah jadwal sebelum aku menyetujui usulan.',
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppPalette.accent,
+                  alignment: Alignment.center,
+                  minimumSize: const Size(48, 48),
+                ),
+                icon: const Icon(Icons.flag_outlined, size: 16),
+                label: const Text('Bantu aku menyusun langkah'),
+              ),
+              if (onOpenAiSettings != null)
+                TextButton.icon(
+                  onPressed: onOpenAiSettings,
                   style: TextButton.styleFrom(
-                    foregroundColor: AppPalette.accent,
-                    alignment: Alignment.center,
-                    minimumSize: const Size(44, 44),
+                    foregroundColor: AppPalette.textDim,
+                    minimumSize: const Size(48, 44),
                   ),
-                  child: Text(
-                    s,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13),
+                  icon: const Icon(Icons.tune_rounded, size: 16),
+                  label: const Text('Atur provider & API key'),
+                ),
+            ] else ...[
+              ...const [
+                'Aku ingin menang LKS nasional IT Software Solution',
+                'Aku kewalahan. Bantu pilih satu langkah hari ini',
+              ].map(
+                (s) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: TextButton(
+                    onPressed: () => onPrompt(s),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppPalette.accent,
+                      alignment: Alignment.center,
+                      minimumSize: const Size(44, 44),
+                    ),
+                    child: Text(
+                      s,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 13),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

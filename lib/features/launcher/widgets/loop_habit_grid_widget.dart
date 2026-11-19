@@ -439,7 +439,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                       ),
                                     ),
                                     // Direct Play in Clock button
-                                    if (_canTime(habit) &&
+                                    if (_canFocus(habit) &&
                                         _isCurrentWeek &&
                                         selectedDateStr ==
                                             _formatDate(DateTime.now()))
@@ -749,13 +749,40 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
       habit.target > 0 &&
       widget.onStartTimer != null;
 
+  bool _canFocus(Habit habit) =>
+      _canTime(habit) ||
+      (habit.effectiveHabitType == 'hybrid' &&
+          habit.hybridSets > 0 &&
+          habit.hybridDurationSeconds > 0 &&
+          habit.hybridRestSeconds >= 0 &&
+          widget.onStartTimer != null);
+
   Widget _habitActions(Habit habit, String date, HabitEntry? entry) {
-    final unsupported =
-        habit.habitType == 'progression' || habit.habitType == 'hybrid';
+    final progression = habit.effectiveHabitType == 'progression';
+    final manualCompletion =
+        !progression && habit.effectiveHabitType != 'hybrid';
+    final progressionSnapshot = entry?.progressionCompletionSnapshot;
+    final progressionAlreadyRecorded =
+        progression && entry?.status == HabitStatus.yes;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (unsupported) Text(habitExecutionLimit(habit)),
+        if (progression && !progressionAlreadyRecorded)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              _progressionStepLabel(habit.currentStep),
+              style: const TextStyle(color: AppPalette.textDim),
+            ),
+          ),
+        if (progressionSnapshot != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Tercatat · ${_progressionStepLabel(progressionSnapshot.step)}',
+              style: const TextStyle(color: AppPalette.textDim),
+            ),
+          ),
         Wrap(
           spacing: 8,
           runSpacing: 4,
@@ -768,7 +795,38 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
               icon: const Icon(Icons.edit_note_rounded),
               label: const Text('Catatan'),
             ),
-            if (!unsupported &&
+            if (progression &&
+                (progressionSnapshot != null ||
+                    (!progressionAlreadyRecorded &&
+                        date == _formatDate(DateTime.now()))))
+              TextButton.icon(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: _actionBusy
+                    ? null
+                    : () => _progressionAction(
+                        habit,
+                        date,
+                        progressionSnapshot,
+                      ),
+                icon: Icon(
+                  progressionSnapshot == null
+                      ? Icons.check_circle_outline
+                      : Icons.undo_rounded,
+                ),
+                label: Text(
+                  progressionSnapshot == null
+                      ? 'Catat langkah'
+                      : 'Batalkan langkah',
+                ),
+              ),
+            if (progressionAlreadyRecorded && progressionSnapshot == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Sudah tercatat. Rincian langkah lama tidak tersedia untuk dibatalkan.',
+                ),
+              ),
+            if (manualCompletion &&
                 (habit.unit == HabitUnit.binary || habit.habitType == 'binary'))
               TextButton.icon(
                 style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
@@ -788,7 +846,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                       : 'Tandai dilakukan',
                 ),
               ),
-            if (!unsupported &&
+            if (manualCompletion &&
                 habit.unit != HabitUnit.binary &&
                 habit.habitType != 'binary' &&
                 (habit.habitType == 'count' || habit.unit == HabitUnit.count))
@@ -800,7 +858,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                 icon: const Icon(Icons.add),
                 label: const Text('Catat jumlah'),
               ),
-            if (_canTime(habit) && date == _formatDate(DateTime.now()))
+            if (_canFocus(habit) && date == _formatDate(DateTime.now()))
               TextButton.icon(
                 style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                 onPressed: _actionBusy
@@ -809,7 +867,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                 icon: const Icon(Icons.play_circle_outline),
                 label: const Text('Mulai fokus'),
               ),
-            if (!unsupported) ...[
+            if (manualCompletion) ...[
               for (final status in [HabitStatus.no, HabitStatus.skip])
                 TextButton(
                   style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
@@ -833,6 +891,56 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
         if (_actionError != null)
           Text(_actionError!, style: const TextStyle(color: AppPalette.danger)),
       ],
+    );
+  }
+
+  String _progressionStepLabel(ProgressionStep step) => step.isRest
+      ? '${step.dayName} · Hari istirahat'
+      : '${step.dayName} · ${step.title} · ${step.target} ${step.unit}';
+
+  Future<void> _progressionAction(
+    Habit habit,
+    String date,
+    ProgressionCompletionSnapshot? snapshot,
+  ) async {
+    final step = snapshot?.step ?? habit.currentStep;
+    final detail = step.isRest
+        ? '${step.dayName}: hari pemulihan dan istirahat.'
+        : '${step.dayName}: ${step.title}, ${step.target} ${step.unit}.';
+    final undo = snapshot != null;
+    await showHabitActionDialog(
+      context: context,
+      builder: (_) => HabitActionSaveDialog(
+        title: undo ? 'Batalkan langkah hari ini?' : 'Catat langkah hari ini?',
+        body: Text(
+          undo
+              ? '$detail Urutan kembali ke langkah ini. Catatan dan durasi tetap disimpan.'
+              : detail,
+        ),
+        saveLabel: undo ? 'Batalkan' : 'Simpan',
+        onSave: () async {
+          final repository = ref.read(sadarRepoProvider);
+          if (undo) {
+            final undone = await repository.undoProgressionStep(
+              habitId: habit.id,
+              dateString: date,
+            );
+            if (!undone) {
+              throw StateError(
+                'Urutan sudah berubah; langkah ini bukan catatan terbaru.',
+              );
+            }
+          } else {
+            final saved = await repository.completeProgressionStep(
+              habitId: habit.id,
+              dateString: date,
+            );
+            if (!saved) {
+              throw StateError('Langkah hari ini sudah tercatat.');
+            }
+          }
+        },
+      ),
     );
   }
 

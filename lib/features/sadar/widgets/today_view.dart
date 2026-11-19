@@ -114,15 +114,11 @@ class _TodayViewState extends ConsumerState<TodayView> {
     if (habit.effectiveHabitType == 'progression') {
       if (currentStatus != HabitStatus.yes) {
         final step = habit.currentStep;
-        final target = step.target;
-        await repo.recordEntryStatus(
+        final advanced = await repo.completeProgressionStep(
           habitId: habit.id,
           dateString: _todayStr,
-          status: HabitStatus.yes,
-          valueCompleted: target,
         );
-        await repo.advanceProgression(habit.id);
-        if (mounted) {
+        if (advanced && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -136,12 +132,23 @@ class _TodayViewState extends ConsumerState<TodayView> {
           );
         }
       } else {
-        await repo.recordEntryStatus(
+        final undone = await repo.undoProgressionStep(
           habitId: habit.id,
           dateString: _todayStr,
-          status: HabitStatus.unmarked,
-          valueCompleted: 0,
         );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                undone
+                    ? 'Langkah dibatalkan. Urutan kembali ke langkah tadi.'
+                    : 'Langkah ini sudah diikuti langkah baru dan tidak bisa dibatalkan dari sini.',
+              ),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
       return;
     }
@@ -482,51 +489,83 @@ class _TodayViewState extends ConsumerState<TodayView> {
         );
       }
     } else if (habitType == 'progression') {
-      final step = habit.currentStep;
-      if (step.isRest) {
-        title = '${habit.name}: ${step.dayName} (hari istirahat)';
+      final recordedStep = entry?.progressionCompletionSnapshot?.step;
+      final step = isDone ? recordedStep : habit.currentStep;
+      if (isDone && step == null) {
+        title = '${habit.name}: Langkah tercatat';
+        subtitle = 'Detail langkah ini berasal dari catatan lama.';
+      } else if (step!.isRest) {
+        title = isDone
+            ? '${habit.name}: ${step.dayName} (hari istirahat)'
+            : '${habit.name}: ${step.dayName} (hari istirahat)';
         subtitle = 'Hari pemulihan & istirahat otot';
-        if (!isDone) {
-          trailingAction = FilledButton.tonalIcon(
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.2),
-              foregroundColor: const Color(0xFF818CF8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            icon: const Icon(Icons.bedtime_rounded, size: 16),
-            label: const Text(
-              'Ambil Rest',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-            ),
-            onPressed: () =>
-                _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
-          );
-        }
+        trailingAction = isDone
+            ? FilledButton.tonalIcon(
+                onPressed: () => _toggleComplete(habit, HabitStatus.yes),
+                icon: const Icon(Icons.undo_rounded, size: 16),
+                label: const Text('Batalkan'),
+              )
+            : FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  backgroundColor: const Color(
+                    0xFF6366F1,
+                  ).withValues(alpha: 0.2),
+                  foregroundColor: const Color(0xFF818CF8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const Icon(Icons.bedtime_rounded, size: 16),
+                label: const Text(
+                  'Ambil Rest',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () => _toggleComplete(
+                  habit,
+                  entry?.status ?? HabitStatus.unmarked,
+                ),
+              );
       } else {
         title = '${habit.name}: ${step.dayName} — ${step.title}';
-        subtitle = '${step.target}x repetisi (Terkunci)';
-        if (!isDone) {
-          trailingAction = FilledButton.tonalIcon(
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              backgroundColor: const Color(0xFFEAB308).withValues(alpha: 0.2),
-              foregroundColor: const Color(0xFFFDE047),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            icon: const Icon(Icons.check_rounded, size: 16),
-            label: Text(
-              '${step.target}x Selesai',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-            ),
-            onPressed: () =>
-                _toggleComplete(habit, entry?.status ?? HabitStatus.unmarked),
-          );
-        }
+        subtitle =
+            '${step.target} ${step.unit} · ${isDone ? 'tercatat' : 'hari ini'}';
+        trailingAction = isDone
+            ? FilledButton.tonalIcon(
+                onPressed: () => _toggleComplete(habit, HabitStatus.yes),
+                icon: const Icon(Icons.undo_rounded, size: 16),
+                label: const Text('Batalkan'),
+              )
+            : FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  backgroundColor: const Color(
+                    0xFFEAB308,
+                  ).withValues(alpha: 0.2),
+                  foregroundColor: const Color(0xFFFDE047),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const Icon(Icons.check_rounded, size: 16),
+                label: Text(
+                  '${step.target}x Selesai',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: () => _toggleComplete(
+                  habit,
+                  entry?.status ?? HabitStatus.unmarked,
+                ),
+              );
       }
     } else if (habitType == 'hybrid') {
       subtitle = '${habit.hybridSets} Set @ ${habit.hybridDurationSeconds}s';

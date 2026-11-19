@@ -75,3 +75,8 @@ Settings notifier already serializes _mutate and publishes only after write. Fav
 
 ## Parent acceptance
 Reviewed the complete source/test diff, all matrix rows mapped to the 29 new and existing capability tests. Final parent run: 35 preference/drawer/capability tests passed in 3 seconds; flutter analyze --no-pub clean in 6.5 seconds. Review hydration-header finding fixed and tested; reviewer inspected final shared sheet with no additional findings. No deferred findings from this slice. Native/runtime proof remains separate.
+
+
+## Favorites drawer clarity follow-up (20 Nov 2026)
+
+Favorites are rendered as a quick-access section and removed from the normal alphabetical rows, avoiding duplicate entries. When search is open, all visible installed apps (including favorites) remain searchable once. Scoped analyzer and formatting checks pass. Custom app ordering remains outside the implemented preference model.

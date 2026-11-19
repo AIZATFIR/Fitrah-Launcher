@@ -547,7 +547,12 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView> {
                                 Text(
                                   timer.isOverdue
                                       ? '+${_formatTime((timer.actualDurationSeconds - timer.targetSeconds).clamp(0, 999999))}'
-                                      : _formatTime(timer.remainingSeconds),
+                                      : _formatTime(
+                                          timer.isHybrid
+                                              ? timer
+                                                    .hybridPhaseRemainingSeconds
+                                              : timer.remainingSeconds,
+                                        ),
                                   style: TextStyle(
                                     fontSize: 76,
                                     fontWeight: FontWeight.w800,
@@ -562,7 +567,14 @@ class _SadarYptFocusViewState extends ConsumerState<SadarYptFocusView> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  timer.isCompleted && !timer.isSavePending
+                                  timer.isHybrid && !timer.isOverdue
+                                      ? timer.hybridRoutineComplete
+                                            ? 'Semua set tercapai. Alhamdulillah.'
+                                            : timer.hybridIsRest
+                                            ? 'Set ${timer.hybridCurrentSet} dari ${timer.hybridSetCount} · Istirahat'
+                                            : 'Set ${timer.hybridCurrentSet} dari ${timer.hybridSetCount} · Fokus'
+                                      : timer.isCompleted &&
+                                            !timer.isSavePending
                                       ? 'Target tercapai. Alhamdulillah.'
                                       : (timer.isPaused
                                             ? 'Sesi dijeda'

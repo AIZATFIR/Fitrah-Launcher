@@ -78,11 +78,13 @@ void main() {
         root['formatVersion'] = version;
         root['data']['activities'][0].remove('habitId');
         root['data']['timerSessions'][0].remove('habitTargetSnapshot');
+        root['data']['timerSessions'][0].remove('revision');
         root['data'].remove('terminalFocusSessions');
         _refreshChecksum(root);
         final old = FocusClockBackupCodec.decode(utf8.encode(jsonEncode(root)));
         expect(old.data.activities.single.habitId, isNull);
         expect(old.data.timerSessions.single.habitTargetSnapshot, isNull);
+        expect(old.data.timerSessions.single.revision, 0);
         expect(old.data.terminalFocusSessions, isEmpty);
       }
       data.activities.single.habitId = -1;
@@ -99,6 +101,28 @@ void main() {
       'round-trips supported records and preserves IDs and exact seconds',
       () {
         final data = _sampleData();
+        data.timerSessions.single
+          ..hybridSetCount = 3
+          ..hybridWorkSeconds = 45
+          ..hybridRestSeconds = 15
+          ..revision = 7;
+        data.habitEntries.single.progressionCompletionSnapshotJson =
+            const ProgressionCompletionSnapshot(
+              stepIndex: 0,
+              nextIndex: 1,
+              step: ProgressionStep(
+                dayName: 'Senin',
+                title: 'Push Up',
+                target: 20,
+                unit: 'reps',
+                isRest: false,
+              ),
+              previousStatus: HabitStatus.unmarked,
+              previousValueCompleted: 0,
+              previousTargetSnapshot: 0,
+              previousCompletedAt: null,
+              previousSource: 'manual',
+            ).encode();
         final decoded = FocusClockBackupCodec.decode(
           FocusClockBackupCodec.encode(data),
         );
@@ -116,8 +140,16 @@ void main() {
         expect(decoded.data.activities.single.id, 17);
         expect(decoded.data.habits.single.id, 23);
         expect(decoded.data.habitEntries.single.actualDurationSeconds, 91);
+        expect(
+          decoded.data.habitEntries.single.progressionCompletionSnapshotJson,
+          data.habitEntries.single.progressionCompletionSnapshotJson,
+        );
         expect(decoded.data.appSettings.single.id, 0);
         expect(decoded.data.timerSessions.single.id, 1);
+        expect(decoded.data.timerSessions.single.hybridSetCount, 3);
+        expect(decoded.data.timerSessions.single.hybridWorkSeconds, 45);
+        expect(decoded.data.timerSessions.single.hybridRestSeconds, 15);
+        expect(decoded.data.timerSessions.single.revision, 7);
         expect(decoded.data.launcherSettings.focusGoal, 'Menang LKS nasional');
         expect(decoded.data.launcherSettings.showAppIcons, isFalse);
         expect(decoded.data.launcherSettings.autoFocusSearch, isTrue);
@@ -164,15 +196,19 @@ void main() {
         expect(restored.actualDurationSeconds, 900);
         expect(restored.goalId, '22222222-2222-4222-8222-222222222222');
         expect(restored.goalTitleSnapshot, 'Win nationals');
-      final missingLedger = jsonDecode(
-        utf8.decode(FocusClockBackupCodec.encode(base)),
-      ) as Map<String, dynamic>;
-      (missingLedger['data'] as Map<String, dynamic>).remove('terminalFocusSessions');
-      _refreshChecksum(missingLedger);
-      expect(
-        () => FocusClockBackupCodec.decode(utf8.encode(jsonEncode(missingLedger))),
-        throwsFormatException,
-      );
+        final missingLedger =
+            jsonDecode(utf8.decode(FocusClockBackupCodec.encode(base)))
+                as Map<String, dynamic>;
+        (missingLedger['data'] as Map<String, dynamic>).remove(
+          'terminalFocusSessions',
+        );
+        _refreshChecksum(missingLedger);
+        expect(
+          () => FocusClockBackupCodec.decode(
+            utf8.encode(jsonEncode(missingLedger)),
+          ),
+          throwsFormatException,
+        );
         final duplicate = FocusClockBackupData(
           presets: data.presets,
           activities: data.activities,

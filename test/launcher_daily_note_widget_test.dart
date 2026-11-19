@@ -30,6 +30,25 @@ class Storage extends SecureStorageService {
 }
 
 void main() {
+  Future<void> revealTools(WidgetTester tester) async {
+    if (find
+        .text('Tulis pemikiran, niat, atau catatan hari ini...')
+        .evaluate()
+        .isEmpty) {
+      final homeList = find.byKey(const ValueKey('focus-clock-home-list'));
+      for (
+        var i = 0;
+        i < 16 && find.text('Catatan & alat').evaluate().isEmpty;
+        i++
+      ) {
+        await tester.drag(homeList, const Offset(0, -400));
+        await tester.pump();
+      }
+      await tester.tap(find.text('Catatan & alat'));
+      await tester.pumpAndSettle();
+    }
+  }
+
   Future<void> showHome(
     WidgetTester tester,
     Storage storage,
@@ -52,6 +71,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await revealTools(tester);
   }
 
   final note = find.widgetWithText(
@@ -84,11 +104,13 @@ void main() {
     );
     await tester.pumpWidget(home(const ValueKey('first')));
     await tester.pumpAndSettle();
+    await revealTools(tester);
     await tester.enterText(note, 'unresolved');
     await tester.pumpAndSettle();
     today = DateTime(2026, 11, 8);
     await tester.pumpWidget(home(const ValueKey('second')));
     await tester.pumpAndSettle();
+    await revealTools(tester);
     expect(find.text('unresolved'), findsOneWidget);
     expect(find.text('Gagal menyimpan'), findsOneWidget);
     storage.failWrite = false;
@@ -123,6 +145,7 @@ void main() {
     );
     await tester.pumpWidget(home(const ValueKey('first')));
     await tester.pumpAndSettle();
+    await revealTools(tester);
     storage.writeGate = Completer<void>();
     await tester.scrollUntilVisible(
       note,
@@ -132,7 +155,8 @@ void main() {
     await tester.enterText(note, 'saving');
     await tester.pump();
     await tester.pumpWidget(home(const ValueKey('second')));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await revealTools(tester);
     await tester.scrollUntilVisible(
       note,
       400,
@@ -175,7 +199,8 @@ void main() {
         ),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await revealTools(tester);
     await tester.scrollUntilVisible(
       note,
       400,

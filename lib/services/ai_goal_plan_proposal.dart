@@ -3,8 +3,15 @@ import '../domain/goal_plan_proposal.dart';
 /// Approval gate paired with an editable domain proposal. The callback is the
 /// only place that reaches the durable application use case.
 class AiGoalPlanProposal {
-  AiGoalPlanProposal({required this.proposal, required this.apply});
+  AiGoalPlanProposal({
+    required this.proposal,
+    required this.apply,
+    this.goalId,
+    this.expectedGoalRevision,
+  });
   final PlanProposal proposal;
+  final String? goalId;
+  final int? expectedGoalRevision;
   final Future<Object?> Function(PlanProposal edited) apply;
   bool _pending = true;
   bool _applying = false;

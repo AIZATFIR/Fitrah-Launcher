@@ -82,11 +82,19 @@ context:
 
 ## Plan Change Log
 
+- 2026-11-16 follow-up: Home now starts a selected scheduled task's existing activity as a focus session in one tap and carries its selected goal snapshot into session history. Focused Home/timer tests verify the route. This keeps the approval-first plan flow connected to the real action loop.
+- 2026-11-17 follow-up: OpenAI-compatible BYOK endpoints that explicitly reject `tools`/function calling now retry once without tool fields and receive an ephemeral JSON envelope instruction. `reply` remains supportive chat; only a valid `goal_plan` becomes an inert review card through the same provider-neutral model. Ordinary server errors do not use this compatibility retry.
 
 ## Review Triage Log
 
+- **medium → patch, resolved:** excluded occurrences now suppress both same-date/recurring checks and the future one-off look-ahead; `goal_plan_application_test.dart` covers excluded-date and future one-time conflicts.
+- **medium → patch, resolved:** Google-compatible history is rebuilt from current conversation history on each agent-loop request; `ai_action_proposal_test.dart` verifies tool calls and results survive the next request.
+- **medium → patch, resolved:** the approval card now has explicit apply/cancel coverage in `goal_plan_application_test.dart`; the chat widget separately covers the approval gate.
+- Follow-up verification: **69 focused tests passed** across Home intent, timer state machine, goal-plan application, AI provider proposals and chat approval; targeted analyzer clean. Emulator QA verified a scheduled Home action opens its linked timer. Physical phone and real-provider end-to-end remain open.
 
 ## Verification
+
+Unsupported-tool compatibility follow-up: `test/ai_action_proposal_test.dart`, `test/ai_chat_approval_widget_test.dart`, and `test/goal_plan_application_test.dart` pass (**24 tests**). Tests cover explicit 400/422 capability refusal, retry request shape, model/provider attribution, ordinary chat without a plan, no pre-approval writes, and no compatibility retry for provider 500. Targeted analyzer reports no issues. Android/web preview builds are recorded in the ecosystem checkpoint.
 
 **Commands:**
 - `flutter test --no-pub test/ai_action_proposal_test.dart test/home_schedule_service_test.dart test/intent_repository_test.dart` -- typed preview, approval gate, transaction rollback, conflict and retry cases pass.

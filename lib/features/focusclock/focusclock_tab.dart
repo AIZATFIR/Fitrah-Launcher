@@ -76,12 +76,12 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Add Activity',
+              'Tambah kegiatan',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             const Text(
-              'Pick a preset or create custom',
+              'Pilih preset atau buat sendiri',
               style: TextStyle(fontSize: 13, color: AppPalette.textDim),
             ),
             const SizedBox(height: 14),
@@ -89,7 +89,7 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  'No presets yet.',
+                  'Belum ada preset.',
                   style: TextStyle(color: AppPalette.textDim),
                 ),
               )
@@ -182,7 +182,7 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
                   ),
                   icon: const Icon(Icons.arrow_forward_rounded, size: 24),
                   label: const Text(
-                    'Custom Activity',
+                    'Buat kegiatan sendiri',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                   onPressed: () => Navigator.pop(context, 'custom'),
@@ -387,7 +387,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final activities = activitiesAsync.valueOrNull ?? const <Activity>[];
     final schedulingTask = ref.watch(schedulingTaskProvider);
     final isInstant = ref.watch(isInstantModeProvider);
-    final isCompactHeader = MediaQuery.sizeOf(context).width < 600;
 
     ref.listen<bool>(precisionModeProvider, (prev, next) {
       if (next != _isPrecisionMode) {
@@ -440,6 +439,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       },
       child: LayoutBuilder(
         builder: (context, constraints) {
+          // This page is capped at 500dp inside the launcher. Use its actual
+          // available width, not the device's wider MediaQuery, for the header.
+          final isCompactHeader = constraints.maxWidth < 600;
           return Stack(
             children: [
               Positioned.fill(
@@ -757,7 +759,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                               left: 16,
                               right: 16,
                               child: Container(
-                                constraints: const BoxConstraints(minHeight: 44),
+                                constraints: const BoxConstraints(
+                                  minHeight: 44,
+                                ),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 12,
@@ -947,36 +951,40 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           border: Border.all(color: AppPalette.stroke),
                         ),
                         child: isCompactHeader
-                            ? const Icon(Icons.menu_book_outlined, size: 20, color: AppPalette.accent)
-                            : const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'FOCUS',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 2,
-                                color: AppPalette.text,
-                              ),
-                            ),
-                            Text(
-                              'CLOCK',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 2,
+                            ? const Icon(
+                                Icons.menu_book_outlined,
+                                size: 20,
                                 color: AppPalette.accent,
+                              )
+                            : const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'FOCUS',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 2,
+                                      color: AppPalette.text,
+                                    ),
+                                  ),
+                                  Text(
+                                    'CLOCK',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 2,
+                                      color: AppPalette.accent,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    size: 14,
+                                    color: AppPalette.textDim,
+                                  ),
+                                ],
                               ),
-                            ),
-                            SizedBox(width: 4),
-                            Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 14,
-                              color: AppPalette.textDim,
-                            ),
-                          ],
-                        ),
                       ),
                     ),
 
@@ -988,46 +996,49 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       children: [
                         Semantics(
                           button: true,
-                          label: 'Pilih tanggal ${date.day} ${_monthName(date.month)} ${date.year}',
+                          label:
+                              'Pilih tanggal ${date.day} ${_monthName(date.month)} ${date.year}',
                           child: GestureDetector(
-                          onTap: () {
-                            HapticFeedback.mediumImpact();
-                            _showLargeCalendarBatchPicker(context, date);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppPalette.card,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: AppPalette.accent.withValues(alpha: 0.4),
+                            onTap: () {
+                              HapticFeedback.mediumImpact();
+                              _showLargeCalendarBatchPicker(context, date);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
                               ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.calendar_month_rounded,
-                                  size: 13,
-                                  color: AppPalette.accent,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  isCompactHeader
-                                      ? '${date.day} ${_monthName(date.month)}'
-                                      : '${date.day} ${_monthName(date.month)} ${date.year}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppPalette.text,
+                              decoration: BoxDecoration(
+                                color: AppPalette.card,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppPalette.accent.withValues(
+                                    alpha: 0.4,
                                   ),
                                 ),
-                              ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_month_rounded,
+                                    size: 13,
+                                    color: AppPalette.accent,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isCompactHeader
+                                        ? '${date.day} ${_monthName(date.month)}'
+                                        : '${date.day} ${_monthName(date.month)} ${date.year}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppPalette.text,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
                           ),
                         ),
                         const SizedBox(width: 8),

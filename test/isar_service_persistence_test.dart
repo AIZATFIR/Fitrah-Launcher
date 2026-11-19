@@ -113,6 +113,9 @@ void main() {
           ..habitId = 42
           ..habitName = 'Latihan LKS'
           ..targetSeconds = 1200
+          ..hybridSetCount = 3
+          ..hybridWorkSeconds = 45
+          ..hybridRestSeconds = 15
           ..startedAt = now
           ..attributionLocalDate = '2026-11-04'
           ..status = TimerStateStatus.paused
@@ -142,6 +145,10 @@ void main() {
       expect(restoredEntry?.targetSnapshot, 20);
       final restoredSession = await secondOpen.isar!.timerSessions.get(1);
       expect(restoredSession?.attributionLocalDate, '2026-11-04');
+      expect(restoredSession?.hybridSetCount, 3);
+      expect(restoredSession?.hybridWorkSeconds, 45);
+      expect(restoredSession?.hybridRestSeconds, 15);
+      expect(restoredSession?.revision, 1);
       final terminalRows = await secondOpen.isar!.terminalFocusSessions
           .where()
           .findAll();
@@ -150,65 +157,264 @@ void main() {
     },
   );
 
-  test('goal attribution schema preserves old property IDs and reopens', () async {
-    final timerIds = TimerSessionSchema.properties.map(
-      (name, property) => MapEntry(name, property.id),
-    );
-    expect(timerIds['habitId'], 5);
-    expect(timerIds['habitName'], 6);
-    expect(timerIds['updatedAt'], 17);
-    expect(timerIds['goalId'], 18);
-    expect(timerIds['goalTitleSnapshot'], 19);
-    final terminalIds = TerminalFocusSessionSchema.properties.map(
-      (name, property) => MapEntry(name, property.id),
-    );
-    expect(terminalIds['habitId'], 3);
-    expect(terminalIds['titleSnapshot'], 9);
-    expect(terminalIds['goalId'], 10);
-    expect(terminalIds['goalTitleSnapshot'], 11);
-
+  test('new activities are serializable without explicit timestamps', () async {
     final directory = await Directory.systemTemp.createTemp(
-      'focus_clock_goal_attribution_schema_',
+      'focus_clock_activity_defaults_',
     );
     addTearDown(() => directory.delete(recursive: true));
-    final first = await IsarService.openAt(directory.path);
-    final now = DateTime(2026, 11, 16, 9);
-    await first.isar!.writeTxn(() async {
-      await first.isar!.timerSessions.put(
+
+    final service = await IsarService.openAt(directory.path);
+    final activity = Activity()
+      ..title = 'Latihan LKS'
+      ..startMinute = 9 * 60
+      ..endMinute = 9 * 60 + 30
+      ..ampmHalf = AmPmHalf.am
+      ..date = DateTime(2026, 11, 20)
+      ..colorValue = 0xFF8BAE9A;
+
+    await service.isar!.writeTxn(() => service.isar!.activitys.put(activity));
+
+    final stored = await service.isar!.activitys.get(activity.id);
+    expect(stored!.createdAt, isA<DateTime>());
+    expect(stored.updatedAt, isA<DateTime>());
+    await service.isar!.close();
+  });
+
+  test(
+    'retrying an old completion cannot delete the newer active timer',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'focus_clock_timer_receipt_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final opened = await IsarService.openAt(directory.path);
+      addTearDown(() => opened.isar!.close());
+      final repository = SadarRepository(opened.isar!);
+      final now = DateTime(2026, 11, 17, 9);
+      await repository.saveTimerSession(
         TimerSession()
-          ..sessionId = 'attributed-active'
-          ..goalId = '22222222-2222-4222-8222-222222222222'
-          ..goalTitleSnapshot = 'Win nationals'
+          ..sessionId = 'completed-session'
+          ..habitId = 42
           ..habitName = 'LKS'
+          ..habitTargetSnapshot = 20
+          ..targetSeconds = 1200
+          ..startedAt = now
+          ..status = TimerStateStatus.completed
+          ..updatedAt = now,
+      );
+      await repository.completeTimerSession(
+        habitId: 42,
+        sessionId: 'completed-session',
+        dateString: '2026-11-17',
+        actualDurationMinutes: 1,
+        actualDurationSeconds: 60,
+        targetSnapshot: 20,
+        completedAt: now.add(const Duration(minutes: 1)),
+      );
+      await repository.saveTimerSession(
+        TimerSession()
+          ..sessionId = 'new-active-session'
+          ..habitId = 43
+          ..habitName = 'Reading'
+          ..targetSeconds = 1800
+          ..startedAt = now.add(const Duration(hours: 1))
+          ..status = TimerStateStatus.running
+          ..updatedAt = now,
+      );
+
+      await repository.completeTimerSession(
+        habitId: 42,
+        sessionId: 'completed-session',
+        dateString: '2026-11-17',
+        actualDurationMinutes: 1,
+        actualDurationSeconds: 60,
+        targetSnapshot: 20,
+        completedAt: now.add(const Duration(minutes: 1)),
+      );
+
+      expect(
+        (await repository.getActiveTimerSession())?.sessionId,
+        'new-active-session',
+      );
+    },
+  );
+
+  test(
+    'stale timer writer cannot overwrite a newer durable checkpoint',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'focus_clock_timer_revision_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final opened = await IsarService.openAt(directory.path);
+      addTearDown(() => opened.isar!.close());
+      final db = opened.isar!;
+      final writer = SadarRepository(db);
+      final staleWriter = SadarRepository(db);
+      final now = DateTime(2026, 11, 17, 9);
+      await writer.saveTimerSession(
+        TimerSession()
+          ..sessionId = 'revision-cas-session'
+          ..habitId = 42
+          ..habitName = 'LKS'
+          ..targetSeconds = 1800
           ..startedAt = now
           ..status = TimerStateStatus.paused
           ..updatedAt = now,
       );
-      final terminal = TerminalFocusSession()
-        ..sessionId = 'attributed-terminal'
-        ..sourceKind = 'habit'
-        ..titleSnapshot = 'LKS'
-        ..goalId = '22222222-2222-4222-8222-222222222222'
-        ..goalTitleSnapshot = 'Win nationals'
-        ..startedAt = now
-        ..completedAt = now
-        ..actualDurationSeconds = 60
-        ..status = TerminalSessionStatus.completed;
-      await first.isar!.terminalFocusSessions.put(terminal);
-    });
-    await first.isar!.close();
 
-    final reopened = await IsarService.openAt(directory.path);
-    addTearDown(() => reopened.isar!.close());
-    final active = await reopened.isar!.timerSessions.get(1);
-    expect(active?.goalId, '22222222-2222-4222-8222-222222222222');
-    expect(active?.goalTitleSnapshot, 'Win nationals');
-    final terminal = await reopened.isar!.terminalFocusSessions
-        .where()
-        .findFirst();
-    expect(terminal?.goalId, active?.goalId);
-    expect(terminal?.goalTitleSnapshot, active?.goalTitleSnapshot);
-  });
+      final stale = (await staleWriter.getActiveTimerSession())!;
+      final latest = (await writer.getActiveTimerSession())!
+        ..accumulatedDurationSeconds = 30;
+      await writer.saveTimerSession(latest);
+      stale.accumulatedDurationSeconds = 90;
+
+      await expectLater(
+        staleWriter.saveTimerSession(stale),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        (await writer.getActiveTimerSession())?.accumulatedDurationSeconds,
+        30,
+      );
+      expect((await writer.getActiveTimerSession())?.revision, 2);
+    },
+  );
+
+  test(
+    'goal attribution schema preserves old property IDs and reopens',
+    () async {
+      final timerIds = TimerSessionSchema.properties.map(
+        (name, property) => MapEntry(name, property.id),
+      );
+      expect(timerIds['habitId'], 5);
+      expect(timerIds['habitName'], 6);
+      expect(timerIds['updatedAt'], 17);
+      expect(timerIds['goalId'], 18);
+      expect(timerIds['goalTitleSnapshot'], 19);
+      expect(timerIds['hybridRestSeconds'], 20);
+      expect(timerIds['hybridSetCount'], 21);
+      expect(timerIds['hybridWorkSeconds'], 22);
+      expect(timerIds['revision'], 23);
+      final terminalIds = TerminalFocusSessionSchema.properties.map(
+        (name, property) => MapEntry(name, property.id),
+      );
+      expect(terminalIds['habitId'], 3);
+      expect(terminalIds['titleSnapshot'], 9);
+      expect(terminalIds['goalId'], 10);
+      expect(terminalIds['goalTitleSnapshot'], 11);
+
+      final directory = await Directory.systemTemp.createTemp(
+        'focus_clock_goal_attribution_schema_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final first = await IsarService.openAt(directory.path);
+      final now = DateTime(2026, 11, 16, 9);
+      await first.isar!.writeTxn(() async {
+        await first.isar!.timerSessions.put(
+          TimerSession()
+            ..sessionId = 'attributed-active'
+            ..goalId = '22222222-2222-4222-8222-222222222222'
+            ..goalTitleSnapshot = 'Win nationals'
+            ..habitName = 'LKS'
+            ..startedAt = now
+            ..status = TimerStateStatus.paused
+            ..updatedAt = now,
+        );
+        final terminal = TerminalFocusSession()
+          ..sessionId = 'attributed-terminal'
+          ..sourceKind = 'habit'
+          ..titleSnapshot = 'LKS'
+          ..goalId = '22222222-2222-4222-8222-222222222222'
+          ..goalTitleSnapshot = 'Win nationals'
+          ..startedAt = now
+          ..completedAt = now
+          ..actualDurationSeconds = 60
+          ..status = TerminalSessionStatus.completed;
+        await first.isar!.terminalFocusSessions.put(terminal);
+      });
+      await first.isar!.close();
+
+      final reopened = await IsarService.openAt(directory.path);
+      addTearDown(() => reopened.isar!.close());
+      final active = await reopened.isar!.timerSessions.get(1);
+      expect(active?.goalId, '22222222-2222-4222-8222-222222222222');
+      expect(active?.goalTitleSnapshot, 'Win nationals');
+      final terminal = await reopened.isar!.terminalFocusSessions
+          .where()
+          .findFirst();
+      expect(terminal?.goalId, active?.goalId);
+      expect(terminal?.goalTitleSnapshot, active?.goalTitleSnapshot);
+    },
+  );
+
+  test(
+    'hybrid timer stores completed sets without counting rest time',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'focus_clock_hybrid_timer_',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final opened = await IsarService.openAt(directory.path);
+      final db = opened.isar!;
+      final repository = SadarRepository(db);
+      final hybrid = Habit()
+        ..name = 'Math drills'
+        ..target = 2
+        ..habitType = 'hybrid'
+        ..hybridSets = 2
+        ..hybridDurationSeconds = 20
+        ..hybridRestSeconds = 10
+        ..colorValue = 0xFF779988
+        ..createdAt = DateTime(2026, 11, 17);
+      final habitId = await repository.upsertHabit(hybrid);
+      final now = DateTime(2026, 11, 17, 10);
+      await repository.saveTimerSession(
+        TimerSession()
+          ..sessionId = 'hybrid-native-session'
+          ..habitId = habitId
+          ..habitName = hybrid.name
+          ..sourceKind = TimerSessionSourceKind.yptHabit
+          ..targetSeconds = 50
+          ..hybridSetCount = 2
+          ..hybridWorkSeconds = 20
+          ..hybridRestSeconds = 10
+          ..accumulatedDurationSeconds = 30
+          ..startedAt = now
+          ..attributionLocalDate = '2026-11-17'
+          ..status = TimerStateStatus.completed
+          ..updatedAt = now,
+      );
+      final entry = await repository.completeTimerSession(
+        habitId: habitId,
+        sessionId: 'hybrid-native-session',
+        dateString: '2026-11-17',
+        actualDurationMinutes: 0,
+        actualDurationSeconds: 20,
+        targetSnapshot: 2,
+        completedUnitCount: 1,
+        completedAt: now.add(const Duration(seconds: 30)),
+      );
+      expect(entry.status, HabitStatus.unmarked);
+      expect(entry.valueCompleted, 1);
+      expect(entry.actualDurationSeconds, 20);
+      expect(entry.source, 'timer');
+      await db.close();
+
+      final reopened = await IsarService.openAt(directory.path);
+      addTearDown(() => reopened.isar!.close());
+      final restoredTimer = await reopened.isar!.timerSessions.get(1);
+      final restoredEntry = await reopened.isar!.habitEntrys
+          .filter()
+          .habitIdEqualTo(habitId)
+          .dateStringEqualTo('2026-11-17')
+          .findFirst();
+      expect(restoredTimer, isNull);
+      expect(restoredEntry?.valueCompleted, 1);
+      expect(restoredEntry?.actualDurationSeconds, 20);
+      expect(restoredEntry?.status, HabitStatus.unmarked);
+    },
+  );
 
   test('unavailable store keeps timer session for recovery', () async {
     final directory = await Directory.systemTemp.createTemp(

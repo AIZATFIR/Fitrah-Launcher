@@ -55,12 +55,12 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] Add a durable terminal-session model with stable UUID, source snapshot, actual timing, status, and validation; register it in Isar and browser store codec/watch.
-- [ ] Update every terminal repository path (habit, scheduled activity, preset, free, cancel) to atomically store the terminal row and contribution, clear active session, and deduplicate retries by stable ID in durable and memory stores.
-- [ ] Extend backup to v5, validate and export/import ledger, and retain v1–v4 compatibility and recovery rollback.
-- [ ] Show today's completed sessions and total measured time in Home with an empty state; refresh from store updates and preserve selected palette/accessibility.
-- [ ] Add tests for each source, finish early, cancel, duplicate retry, transaction failure/reopen, browser codec/watch, backup v1–v5, and Home history.
-- [ ] Update E2 evidence and roadmap based only on verified gates; keep unrelated E2 gaps open.
+- [x] Add a durable terminal-session model with stable UUID, source snapshot, actual timing, status, and validation; register it in Isar and browser store codec/watch.
+- [x] Update terminal repository paths (habit, scheduled activity, preset, free, cancel) to atomically store the terminal row and contribution, clear active session, and deduplicate retries by stable ID in durable and memory stores.
+- [x] Extend backup to v5, validate and export/import ledger, and retain v1–v4 compatibility and recovery rollback.
+- [x] Show today's completed sessions and total measured time in Home with an empty state; refresh from store updates and preserve selected palette/accessibility.
+- [x] Add tests for each source, finish early, cancel, duplicate retry, transaction failure/reopen, browser codec/watch, backup v1–v5, and Home history.
+- [x] Update E2 evidence and roadmap based only on verified gates; keep unrelated E2 gaps open.
 
 **Acceptance Criteria:**
 - Given a completed timer, when Home is reopened, then one truthful session appears with actual measured duration and source snapshot.
@@ -73,6 +73,7 @@ context:
 
 - Active TimerSession now carries a stable UUID, including through backup; legacy rows are assigned a terminal fallback source from habit linkage. The Home history card sits after the analog clock so it does not push the primary cue/actions down; its header wraps at narrow widths. Full-suite QA caught and fixed a 320 px overflow and adjusted the Home history test to scroll to the below-fold card.
 - Full verification passed: 329 tests with serial concurrency and `flutter analyze --no-pub`. `build_runner` emitted the new model but exited nonzero on the unrelated annotation error in `tool/web_storage_spike/test/storage_test.dart`; `tool/fix_isar_schema_ids.dart` completed. Real browser reload/storage and upgrading an existing personal database remain unverified.
+- Follow-up v8100 verification closed the browser portion of this slice: five production-browser storage journeys passed, including reload/recovery and two-tab session exclusivity/completion. Native Isar save/reopen and backup compatibility remain covered by the focused persistence/backup suites and the 438-test v8100 full-suite run. User-device upgrade and physical/OEM behavior still require owner/device verification. The full `build_runner` command still reports the unrelated annotation error noted above; generated schema and the bounded-ID transformer are present, but a clean generator exit remains a tooling cleanup item.
 
 ## Plan Change Log
 

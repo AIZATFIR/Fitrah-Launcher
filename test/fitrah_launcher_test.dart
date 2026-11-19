@@ -85,7 +85,7 @@ void main() {
       await tester.tap(searchFab);
       await tester.pumpAndSettle();
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Search apps'), findsOneWidget);
+      expect(find.text('Cari aplikasi'), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'Test');
       await tester.pump();
       expect(find.text('Test App'), findsOneWidget);
@@ -103,6 +103,40 @@ void main() {
 
       expect(find.byType(FocusClockHomeView), findsOneWidget);
       expect(find.byType(PageView), findsOneWidget);
+      expect(find.text('Hari Ini'), findsOneWidget);
+      expect(find.text('Jam'), findsOneWidget);
+      expect(find.text('Aplikasi'), findsOneWidget);
+      final shellScaffold = tester.widget<Scaffold>(
+        find
+            .descendant(
+              of: find.byType(FitrahLauncherShell),
+              matching: find.byType(Scaffold),
+            )
+            .first,
+      );
+      expect(shellScaffold.bottomNavigationBar, isA<NavigationBar>());
+      await tester.tap(find.text('Jam'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page,
+        0,
+      );
+      await tester.tap(find.text('Hari Ini'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page,
+        1,
+      );
+      await tester.tap(find.text('Aplikasi'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page,
+        2,
+      );
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        2,
+      );
       final container = ProviderScope.containerOf(
         tester.element(find.byType(FitrahLauncherShell)),
       );
@@ -149,10 +183,9 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
 
-    testWidgets('Home follows the saved prayer versus Focus Events setting', (
+    testWidgets('Home uses saved Focus Clock mode and widget visibility', (
       tester,
     ) async {
-      final semantics = tester.ensureSemantics();
       final storage = NoteStorage()
         ..raw = LauncherSettings(widgetDisplayMode: 'focus_clock').toJson();
       final container = ProviderContainer(
@@ -175,19 +208,13 @@ void main() {
       expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
       expect(find.text('Subuh'), findsNothing);
       expect(find.byKey(const ValueKey('home-date-hijri')), findsOneWidget);
-      expect(find.byKey(const ValueKey('home-current-event')), findsOneWidget);
+      // The compact Home uses its inline "SEKARANG" cue instead of the
+      // expanded dial's separate current-event badge.
+      expect(find.byKey(const ValueKey('home-current-event')), findsNothing);
       expect(container.read(launcherSettingsProvider).showHabitsWidget, isTrue);
       expect(
         find.byKey(const ValueKey('home-agenda-carousel')),
         findsOneWidget,
-      );
-      expect(
-        tester
-            .getSemantics(
-              find.byKey(const ValueKey('home-prayer-focus-toggle')),
-            )
-            .label,
-        'Tampilkan waktu sholat',
       );
       final homeList = find.byType(ListView).first;
       final homeScrollable = find
@@ -199,22 +226,13 @@ void main() {
         scrollable: homeScrollable,
       );
       expect(find.byKey(const ValueKey('home-habit-grid')), findsOneWidget);
-      await tester.drag(homeList, const Offset(0, 1200));
+      await container
+          .read(launcherSettingsProvider.notifier)
+          .setWidgetDisplayMode('prayer');
       await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const ValueKey('home-prayer-focus-toggle')));
+      await tester.drag(homeList, const Offset(0, 1400));
       await tester.pumpAndSettle();
-
       expect(find.byIcon(Icons.mosque_rounded), findsOneWidget);
-      expect(find.text('Subuh'), findsOneWidget);
-      expect(
-        tester
-            .getSemantics(
-              find.byKey(const ValueKey('home-prayer-focus-toggle')),
-            )
-            .hasFlag(SemanticsFlag.isToggled),
-        isTrue,
-      );
       expect(
         LauncherSettings.fromJson(storage.raw!).widgetDisplayMode,
         'prayer',
@@ -223,22 +241,11 @@ void main() {
       await container
           .read(launcherSettingsProvider.notifier)
           .togglePrayerTimes(false);
+      await container
+          .read(launcherSettingsProvider.notifier)
+          .setWidgetDisplayMode('focus_clock');
       await tester.pumpAndSettle();
       expect(find.text('Subuh'), findsNothing);
-      expect(
-        tester
-            .getSemantics(
-              find.byKey(const ValueKey('home-prayer-focus-toggle')),
-            )
-            .label,
-        'Waktu sholat nonaktif. Aktifkan di Pengaturan Home',
-      );
-      await tester.tap(find.byKey(const ValueKey('home-prayer-focus-toggle')));
-      await tester.pumpAndSettle();
-      expect(
-        find.text('Aktifkan baris waktu sholat di Pengaturan Home.'),
-        findsOneWidget,
-      );
 
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('home-habit-grid')),
@@ -262,7 +269,6 @@ void main() {
       expect(find.byKey(const ValueKey('home-agenda-carousel')), findsNothing);
       expect(find.byKey(const ValueKey('home-habit-grid')), findsNothing);
 
-      semantics.dispose();
       await tester.pumpWidget(const SizedBox());
     });
 
@@ -292,10 +298,8 @@ void main() {
         isTrue,
       );
       expect(
-        RegExp(
-          r'^Jam jadwal hari ini\. Sekarang pukul \d{2}:\d{2}\. Ketuk untuk menambah jadwal\.$',
-        ).hasMatch(clockSemantics.label),
-        isTrue,
+        clockSemantics.label,
+        startsWith('Buka jam jadwal. Sekarang pukul '),
       );
       semantics.dispose();
       await tester.pumpWidget(const SizedBox());

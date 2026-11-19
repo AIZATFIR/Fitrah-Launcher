@@ -54,6 +54,50 @@ void main() {
   );
 
   test(
+    'pinned goal context applies only to its current provider request',
+    () async {
+      final requests = <Map<String, dynamic>>[];
+      final ai = AiService(
+        baseUrl: 'https://provider.test/v1',
+        apiKey: '',
+        model: 'test-model',
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ConfiguredProviderStorage(),
+        httpClient: MockClient((request) async {
+          requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'role': 'assistant', 'content': 'Reply'},
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      await ai.send('Pertanyaan dari Home', goalContext: 'Goal privat');
+      await ai.send('Pertanyaan umum');
+
+      final firstMessages = requests[0]['messages'] as List;
+      expect(
+        ((firstMessages[1] as Map)['content'] as String),
+        contains('Goal privat'),
+      );
+      final followUpMessages = requests[1]['messages'] as List;
+      final priorUserTurn = followUpMessages[1] as Map;
+      expect(priorUserTurn['content'], 'Pertanyaan dari Home');
+      expect(
+        followUpMessages.map((message) => (message as Map)['content']),
+        isNot(contains(contains('Goal privat'))),
+      );
+    },
+  );
+
+  test(
     'configured Google endpoint receives goal-first guidance and prior turns once',
     () async {
       final requests = <Map<String, dynamic>>[];
@@ -114,6 +158,118 @@ void main() {
         ),
         hasLength(1),
       );
+    },
+  );
+
+  test(
+    'custom provider without key is used directly without authorization',
+    () async {
+      http.Request? sent;
+      var backendCalls = 0;
+      final client = MockClient((request) async {
+        if (request.url.path.endsWith('/chat/completions')) {
+          sent = request;
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'role': 'assistant', 'content': 'Local reply'},
+                },
+              ],
+            }),
+            200,
+          );
+        }
+        backendCalls++;
+        return http.Response('{}', 503);
+      });
+      final ai = AiService(
+        baseUrl: 'https://my-ollama.example/v1',
+        apiKey: '',
+        model: 'qwen-local',
+        allowUnauthenticatedProvider: true,
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ReadOnlyBackendStorage(),
+        httpClient: client,
+      );
+
+      expect(await ai.send('Bantu aku fokus'), 'Local reply');
+      expect(sent?.url.path, '/v1/chat/completions');
+      expect(sent?.headers.containsKey('authorization'), isFalse);
+      expect(backendCalls, 0);
+    },
+  );
+
+  test(
+    'custom provider failure does not send chat to backend fallback',
+    () async {
+      var backendCalls = 0;
+      final client = MockClient((request) async {
+        if (request.url.path.endsWith('/chat/completions')) {
+          return http.Response('unavailable', 503);
+        }
+        backendCalls++;
+        return http.Response(jsonEncode({'reply': 'unexpected fallback'}), 200);
+      });
+      final ai = AiService(
+        baseUrl: 'https://my-ollama.example/v1',
+        apiKey: '',
+        model: 'qwen-local',
+        allowUnauthenticatedProvider: true,
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ReadOnlyBackendStorage(),
+        httpClient: client,
+      );
+
+      expect(await ai.send('Curhat rahasia'), contains('Provider pilihan'));
+      expect(backendCalls, 0);
+    },
+  );
+
+  test(
+    'configured provider failure never forwards private chat to another endpoint',
+    () async {
+      final requestUris = <Uri>[];
+      final requestBodies = <String>[];
+      final client = MockClient((request) async {
+        requestUris.add(request.url);
+        requestBodies.add(request.body);
+        if (request.url.host == 'provider.test') {
+          return http.Response('provider unavailable', 503);
+        }
+        return http.Response(
+          jsonEncode({'reply': 'unexpected fallback reply'}),
+          200,
+        );
+      });
+      final ai = AiService(
+        baseUrl: 'https://provider.test/v1',
+        apiKey: '',
+        model: 'chosen-model',
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ConfiguredProviderStorage(),
+        httpClient: client,
+      );
+
+      final reply = await ai.send(
+        'Curhat rahasia',
+        allowActions: true,
+        goalContext: 'Tujuan privat',
+      );
+
+      expect(
+        requestUris,
+        [Uri.parse('https://provider.test/v1/chat/completions')],
+      );
+      expect(requestBodies.single, contains('Curhat rahasia'));
+      expect(requestBodies.single, contains('Tujuan privat'));
+      expect(reply.toLowerCase(), contains('provider'));
+      expect(reply, isNot(contains('unexpected fallback reply')));
+      expect(reply, isNot(contains('provider unavailable')));
+      expect(reply, isNot(contains('sk-custom-provider-key')));
     },
   );
 
@@ -198,8 +354,12 @@ void main() {
       final reply = await ai.send(
         'Bantu susun latihan mingguan.',
         allowActions: true,
+        goalId: '123e4567-e89b-12d3-a456-426614174000',
+        expectedGoalRevision: 4,
       );
       final pending = ai.pendingGoalPlan!;
+      expect(pending.goalId, '123e4567-e89b-12d3-a456-426614174000');
+      expect(pending.expectedGoalRevision, 4);
       expect(reply, contains('Belum ada perubahan yang diterapkan'));
       expect(pending.proposal.goal.title, 'Win the LKS');
       expect(pending.proposal.blocks.single.startMinute, 1080);
@@ -221,6 +381,181 @@ void main() {
         'assistant',
         'user',
       ]);
+    },
+  );
+
+  test(
+    'provider without tool calling returns an inert validated plan envelope',
+    () async {
+      var calls = 0;
+      final requests = <Map<String, dynamic>>[];
+      final activities = ActivityRepository(null, NotificationService());
+      final client = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        requests.add(body);
+        calls++;
+        if (calls == 1) {
+          return http.Response(
+            jsonEncode({
+              'error': {
+                'message':
+                    'This model does not support tools or function calling.',
+              },
+            }),
+            400,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'role': 'assistant',
+                  'content': jsonEncode({
+                    'reply':
+                        'Aku tangkap LKS penting buatmu; ini draft yang bisa kamu ubah.',
+                    'goal_plan': {
+                      'goal': {
+                        'title': 'Menang LKS nasional IT Software Solution',
+                        'why':
+                            'Aku ingin mengembangkan kemampuan dan mewakili sekolah.',
+                        'targetDate': '2027-07-15',
+                      },
+                      'assumptions': ['Sekolah berlangsung pada pagi hari.'],
+                      'blocks': [
+                        {
+                          'weekday': 2,
+                          'startMinute': 1080,
+                          'durationMinutes': 45,
+                        },
+                      ],
+                    },
+                  }),
+                },
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      final ai = AiService(
+        baseUrl: 'https://provider.test/v1',
+        apiKey: '',
+        model: 'model-without-tools',
+        activityRepo: activities,
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ConfiguredProviderStorage(),
+        httpClient: client,
+      );
+
+      final reply = await ai.send(
+        'Aku ingin menang LKS nasional.',
+        allowActions: true,
+        goalId: '123e4567-e89b-12d3-a456-426614174001',
+        expectedGoalRevision: 2,
+      );
+
+      expect(calls, 2);
+      expect(requests.first['tools'], isNotNull);
+      expect(requests.last.containsKey('tools'), isFalse);
+      expect(requests.last.containsKey('tool_choice'), isFalse);
+      expect(reply, contains('Aku tangkap LKS penting buatmu'));
+      expect(
+        ai.pendingGoalPlan?.proposal.goal.title,
+        'Menang LKS nasional IT Software Solution',
+      );
+      expect(ai.pendingGoalPlan?.proposal.provider, 'https://provider.test/v1');
+      expect(ai.pendingGoalPlan?.proposal.model, 'model-without-tools');
+      expect(
+        ai.pendingGoalPlan?.goalId,
+        '123e4567-e89b-12d3-a456-426614174001',
+      );
+      expect(ai.pendingGoalPlan?.expectedGoalRevision, 2);
+      expect(await activities.getByDate(DateTime.now()), isEmpty);
+    },
+  );
+
+  test(
+    'provider without tool calling can return supportive chat without a plan',
+    () async {
+      var calls = 0;
+      final client = MockClient((request) async {
+        calls++;
+        if (calls == 1) {
+          return http.Response(
+            jsonEncode({
+              'error': {'message': 'tools are not supported'},
+            }),
+            422,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'role': 'assistant',
+                  'content': jsonEncode({
+                    'reply':
+                        'Kedengarannya hari ini berat. Bagian mana yang paling mengganggu?',
+                    'goal_plan': null,
+                  }),
+                },
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      final ai = AiService(
+        baseUrl: 'https://provider.test/v1',
+        apiKey: '',
+        model: 'model-without-tools',
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ConfiguredProviderStorage(),
+        httpClient: client,
+      );
+
+      final reply = await ai.send('Aku lagi kewalahan.', allowActions: true);
+
+      expect(calls, 2);
+      expect(reply, contains('Kedengarannya hari ini berat'));
+      expect(ai.pendingGoalPlan, isNull);
+      expect(ai.pendingActions, isEmpty);
+    },
+  );
+
+  test(
+    'provider server errors never trigger the no-tool compatibility retry',
+    () async {
+      var completionCalls = 0;
+      final client = MockClient((request) async {
+        if (request.url.path.endsWith('/chat/completions')) {
+          completionCalls++;
+          return http.Response(
+            jsonEncode({
+              'error': {'message': 'temporary internal server error'},
+            }),
+            500,
+          );
+        }
+        return http.Response('{}', 503);
+      });
+      final ai = AiService(
+        baseUrl: 'https://provider.test/v1',
+        apiKey: '',
+        model: 'chosen-model',
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ConfiguredProviderStorage(),
+        httpClient: client,
+      );
+
+      await ai.send('Bantu aku merencanakan minggu ini.', allowActions: true);
+
+      expect(completionCalls, 1);
+      expect(ai.pendingGoalPlan, isNull);
     },
   );
 

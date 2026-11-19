@@ -39,6 +39,13 @@ class TimerSession {
   String? goalId;
   String? goalTitleSnapshot;
   int targetSeconds = 0;
+  int hybridSetCount = 0;
+  int hybridWorkSeconds = 0;
+  int hybridRestSeconds = 0;
+
+  /// Monotonic compare-and-swap token for durable active-session writes.
+  int revision = 0;
+
   DateTime? startedAt;
   String? attributionLocalDate;
   DateTime? runningSince;

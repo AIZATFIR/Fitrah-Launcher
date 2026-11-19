@@ -59,11 +59,27 @@ const TimerSessionSchema = CollectionSchema(
       name: r'habitTargetSnapshot',
       type: IsarType.long,
     ),
+    r'hybridRestSeconds': PropertySchema(
+      id: 20,
+      name: r'hybridRestSeconds',
+      type: IsarType.long,
+    ),
+    r'hybridSetCount': PropertySchema(
+      id: 21,
+      name: r'hybridSetCount',
+      type: IsarType.long,
+    ),
+    r'hybridWorkSeconds': PropertySchema(
+      id: 22,
+      name: r'hybridWorkSeconds',
+      type: IsarType.long,
+    ),
     r'pausedAt': PropertySchema(
       id: 8,
       name: r'pausedAt',
       type: IsarType.dateTime,
     ),
+    r'revision': PropertySchema(id: 23, name: r'revision', type: IsarType.long),
     r'runningSince': PropertySchema(
       id: 9,
       name: r'runningSince',
@@ -183,16 +199,20 @@ void _timerSessionSerialize(
   writer.writeLong(offsets[7], object.habitId);
   writer.writeString(offsets[8], object.habitName);
   writer.writeLong(offsets[9], object.habitTargetSnapshot);
-  writer.writeDateTime(offsets[10], object.pausedAt);
-  writer.writeDateTime(offsets[11], object.runningSince);
-  writer.writeString(offsets[12], object.sessionId);
-  writer.writeLong(offsets[13], object.sourceColorValue);
-  writer.writeString(offsets[14], object.sourceIdentity);
-  writer.writeLong(offsets[15], object.sourceKindIndex);
-  writer.writeDateTime(offsets[16], object.startedAt);
-  writer.writeByte(offsets[17], object.status.index);
-  writer.writeLong(offsets[18], object.targetSeconds);
-  writer.writeDateTime(offsets[19], object.updatedAt);
+  writer.writeLong(offsets[10], object.hybridRestSeconds);
+  writer.writeLong(offsets[11], object.hybridSetCount);
+  writer.writeLong(offsets[12], object.hybridWorkSeconds);
+  writer.writeDateTime(offsets[13], object.pausedAt);
+  writer.writeLong(offsets[14], object.revision);
+  writer.writeDateTime(offsets[15], object.runningSince);
+  writer.writeString(offsets[16], object.sessionId);
+  writer.writeLong(offsets[17], object.sourceColorValue);
+  writer.writeString(offsets[18], object.sourceIdentity);
+  writer.writeLong(offsets[19], object.sourceKindIndex);
+  writer.writeDateTime(offsets[20], object.startedAt);
+  writer.writeByte(offsets[21], object.status.index);
+  writer.writeLong(offsets[22], object.targetSeconds);
+  writer.writeDateTime(offsets[23], object.updatedAt);
 }
 
 TimerSession _timerSessionDeserialize(
@@ -212,19 +232,23 @@ TimerSession _timerSessionDeserialize(
   object.habitId = reader.readLong(offsets[7]);
   object.habitName = reader.readString(offsets[8]);
   object.habitTargetSnapshot = reader.readLongOrNull(offsets[9]);
+  object.hybridRestSeconds = reader.readLong(offsets[10]);
+  object.hybridSetCount = reader.readLong(offsets[11]);
+  object.hybridWorkSeconds = reader.readLong(offsets[12]);
   object.id = id;
-  object.pausedAt = reader.readDateTimeOrNull(offsets[10]);
-  object.runningSince = reader.readDateTimeOrNull(offsets[11]);
-  object.sessionId = reader.readStringOrNull(offsets[12]);
-  object.sourceColorValue = reader.readLongOrNull(offsets[13]);
-  object.sourceIdentity = reader.readStringOrNull(offsets[14]);
-  object.sourceKindIndex = reader.readLongOrNull(offsets[15]);
-  object.startedAt = reader.readDateTimeOrNull(offsets[16]);
+  object.pausedAt = reader.readDateTimeOrNull(offsets[13]);
+  object.revision = reader.readLong(offsets[14]);
+  object.runningSince = reader.readDateTimeOrNull(offsets[15]);
+  object.sessionId = reader.readStringOrNull(offsets[16]);
+  object.sourceColorValue = reader.readLongOrNull(offsets[17]);
+  object.sourceIdentity = reader.readStringOrNull(offsets[18]);
+  object.sourceKindIndex = reader.readLongOrNull(offsets[19]);
+  object.startedAt = reader.readDateTimeOrNull(offsets[20]);
   object.status =
-      _TimerSessionstatusValueEnumMap[reader.readByteOrNull(offsets[17])] ??
+      _TimerSessionstatusValueEnumMap[reader.readByteOrNull(offsets[21])] ??
       TimerStateStatus.idle;
-  object.targetSeconds = reader.readLong(offsets[18]);
-  object.updatedAt = reader.readDateTime(offsets[19]);
+  object.targetSeconds = reader.readLong(offsets[22]);
+  object.updatedAt = reader.readDateTime(offsets[23]);
   return object;
 }
 
@@ -255,8 +279,16 @@ P _timerSessionDeserializeProp<P>(
       return (reader.readString(offset)) as P;
     case 7:
       return (reader.readLongOrNull(offset)) as P;
+    case 20:
+      return (reader.readLong(offset)) as P;
+    case 21:
+      return (reader.readLong(offset)) as P;
+    case 22:
+      return (reader.readLong(offset)) as P;
     case 8:
       return (reader.readDateTimeOrNull(offset)) as P;
+    case 23:
+      return (reader.readLong(offset)) as P;
     case 9:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 10:
@@ -1429,6 +1461,171 @@ extension TimerSessionQueryFilter
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridRestSecondsEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'hybridRestSeconds', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridRestSecondsGreaterThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'hybridRestSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridRestSecondsLessThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'hybridRestSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridRestSecondsBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'hybridRestSeconds',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridSetCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'hybridSetCount', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridSetCountGreaterThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'hybridSetCount',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridSetCountLessThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'hybridSetCount',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridSetCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'hybridSetCount',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridWorkSecondsEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'hybridWorkSeconds', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridWorkSecondsGreaterThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'hybridWorkSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridWorkSecondsLessThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'hybridWorkSeconds',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  hybridWorkSecondsBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'hybridWorkSeconds',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition> idEqualTo(
     Id value,
   ) {
@@ -1552,6 +1749,61 @@ extension TimerSessionQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'pausedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  revisionEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'revision', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  revisionGreaterThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'revision',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  revisionLessThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'revision',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterFilterCondition>
+  revisionBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'revision',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -2478,6 +2730,48 @@ extension TimerSessionQuerySortBy
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByHybridRestSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridRestSeconds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByHybridRestSecondsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridRestSeconds', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByHybridSetCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridSetCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByHybridSetCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridSetCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByHybridWorkSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridWorkSeconds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  sortByHybridWorkSecondsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridWorkSeconds', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByPausedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'pausedAt', Sort.asc);
@@ -2487,6 +2781,18 @@ extension TimerSessionQuerySortBy
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByPausedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'pausedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByRevision() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy> sortByRevisionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.desc);
     });
   }
 
@@ -2742,6 +3048,48 @@ extension TimerSessionQuerySortThenBy
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByHybridRestSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridRestSeconds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByHybridRestSecondsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridRestSeconds', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByHybridSetCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridSetCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByHybridSetCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridSetCount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByHybridWorkSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridWorkSeconds', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy>
+  thenByHybridWorkSecondsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hybridWorkSeconds', Sort.desc);
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -2763,6 +3111,18 @@ extension TimerSessionQuerySortThenBy
   QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenByPausedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'pausedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenByRevision() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QAfterSortBy> thenByRevisionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'revision', Sort.desc);
     });
   }
 
@@ -2961,9 +3321,36 @@ extension TimerSessionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<TimerSession, TimerSession, QDistinct>
+  distinctByHybridRestSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'hybridRestSeconds');
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QDistinct>
+  distinctByHybridSetCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'hybridSetCount');
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QDistinct>
+  distinctByHybridWorkSeconds() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'hybridWorkSeconds');
+    });
+  }
+
   QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByPausedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'pausedAt');
+    });
+  }
+
+  QueryBuilder<TimerSession, TimerSession, QDistinct> distinctByRevision() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'revision');
     });
   }
 
@@ -3105,9 +3492,35 @@ extension TimerSessionQueryProperty
     });
   }
 
+  QueryBuilder<TimerSession, int, QQueryOperations>
+  hybridRestSecondsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'hybridRestSeconds');
+    });
+  }
+
+  QueryBuilder<TimerSession, int, QQueryOperations> hybridSetCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'hybridSetCount');
+    });
+  }
+
+  QueryBuilder<TimerSession, int, QQueryOperations>
+  hybridWorkSecondsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'hybridWorkSeconds');
+    });
+  }
+
   QueryBuilder<TimerSession, DateTime?, QQueryOperations> pausedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'pausedAt');
+    });
+  }
+
+  QueryBuilder<TimerSession, int, QQueryOperations> revisionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'revision');
     });
   }
 

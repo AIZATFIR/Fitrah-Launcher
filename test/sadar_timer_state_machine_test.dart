@@ -5,6 +5,7 @@ import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
 import 'package:fitrah_launcher/models/habit.dart';
 import 'package:fitrah_launcher/models/habit_entry.dart';
 import 'package:fitrah_launcher/models/timer_session.dart';
+import 'package:fitrah_launcher/services/notification_service.dart';
 import 'package:fitrah_launcher/services/sadar_timer_engine.dart';
 
 void main() {
@@ -39,6 +40,49 @@ void main() {
     });
 
     test(
+      'startup without an active session clears an orphaned reminder',
+      () async {
+        engine.dispose();
+        final notifications = _RecordingTimerNotifications();
+        engine = SadarTimerEngine(repo, notifications);
+
+        await engine.waitUntilRestored();
+
+        expect(notifications.cancelCount, 1);
+        expect(notifications.scheduledSeconds, isEmpty);
+      },
+    );
+
+    test(
+      'timer reminder follows durable run, pause, resume and finish',
+      () async {
+        engine.dispose();
+        final notifications = _RecordingTimerNotifications();
+        engine = SadarTimerEngine(repo, notifications);
+
+        expect(await engine.start(habit), isTrue);
+        expect(
+          (await repo.getActiveTimerSession())?.status,
+          TimerStateStatus.running,
+        );
+        expect(notifications.scheduledSeconds, [1200]);
+        expect(notifications.cancelCount, 1); // Clear stale alarms at startup.
+
+        await engine.pause();
+        expect(notifications.cancelCount, 2);
+        await engine.resume();
+        expect(notifications.scheduledSeconds.last, 1200);
+
+        await engine.extendBy(60);
+        expect(notifications.scheduledSeconds.last, 1260);
+
+        await engine.finishEarly();
+        expect(notifications.cancelCount, 3);
+        expect(await repo.getActiveTimerSession(), isNull);
+      },
+    );
+
+    test(
       'startup restore prevents a new timer from replacing the saved one',
       () async {
         engine.dispose();
@@ -66,6 +110,204 @@ void main() {
         expect(engine.state.status, TimerStateStatus.paused);
         expect(engine.state.habitId, habit.id);
         expect(engine.state.remainingSeconds, 20 * 60 - 90);
+      },
+    );
+
+    test('concurrent starts accept only one active habit session', () async {
+      engine.dispose();
+      final bothClockReadsStarted = Completer<void>();
+      final releaseClockReads = Completer<Map<String, int>?>();
+      var clockReads = 0;
+      engine = SadarTimerEngine(repo, null, () {
+        clockReads++;
+        if (clockReads == 1) bothClockReadsStarted.complete();
+        return releaseClockReads.future;
+      });
+      await engine.waitUntilRestored();
+
+      final otherHabit = Habit()
+        ..id = 43
+        ..name = 'Reading'
+        ..target = 30
+        ..unit = HabitUnit.min
+        ..createdAt = DateTime.now();
+      final starts = [engine.start(habit), engine.start(otherHabit)];
+      await bothClockReadsStarted.future;
+      releaseClockReads.complete(null);
+
+      final accepted = await Future.wait(starts);
+      expect(accepted.where((started) => started), hasLength(1));
+      final acceptedHabitId = accepted[0] ? habit.id : otherHabit.id;
+      expect(engine.state.habitId, acceptedHabitId);
+      expect((await repo.getActiveTimerSession())?.habitId, acceptedHabitId);
+    });
+
+    test(
+      'timer checkpoint revisions advance across pause and restore',
+      () async {
+        expect(await engine.start(habit), isTrue);
+        expect((await repo.getActiveTimerSession())?.revision, 1);
+
+        await engine.pause();
+        expect((await repo.getActiveTimerSession())?.revision, 2);
+
+        engine.dispose();
+        engine = SadarTimerEngine(repo);
+        await engine.waitUntilRestored();
+        await engine.resume();
+
+        expect((await repo.getActiveTimerSession())?.revision, 3);
+      },
+    );
+
+    test(
+      'concurrent duplicate start attaches to the same saved session',
+      () async {
+        final accepted = await Future.wait([
+          engine.start(habit),
+          engine.start(habit),
+        ]);
+
+        expect(accepted, [true, true]);
+        expect(engine.state.habitId, habit.id);
+        expect((await repo.getActiveTimerSession())?.sessionId, isNotNull);
+      },
+    );
+
+    test(
+      'hybrid YPT timer plans work and rest in one shared session',
+      () async {
+        final hybrid = Habit()
+          ..id = 44
+          ..name = 'Math drills'
+          ..target = 1
+          ..unit = HabitUnit.min
+          ..habitType = 'hybrid'
+          ..hybridSets = 3
+          ..hybridDurationSeconds = 20
+          ..hybridRestSeconds = 10
+          ..createdAt = DateTime.now();
+
+        expect(await engine.startYpt(hybrid), isTrue);
+
+        expect(engine.state.targetSeconds, 80);
+        expect(engine.state.hybridSetCount, 3);
+        expect(engine.state.hybridWorkSeconds, 20);
+        expect(engine.state.hybridRestSeconds, 10);
+        expect(engine.state.hybridCurrentSet, 1);
+        expect(engine.state.hybridIsRest, isFalse);
+        expect(engine.state.hybridPhaseRemainingSeconds, 20);
+
+        final saved = await repo.getActiveTimerSession();
+        expect(saved?.hybridSetCount, 3);
+        expect(saved?.hybridWorkSeconds, 20);
+        expect(saved?.hybridRestSeconds, 10);
+      },
+    );
+
+    test(
+      'hybrid plan and current phase survive pause and app restore',
+      () async {
+        final hybrid = Habit()
+          ..id = 45
+          ..name = 'Math drills'
+          ..target = 1
+          ..unit = HabitUnit.min
+          ..habitType = 'hybrid'
+          ..hybridSets = 2
+          ..hybridDurationSeconds = 20
+          ..hybridRestSeconds = 10
+          ..createdAt = DateTime.now();
+        await engine.startYpt(hybrid);
+        await engine.pause();
+        engine.dispose();
+        engine = SadarTimerEngine(repo);
+
+        await engine.waitUntilRestored();
+
+        expect(engine.state.isPaused, isTrue);
+        expect(engine.state.hybridSetCount, 2);
+        expect(engine.state.hybridWorkSeconds, 20);
+        expect(engine.state.hybridRestSeconds, 10);
+        expect(engine.state.hybridCurrentSet, 1);
+        expect(engine.state.hybridIsRest, isFalse);
+        expect(engine.state.hybridPhaseRemainingSeconds, 20);
+      },
+    );
+
+    test('hybrid phase display follows work-rest boundaries', () {
+      final work = TimerState(
+        targetSeconds: 80,
+        actualDurationSeconds: 19,
+        hybridSetCount: 3,
+        hybridWorkSeconds: 20,
+        hybridRestSeconds: 10,
+      );
+      final rest = TimerState(
+        targetSeconds: 80,
+        actualDurationSeconds: 20,
+        hybridSetCount: 3,
+        hybridWorkSeconds: 20,
+        hybridRestSeconds: 10,
+      );
+      final nextSet = TimerState(
+        targetSeconds: 80,
+        actualDurationSeconds: 30,
+        hybridSetCount: 3,
+        hybridWorkSeconds: 20,
+        hybridRestSeconds: 10,
+      );
+
+      expect(work.hybridIsRest, isFalse);
+      expect(work.hybridPhaseRemainingSeconds, 1);
+      expect(work.hybridWorkElapsedSeconds, 19);
+      expect(rest.hybridIsRest, isTrue);
+      expect(rest.hybridPhaseRemainingSeconds, 10);
+      expect(rest.hybridCompletedSetCount, 1);
+      expect(rest.hybridWorkElapsedSeconds, 20);
+      expect(nextSet.hybridCurrentSet, 2);
+      expect(nextSet.hybridIsRest, isFalse);
+      expect(nextSet.hybridCompletedSetCount, 1);
+      expect(nextSet.hybridWorkElapsedSeconds, 20);
+      final completed = TimerState(
+        targetSeconds: 80,
+        actualDurationSeconds: 80,
+        hybridSetCount: 3,
+        hybridWorkSeconds: 20,
+        hybridRestSeconds: 10,
+      );
+      expect(completed.hybridRoutineComplete, isTrue);
+      expect(completed.hybridCompletedSetCount, 3);
+      expect(completed.hybridWorkElapsedSeconds, 60);
+    });
+
+    test(
+      'hybrid completion records sets and work seconds, not rest seconds',
+      () async {
+        final hybrid = Habit()
+          ..name = 'Math drills'
+          ..target = 1
+          ..unit = HabitUnit.min
+          ..habitType = 'hybrid'
+          ..createdAt = DateTime.now();
+        final habitId = await repo.upsertHabit(hybrid);
+
+        final entry = await repo.completeTimerSession(
+          habitId: habitId,
+          sessionId: 'hybrid-complete-1',
+          dateString: '2026-11-17',
+          actualDurationMinutes: 1,
+          actualDurationSeconds: 60,
+          targetSnapshot: 3,
+          completedUnitCount: 3,
+          completedAt: DateTime.now(),
+        );
+
+        expect(entry.status, HabitStatus.yes);
+        expect(entry.targetSnapshot, 3);
+        expect(entry.valueCompleted, 3);
+        expect(entry.actualDurationSeconds, 60);
+        expect(entry.source, 'timer');
       },
     );
 
@@ -340,9 +582,10 @@ void main() {
             ..status = TimerStateStatus.running
             ..updatedAt = DateTime.now(),
         );
+        final notifications = _RecordingTimerNotifications();
         engine = SadarTimerEngine(
           repo,
-          null,
+          notifications,
           () async => {'bootCount': 12, 'elapsedRealtimeMillis': 61_000},
         );
 
@@ -352,6 +595,7 @@ void main() {
         expect(engine.state.recoveryUncertain, isFalse);
         expect(engine.state.remainingSeconds, 540);
         expect(engine.state.actualDurationSeconds, 60);
+        expect(notifications.scheduledSeconds, [540]);
       },
     );
 
@@ -463,6 +707,28 @@ void main() {
       expect(row.goalId, goalId);
       expect(row.goalTitleSnapshot, 'Win nationals');
     });
+
+    test(
+      'scheduled activity session retains its selected goal snapshot',
+      () async {
+        const goalId = '22222222-2222-4222-8222-222222222222';
+        await engine.startNonHabit(
+          title: 'Latihan LKS',
+          targetSeconds: 1800,
+          sourceKind: TimerSessionSourceKind.activity,
+          activityId: 14,
+          goalId: goalId,
+          goalTitle: 'Win nationals',
+        );
+
+        final active = await repo.getActiveTimerSession();
+        expect(active?.activityId, 14);
+        expect(active?.goalId, goalId);
+        expect(active?.goalTitleSnapshot, 'Win nationals');
+        expect(engine.state.goalId, goalId);
+        expect(engine.state.goalTitleSnapshot, 'Win nationals');
+      },
+    );
 
     test('a failed start write does not leave a running timer', () async {
       final failingEngine = SadarTimerEngine(_FailingTimerSessionRepository());
@@ -739,6 +1005,7 @@ class _FailOnceTimerCompletionRepository extends SadarRepository {
     required int actualDurationMinutes,
     int? actualDurationSeconds,
     required int targetSnapshot,
+    int? completedUnitCount,
     required DateTime completedAt,
   }) async {
     if (_failNext) {
@@ -752,6 +1019,7 @@ class _FailOnceTimerCompletionRepository extends SadarRepository {
       actualDurationMinutes: actualDurationMinutes,
       actualDurationSeconds: actualDurationSeconds,
       targetSnapshot: targetSnapshot,
+      completedUnitCount: completedUnitCount,
       completedAt: completedAt,
     );
   }
@@ -815,5 +1083,20 @@ class _DelayedActiveTimerRepository extends SadarRepository {
   @override
   Future<void> clearTimerSession() async {
     clearCalled = true;
+  }
+}
+
+class _RecordingTimerNotifications extends NotificationService {
+  final scheduledSeconds = <int>[];
+  int cancelCount = 0;
+
+  @override
+  Future<void> scheduleTimerCompletion({required int remainingSeconds}) async {
+    scheduledSeconds.add(remainingSeconds);
+  }
+
+  @override
+  Future<void> cancelTimerCompletion() async {
+    cancelCount++;
   }
 }

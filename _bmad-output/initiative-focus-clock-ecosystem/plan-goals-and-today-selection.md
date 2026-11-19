@@ -96,3 +96,8 @@ Final independent verification after review patches: `flutter test --no-pub --re
 
 - Final post-review Android arm64 release compile passed (198.9 seconds). Personal preview: `release_dist/2026-11-08-2a6761f/Focus-Clock-2a6761f-Android-arm64-preview.apk`, SHA-256 `ecde1ca743e1b09ae151ca71b1dab18d3683d7f6d857f58d1358809f98676824`. Package remains `com.aizatfir.fitrah_launcher`, version `0.5.3+7`, using the existing Android Debug signing identity. This is a preview, not a public stable signing release. Signature verification passed; arm64 libisar LOAD segments use 0x4000 alignment. No Android device is attached, so installation was not verified.
 - Final post-review web compile passed (64.3 seconds) at `/tmp/focus-clock-home-2a6761f`. ZIP preview: `release_dist/2026-11-08-2a6761f/Focus-Clock-2a6761f-Web-preview.zip`, SHA-256 `51ec5258ec857e9d59443de1ad85bcd6a774c0918e62574284095a61f7fddfba`. BUILD-MANIFEST.json and SHA256SUMS accompany both artifacts. Local preview server is bound to 127.0.0.1:4174. No browser runtime/visual verification claim is made.
+
+
+## Home action copy follow-up (20 Nov 2026)
+
+The chosen-action card previously labeled its secondary selection control “Pilih tindakan hari ini” even while a valid action was already selected. It now reads “Ganti tindakan”; empty, completed, or unavailable selections keep the original choose wording. Scoped analysis/format, APK and web builds pass. On the disposable API36 AVD, the saved goal/action remained visible, the new label rendered, **Mulai fokus** opened the linked 30-minute timer, and cancel returned Home. Automated tests were not run.

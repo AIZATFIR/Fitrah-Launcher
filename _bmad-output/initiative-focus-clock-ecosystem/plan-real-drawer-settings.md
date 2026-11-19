@@ -63,8 +63,8 @@ Rejected keeping the local toggle (no effect) and adding a separate settings sto
 - Existing daily-note storage fakes support delayed/failing read/write. Explicit test fixtures only; no production memory fallback.
 
 ## Tasks / verification
-- [ ] Write focused failing model/provider/widget regression tests, then add durable model/API changes.
-- [ ] Shared controls and all write callers; real icon behavior and hydration-aware focus.
+- [x] Write focused failing model/provider/widget regression tests, then add durable model/API changes.
+- [x] Shared controls and all write callers; real icon behavior and hydration-aware focus.
 - [x] Test every matrix row using affected tests plus relevant launcher/notes tests; run analyzer and diff check. No full repository suite was run.
 - [x] Record exact tests/results/limitations in implementation notes. Affected checks and local commit completed.
 

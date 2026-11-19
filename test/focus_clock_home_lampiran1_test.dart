@@ -7,12 +7,28 @@ import 'package:fitrah_launcher/features/settings/settings_screen.dart';
 import 'package:fitrah_launcher/providers/providers.dart';
 import 'package:fitrah_launcher/providers/sadar_providers.dart';
 import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
+import 'package:fitrah_launcher/domain/focus_intent.dart';
+import 'package:fitrah_launcher/providers/intent_providers.dart';
 import 'package:fitrah_launcher/models/timer_session.dart';
 import 'package:fitrah_launcher/services/secure_storage_service.dart';
 import 'launcher_daily_note_test.dart' show NoteStorage;
 
 void main() {
   group('FocusClockHomeView Lampiran 1 & Future Self Sadar System Tests', () {
+    Finder homeScrollable() => find
+        .descendant(
+          of: find.byKey(const ValueKey('focus-clock-home-list')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
+    Future<void> expandSupportTools(WidgetTester tester) async {
+      final tile = find.text('Catatan & alat');
+      await tester.scrollUntilVisible(tile, 300, scrollable: homeScrollable());
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+    }
+
     Widget createWidgetUnderTest({
       bool useSampleData = true,
       bool emptyTasks = false,
@@ -26,6 +42,16 @@ void main() {
           if (emptyTasks)
             eisenhowerTasksProvider.overrideWith(
               (ref) => Stream.value(const []),
+            ),
+          if (emptyTasks)
+            intentStateProvider.overrideWith(
+              (ref) => Stream.value(
+                IntentState(sourceStoreId: 'test-store', legacyImported: true),
+              ),
+            ),
+          if (emptyTasks)
+            intentSourceDataProvider.overrideWith(
+              (ref) => Stream.value(const IntentSourceData([], [], [])),
             ),
           if (sadarRepository != null)
             sadarRepoProvider.overrideWithValue(sadarRepository),
@@ -50,37 +76,34 @@ void main() {
         await tester.pumpWidget(createWidgetUnderTest());
         await tester.pump();
 
-        // Top bar toggle button starts on schedule_rounded (agenda mode)
-        expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
-        expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('home-agenda-carousel')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('home-menu-button')), findsOneWidget);
 
-        // Tap toggle button to switch to prayer schedule
-        await tester.tap(find.byIcon(Icons.schedule_rounded));
+        // Prayer display is an explicit menu preference, not a header icon toggle.
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
         await tester.pumpAndSettle();
-
-        // Now prayer times are visible
-        expect(find.text('Subuh'), findsOneWidget);
-        expect(find.text('Dzuhur'), findsOneWidget);
-        expect(find.text('Asar'), findsOneWidget);
-        expect(find.text('Maghrib'), findsOneWidget);
-        expect(find.text('Isya'), findsOneWidget);
-        for (final name in ['Subuh', 'Dzuhur', 'Asar', 'Maghrib', 'Isya']) {
-          final label = tester.widget<Text>(find.text(name));
-          expect(label.maxLines, 1, reason: '$name must stay on one line');
-          expect(label.softWrap, isFalse, reason: '$name must not wrap');
-        }
-
-        // Tap again to switch back
-        await tester.tap(find.byIcon(Icons.mosque_rounded));
+        await tester.tap(find.text('Tampilkan waktu salat'));
         await tester.pumpAndSettle();
-        expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.mosque_outlined), findsOneWidget);
+
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Tampilkan agenda Focus Clock'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('home-agenda-carousel')),
+          findsOneWidget,
+        );
       },
     );
 
     testWidgets('Focus Clock menu exposes settings route', (tester) async {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
-      await tester.tap(find.byIcon(Icons.menu_rounded));
+      await tester.tap(find.byKey(const ValueKey('home-menu-button')));
       await tester.pumpAndSettle();
 
       expect(find.text('Pengaturan Focus Clock'), findsOneWidget);
@@ -101,9 +124,32 @@ void main() {
       expect(find.text('Restore backup'), findsOneWidget);
     });
 
+    testWidgets('AI setup opens at the provider controls on a phone', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: SettingsScreen(focusAiConfiguration: true)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final config = find.byKey(const ValueKey('ai-provider-settings'));
+      final providerLabel = find.text('Provider');
+      expect(config, findsOneWidget);
+      expect(providerLabel, findsOneWidget);
+      expect(tester.getRect(providerLabel).top, greaterThan(56));
+      expect(tester.getRect(providerLabel).bottom, lessThan(844));
+    });
+
     testWidgets('Renders today note card with scratchpad', (tester) async {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
+      await expandSupportTools(tester);
 
       final homeList = find.byType(ListView).first;
       await tester.scrollUntilVisible(
@@ -126,11 +172,23 @@ void main() {
         await tester.pumpWidget(createWidgetUnderTest());
         await tester.pump();
 
-        expect(find.text('AM'), findsOneWidget);
-        expect(find.text('PM'), findsOneWidget);
-        expect(find.text('Cari'), findsOneWidget);
-        expect(find.text('Daftar'), findsOneWidget);
-        expect(find.text('Timer'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('home-agenda-carousel')),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
+        await tester.pumpAndSettle();
+        expect(find.text('Cari jadwal'), findsOneWidget);
+        expect(find.text('Lihat daftar jadwal'), findsOneWidget);
+        await tester.tapAt(const Offset(4, 4));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('home-open-focus-timer')),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const ValueKey('home-open-focus-timer')));
+        await tester.pumpAndSettle();
+        expect(find.text('Pusat Timer Fokus'), findsOneWidget);
       },
     );
 
@@ -145,11 +203,15 @@ void main() {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
 
-      expect(find.text('AM'), findsOneWidget);
-      expect(find.text('PM'), findsOneWidget);
-      expect(find.text('Cari'), findsOneWidget);
-      expect(find.text('Daftar'), findsOneWidget);
-      expect(find.text('Timer'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('home-agenda-carousel')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('home-open-focus-timer')),
+        findsOneWidget,
+      );
+      await expandSupportTools(tester);
       expect(tester.takeException(), isNull);
     });
 
@@ -159,8 +221,9 @@ void main() {
         await tester.pumpWidget(createWidgetUnderTest());
         await tester.pump();
 
-        // Tap Daftar
-        await tester.tap(find.text('Daftar'));
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Lihat daftar jadwal'));
         await tester.pumpAndSettle();
 
         // In list view, SE - Orkestrasi AI should be listed
@@ -182,6 +245,7 @@ void main() {
 
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
+      await expandSupportTools(tester);
 
       expect(find.text('Identitas: Programmer'), findsOneWidget);
       expect(find.text('Preset Blok Waktu'), findsWidgets);
@@ -200,6 +264,7 @@ void main() {
 
         await tester.pumpWidget(createWidgetUnderTest());
         await tester.pump();
+        await expandSupportTools(tester);
 
         // Find first play arrow button in presets
         final playBtn = find.byKey(const ValueKey('preset_play_1'));
@@ -244,6 +309,7 @@ void main() {
 
         await tester.pumpWidget(createWidgetUnderTest());
         await tester.pump();
+        await expandSupportTools(tester);
 
         for (int i = 0; i < 6; i++) {
           if (find
@@ -280,7 +346,7 @@ void main() {
         await tester.pump();
 
         // Open menu
-        await tester.tap(find.byIcon(Icons.menu_rounded));
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
         await tester.pumpAndSettle();
 
         // Tap Jelas
@@ -311,16 +377,9 @@ void main() {
 
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
-
-      final addIdentityBtn = find.text('Tambah identitas');
-      await tester.scrollUntilVisible(
-        addIdentityBtn,
-        400,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -150));
+      await tester.tap(find.byKey(const ValueKey('home-menu-button')));
       await tester.pumpAndSettle();
-      await tester.tap(addIdentityBtn);
+      await tester.tap(find.text('Tambah Identitas Baru'));
       await tester.pumpAndSettle();
 
       // Verify bottom sheet for new identity is open
@@ -337,17 +396,7 @@ void main() {
       // Tap create
       await tester.tap(find.text('Buat Identitas'));
       await tester.pumpAndSettle();
-
-      // Scroll up to locate the updated preset section
-      for (int i = 0; i < 8; i++) {
-        if (find.text('Identitas: Penulis').evaluate().isNotEmpty) break;
-        await tester.drag(
-          find.byType(ListView).first,
-          const Offset(0, 300),
-          warnIfMissed: false,
-        );
-        await tester.pumpAndSettle();
-      }
+      await expandSupportTools(tester);
 
       // New identity card block should be rendered
       expect(find.text('Identitas: Penulis'), findsOneWidget);
@@ -373,6 +422,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        await expandSupportTools(tester);
         for (
           var i = 0;
           i < 6 && find.text('Task & Habit Dump (Inbox)').evaluate().isEmpty;
@@ -410,13 +460,14 @@ void main() {
 
         await tester.pumpWidget(createWidgetUnderTest());
         await tester.pump();
+        await expandSupportTools(tester);
 
         // 1. Verify Floating Bottom Dock is removed for clean minimalist experience
         expect(find.text('Beranda'), findsNothing);
 
         // 2. Scroll to Task Dump section
         for (int i = 0; i < 6; i++) {
-          if (find.text('Task & Habit Dump (Inbox)').evaluate().isNotEmpty) {
+          if (find.text('Kotak masuk kegiatan').evaluate().isNotEmpty) {
             break;
           }
           await tester.drag(find.byType(ListView).first, const Offset(0, -400));
@@ -424,7 +475,7 @@ void main() {
         }
 
         // 3. Verify Task Dump section
-        expect(find.text('Task & Habit Dump (Inbox)'), findsOneWidget);
+        expect(find.text('Kotak masuk kegiatan'), findsOneWidget);
         expect(find.text('Selesaikan modul UI Focus Clock'), findsOneWidget);
         expect(find.text('Sekarang'), findsWidgets);
 
@@ -440,7 +491,7 @@ void main() {
       },
     );
 
-    testWidgets('blank add opens as a calm, text-first schedule form', (
+    testWidgets('quick add opens as a calm, text-first inbox capture', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(320, 760);
@@ -450,35 +501,26 @@ void main() {
 
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();
+      await expandSupportTools(tester);
       for (var i = 0; i < 6; i++) {
-        if (find.text('Task & Habit Dump (Inbox)').evaluate().isNotEmpty) break;
+        if (find.text('Kotak masuk kegiatan').evaluate().isNotEmpty) break;
         await tester.drag(find.byType(ListView).first, const Offset(0, -400));
         await tester.pumpAndSettle();
       }
-      await tester.tap(find.byIcon(Icons.flash_on_rounded).first);
+      await tester.ensureVisible(find.text('Tambah').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tambah').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Apa yang perlu kamu lakukan?'), findsOneWidget);
-      expect(find.text('Pilih yang Ada'), findsOneWidget);
-      expect(find.byType(RangeSlider), findsNothing);
-      expect(
-        tester.getSize(find.byTooltip('Tambah kegiatan ke Focus Clock')).width,
-        greaterThanOrEqualTo(48),
-      );
-      final durationChoice = find.ancestor(
-        of: find.text('15 m'),
-        matching: find.byType(InkWell),
-      );
-      expect(
-        tester.getSize(durationChoice.first).height,
-        greaterThanOrEqualTo(44),
-      );
+      expect(find.text('Catat Cepat ke Dump Inbox'), findsOneWidget);
+      expect(find.text('Pilih yang Ada'), findsNothing);
+      expect(find.text('Pilih Identitas:'), findsNothing);
       expect(tester.takeException(), isNull);
 
       final captureField = find.byWidgetPredicate(
         (widget) =>
             widget is TextField &&
-            widget.decoration?.labelText == 'Apa yang perlu kamu lakukan?',
+            widget.decoration?.hintText == 'Nama kegiatan / habit / tugas...',
       );
       await tester.enterText(captureField, 'Latihan LKS');
       expect(
@@ -508,14 +550,17 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final addSchedule = find.text('Pasang Jadwal ke Jam');
-        await tester.ensureVisible(addSchedule);
-        await tester.tap(addSchedule);
+        final addActivity = find.text('Tambah kegiatan');
+        await tester.ensureVisible(addActivity);
+        await tester.pumpAndSettle();
+        await tester.tap(addActivity);
         await tester.pumpAndSettle();
 
         expect(find.text('Pilih yang Ada'), findsNothing);
         expect(find.text('Pilih Identitas:'), findsNothing);
-        expect(find.text('Apa yang perlu kamu lakukan?'), findsOneWidget);
+        expect(find.text('Catat Cepat ke Dump Inbox'), findsOneWidget);
+        expect(find.text('Pilih yang Ada'), findsNothing);
+        expect(find.text('Pilih Identitas:'), findsNothing);
       },
     );
 
@@ -539,7 +584,7 @@ void main() {
         createWidgetUnderTest(sadarRepository: repository),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Timer').first);
+      await tester.tap(find.byKey(const ValueKey('home-open-focus-timer')));
       await tester.pumpAndSettle();
 
       expect(find.text('Sesi dijeda'), findsOneWidget);

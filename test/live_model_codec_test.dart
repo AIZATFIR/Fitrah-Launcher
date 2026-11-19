@@ -22,9 +22,17 @@ void main() {
     roundtrip(fixture.appSettings.single);
     roundtrip(fixture.tasks.single);
     roundtrip(fixture.habits.single);
+    fixture.habitEntries.single.progressionCompletionSnapshotJson =
+        '{"stepIndex":0,"step":{"title":"Push Up"}}';
     roundtrip(fixture.habitEntries.single);
     roundtrip(fixture.dailyReflections.single);
-    roundtrip(fixture.timerSessions.single);
+    roundtrip(
+      fixture.timerSessions.single
+        ..hybridSetCount = 3
+        ..hybridWorkSeconds = 45
+        ..hybridRestSeconds = 15
+        ..revision = 7,
+    );
     roundtrip(fixture.intentDocuments.single);
     expect(
       (LiveModelCodec.encode(fixture.appSettings.single)['data'] as Map).length,

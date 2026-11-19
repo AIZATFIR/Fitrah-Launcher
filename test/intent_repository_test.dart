@@ -376,78 +376,77 @@ void main() {
     },
   );
 
-  test(
-    'binary/count units and unsupported progression/hybrid project honestly without writes',
-    () async {
-      final state = await repo.read();
-      for (final type in [
-        'binary',
-        'count',
-        'timed',
-        'progression',
-        'hybrid',
-        'unknown',
-      ]) {
-        final habit = Habit()
-          ..id = 1
-          ..name = type
-          ..habitType = type
-          ..unit = (type == 'binary'
-              ? HabitUnit.binary
-              : type == 'count'
-              ? HabitUnit.count
-              : HabitUnit.min)
-          ..createdAt = now;
-        final source = IntentSource(
-          id: IntentRepository.newId(),
-          sourceStoreId: state.sourceStoreId,
-          type: IntentSourceType.habit,
-          legacyId: 1,
-        );
-        final selected = state.copyWith(
-          sources: [source],
-          selections: [
-            TodaySelection(
-              localDate: '2026-11-08',
-              sourceId: source.id,
-              chosenAtUtc: now.toUtc(),
-            ),
-          ],
-        );
-        final before = selected.encode();
-        final projected = TodayIntentProjection.calculate(
+  test('binary/count/hybrid/progression project executable actions', () async {
+    final state = await repo.read();
+    for (final type in [
+      'binary',
+      'count',
+      'timed',
+      'progression',
+      'hybrid',
+      'unknown',
+    ]) {
+      final habit = Habit()
+        ..id = 1
+        ..name = type
+        ..habitType = type
+        ..unit = (type == 'binary'
+            ? HabitUnit.binary
+            : type == 'count'
+            ? HabitUnit.count
+            : HabitUnit.min)
+        ..createdAt = now;
+      final source = IntentSource(
+        id: IntentRepository.newId(),
+        sourceStoreId: state.sourceStoreId,
+        type: IntentSourceType.habit,
+        legacyId: 1,
+      );
+      final selected = state.copyWith(
+        sources: [source],
+        selections: [
+          TodaySelection(
+            localDate: '2026-11-08',
+            sourceId: source.id,
+            chosenAtUtc: now.toUtc(),
+          ),
+        ],
+      );
+      final before = selected.encode();
+      final projected = TodayIntentProjection.calculate(
+        state: selected,
+        actualDate: '2026-11-08',
+        habits: [habit],
+        tasks: [],
+        entries: [],
+      )!;
+      expect(projected.completed, false);
+      expect(projected.kind, switch (type) {
+        'binary' => IntentActionKind.binary,
+        'count' => IntentActionKind.count,
+        'timed' => IntentActionKind.timed,
+        'hybrid' => IntentActionKind.hybrid,
+        'progression' => IntentActionKind.progression,
+        _ => IntentActionKind.unsupported,
+      });
+      final done = HabitEntry()
+        ..habitId = 1
+        ..dateString = '2026-11-08'
+        ..status = HabitStatus.yes
+        ..updatedAt = now;
+      expect(
+        TodayIntentProjection.calculate(
           state: selected,
           actualDate: '2026-11-08',
           habits: [habit],
           tasks: [],
-          entries: [],
-        )!;
-        expect(projected.completed, false);
-        expect(projected.kind, switch (type) {
-          'binary' => IntentActionKind.binary,
-          'count' => IntentActionKind.count,
-          'timed' => IntentActionKind.timed,
-          _ => IntentActionKind.unsupported,
-        });
-        final done = HabitEntry()
-          ..habitId = 1
-          ..dateString = '2026-11-08'
-          ..status = HabitStatus.yes
-          ..updatedAt = now;
-        expect(
-          TodayIntentProjection.calculate(
-            state: selected,
-            actualDate: '2026-11-08',
-            habits: [habit],
-            tasks: [],
-            entries: [done],
-          )!.completed,
-          true,
-        );
-        expect(selected.encode(), before);
-      }
-    },
-  );
+          entries: [done],
+        )!.completed,
+        true,
+      );
+      expect(selected.encode(), before);
+    }
+  });
 }
 
 class _SettingsStorage extends SecureStorageService {

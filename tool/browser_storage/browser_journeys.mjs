@@ -158,7 +158,8 @@ try {
   const recovery=await ok(b,'recovery');
   assert.ok(recovery.bytes.length>100);
   const recoveryText=new TextDecoder().decode(Uint8Array.from(recovery.bytes));
-  assert.equal(JSON.parse(recoveryText).formatVersion,4);
+  // Keep aligned with FocusClockBackupCodec.currentFormatVersion.
+  assert.equal(JSON.parse(recoveryText).formatVersion,5);
   assert.ok(!recoveryText.includes('SYNTHETIC-NON-SECRET'));
   passed.push('portable restore and preference failure compensate; durable recovery export bytes survive restart without credentials');
   console.log(JSON.stringify({passed,mode:completed.mode,isolation,browser:await send('Browser.getVersion')},null,2));

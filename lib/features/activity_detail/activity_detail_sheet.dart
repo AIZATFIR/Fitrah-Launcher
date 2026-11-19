@@ -68,6 +68,9 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   late int _importance;
   late bool _isLocked;
   DateTime? _deadline;
+  Future<void>? _groupSpanLoad;
+  int _projectionOffsetDays = 0;
+  DateTime? _projectedStartDate;
   final _focusNode = FocusNode();
 
   static const List<String> _availableIcons = [
@@ -121,7 +124,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     _importance = a.importance;
     _isLocked = a.isLocked;
     _deadline = a.deadline;
-    if (a.groupId != null) _loadGroupSpan(a.groupId!);
+    if (a.groupId != null) _groupSpanLoad = _loadGroupSpan(a.groupId!);
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _focusNode.requestFocus(),
     );
@@ -137,17 +140,29 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       final h = a.ampmHalf.index.compareTo(b.ampmHalf.index);
       return h != 0 ? h : a.startMinute.compareTo(b.startMinute);
     });
+    final tappedSource = group.firstWhere(
+      (activity) => activity.id == widget.initial.id,
+      orElse: () => group.first,
+    );
+    final offsetDays = dateOnly(
+      widget.initial.date,
+    ).difference(dateOnly(tappedSource.date)).inDays;
+    final shift = Duration(days: offsetDays);
+    final projectedStart = toDateTime(
+      group.first.date,
+      group.first.ampmHalf,
+      group.first.startMinute,
+    ).add(shift);
+    final projectedEnd = toDateTime(
+      group.last.date,
+      group.last.ampmHalf,
+      group.last.endMinute,
+    ).add(shift);
     setState(() {
-      _startDt = toDateTime(
-        group.first.date,
-        group.first.ampmHalf,
-        group.first.startMinute,
-      );
-      _endDt = toDateTime(
-        group.last.date,
-        group.last.ampmHalf,
-        group.last.endMinute,
-      );
+      _projectionOffsetDays = offsetDays;
+      _startDt = projectedStart;
+      _endDt = projectedEnd;
+      _projectedStartDate = dateOnly(projectedStart);
     });
   }
 
@@ -256,24 +271,31 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.bolt_rounded,
-                          size: 18,
-                          color: AppPalette.accent,
+                        const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.bolt_rounded,
+                              size: 18,
+                              color: AppPalette.accent,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Durasi cepat',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: AppPalette.accent,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'Preset',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: AppPalette.accent,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                        const Spacer(),
                         // Start From Now toggle button
                         InkWell(
                           onTap: () {
@@ -292,6 +314,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                           },
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
+                            constraints: const BoxConstraints(minHeight: 48),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 5,
@@ -382,7 +405,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        '${mins}m',
+                                        '$mins mnt',
                                         style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w900,
@@ -394,10 +417,10 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                                       const SizedBox(height: 2),
                                       Text(
                                         mins == 14
-                                            ? 'Detail 14m'
+                                            ? 'Rinci 14 mnt'
                                             : (mins <= 15
-                                                  ? 'Quick'
-                                                  : 'Deep Work'),
+                                                  ? 'Cepat'
+                                                  : 'Fokus mendalam'),
                                         style: TextStyle(
                                           fontSize: 9,
                                           fontWeight: FontWeight.bold,
@@ -417,8 +440,12 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Custom Minute Stepper/Calculator (e.g. 14 menit dari sekarang)
-                    Row(
+                    // Fine duration adjustment; the start/end fields below
+                    // already show the resulting time range.
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const Text(
                           'Durasi',
@@ -428,15 +455,18 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(width: 8),
                         IconButton(
+                          tooltip: 'Kurangi 1 menit',
                           icon: const Icon(
                             Icons.remove_circle_outline_rounded,
                             size: 22,
                             color: AppPalette.accent,
                           ),
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                          constraints: const BoxConstraints(
+                            minWidth: 48,
+                            minHeight: 48,
+                          ),
                           onPressed: () {
                             SystemSound.play(SystemSoundType.click);
                             HapticFeedback.selectionClick();
@@ -453,9 +483,9 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                           },
                         ),
                         Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
+                          margin: EdgeInsets.zero,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
+                            horizontal: 10,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
@@ -475,13 +505,17 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                           ),
                         ),
                         IconButton(
+                          tooltip: 'Tambah 1 menit',
                           icon: const Icon(
                             Icons.add_circle_outline_rounded,
                             size: 22,
                             color: AppPalette.accent,
                           ),
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                          constraints: const BoxConstraints(
+                            minWidth: 48,
+                            minHeight: 48,
+                          ),
                           onPressed: () {
                             SystemSound.play(SystemSoundType.click);
                             HapticFeedback.selectionClick();
@@ -495,15 +529,6 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                             });
                           },
                         ),
-                        const Spacer(),
-                        Text(
-                          '${_startDt.hour.toString().padLeft(2, '0')}:${_startDt.minute.toString().padLeft(2, '0')} → ${_endDt.hour.toString().padLeft(2, '0')}:${_endDt.minute.toString().padLeft(2, '0')}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppPalette.textDim,
-                          ),
-                        ),
                       ],
                     ),
                   ],
@@ -514,7 +539,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
               children: [
                 Expanded(
                   child: _TimeBlock(
-                    label: 'Start',
+                    label: 'Mulai',
                     value: _startDt,
                     is24h: is24h,
                     readOnly: readOnly,
@@ -530,7 +555,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _TimeBlock(
-                    label: 'End',
+                    label: 'Selesai',
                     value: _endDt,
                     is24h: is24h,
                     nextDay: _overnight,
@@ -564,7 +589,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    'Overnight',
+                    'Lintas hari',
                     style: const TextStyle(
                       color: AppPalette.accent,
                       fontSize: 12,
@@ -669,7 +694,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                 child: Row(
                   children: [
                     ChoiceChip(
-                      label: const Text('Once'),
+                      label: const Text('Sekali'),
                       selected: _recurrence == 'none',
                       onSelected: (b) {
                         if (b) setState(() => _recurrence = 'none');
@@ -677,7 +702,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                     ),
                     const SizedBox(width: 8),
                     ChoiceChip(
-                      label: const Text('Daily'),
+                      label: const Text('Setiap hari'),
                       selected: _recurrence == 'daily',
                       onSelected: (b) {
                         if (b) setState(() => _recurrence = 'daily');
@@ -685,7 +710,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                     ),
                     const SizedBox(width: 8),
                     ChoiceChip(
-                      label: const Text('Weekday'),
+                      label: const Text('Hari kerja'),
                       selected: _recurrence == 'weekday',
                       onSelected: (b) {
                         if (b) setState(() => _recurrence = 'weekday');
@@ -693,7 +718,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                     ),
                     const SizedBox(width: 8),
                     ChoiceChip(
-                      label: const Text('Weekly'),
+                      label: const Text('Setiap minggu'),
                       selected: _recurrence == 'weekly',
                       onSelected: (b) {
                         if (b) setState(() => _recurrence = 'weekly');
@@ -732,7 +757,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: const Text('Batal'),
                     ),
                     const Spacer(),
                     FilledButton(
@@ -741,7 +766,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                         foregroundColor: Colors.black,
                       ),
                       onPressed: _save,
-                      child: const Text('Save'),
+                      child: const Text('Simpan'),
                     ),
                   ],
                 ),
@@ -754,9 +779,9 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
 
   String _modeTitle() => switch (_mode) {
     DetailMode.view =>
-      widget.initial.title.isEmpty ? 'Activity' : widget.initial.title,
-    DetailMode.edit => 'Edit Activity',
-    DetailMode.create => 'New Activity',
+      widget.initial.title.isEmpty ? 'Kegiatan' : widget.initial.title,
+    DetailMode.edit => 'Edit kegiatan',
+    DetailMode.create => 'Kegiatan baru',
   };
 
   Activity _segmentActivity(SpanSegment seg, String? groupId) {
@@ -782,20 +807,25 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   }
 
   Future<void> _save() async {
+    final groupSpanLoad = _groupSpanLoad;
+    if (groupSpanLoad != null) {
+      await groupSpanLoad;
+      if (!mounted) return;
+    }
     if (!_endDt.isAfter(_startDt)) {
       _endDt = _startDt.add(const Duration(minutes: 5));
     }
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Activity name required')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama kegiatan harus diisi.')),
+      );
       return;
     }
 
-    final a = widget.initial;
     final repo = ref.read(activityRepoProvider);
-    final segments = splitSpan(_startDt, _endDt);
+    final a = widget.initial;
+    var segments = splitSpan(_startDt, _endDt);
 
     final selfIds = <int>{a.id};
     if (a.groupId != null) {
@@ -824,7 +854,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       final proceed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Time conflict'),
+          title: const Text('Jadwal bertabrakan'),
           content: Text(
             'Overlaps with "${c.title}" '
             '(${formatMinuteOfHalf(c.startMinute, clashHalf, is24h: false)}–'
@@ -833,7 +863,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
+              child: const Text('Batal'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
@@ -841,7 +871,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                 foregroundColor: Colors.white,
               ),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save anyway'),
+              child: const Text('Tetap simpan'),
             ),
           ],
         ),
@@ -849,14 +879,73 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       if (proceed != true) return;
     }
 
+    if (!mounted) return;
+
     final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
 
-    if (segments.length == 1 && a.groupId == null) {
+    String? recurrenceScope;
+    if (_mode == DetailMode.edit && a.recurrence != 'none') {
+      final occurrenceStart = dateOnly(_startDt);
+      recurrenceScope = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Simpan perubahan berulang'),
+          content: Text(
+            'Ubah blok mulai ${occurrenceStart.day}/${occurrenceStart.month}/${occurrenceStart.year} saja, atau terapkan ke seluruh seri.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'occurrence'),
+              child: const Text('Tanggal ini saja'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, 'series'),
+              child: const Text('Seluruh seri'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || recurrenceScope == null) return;
+    }
+
+    if (recurrenceScope == 'occurrence') {
+      final groupId = segments.length > 1 ? const Uuid().v4() : null;
+      final editedSegments = [
+        for (final segment in segments)
+          _segmentActivity(segment, groupId)..recurrence = 'none',
+      ];
+      try {
+        await repo.editSingleInstanceSpan(
+          a,
+          dateOnly(_startDt),
+          editedSegments,
+        );
+      } on StateError {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Seri sudah berubah. Tutup lalu buka ulang jadwal ini.',
+            ),
+          ),
+        );
+        return;
+      }
+    } else if (segments.length == 1 && a.groupId == null) {
       final seg = segments.first;
+      final stored = recurrenceScope == 'series' ? await repo.get(a.id) : null;
       a.title = title;
       a.iconKey = _iconKey;
       a.description = _descCtrl.text.trim();
-      a.date = seg.date;
+      // A projected occurrence carries the selected date, while the source
+      // row owns the recurrence anchor. Keep that anchor unless changed.
+      a.date = stored != null && stored.date != a.date && seg.date == a.date
+          ? stored.date
+          : seg.date;
       a.ampmHalf = seg.half;
       a.startMinute = seg.start;
       a.endMinute = seg.end;
@@ -867,14 +956,42 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       a.isLocked = _isLocked;
       await repo.upsert(a, notifLeadMinutes: lead);
     } else {
+      if (recurrenceScope == 'series' &&
+          _projectionOffsetDays != 0 &&
+          _projectedStartDate == dateOnly(_startDt)) {
+        final shiftBack = Duration(days: _projectionOffsetDays);
+        segments = [
+          for (final segment in segments)
+            (
+              date: dateOnly(segment.date.subtract(shiftBack)),
+              half: segment.half,
+              start: segment.start,
+              end: segment.end,
+            ),
+        ];
+      }
       final groupId = segments.length > 1
-          ? (a.groupId ?? const Uuid().v4())
+          ? (recurrenceScope == 'series' ? a.groupId : const Uuid().v4())
           : null;
-      await repo.replaceSpan(
-        original: a,
-        segments: [for (final s in segments) _segmentActivity(s, groupId)],
-        notifLeadMinutes: lead,
-      );
+      try {
+        await repo.replaceSpan(
+          original: a,
+          segments: [for (final s in segments) _segmentActivity(s, groupId)],
+          notifLeadMinutes: lead,
+        );
+      } on StateError catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error.message.contains('history')
+                  ? 'Blok ini memiliki riwayat sesi. Pertahankan rentang blok agar riwayat tetap terhubung.'
+                  : 'Perubahan belum bisa disimpan. Coba lagi.',
+            ),
+          ),
+        );
+        return;
+      }
     }
     HapticFeedback.lightImpact();
 
@@ -898,19 +1015,19 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       final choice = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Hapus Aktivitas Berulang'),
+          title: const Text('Hapus kegiatan berulang'),
           content: const Text(
-            'Apakah Anda ingin menghapus hanya untuk hari ini atau seluruh seri berulang?',
+            'Hapus hanya untuk tanggal ini atau seluruh seri?',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, 'single'),
-              child: const Text('Hapus Hari Ini Doang'),
+              child: const Text('Tanggal ini saja'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: AppPalette.danger),
               onPressed: () => Navigator.pop(ctx, 'all'),
-              child: const Text('Hapus Semua Hari'),
+              child: const Text('Seluruh seri'),
             ),
           ],
         ),
@@ -935,9 +1052,12 @@ class _RecurrenceInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = recurrence == 'daily'
-        ? '↻ Repeats daily'
-        : '↻ Repeats weekly';
+    final label = switch (recurrence) {
+      'daily' => 'Ulangi setiap hari',
+      'weekday' => 'Ulangi hari kerja',
+      'weekly' => 'Ulangi setiap minggu',
+      _ => 'Jadwal berulang',
+    };
     return Row(
       children: [
         const Icon(Icons.repeat, size: 14, color: AppPalette.accent),
@@ -985,7 +1105,10 @@ class _TimeBlock extends StatelessWidget {
               style: const TextStyle(fontSize: 11, color: AppPalette.textDim),
             ),
             const SizedBox(height: 4),
-            Row(
+            Wrap(
+              spacing: 5,
+              runSpacing: 2,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
                   formatTimeOfDay(value, is24h: is24h),
@@ -995,7 +1118,6 @@ class _TimeBlock extends StatelessWidget {
                   ),
                 ),
                 if (nextDay) ...[
-                  const SizedBox(width: 5),
                   const Text(
                     '+1',
                     style: TextStyle(

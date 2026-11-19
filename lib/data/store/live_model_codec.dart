@@ -196,6 +196,8 @@ class LiveModelCodec {
             : _date(x.completedAt!, false),
         'source': x.source,
         'note': x.note,
+        'progressionCompletionSnapshotJson':
+            x.progressionCompletionSnapshotJson,
         'createdAt': x.createdAt == null ? null : _date(x.createdAt!, false),
         'updatedAt': _date(x.updatedAt, false),
       },
@@ -228,6 +230,10 @@ class LiveModelCodec {
             ? null
             : _integer(x.habitTargetSnapshot!),
         'targetSeconds': _integer(x.targetSeconds),
+        'hybridSetCount': _integer(x.hybridSetCount),
+        'hybridWorkSeconds': _integer(x.hybridWorkSeconds),
+        'hybridRestSeconds': _integer(x.hybridRestSeconds),
+        'revision': _integer(x.revision),
         'startedAt': x.startedAt == null ? null : _date(x.startedAt!, false),
         'attributionLocalDate': x.attributionLocalDate,
         'runningSince': x.runningSince == null
@@ -405,6 +411,10 @@ class LiveModelCodec {
               : _readDate(m['completedAt'], false)
           ..source = m['source'] as String
           ..note = m['note'] == null ? null : m['note'] as String
+          ..progressionCompletionSnapshotJson =
+              m['progressionCompletionSnapshotJson'] == null
+              ? null
+              : m['progressionCompletionSnapshotJson'] as String
           ..createdAt = m['createdAt'] == null
               ? null
               : _readDate(m['createdAt'], false)
@@ -445,6 +455,10 @@ class LiveModelCodec {
               ? null
               : _readInt(m['habitTargetSnapshot'])
           ..targetSeconds = _readInt(m['targetSeconds'])
+          ..hybridSetCount = _readInt(m['hybridSetCount'] ?? 0)
+          ..hybridWorkSeconds = _readInt(m['hybridWorkSeconds'] ?? 0)
+          ..hybridRestSeconds = _readInt(m['hybridRestSeconds'] ?? 0)
+          ..revision = _readInt(m['revision'] ?? 0)
           ..startedAt = m['startedAt'] == null
               ? null
               : _readDate(m['startedAt'], false)

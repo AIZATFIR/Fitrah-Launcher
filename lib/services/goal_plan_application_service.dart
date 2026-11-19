@@ -34,12 +34,27 @@ class GoalPlanApplicationService {
   final FocusStore store;
   final DateTime Function() now;
 
-  Future<List<String>> previewConflicts(PlanProposal proposal) async {
+  Future<List<String>> previewConflicts(
+    PlanProposal proposal, {
+    String? goalId,
+  }) async {
     _checkStore();
     final current = now();
     _checkTargetDate(proposal, current);
     final activities = await store.activitys.all();
-    return _conflicts(proposal, activities, current);
+    final documents = await store.focusIntentDocuments.all();
+    final state = documents.length == 1
+        ? IntentState.decode(documents.single.payload)
+        : null;
+    final previous = goalId == null
+        ? null
+        : state?.planReceipts.where((r) => r.goalId == goalId).lastOrNull;
+    return _conflicts(
+      proposal,
+      activities,
+      current,
+      excludingActivityIds: previous?.activityIds.toSet() ?? const {},
+    );
   }
 
   Future<GoalPlanApplyResult> apply({
@@ -94,10 +109,17 @@ class GoalPlanApplicationService {
           'Tujuan berubah. Muat ulang rencana sebelum menerapkan.',
         );
       }
+      final previousReceipt = existingGoal == null
+          ? null
+          : state.planReceipts
+                .where((r) => r.goalId == existingGoal.id)
+                .lastOrNull;
+      final previousActivityIds = previousReceipt?.activityIds.toSet() ?? {};
       final conflicts = _conflicts(
         proposal,
         await store.activitys.all(),
         currentTime,
+        excludingActivityIds: previousActivityIds,
       );
       if (conflicts.isNotEmpty) throw StateError(conflicts.join('\n'));
 
@@ -129,7 +151,10 @@ class GoalPlanApplicationService {
           .where((g) => g.id != newGoalId)
           .toList();
 
-      final habit = Habit()
+      final storedHabit = previousReceipt == null
+          ? null
+          : await store.habits.get(previousReceipt.habitId);
+      final habit = (storedHabit ?? Habit())
         ..name = proposal.goal.title.trim()
         ..target = proposal.blocks
             .map((b) => b.durationMinutes)
@@ -141,19 +166,52 @@ class GoalPlanApplicationService {
         ..recurrence = 'custom'
         ..preferredTime = _formatMinute(proposal.blocks.first.startMinute)
         ..colorValue = 0xffd8bd74
-        ..createdAt = currentTime;
+        ..createdAt = storedHabit?.createdAt ?? currentTime;
       final habitId = await store.habits.put(habit);
-      final source = IntentSource(
-        id: const Uuid().v4(),
-        sourceStoreId: state.sourceStoreId,
-        type: IntentSourceType.habit,
-        legacyId: habitId,
-      );
+      final source =
+          state.sources
+              .where(
+                (s) =>
+                    s.sourceStoreId == state.sourceStoreId &&
+                    s.type == IntentSourceType.habit &&
+                    s.legacyId == habitId,
+              )
+              .firstOrNull ??
+          IntentSource(
+            id: const Uuid().v4(),
+            sourceStoreId: state.sourceStoreId,
+            type: IntentSourceType.habit,
+            legacyId: habitId,
+          );
+
+      final oldActivities = {
+        for (final activity in await store.activitys.all())
+          activity.id: activity,
+      };
+      final terminalActivityIds = (await store.terminalFocusSessions.all())
+          .map((session) => session.activityId)
+          .whereType<int>()
+          .toSet();
+      final retainedEvidence = <Activity>[];
+      for (final id in previousActivityIds) {
+        final old = oldActivities[id];
+        if (old == null) continue;
+        if (old.isCompleted ||
+            old.actualDurationSeconds > 0 ||
+            terminalActivityIds.contains(id)) {
+          old.recurrence = 'none';
+          old.updatedAt = currentTime;
+          await store.activitys.put(old);
+          retainedEvidence.add(old);
+        } else {
+          await store.activitys.delete(id);
+        }
+      }
 
       final weekStart = dateOnly(
         currentTime,
       ).subtract(Duration(days: currentTime.weekday - 1));
-      final activities = <Activity>[];
+      final activities = <Activity>[...retainedEvidence];
       for (final block in proposal.blocks) {
         final firstDate = weekStart.add(Duration(days: block.weekday - 1));
         var start = DateTime(
@@ -208,7 +266,10 @@ class GoalPlanApplicationService {
       final updated = state.copyWith(
         revision: state.revision + 1,
         goals: goalList,
-        sources: [...state.sources, source],
+        sources: [
+          ...state.sources.where((item) => item.id != source.id),
+          source,
+        ],
         links: [
           ...state.links.where((l) => l.sourceId != source.id),
           IntentLink(sourceId: source.id, goalId: newGoalId),
@@ -250,8 +311,9 @@ class GoalPlanApplicationService {
   List<String> _conflicts(
     PlanProposal proposal,
     List<Activity> existing,
-    DateTime current,
-  ) {
+    DateTime current, {
+    Set<int> excludingActivityIds = const {},
+  }) {
     final weekStart = dateOnly(
       current,
     ).subtract(Duration(days: current.weekday - 1));
@@ -294,22 +356,19 @@ class GoalPlanApplicationService {
         }
       }
       for (final activity in existing) {
+        if (excludingActivityIds.contains(activity.id)) continue;
         final sameDate = dateOnly(activity.date) == a.date;
         final recurringDay = _recursOn(activity, a.weekday);
         final excluded = activity.excludedDates.any(
           (d) => dateOnly(d) == a.date,
         );
-        final futureWeeklyOccurrence =
-            activity.recurrence != 'daily' &&
-            activity.recurrence != 'weekday' &&
-            activity.recurrence != 'weekly' &&
+        final futureOneOffOccurrence =
+            activity.recurrence == 'none' &&
             activity.date.weekday == a.weekday &&
             !dateOnly(activity.date).isBefore(a.date) &&
-            !activity.excludedDates.any(
-              (d) => dateOnly(d) == dateOnly(activity.date),
-            );
+            !excluded;
         if (((sameDate || recurringDay) && !excluded ||
-                futureWeeklyOccurrence) &&
+                futureOneOffOccurrence) &&
             activity.ampmHalf == a.half &&
             rangesOverlap(
               activity.startMinute,

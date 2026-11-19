@@ -310,6 +310,7 @@ class _FailOnceCompletionRepository extends SadarRepository {
     required int actualDurationMinutes,
     int? actualDurationSeconds,
     required int targetSnapshot,
+    int? completedUnitCount,
     required DateTime completedAt,
   }) async {
     completionAttempts++;
@@ -321,6 +322,7 @@ class _FailOnceCompletionRepository extends SadarRepository {
       actualDurationMinutes: actualDurationMinutes,
       actualDurationSeconds: actualDurationSeconds,
       targetSnapshot: targetSnapshot,
+      completedUnitCount: completedUnitCount,
       completedAt: completedAt,
     );
   }

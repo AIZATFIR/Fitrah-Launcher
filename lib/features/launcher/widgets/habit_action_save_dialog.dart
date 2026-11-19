@@ -7,10 +7,12 @@ class HabitActionSaveDialog extends StatefulWidget {
     required this.title,
     required this.body,
     required this.onSave,
+    this.saveLabel = 'Simpan',
   });
   final String title;
   final Widget body;
   final Future<void> Function() onSave;
+  final String saveLabel;
   @override
   State<HabitActionSaveDialog> createState() => HabitActionSaveDialogState();
 }
@@ -60,25 +62,35 @@ class HabitActionSaveDialogState extends State<HabitActionSaveDialog> {
                     if (mounted) {
                       setState(() {
                         busy = false;
-                        error = '$e';
+                        error = _saveErrorMessage(e);
                       });
                     }
                   }
                 },
-          child: const Text('Simpan'),
+          child: Text(widget.saveLabel),
         ),
       ],
     ),
   );
 }
 
+String _saveErrorMessage(Object error) {
+  if (error is FormatException) {
+    return error.message.toString();
+  }
+  if (error is StateError) return error.message.toString();
+  if (error is ArgumentError) {
+    return error.message?.toString() ?? 'Periksa kembali data yang dimasukkan.';
+  }
+  return '$error';
+}
+
 String habitExecutionLimit(Habit habit) {
-  if (habit.habitType != 'progression' && habit.habitType != 'hybrid') {
+  if (habit.habitType != 'progression') {
     return 'Jenis habit ini belum didukung. Rincian pelaksanaan tidak tersedia; tindakan ini tidak menandai selesai.';
   }
-  final detail = habit.habitType == 'progression'
-      ? '${habit.currentStep.dayName}: ${habit.currentStep.title} — ${habit.currentStep.isRest ? 'Istirahat' : '${habit.currentStep.target} ${habit.currentStep.unit}'}'
-      : '${habit.hybridSets} set × ${habit.hybridDurationSeconds} detik; istirahat ${habit.hybridRestSeconds} detik';
+  final detail =
+      '${habit.currentStep.dayName}: ${habit.currentStep.title} — ${habit.currentStep.isRest ? 'Istirahat' : '${habit.currentStep.target} ${habit.currentStep.unit}'}';
   return '$detail\nPencatatan langkah/set belum didukung. Rincian ini tidak menandai selesai.';
 }
 

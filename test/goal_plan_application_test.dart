@@ -7,6 +7,7 @@ import 'package:fitrah_launcher/data/isar_service.dart';
 import 'package:fitrah_launcher/data/store/focus_store.dart';
 import 'package:fitrah_launcher/data/store/native_focus_store.dart';
 import 'package:fitrah_launcher/domain/goal_plan_proposal.dart';
+import 'package:fitrah_launcher/domain/focus_intent.dart';
 import 'package:fitrah_launcher/features/ai_chat/ai_chat_sheet.dart';
 import 'package:fitrah_launcher/models/activity.dart';
 import 'package:fitrah_launcher/services/ai_goal_plan_proposal.dart';
@@ -127,6 +128,55 @@ void main() {
     );
     expect(await store.habits.count(), 1);
   });
+
+  test(
+    'replans an existing goal without duplicating its habit or evidence',
+    () async {
+      final service = GoalPlanApplicationService(
+        store,
+        now: () => DateTime(2026, 11, 16, 8),
+      );
+      final first = await service.apply(
+        operationId: 'create-goal',
+        proposal: plan(),
+      );
+      final completed = (await store.activitys.all()).first;
+      completed.isCompleted = true;
+      completed.actualDurationSeconds = 900;
+      await store.writeTxn(() => store.activitys.put(completed));
+
+      final updated = await service.apply(
+        operationId: 'replan-goal',
+        proposal: plan().copyWith(
+          blocks: [
+            WeeklyPracticeBlock(
+              weekday: 1,
+              startMinute: 720,
+              durationMinutes: 45,
+            ),
+          ],
+        ),
+        goalId: first.goalId,
+        expectedGoalRevision: 1,
+      );
+
+      expect(updated.goalId, first.goalId);
+      expect(updated.habitId, first.habitId);
+      expect(await store.habits.count(), 1);
+      final activities = await store.activitys.all();
+      expect(activities.where((a) => a.isCompleted).map((a) => a.id), [
+        completed.id,
+      ]);
+      expect(activities.where((a) => !a.isCompleted), hasLength(1));
+      final state = IntentState.decode(
+        (await store.focusIntentDocuments.all()).single.payload,
+      );
+      expect(state.goals, hasLength(1));
+      expect(state.goals.single.revision, 2);
+      expect(state.sources, hasLength(1));
+      expect(state.planReceipts.last.operationId, 'replan-goal');
+    },
+  );
 
   test(
     'reports recurring commitment conflicts and does not write on approval',

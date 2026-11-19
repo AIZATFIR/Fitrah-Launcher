@@ -136,6 +136,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> expandToday(WidgetTester tester) async {
+    final cells = find.byWidgetPredicate(
+      (w) => w is Container && w.constraints?.maxHeight == 32,
+    );
+    await tester.tap(cells.at(DateTime.now().weekday - 1));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets(
     'only timed/min with callback offers Play; historical selection cannot start',
     (tester) async {
@@ -176,7 +184,7 @@ void main() {
       final differentDay = DateTime.now().weekday % 7;
       await tester.tap(
         find.text(
-          ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][differentDay],
+          ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'][differentDay],
         ),
       );
       await tester.pumpAndSettle();
@@ -357,36 +365,67 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
-  for (final type in ['progression', 'hybrid']) {
-    testWidgets('$type shows honest details and wraps at 320dp/200%', (
-      tester,
-    ) async {
-      final repo = ActionRepository();
-      await seed(
-        repo,
-        type: type,
-        name: 'A very long habit name that needs multiple lines',
-      );
-      tester.view.physicalSize = const Size(320, 1800);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await mount(
-        tester,
-        repo,
-        timer: (_) => fail('unsupported timer'),
-        scale: 2,
-      );
-      await expand(tester);
-      expect(
-        find.textContaining('Pencatatan langkah/set belum didukung'),
-        findsOneWidget,
-      );
-      expect(find.text('Tandai dilakukan'), findsNothing);
-      expect(find.text('Catat jumlah'), findsNothing);
-      expect(find.byTooltip('Mulai di Focus Clock'), findsNothing);
-      expect(repo.writes, 0);
-      expect(tester.takeException(), isNull);
-    });
-  }
+  testWidgets('hybrid habits start their configured focus session from Home', (
+    tester,
+  ) async {
+    final repo = ActionRepository();
+    final habit = await seed(repo, type: 'hybrid');
+    final started = <Habit>[];
+    await mount(tester, repo, timer: started.add);
+
+    expect(find.byTooltip('Mulai di Focus Clock'), findsOneWidget);
+    await tester.tap(find.byTooltip('Mulai di Focus Clock'));
+    await tester.pumpAndSettle();
+    expect(started.single.id, habit.id);
+
+    await expandToday(tester);
+    expect(find.text('Mulai fokus'), findsOneWidget);
+    expect(
+      find.textContaining('Pencatatan langkah/set belum didukung'),
+      findsNothing,
+    );
+    expect(find.text('Tandai dilakukan'), findsNothing);
+    expect(find.text('Tidak dilakukan'), findsNothing);
+    expect(find.text('Lewati'), findsNothing);
+  });
+
+  testWidgets('progression step can be completed and safely undone from Home', (
+    tester,
+  ) async {
+    final repo = ActionRepository();
+    await seed(repo, type: 'progression');
+    await mount(tester, repo);
+    await expandToday(tester);
+
+    expect(find.text('Catat langkah'), findsOneWidget);
+    expect(find.textContaining('Push Up'), findsOneWidget);
+    expect(
+      find.textContaining('Pencatatan langkah/set belum didukung'),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Catat langkah'));
+    await tester.pumpAndSettle();
+    expect(find.text('Catat langkah hari ini?'), findsOneWidget);
+    final date = DateTime.now().toIso8601String().substring(0, 10);
+    expect(await repo.getEntriesForDateRange(date, date), isEmpty);
+
+    await tester.tap(find.text('Simpan'));
+    await tester.pumpAndSettle();
+    var entry = (await repo.getEntriesForDateRange(date, date)).single;
+    expect(entry.status, HabitStatus.yes);
+    expect(entry.progressionCompletionSnapshot?.step.title, 'Push Up');
+    expect((await repo.getHabits()).single.currentProgressionIndex, 1);
+
+    await tester.tap(find.text('Batalkan langkah'));
+    await tester.pumpAndSettle();
+    expect(find.text('Batalkan langkah hari ini?'), findsOneWidget);
+    await tester.tap(find.text('Batalkan'));
+    await tester.pumpAndSettle();
+    entry = (await repo.getEntriesForDateRange(date, date)).single;
+    expect(entry.status, HabitStatus.unmarked);
+    expect(entry.progressionCompletionSnapshot, isNull);
+    expect((await repo.getHabits()).single.currentProgressionIndex, 0);
+    expect(find.text('Catat langkah'), findsOneWidget);
+  });
 }

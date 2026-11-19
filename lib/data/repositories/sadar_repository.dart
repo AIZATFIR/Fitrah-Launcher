@@ -292,6 +292,9 @@ class SadarRepository {
       throw ArgumentError('Negative duration');
     }
     return _mutateHabitEntry(habitId, dateString, (entry, habit, isNew) {
+      if (entry.progressionCompletionSnapshotJson != null) {
+        throw StateError('Gunakan aksi progression untuk membatalkan langkah.');
+      }
       _retainLegacyTimerSeconds(entry);
       entry.status = status;
       if (valueCompleted != null) entry.valueCompleted = valueCompleted;
@@ -409,6 +412,216 @@ class SadarRepository {
         (habit.currentProgressionIndex + 1) % totalSteps;
     await upsertHabit(habit);
   }
+
+  /// Records the current progression step and advances the cursor once for a
+  /// date. Duplicate taps return false and never advance another step.
+  Future<bool> completeProgressionStep({
+    required int habitId,
+    required String dateString,
+  }) async {
+    if (_isar == null) {
+      final habit = _memHabits[habitId];
+      if (habit == null ||
+          habit.isArchived ||
+          habit.effectiveHabitType != 'progression') {
+        throw StateError('Progression habit tidak tersedia.');
+      }
+      final key = '$habitId-$dateString';
+      final existing = _memEntries[key];
+      if (existing?.status == HabitStatus.yes) return false;
+
+      final now = DateTime.now();
+      final entry =
+          existing ??
+          (HabitEntry()
+            ..id = _memEntryIdCounter++
+            ..habitId = habitId
+            ..dateString = dateString
+            ..createdAt = now);
+      final steps = habit.progressionSteps;
+      final stepIndex = habit.currentProgressionIndex.clamp(
+        0,
+        steps.length - 1,
+      );
+      final step = steps[stepIndex];
+      _retainLegacyTimerSeconds(entry);
+      entry.progressionCompletionSnapshotJson = _progressionSnapshot(
+        habit,
+        entry,
+        stepIndex,
+      ).encode();
+      entry
+        ..status = HabitStatus.yes
+        ..valueCompleted = step.target
+        ..targetSnapshot = step.target
+        ..completedAt = now
+        ..source = 'manual'
+        ..updatedAt = now;
+      habit
+        ..currentProgressionIndex = (stepIndex + 1) % steps.length
+        ..updatedAt = now;
+      _memEntries[key] = entry;
+      _entriesStreamCtrl.add(null);
+      return true;
+    }
+
+    return _isar.writeTxn(() async {
+      final habit = await _isar.habits.get(habitId);
+      if (habit == null ||
+          habit.isArchived ||
+          habit.effectiveHabitType != 'progression') {
+        throw StateError('Progression habit tidak tersedia.');
+      }
+      final existing = await _isar.habitEntrys
+          .select(
+            where: (entry) =>
+                entry.habitId == habitId && entry.dateString == dateString,
+          )
+          .findFirst();
+      if (existing?.status == HabitStatus.yes) return false;
+
+      final now = DateTime.now();
+      final entry =
+          existing ??
+          (HabitEntry()
+            ..habitId = habitId
+            ..dateString = dateString
+            ..createdAt = now);
+      final steps = habit.progressionSteps;
+      final stepIndex = habit.currentProgressionIndex.clamp(
+        0,
+        steps.length - 1,
+      );
+      final step = steps[stepIndex];
+      _retainLegacyTimerSeconds(entry);
+      entry.progressionCompletionSnapshotJson = _progressionSnapshot(
+        habit,
+        entry,
+        stepIndex,
+      ).encode();
+      entry
+        ..status = HabitStatus.yes
+        ..valueCompleted = step.target
+        ..targetSnapshot = step.target
+        ..completedAt = now
+        ..source = 'manual'
+        ..updatedAt = now;
+      habit
+        ..currentProgressionIndex = (stepIndex + 1) % steps.length
+        ..updatedAt = now;
+      await _isar.habits.put(habit);
+      await _isar.habitEntrys.put(entry);
+      return true;
+    });
+  }
+
+  ProgressionCompletionSnapshot _progressionSnapshot(
+    Habit habit,
+    HabitEntry entry,
+    int stepIndex,
+  ) {
+    final step = habit.progressionSteps[stepIndex];
+    return ProgressionCompletionSnapshot(
+      stepIndex: stepIndex,
+      nextIndex: (stepIndex + 1) % habit.progressionSteps.length,
+      step: ProgressionStep.fromJson(step.toJson()),
+      previousStatus: entry.status,
+      previousValueCompleted: entry.valueCompleted,
+      previousTargetSnapshot: entry.targetSnapshot,
+      previousCompletedAt: entry.completedAt,
+      previousSource: entry.source,
+    );
+  }
+
+  /// Undo only the latest progression completion while the plan/cursor still
+  /// match its saved snapshot. Other habit evidence and notes stay intact.
+  Future<bool> undoProgressionStep({
+    required int habitId,
+    required String dateString,
+  }) async {
+    bool canUndo(Habit habit, HabitEntry entry, List<HabitEntry> history) {
+      if (habit.isArchived ||
+          habit.effectiveHabitType != 'progression' ||
+          entry.status != HabitStatus.yes) {
+        return false;
+      }
+      final snapshot = entry.progressionCompletionSnapshot;
+      final completedAt = entry.completedAt;
+      final steps = habit.progressionSteps;
+      if (snapshot == null ||
+          completedAt == null ||
+          snapshot.stepIndex >= steps.length ||
+          snapshot.nextIndex != (snapshot.stepIndex + 1) % steps.length ||
+          habit.currentProgressionIndex != snapshot.nextIndex ||
+          !_sameProgressionStep(steps[snapshot.stepIndex], snapshot.step)) {
+        return false;
+      }
+      return !history.any(
+        (other) =>
+            other.id != entry.id &&
+            other.habitId == habitId &&
+            other.status == HabitStatus.yes &&
+            other.progressionCompletionSnapshotJson != null &&
+            other.completedAt != null &&
+            !other.completedAt!.isBefore(completedAt),
+      );
+    }
+
+    void restore(Habit habit, HabitEntry entry) {
+      final snapshot = entry.progressionCompletionSnapshot!;
+      entry
+        ..status = snapshot.previousStatus
+        ..valueCompleted = snapshot.previousValueCompleted
+        ..targetSnapshot = snapshot.previousTargetSnapshot
+        ..completedAt = snapshot.previousCompletedAt
+        ..source = snapshot.previousSource
+        ..progressionCompletionSnapshotJson = null
+        ..updatedAt = DateTime.now();
+      habit
+        ..currentProgressionIndex = snapshot.stepIndex
+        ..updatedAt = DateTime.now();
+    }
+
+    if (_isar == null) {
+      final habit = _memHabits[habitId];
+      final entry = _memEntries['$habitId-$dateString'];
+      if (habit == null || entry == null) return false;
+      final history = _memEntries.values
+          .where((item) => item.habitId == habitId)
+          .toList();
+      if (!canUndo(habit, entry, history)) return false;
+      restore(habit, entry);
+      _habitsStreamCtrl.add(null);
+      _entriesStreamCtrl.add(null);
+      return true;
+    }
+
+    return _isar.writeTxn(() async {
+      final habit = await _isar.habits.get(habitId);
+      final entry = await _isar.habitEntrys
+          .select(
+            where: (item) =>
+                item.habitId == habitId && item.dateString == dateString,
+          )
+          .findFirst();
+      if (habit == null || entry == null) return false;
+      final history = await _isar.habitEntrys
+          .select(where: (item) => item.habitId == habitId)
+          .findAll();
+      if (!canUndo(habit, entry, history)) return false;
+      restore(habit, entry);
+      await _isar.habits.put(habit);
+      await _isar.habitEntrys.put(entry);
+      return true;
+    });
+  }
+
+  bool _sameProgressionStep(ProgressionStep a, ProgressionStep b) =>
+      a.dayName == b.dayName &&
+      a.title == b.title &&
+      a.target == b.target &&
+      a.unit == b.unit &&
+      a.isRest == b.isRest;
 
   Future<HabitEntry> incrementHabitCount({
     required int habitId,
@@ -561,7 +774,8 @@ class SadarRepository {
   void _requireObservedSession(TimerSession? current) {
     if (current == null ||
         _observedSession == null ||
-        !_sameSession(current, _observedSession!)) {
+        !_sameSession(current, _observedSession!) ||
+        current.revision != _observedSession!.revision) {
       throw StateError('The active session changed. Reopen the timer.');
     }
   }
@@ -605,8 +819,20 @@ class SadarRepository {
   Future<void> saveTimerSession(TimerSession session) async {
     session.id = 1;
     session.sessionId ??= const Uuid().v4();
-    session.updatedAt = DateTime.now();
     if (_isar == null) {
+      final current = _memTimerSession;
+      if (current != null) {
+        if (!_sameSession(current, session)) {
+          throw StateError('An active timer session already exists.');
+        }
+        if (session.revision != current.revision) {
+          throw StateError('This timer checkpoint is stale. Reopen the timer.');
+        }
+        session.revision = current.revision + 1;
+      } else {
+        session.revision++;
+      }
+      session.updatedAt = DateTime.now();
       _memTimerSession = session;
       return;
     }
@@ -617,9 +843,16 @@ class SadarRepository {
         if (!_sameSession(current, session)) {
           throw StateError('An active timer session already exists.');
         }
+        if (session.revision != current.revision) {
+          throw StateError('This timer checkpoint is stale. Reopen the timer.');
+        }
+        session.revision = current.revision + 1;
       } else if (_observedSession != null) {
         throw StateError('This timer session already ended.');
+      } else {
+        session.revision++;
       }
+      session.updatedAt = DateTime.now();
       if (current == null) await _bindScheduledHabit(session);
       await putTimerSessionInTxn(session);
     });
@@ -641,6 +874,7 @@ class SadarRepository {
       if (await _isar.timerSessions.get(1) != null) {
         throw StateError('An active timer session already exists.');
       }
+      session.revision++;
       final activityId = await _isar.activitys.put(activity);
       session.activityId = activityId;
       await _bindScheduledHabit(session);
@@ -676,6 +910,7 @@ class SadarRepository {
     int target,
     DateTime at, {
     bool timed = true,
+    int? completedUnitCount,
   }) {
     final previous = entry.actualDurationSeconds > 0
         ? entry.actualDurationSeconds
@@ -692,6 +927,16 @@ class SadarRepository {
           ? HabitStatus.yes
           : HabitStatus.unmarked;
       entry.valueCompleted = total ~/ 60;
+    }
+    if (completedUnitCount != null && !manual) {
+      entry.valueCompleted = (entry.valueCompleted + completedUnitCount).clamp(
+        0,
+        target,
+      );
+      entry.status = target > 0 && entry.valueCompleted >= target
+          ? HabitStatus.yes
+          : HabitStatus.unmarked;
+      entry.source = 'timer';
     }
     entry.actualDurationSeconds = total;
     entry.actualDurationMinutes = total ~/ 60;
@@ -791,6 +1036,7 @@ class SadarRepository {
     required int actualDurationMinutes,
     int? actualDurationSeconds,
     required int targetSnapshot,
+    int? completedUnitCount,
     required DateTime completedAt,
   }) async {
     final now = DateTime.now();
@@ -805,6 +1051,7 @@ class SadarRepository {
       final active = _memTimerSession;
       final stableId = sessionId ?? active?.sessionId;
       if (stableId != null && _memTerminalSessions.containsKey(stableId)) {
+        if (active?.sessionId == stableId) _memTimerSession = null;
         final committedEntry = _memEntries['$habitId-$dateString'];
         if (committedEntry != null) return committedEntry;
       }
@@ -832,6 +1079,7 @@ class SadarRepository {
         targetSnapshot,
         completedAt,
         timed: timed,
+        completedUnitCount: completedUnitCount,
       );
       _memEntries[key] = entry;
       _memTimerSession = null;
@@ -853,10 +1101,11 @@ class SadarRepository {
                     row.habitId == habitId && row.dateString == dateString,
               )
               .findFirst();
-          if (current != null) {
+          if (current?.sessionId == stableId) {
+            _requireObservedSession(current);
             await _isar.timerSessions.delete(1);
+            _observedSession = null;
           }
-          _observedSession = null;
           if (committedEntry != null) return committedEntry;
         }
       }
@@ -886,6 +1135,7 @@ class SadarRepository {
         targetSnapshot,
         completedAt,
         timed: timed,
+        completedUnitCount: completedUnitCount,
       );
 
       await _isar.habitEntrys.put(entry);

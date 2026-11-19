@@ -35,7 +35,9 @@ void main() {
     void Function(Habit)? habitAction,
     void Function(Habit, String?, String?)? attributedHabitAction,
     void Function(Habit)? habitSchedule,
-    Future<void> Function(Task)? taskAction,
+    ValueChanged<IntentGoal?>? assistantAction,
+    Future<void> Function(Task, {String? goalId, String? goalTitle})?
+    taskAction,
     Stream<IntentState>? intentStream,
     double width = 800,
     double textScale = 1,
@@ -86,7 +88,10 @@ void main() {
                 onHabitTimer: habitAction ?? (_) {},
                 onAttributedHabitTimer: attributedHabitAction,
                 onHabitSchedule: habitSchedule,
-                onTaskSchedule: taskAction ?? (_) async {},
+                onAssistant: assistantAction,
+                onTaskAction:
+                    taskAction ??
+                    (task, {String? goalId, String? goalTitle}) async {},
                 onSession: () {},
               ),
             ),
@@ -134,6 +139,60 @@ void main() {
     unawaited(store.close());
   });
 
+  testWidgets('goal header opens the assistant with the pinned goal', (
+    tester,
+  ) async {
+    IntentGoal? goalSentToAssistant;
+    await show(
+      tester,
+      state: IntentState(
+        sourceStoreId: storeId,
+        legacyImported: true,
+        goals: const [
+          IntentGoal(
+            id: '22222222-2222-4222-8222-222222222222',
+            title: 'Menang LKS Nasional IT Software Solution',
+            pinned: true,
+          ),
+        ],
+      ),
+      assistantAction: (goal) => goalSentToAssistant = goal,
+    );
+
+    expect(find.text('Tanya AI'), findsOneWidget);
+    await tester.tap(find.text('Tanya AI'));
+    expect(goalSentToAssistant?.id, '22222222-2222-4222-8222-222222222222');
+    expect(
+      goalSentToAssistant?.title,
+      'Menang LKS Nasional IT Software Solution',
+    );
+  });
+
+  testWidgets('goal cue keeps Tanya AI visible at 320dp without overflow', (
+    tester,
+  ) async {
+    await show(
+      tester,
+      width: 320,
+      state: IntentState(
+        sourceStoreId: storeId,
+        legacyImported: true,
+        goals: const [
+          IntentGoal(
+            id: '22222222-2222-4222-8222-222222222222',
+            title: 'Menang LKS',
+            pinned: true,
+          ),
+        ],
+      ),
+      assistantAction: (_) {},
+    );
+
+    expect(find.text('Menang LKS'), findsOneWidget);
+    expect(find.text('Tanya AI'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('timed daily choice passes its explicitly linked goal snapshot', (
     tester,
   ) async {
@@ -176,6 +235,49 @@ void main() {
     expect(goalTitle, 'Win nationals');
   });
 
+  testWidgets('scheduled task action is one tap away from starting focus', (
+    tester,
+  ) async {
+    await store.put(
+      Task()
+        ..id = 7
+        ..title = 'Latihan LKS'
+        ..activityId = 14
+        ..createdAt = now,
+    );
+    String? receivedGoalId;
+    String? receivedGoalTitle;
+    await show(
+      tester,
+      state: selected(
+        IntentSourceType.task,
+        goals: const [
+          IntentGoal(
+            id: '22222222-2222-4222-8222-222222222222',
+            title: 'Win nationals',
+          ),
+        ],
+        links: const [
+          IntentLink(
+            sourceId: sourceId,
+            goalId: '22222222-2222-4222-8222-222222222222',
+          ),
+        ],
+      ),
+      taskAction: (task, {String? goalId, String? goalTitle}) async {
+        receivedGoalId = goalId;
+        receivedGoalTitle = goalTitle;
+      },
+    );
+
+    expect(find.text('Mulai fokus'), findsOneWidget);
+    expect(find.text('Buka jadwal tugas'), findsNothing);
+    await tester.tap(find.text('Mulai fokus'));
+    await tester.pumpAndSettle();
+    expect(receivedGoalId, '22222222-2222-4222-8222-222222222222');
+    expect(receivedGoalTitle, 'Win nationals');
+  });
+
   testWidgets('loading and failed intent differ from empty and expose retry', (
     tester,
   ) async {
@@ -190,6 +292,24 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     unawaited(stream.close());
   });
+  testWidgets('empty goal shows a clear validation message without saving', (
+    tester,
+  ) async {
+    await show(tester);
+    await tester.tap(find.byTooltip('Ubah tujuan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tambah tujuan'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Simpan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tulis tujuan agar bisa disimpan.'), findsOneWidget);
+    expect(find.textContaining('FormatException'), findsNothing);
+    expect((await repo.read()).goals, isEmpty);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
   testWidgets(
     'goal save retains draft on failure and locks fields, cancel and duplicate submit while pending',
     (tester) async {
@@ -375,7 +495,7 @@ void main() {
             ),
           ],
         ),
-        taskAction: (t) async {
+        taskAction: (t, {String? goalId, String? goalTitle}) async {
           taskId = t.id;
         },
       );
@@ -508,7 +628,7 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       await show(tester, state: saved);
       expect(find.text('My habit'), findsOneWidget);
-      await tester.tap(find.text('Pilih tindakan hari ini'));
+      await tester.tap(find.text('Ganti tindakan'));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(DropdownButtonFormField<String>).first);
       await tester.pumpAndSettle();
@@ -708,7 +828,21 @@ void main() {
       );
       await store.put(
         FocusIntentDocument()
-          ..payload = selected(IntentSourceType.task).encode(),
+          ..payload = selected(
+            IntentSourceType.task,
+            goals: const [
+              IntentGoal(
+                id: '22222222-2222-4222-8222-222222222222',
+                title: 'Win nationals',
+              ),
+            ],
+            links: const [
+              IntentLink(
+                sourceId: sourceId,
+                goalId: '22222222-2222-4222-8222-222222222222',
+              ),
+            ],
+          ).encode(),
       );
       var opened = false;
       await tester.pumpWidget(
@@ -775,7 +909,21 @@ void main() {
       );
       await store.put(
         FocusIntentDocument()
-          ..payload = selected(IntentSourceType.task).encode(),
+          ..payload = selected(
+            IntentSourceType.task,
+            goals: const [
+              IntentGoal(
+                id: '22222222-2222-4222-8222-222222222222',
+                title: 'Win nationals',
+              ),
+            ],
+            links: const [
+              IntentLink(
+                sourceId: sourceId,
+                goalId: '22222222-2222-4222-8222-222222222222',
+              ),
+            ],
+          ).encode(),
       );
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1;
@@ -802,10 +950,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Buka jadwal tugas'));
+      await tester.tap(find.text('Mulai fokus'));
       await tester.pumpAndSettle();
       expect(find.text('Exact existing block'), findsWidgets);
-      expect(find.text('Jadwalkan ke Clock'), findsNothing);
+      final active = await SadarRepository.store(store).getActiveTimerSession();
+      expect(active?.activityId, 42);
+      expect(active?.goalId, '22222222-2222-4222-8222-222222222222');
+      expect(active?.goalTitleSnapshot, 'Win nationals');
       expect((await store.all<Activity>()).length, 1);
     },
   );
@@ -906,38 +1057,87 @@ void main() {
     },
   );
   testWidgets(
-    'unsupported mode offers honest detail and agenda is labelled planned on actual date',
+    'hybrid home action opens the shared timer; it does not complete optimistically',
     (tester) async {
+      Habit? opened;
       await store.put(
         Habit()
           ..id = 7
           ..name = 'Sets'
           ..habitType = 'hybrid'
+          ..hybridSets = 4
+          ..hybridDurationSeconds = 45
           ..colorValue = 0xff123456
           ..createdAt = now,
       );
-      await show(tester, state: selected(IntentSourceType.habit));
-      await tester.tap(find.text('Lihat rincian'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('tidak menandai selesai'), findsOneWidget);
-      expect(await store.all<HabitEntry>(), isEmpty);
-      await tester.tap(find.text('Tutup'));
-      await tester.pumpAndSettle();
-      await repo.choose(localDate: '2026-11-08', expectedRevision: 1);
-      await store.put(
-        Activity()
-          ..id = 4
-          ..title = 'Planned only'
-          ..ampmHalf = AmPmHalf.am
-          ..startMinute = 620
-          ..endMinute = 650
-          ..date = DateTime(now.year, now.month, now.day)
-          ..colorValue = 0xff123456
-          ..createdAt = now
-          ..updatedAt = now,
+      await show(
+        tester,
+        state: selected(IntentSourceType.habit),
+        habitAction: (habit) => opened = habit,
       );
+      expect(find.text('Mulai rangkaian'), findsOneWidget);
+      await tester.tap(find.text('Mulai rangkaian'));
       await tester.pumpAndSettle();
-      expect(find.text('Direncanakan: Planned only'), findsOneWidget);
+      expect(opened?.id, 7);
+      expect(opened?.hybridSets, 4);
+      expect(opened?.hybridDurationSeconds, 45);
+      expect(await store.all<HabitEntry>(), isEmpty);
+    },
+  );
+  testWidgets(
+    'progression home action confirms and records the current step once',
+    (tester) async {
+      final progression = Habit()
+        ..id = 7
+        ..name = 'Strength'
+        ..habitType = 'progression'
+        ..colorValue = 0xff123456
+        ..createdAt = now;
+      await store.put(progression);
+      await show(tester, state: selected(IntentSourceType.habit));
+
+      expect(find.text('Catat langkah'), findsOneWidget);
+      await tester.tap(find.text('Catat langkah'));
+      await tester.pumpAndSettle();
+      expect(find.text('Catat langkah hari ini?'), findsOneWidget);
+      expect(
+        find.textContaining(progression.currentStep.title),
+        findsNWidgets(2),
+      );
+      expect(await store.all<HabitEntry>(), isEmpty);
+
+      await tester.tap(find.text('Simpan'));
+      await tester.pumpAndSettle();
+      final entries = await SadarRepository.store(
+        store,
+      ).getEntriesForDateRange('2026-11-08', '2026-11-08');
+      expect(entries, hasLength(1));
+      expect(entries.single.status, HabitStatus.yes);
+      expect(entries.single.targetSnapshot, progression.currentStep.target);
+      expect(
+        (await SadarRepository.store(
+          store,
+        ).getHabitById(7))?.currentProgressionIndex,
+        1,
+      );
+      expect(find.text('Batalkan langkah'), findsOneWidget);
+      await tester.tap(find.text('Batalkan langkah'));
+      await tester.pumpAndSettle();
+      expect(find.text('Batalkan langkah hari ini?'), findsOneWidget);
+      await tester.tap(find.text('Batalkan'));
+      await tester.pumpAndSettle();
+      expect(
+        (await SadarRepository.store(
+          store,
+        ).getHabitById(7))?.currentProgressionIndex,
+        0,
+      );
+      expect(
+        (await SadarRepository.store(
+          store,
+        ).getEntriesForDateRange('2026-11-08', '2026-11-08')).single.status,
+        HabitStatus.unmarked,
+      );
     },
   );
 }

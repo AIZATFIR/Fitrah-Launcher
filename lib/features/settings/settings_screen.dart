@@ -12,6 +12,7 @@ import '../../features/launcher/providers/launcher_settings_provider.dart';
 import '../../models/app_settings.dart';
 import '../../providers/providers.dart';
 import '../../services/secure_storage_service.dart';
+import '../../services/ai_provider_probe.dart';
 import '../../services/firebase_sync_service.dart';
 import '../../widgets/google_auth_dialog.dart';
 
@@ -86,19 +87,24 @@ const _apiKeyGuides = <String, (String url, List<String> steps)>{
       'Install Ollama dari ollama.com/download',
       'Jalankan: ollama pull llama3.2',
       'API key tidak perlu — kosongkan saja',
-      'Gratis & offline, tapi perlu PC yang kuat',
+      'Untuk di HP, gunakan endpoint HTTPS yang dapat dijangkau HP; HTTP biasa diblokir',
     ],
   ),
 };
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.focusAiConfiguration = false});
+
+  final bool focusAiConfiguration;
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final _settingsScrollController = ScrollController();
+  final _aiProviderSettingsKey = GlobalKey();
+  bool _aiSettingsFocusScheduled = false;
   bool? _is24h;
   int? _clockHandsMode;
   bool? _showMinuteLabels;
@@ -147,6 +153,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _glowStyle = s.glowStyle;
   }
 
+  void _focusAiConfiguration() {
+    if (!widget.focusAiConfiguration || _aiSettingsFocusScheduled) return;
+    _aiSettingsFocusScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await WidgetsBinding.instance.endOfFrame;
+      var offset = 0.0;
+      while (mounted && _settingsScrollController.hasClients) {
+        final position = _settingsScrollController.position;
+        _settingsScrollController.jumpTo(
+          offset.clamp(0.0, position.maxScrollExtent),
+        );
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return;
+        final target = _aiProviderSettingsKey.currentContext;
+        if (target != null) {
+          if (!target.mounted) return;
+          Scrollable.ensureVisible(
+            target,
+            alignment: 0.05,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+          );
+          return;
+        }
+        final updatedPosition = _settingsScrollController.position;
+        if (offset >= updatedPosition.maxScrollExtent) return;
+        offset += updatedPosition.viewportDimension * 0.75;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _settingsScrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(settingsProvider);
@@ -166,6 +209,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (s) {
+          _focusAiConfiguration();
           // Initialize if null
           if (_is24h == null) {
             _syncLocal(s);
@@ -187,6 +231,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           final curKeyPlanningMode = _keyPlanningMode ?? s.keyPlanningMode;
 
           return ListView(
+            controller: _settingsScrollController,
             children: [
               // ── Simple Mode ──────────────────────────────────────────────────
               const _Section(title: 'Mode'),
@@ -273,31 +318,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   subtitle: const Text(
                     'Choose how detailed the time bubble is',
                   ),
-                  trailing: DropdownButton<String>(
-                    value: _currentTimeFormat ?? 'short',
-                    dropdownColor: const Color(0xFF1E1F24),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'short',
-                        child: Text('Hours & Minutes'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'seconds',
-                        child: Text('Hours, Minutes, Seconds'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'detailed',
-                        child: Text('Detailed (Date + Time)'),
-                      ),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) {
-                        setState(() {
-                          _currentTimeFormat = v;
-                        });
-                        _save(s, currentTimeFormat: v);
-                      }
-                    },
+                  trailing: SizedBox(
+                    width: 200,
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _currentTimeFormat ?? 'short',
+                      dropdownColor: const Color(0xFF1E1F24),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'short',
+                          child: Text('Hours & Minutes'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'seconds',
+                          child: Text('Hours, Minutes, Seconds'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'detailed',
+                          child: Text('Detailed (Date + Time)'),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() {
+                            _currentTimeFormat = v;
+                          });
+                          _save(s, currentTimeFormat: v);
+                        }
+                      },
+                    ),
                   ),
                 ),
                 SwitchListTile(
@@ -737,39 +786,52 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 title: const Text('Lead time'),
                 subtitle: Text('$curNotifLeadMinutes minute(s) before'),
-                trailing: DropdownButton<int>(
-                  value: curNotifLeadMinutes,
-                  items: const [1, 5, 10, 15]
-                      .map(
-                        (v) =>
-                            DropdownMenuItem(value: v, child: Text('$v min')),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setState(() {
-                        _notifLeadMinutes = v;
-                      });
-                      _save(s, notifLeadMinutes: v);
-                    }
-                  },
+                trailing: SizedBox(
+                  width: 120,
+                  child: DropdownButton<int>(
+                    isExpanded: true,
+                    value: curNotifLeadMinutes,
+                    items: const [1, 5, 10, 15]
+                        .map(
+                          (v) =>
+                              DropdownMenuItem(value: v, child: Text('$v min')),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() {
+                          _notifLeadMinutes = v;
+                        });
+                        _save(s, notifLeadMinutes: v);
+                      }
+                    },
+                  ),
                 ),
               ),
 
               // ── AI Assistant ─────────────────────────────────────────────────
               const Divider(),
-              const _Section(title: 'AI Assistant'),
-              _AiConfigTile(
-                s: s,
-                storage: ref.read(secureStorageServiceProvider),
-                onSave: (baseUrl, model) async {
-                  await _save(
-                    s,
-                    aiBaseUrl: baseUrl,
-                    aiApiKey: '',
-                    aiModel: model,
-                  );
-                },
+              KeyedSubtree(
+                key: _aiProviderSettingsKey,
+                child: Column(
+                  key: const ValueKey('ai-provider-settings'),
+                  children: [
+                    const _Section(title: 'AI Assistant'),
+                    _AiConfigTile(
+                      s: s,
+                      storage: ref.read(secureStorageServiceProvider),
+                      probe: ref.read(aiProviderProbeProvider),
+                      onSave: (baseUrl, model) async {
+                        await _save(
+                          s,
+                          aiBaseUrl: baseUrl,
+                          aiApiKey: '',
+                          aiModel: model,
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
 
               // ── Google Calendar ─────────────────────────────────────────────
@@ -1025,10 +1087,12 @@ class _AiConfigTile extends StatefulWidget {
   const _AiConfigTile({
     required this.s,
     required this.storage,
+    required this.probe,
     required this.onSave,
   });
   final AppSettings s;
   final SecureStorageService storage;
+  final AiProviderProbe probe;
   final Future<void> Function(String baseUrl, String model) onSave;
 
   @override
@@ -1045,6 +1109,9 @@ class _AiConfigTileState extends State<_AiConfigTile> {
 
   bool _voiceEnabled = true;
   bool _saving = false;
+  bool _testingConnection = false;
+  String? _connectionMessage;
+  bool _connectionSucceeded = false;
   String _savedApiKey = '';
 
   @override
@@ -1107,6 +1174,7 @@ class _AiConfigTileState extends State<_AiConfigTile> {
     final preset = _providerPresets.firstWhere((p) => p.$1 == name);
     setState(() {
       _selectedPreset = name;
+      _connectionMessage = null;
       if (preset.$2.isNotEmpty) _urlCtrl.text = preset.$2;
       final m = _defaultModelFor[name];
       if (m != null) {
@@ -1114,6 +1182,46 @@ class _AiConfigTileState extends State<_AiConfigTile> {
         _acFieldCtrl?.text = m;
       }
     });
+  }
+
+  void _clearConnectionResult() {
+    if (_connectionMessage == null) return;
+    setState(() => _connectionMessage = null);
+  }
+
+  Future<void> _testConnection() async {
+    if (_testingConnection) return;
+    final model = _modelCtrl.text.trim();
+    setState(() {
+      _testingConnection = true;
+      _connectionMessage = null;
+    });
+    try {
+      await widget.probe.testConnection(
+        baseUrl: _urlCtrl.text,
+        model: model,
+        apiKey: _keyCtrl.text,
+      );
+      if (!mounted) return;
+      setState(() {
+        _connectionSucceeded = true;
+        _connectionMessage = 'Koneksi berhasil · $model';
+      });
+    } on AiProviderProbeException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _connectionSucceeded = false;
+        _connectionMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _connectionSucceeded = false;
+        _connectionMessage = 'Uji koneksi gagal. Periksa pengaturan provider.';
+      });
+    } finally {
+      if (mounted) setState(() => _testingConnection = false);
+    }
   }
 
   TextEditingController? _acFieldCtrl;
@@ -1245,6 +1353,7 @@ class _AiConfigTileState extends State<_AiConfigTile> {
           const SizedBox(height: 4),
           TextField(
             controller: _urlCtrl,
+            onChanged: (_) => _clearConnectionResult(),
             style: const TextStyle(fontSize: 13),
             decoration: const InputDecoration(
               hintText: 'https://openrouter.ai/api/v1',
@@ -1266,6 +1375,7 @@ class _AiConfigTileState extends State<_AiConfigTile> {
           const SizedBox(height: 4),
           TextField(
             controller: _keyCtrl,
+            onChanged: (_) => _clearConnectionResult(),
             obscureText: _obscureKey,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
@@ -1295,10 +1405,15 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                 'Model',
                 style: TextStyle(fontSize: 13, color: AppPalette.textDim),
               ),
-              const Spacer(),
-              const Text(
-                'Google AI tersedia gratis · Groq lebih cepat',
-                style: TextStyle(fontSize: 11, color: AppPalette.textDim),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Google AI tersedia gratis · Groq lebih cepat',
+                  textAlign: TextAlign.end,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, color: AppPalette.textDim),
+                ),
               ),
             ],
           ),
@@ -1314,7 +1429,10 @@ class _AiConfigTileState extends State<_AiConfigTile> {
               return TextField(
                 controller: ctrl,
                 focusNode: focusNode,
-                onChanged: (v) => _modelCtrl.text = v,
+                onChanged: (v) {
+                  _modelCtrl.text = v;
+                  _clearConnectionResult();
+                },
                 style: const TextStyle(fontSize: 13),
                 decoration: const InputDecoration(
                   hintText: 'gemini-2.5-flash',
@@ -1343,67 +1461,132 @@ class _AiConfigTileState extends State<_AiConfigTile> {
           const SizedBox(height: 14),
 
           // Save button + status
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (saved) ...[
-                const Icon(Icons.check_circle, size: 14, color: Colors.green),
-                const SizedBox(width: 4),
-                const Text(
-                  'Connected',
-                  style: TextStyle(fontSize: 12, color: Colors.green),
+              if (saved ||
+                  const String.fromEnvironment('DEMO_AI_KEY').isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        saved
+                            ? Icons.lock_outline_rounded
+                            : Icons.science_outlined,
+                        size: 16,
+                        color: AppPalette.textDim,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        saved ? 'API key tersimpan' : 'Mode demo tersedia',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppPalette.textDim,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const Spacer(),
-              ] else if (const String.fromEnvironment(
-                'DEMO_AI_KEY',
-              ).isNotEmpty) ...[
-                const Icon(Icons.stars, size: 14, color: AppPalette.accent),
-                const SizedBox(width: 4),
-                const Text(
-                  'Demo Mode Active',
-                  style: TextStyle(fontSize: 12, color: AppPalette.accent),
+              if (_connectionMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          _connectionSucceeded
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.error_outline_rounded,
+                          size: 16,
+                          color: _connectionSucceeded
+                              ? Colors.green
+                              : AppPalette.danger,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _connectionMessage!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _connectionSucceeded
+                                  ? Colors.green
+                                  : AppPalette.danger,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const Spacer(),
-              ] else
-                const Spacer(),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppPalette.accent,
-                  foregroundColor: Colors.black,
-                ),
-                onPressed: _saving
-                    ? null
-                    : () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        final key = _keyCtrl.text.trim();
-                        final url = _urlCtrl.text.trim();
-                        final model = _modelCtrl.text.trim();
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    key: const ValueKey('ai-provider-test-connection'),
+                    onPressed: _testingConnection || _saving
+                        ? null
+                        : _testConnection,
+                    icon: _testingConnection
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.wifi_tethering_rounded, size: 18),
+                    label: Text(
+                      _testingConnection ? 'Menguji…' : 'Uji koneksi',
+                    ),
+                  ),
+                  FilledButton(
+                    key: const ValueKey('ai-provider-save'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppPalette.accent,
+                      foregroundColor: Colors.black,
+                    ),
+                    onPressed: _saving || _testingConnection
+                        ? null
+                        : () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            final key = _keyCtrl.text.trim();
+                            final url = _urlCtrl.text.trim();
+                            final model = _modelCtrl.text.trim();
 
-                        setState(() => _saving = true);
-                        try {
-                          await widget.storage.setAiProviderApiKey(key);
-                          await widget.storage.setVoiceEnabled(_voiceEnabled);
-                          await widget.onSave(url, model);
-                          if (mounted) {
-                            setState(() => _savedApiKey = key);
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Pengaturan AI berhasil disimpan.',
-                                ),
-                              ),
-                            );
-                          }
-                        } catch (error) {
-                          if (mounted) {
-                            messenger.showSnackBar(
-                              SnackBar(content: Text('Save failed: $error')),
-                            );
-                          }
-                        } finally {
-                          if (mounted) setState(() => _saving = false);
-                        }
-                      },
-                child: Text(_saving ? 'Saving…' : 'Save'),
+                            setState(() => _saving = true);
+                            try {
+                              await widget.storage.setAiProviderApiKey(key);
+                              await widget.storage.setVoiceEnabled(
+                                _voiceEnabled,
+                              );
+                              await widget.onSave(url, model);
+                              if (mounted) {
+                                setState(() => _savedApiKey = key);
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Pengaturan AI berhasil disimpan.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            } catch (error) {
+                              if (mounted) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('Save failed: $error'),
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (mounted) setState(() => _saving = false);
+                            }
+                          },
+                    child: Text(_saving ? 'Menyimpan…' : 'Simpan'),
+                  ),
+                ],
               ),
             ],
           ),

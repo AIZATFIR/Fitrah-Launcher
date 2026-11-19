@@ -76,3 +76,17 @@ Investigation guards: legacy source=timer entries may have minutes>0 with second
 ## Verification
 
 Run affected tests once after implementation and after relevant fixes; do not repeat unrelated full suites. Analyzer and diff whitespace check. Browser/runtime/device visual verification unavailable; do not claim it from widget tests or compile alone.
+
+## 17 November progression follow-up
+
+Sadar commits the selected progression step's target snapshot, daily entry, and next cursor in one transaction. Duplicate same-date completion calls are idempotent. The entry now stores a versioned snapshot of the exact step and prior entry state; Home and Sadar show that recorded step and offer undo only when the completion is still latest and the cursor/plan still match. Undo restores the cursor and prior status/value/target/completion/source while retaining note and measured-duration evidence. Legacy completed entries without a snapshot remain readable and do not show a false undo action. Preview and native Isar tests cover concurrent completion, safe undo, and snapshot persistence after close/reopen; live-model and backup codec round trips are covered. The wider ecosystem, daily-use observation, physical accessibility and later sync/AI/WhatsApp/MCP gates remain open.
+
+## 17 November hybrid timer follow-up
+
+Hybrid sessions on Sadar Today use the shared timer's saved plan (`set count`, `work seconds`, `rest seconds`), show current phase and set, and restore after pause/reopen. Completion maps elapsed session time to focused work seconds and fully completed sets; rest intervals do not inflate habit duration. Entry status becomes yes only when the saved set target is met. Native Isar reopen verifies active plan fields and hybrid completion evidence.
+
+Home's selected hybrid habit now projects to an executable `Mulai rangkaian` action and opens the same `SadarTimerView` with its explicitly linked goal snapshot. The Home timer displays the set number, focus/rest phase, and phase countdown; its completion summary reports focused work separately from rests. Finishing during a rest credits only completed work sets and does not mark the target complete.
+
+Home's progression action now shows the current day/step and asks for confirmation before saving. It calls `completeProgressionStep`, which records the selected target snapshot and advances the cursor in one Sadar transaction; repeated completion for that date remains idempotent. Undo/history remains open.
+
+Focused verification: **83 tests passed** across intent projection/repository, Home cue, Sadar timer view/state machine, YPT shared timer, and native Isar persistence. Whole-project analyzer reports five existing info-level diagnostics in unrelated files; `git diff --check` passes. The Home hybrid path is widget-tested against the shared state and timer engine; visual/device accessibility review remains open.
