@@ -1885,7 +1885,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     }
     if (nonSleep.isEmpty) {
       return Container(
-        height: 44,
+        constraints: const BoxConstraints(minHeight: 44),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: tc.card,

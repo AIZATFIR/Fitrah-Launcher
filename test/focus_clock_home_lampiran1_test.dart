@@ -36,6 +36,7 @@ void main() {
       bool emptyTasks = false,
       double textScale = 1,
       bool showUnverifiedPrayerSchedule = false,
+      bool emptySchedule = false,
       SadarRepository? sadarRepository,
     }) {
       final storage = NoteStorage()
@@ -48,6 +49,10 @@ void main() {
       return ProviderScope(
         overrides: [
           secureStorageServiceProvider.overrideWithValue(storage),
+          if (emptySchedule)
+            activitiesByDateProvider.overrideWith(
+              (ref) => Stream.value(const []),
+            ),
           if (emptyTasks)
             eisenhowerTasksProvider.overrideWith(
               (ref) => Stream.value(const []),
@@ -298,6 +303,43 @@ void main() {
       final dateParagraph = tester.renderObject<RenderParagraph>(hijriDate);
       expect(dateParagraph.size.height, greaterThan(30));
       expect(dateParagraph.didExceedMaxLines, isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Empty agenda label grows to fit at 200% text scale', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        createWidgetUnderTest(
+          useSampleData: false,
+          emptyTasks: true,
+          emptySchedule: true,
+          textScale: 2,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final label = find.text('Belum ada jadwal hari ini.');
+      expect(label, findsOneWidget);
+      final status = find.ancestor(
+        of: label,
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Container &&
+              widget.child is Text &&
+              widget.decoration is BoxDecoration,
+        ),
+      );
+      expect(status, findsOneWidget);
+      expect(
+        tester.getSize(status).height,
+        greaterThanOrEqualTo(tester.getSize(label).height),
+      );
       expect(tester.takeException(), isNull);
     });
 
