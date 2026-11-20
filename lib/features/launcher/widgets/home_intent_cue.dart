@@ -87,46 +87,81 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
               data: (intent) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.flag_outlined, size: 15, color: widget.accent),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: Text(
-                          'TUJUAN UTAMA',
-                          style: TextStyle(
-                            color: widget.secondary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.65,
-                          ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final label = Text(
+                        'TUJUAN UTAMA',
+                        style: TextStyle(
+                          color: widget.secondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.65,
                         ),
-                      ),
-                      if (widget.onAssistant != null)
-                        Tooltip(
-                          message: 'Bicarakan tujuan dengan AI',
-                          child: TextButton.icon(
-                            style: TextButton.styleFrom(
-                              foregroundColor: widget.accent,
-                              minimumSize: const Size(48, 44),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
+                      );
+                      final assistant = widget.onAssistant == null
+                          ? null
+                          : Align(
+                              alignment: Alignment.centerRight,
+                              child: Tooltip(
+                                message: 'Bicarakan tujuan dengan AI',
+                                child: TextButton.icon(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: widget.accent,
+                                    minimumSize: const Size(48, 44),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed: () => widget.onAssistant?.call(
+                                    intent.pinnedGoal,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.chat_bubble_outline_rounded,
+                                    size: 16,
+                                  ),
+                                  label: const Text(
+                                    'Tanya AI',
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                ),
                               ),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            onPressed: () =>
-                                widget.onAssistant?.call(intent.pinnedGoal),
-                            icon: const Icon(
-                              Icons.chat_bubble_outline_rounded,
-                              size: 16,
-                            ),
-                            label: const Text(
-                              'Tanya AI',
-                              style: TextStyle(fontSize: 12),
-                            ),
+                            );
+                      final stack =
+                          constraints.maxWidth < 340 ||
+                          MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                      final title = Row(
+                        children: [
+                          Icon(
+                            Icons.flag_outlined,
+                            size: 15,
+                            color: widget.accent,
                           ),
-                        ),
-                    ],
+                          const SizedBox(width: 7),
+                          Expanded(child: label),
+                        ],
+                      );
+
+                      if (stack) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [title, ?assistant],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Icon(
+                            Icons.flag_outlined,
+                            size: 15,
+                            color: widget.accent,
+                          ),
+                          const SizedBox(width: 7),
+                          Expanded(child: label),
+                          ?assistant,
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 5),
                   Row(

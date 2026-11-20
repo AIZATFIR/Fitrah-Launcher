@@ -219,8 +219,11 @@ void main() {
     final heading = tester.renderObject<RenderParagraph>(
       find.text('TUJUAN UTAMA'),
     );
-    expect(heading.size.height, greaterThan(30));
+    expect(heading.size.height, lessThan(80));
     expect(heading.didExceedMaxLines, isFalse);
+    final headingBottom = tester.getBottomLeft(find.text('TUJUAN UTAMA')).dy;
+    final assistantTop = tester.getTopLeft(find.text('Tanya AI')).dy;
+    expect(assistantTop, greaterThan(headingBottom));
     expect(tester.takeException(), isNull);
   });
 
