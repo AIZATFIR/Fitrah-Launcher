@@ -53,9 +53,9 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] Add a failing regression for configured provider 5xx/timeout proving chat is not sent to the backend or demo endpoint.
-- [ ] Change the configured-provider failure path to retain chat locally and return an actionable safe message; leave the keyless manual path intact.
-- [ ] Verify affected provider/chat/approval tests, scoped analyzer, and diff; update the ecosystem roadmap with the privacy boundary.
+- [x] Add a failing regression for configured provider 5xx/timeout proving chat is not sent to the backend or demo endpoint.
+- [x] Change the configured-provider failure path to retain chat locally and return an actionable safe message; leave the keyless manual path intact.
+- [x] Verify affected provider/chat/approval tests, scoped analyzer, and diff; update the ecosystem roadmap with the privacy boundary.
 
 **Acceptance Criteria:**
 - Given the user sends a private message to a configured provider, when that provider fails, then no request containing the message or pinned goal reaches any other endpoint.
@@ -78,7 +78,7 @@ context:
 ## Verification
 
 **Commands:**
-- `flutter test --no-pub test/ai_action_proposal_test.dart test/ai_chat_approval_widget_test.dart --reporter compact` -- 21 tests passed.
+- `flutter test --no-pub test/ai_action_proposal_test.dart test/ai_chat_approval_widget_test.dart --reporter compact` -- 25 tests passed.
 - `flutter analyze --no-pub lib/services/ai_service.dart lib/features/ai_chat/ai_chat_sheet.dart test/ai_action_proposal_test.dart test/ai_chat_approval_widget_test.dart` -- no issues.
-- `git diff --check` -- clean.
+- `git diff --check` -- clean for this checkout's working-tree changes; historical changes since the plan baseline include trailing whitespace in unrelated checkpoint documents.
 - `flutter build apk --release --no-pub` and `flutter build web --release --no-pub` -- succeeded; APK metadata/signature and package SHA-256 checks verified.
