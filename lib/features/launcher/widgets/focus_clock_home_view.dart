@@ -19,6 +19,7 @@ import '../../settings/settings_screen.dart';
 import '../models/launcher_settings.dart';
 import '../providers/launcher_settings_provider.dart';
 import 'fitrah_settings_screen.dart';
+import 'launcher_customization_sheet.dart';
 import '../utils/hijri_date.dart';
 import 'loop_habit_grid_widget.dart';
 import '../../../models/habit_entry.dart';
@@ -795,6 +796,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       if (nowMinute >= start && nowMinute < end) {
         final remainingMins = end - nowMinute;
         return {
+          'activityId': activity.id,
           'name': 'Terjadwal sekarang · ${activity.title}',
           'remaining': 'sisa ${remainingMins}m',
           'isFree': false,
@@ -1322,7 +1324,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final currentAct = _getCurrentActivityInfo(activitiesState);
     final tc = _HomeThemeColors.fromPalette(settings.themePalette);
     final showPrayerSchedule =
-        settings.showPrayerTimes && settings.widgetDisplayMode == 'prayer';
+        settings.showPrayerTimes &&
+        settings.widgetDisplayMode == 'prayer' &&
+        settings.prayerTimesVerified;
+    final showPrayerSetupCue =
+        settings.showPrayerTimes &&
+        settings.widgetDisplayMode == 'prayer' &&
+        !settings.prayerTimesVerified;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -1342,6 +1350,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   tc,
                   activitiesState,
                   showPrayerSchedule: showPrayerSchedule,
+                  showPrayerSetupCue: showPrayerSetupCue,
+                  currentActivityId: currentAct['activityId'] as int?,
                   showAgendaWidget: settings.showAgendaWidget,
                 ),
                 const SizedBox(height: 12),
@@ -1711,6 +1721,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     _HomeThemeColors tc,
     AsyncValue<List<Activity>> activitiesState, {
     required bool showPrayerSchedule,
+    required bool showPrayerSetupCue,
+    required int? currentActivityId,
     required bool showAgendaWidget,
   }) {
     return Row(
@@ -1742,6 +1754,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     final prayer = prayers[index];
                     final isDone = _prayerDone[index] == true;
                     return InkWell(
+                      key: const ValueKey('home-prayer-schedule-cue'),
                       onTap: () => _openPrayerScheduleSheet(prayers, index, tc),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
@@ -1790,10 +1803,59 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     );
                   },
                 )
+              : showPrayerSetupCue
+              ? InkWell(
+                  key: const ValueKey('home-prayer-setup-cue'),
+                  onTap: () => showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => const LauncherCustomizationSheet(),
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    constraints: BoxConstraints(
+                      minHeight: math.max(
+                        44,
+                        MediaQuery.textScalerOf(context).scale(14) * 1.5,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: tc.card,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: tc.stroke),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.mosque_outlined, size: 18, color: tc.accent),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Atur jadwal salat',
+                            style: TextStyle(
+                              color: tc.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: tc.textSecondary,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
               : showAgendaWidget
               ? KeyedSubtree(
                   key: const ValueKey('home-agenda-carousel'),
-                  child: _buildAgendaCarousel(activitiesState, tc),
+                  child: _buildAgendaCarousel(
+                    activitiesState,
+                    tc,
+                    currentActivityId: currentActivityId,
+                  ),
                 )
               : const SizedBox.shrink(),
         ),
@@ -1804,11 +1866,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
   // Horizontal Scrollable Agenda Carousel (Focus Clock Now & Next)
   Widget _buildAgendaCarousel(
     AsyncValue<List<Activity>> activitiesState,
-    _HomeThemeColors tc,
-  ) {
-    final nonSleep = _blocksFromActivities(
-      activitiesState.valueOrNull ?? const [],
-    )..sort((a, b) => a.startHour.compareTo(b.startHour));
+    _HomeThemeColors tc, {
+    int? currentActivityId,
+  }) {
+    final nonSleep =
+        _blocksFromActivities(
+            activitiesState.valueOrNull ?? const [],
+          ).where((block) => block.id != currentActivityId).toList()
+          ..sort((a, b) => a.startHour.compareTo(b.startHour));
 
     if (activitiesState.hasError || activitiesState.isLoading) {
       return _scheduleStatusPill(
@@ -1829,7 +1894,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         ),
         alignment: Alignment.centerLeft,
         child: Text(
-          'Belum ada jadwal hari ini.',
+          currentActivityId == null
+              ? 'Belum ada jadwal hari ini.'
+              : 'Jadwal sedang berjalan.',
           style: TextStyle(color: tc.textSecondary, fontSize: 12),
         ),
       );

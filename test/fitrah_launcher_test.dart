@@ -54,8 +54,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Fajr'), findsOneWidget);
-      expect(find.text('Dhuhr'), findsOneWidget);
+      expect(find.text('Fajr'), findsNothing);
+      expect(find.text('Dhuhr'), findsNothing);
+      expect(find.text('Belum Ada Event Focus Clock'), findsOneWidget);
     });
 
     testWidgets('MinimalistAppDrawer renders search bar and app list', (
@@ -232,7 +233,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.drag(homeList, const Offset(0, 1400));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.mosque_rounded), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('home-prayer-setup-cue')),
+        findsOneWidget,
+      );
       expect(
         LauncherSettings.fromJson(storage.raw!).widgetDisplayMode,
         'prayer',

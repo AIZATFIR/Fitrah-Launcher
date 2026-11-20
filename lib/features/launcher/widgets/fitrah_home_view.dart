@@ -193,7 +193,7 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Ketuk untuk mengubah jam sholat sesuai lokasi Anda',
+                'Nilai awal hanya contoh. Cocokkan dengan sumber waktu di wilayahmu; lokasi tidak dibaca otomatis.',
                 style: TextStyle(fontSize: 12, color: Colors.white54),
               ),
               const SizedBox(height: 16),
@@ -446,14 +446,21 @@ class _FitrahHomeViewState extends ConsumerState<FitrahHomeView> {
                     const SizedBox(height: 6),
 
                     // Content Widget based on mode
-                    if (settings.widgetDisplayMode == 'focus_clock')
+                    if (settings.widgetDisplayMode == 'focus_clock' ||
+                        !settings.showPrayerTimes)
                       _buildFocusClockEventsGrid(activities)
-                    else
+                    else if (settings.prayerTimesVerified)
                       _buildPrayerTimesGrid(
                         settings,
                         notifier,
                         activePrayer,
                         nextPrayerInfo,
+                      )
+                    else
+                      OutlinedButton.icon(
+                        onPressed: _openCustomization,
+                        icon: const Icon(Icons.mosque_outlined),
+                        label: const Text('Atur jadwal salat'),
                       ),
 
                     const SizedBox(height: 12),

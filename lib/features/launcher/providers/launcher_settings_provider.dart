@@ -156,6 +156,9 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
     await _mutate((s) => s.copyWith(showPrayerTimes: enabled));
   }
 
+  Future<bool> setPrayerTimesVerified(bool verified) =>
+      _mutate((s) => s.copyWith(prayerTimesVerified: verified));
+
   Future<void> setPrayerTime(String key, String time) async {
     await _mutate((s) {
       switch (key.toLowerCase()) {

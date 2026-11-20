@@ -105,7 +105,28 @@ void main() {
     expect(legacy.themePalette, 'sky_blue');
     expect(legacy.favoritePackages, LauncherSettings.defaultFavorites);
     expect(legacy.hiddenPackages, isEmpty);
+    expect(legacy.widgetDisplayMode, 'focus_clock');
   });
+
+  test(
+    'legacy prayer times are not assumed verified for the device location',
+    () {
+      final legacy = LauncherSettings.fromMap({
+        'showPrayerTimes': true,
+        'widgetDisplayMode': 'prayer',
+        'prayerDzuhur': '11:52',
+      });
+
+      expect(legacy.toMap()['prayerTimesVerified'], isFalse);
+      expect(
+        LauncherSettings.fromMap({
+          ...legacy.toMap(),
+          'prayerTimesVerified': true,
+        }).toMap()['prayerTimesVerified'],
+        isTrue,
+      );
+    },
+  );
   test(
     'empty favorites, immutable collections, duplicates and unavailable IDs',
     () {

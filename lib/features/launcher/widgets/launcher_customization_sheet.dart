@@ -689,7 +689,7 @@ class _LauncherCustomizationSheetState
               if (settings.showPrayerTimes) ...[
                 const SizedBox(height: 8),
                 const Text(
-                  'Ketuk waktu untuk menyesuaikan jadwal sholat di kotamu:',
+                  'Nilai awal hanya contoh, bukan hasil lokasi otomatis. Cocokkan dengan sumber waktu di wilayahmu:',
                   style: TextStyle(fontSize: 11, color: AppPalette.textDim),
                 ),
                 const SizedBox(height: 10),
@@ -704,6 +704,21 @@ class _LauncherCustomizationSheetState
                     _buildPrayerTimeChip('Maghrib', settings.prayerMaghrib, notifier),
                     _buildPrayerTimeChip('Isya', settings.prayerIsya, notifier),
                   ],
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: AppPalette.accent,
+                  title: const Text(
+                    'Saya sudah mencocokkan semua waktu ini',
+                    style: TextStyle(fontSize: 13, color: AppPalette.text),
+                  ),
+                  subtitle: const Text(
+                    'Waktu salat akan tampil setelah kamu mengonfirmasi.',
+                    style: TextStyle(fontSize: 11, color: AppPalette.textDim),
+                  ),
+                  value: settings.prayerTimesVerified,
+                  onChanged: notifier.setPrayerTimesVerified,
                 ),
               ],
 

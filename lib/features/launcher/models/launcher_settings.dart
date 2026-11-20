@@ -16,6 +16,7 @@ class LauncherSettings {
 
   // Waktu Sholat (Muslim Fitrah Anchor)
   final bool showPrayerTimes;
+  final bool prayerTimesVerified;
   final String prayerSubuh;
   final String prayerSyuruq;
   final String prayerDzuhur;
@@ -97,13 +98,14 @@ class LauncherSettings {
       'com.android.camera',
     ],
     this.showPrayerTimes = true,
+    this.prayerTimesVerified = false,
     this.prayerSubuh = '04:32',
     this.prayerSyuruq = '05:46',
     this.prayerDzuhur = '11:52',
     this.prayerAshar = '15:10',
     this.prayerMaghrib = '17:54',
     this.prayerIsya = '19:03',
-    this.widgetDisplayMode = 'prayer',
+    this.widgetDisplayMode = 'focus_clock',
     this.autoFocusSearch = false,
     this.showAppIcons = true,
     this.themePalette = 'full_book',
@@ -132,6 +134,7 @@ class LauncherSettings {
     bool? showHabitsWidget,
     List<String>? dockPackages,
     bool? showPrayerTimes,
+    bool? prayerTimesVerified,
     String? prayerSubuh,
     String? prayerSyuruq,
     String? prayerDzuhur,
@@ -164,6 +167,7 @@ class LauncherSettings {
       showHabitsWidget: showHabitsWidget ?? this.showHabitsWidget,
       dockPackages: dockPackages ?? this.dockPackages,
       showPrayerTimes: showPrayerTimes ?? this.showPrayerTimes,
+      prayerTimesVerified: prayerTimesVerified ?? this.prayerTimesVerified,
       prayerSubuh: prayerSubuh ?? this.prayerSubuh,
       prayerSyuruq: prayerSyuruq ?? this.prayerSyuruq,
       prayerDzuhur: prayerDzuhur ?? this.prayerDzuhur,
@@ -199,6 +203,7 @@ class LauncherSettings {
       'showHabitsWidget': showHabitsWidget,
       'dockPackages': dockPackages,
       'showPrayerTimes': showPrayerTimes,
+      'prayerTimesVerified': prayerTimesVerified,
       'prayerSubuh': prayerSubuh,
       'prayerSyuruq': prayerSyuruq,
       'prayerDzuhur': prayerDzuhur,
@@ -247,13 +252,14 @@ class LauncherSettings {
             'com.android.camera',
           ],
       showPrayerTimes: map['showPrayerTimes'] as bool? ?? true,
+      prayerTimesVerified: map['prayerTimesVerified'] as bool? ?? false,
       prayerSubuh: map['prayerSubuh'] as String? ?? '04:32',
       prayerSyuruq: map['prayerSyuruq'] as String? ?? '05:46',
       prayerDzuhur: map['prayerDzuhur'] as String? ?? '11:52',
       prayerAshar: map['prayerAshar'] as String? ?? '15:10',
       prayerMaghrib: map['prayerMaghrib'] as String? ?? '17:54',
       prayerIsya: map['prayerIsya'] as String? ?? '19:03',
-      widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'prayer',
+      widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'focus_clock',
       autoFocusSearch: map['autoFocusSearch'] as bool? ?? false,
       themePalette: switch (map['themePalette'] as String? ?? 'full_book') {
         'ocean_blue' || 'sage' => 'full_book',

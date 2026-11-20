@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/launcher_customization_sheet.dart';
 import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
 import 'package:fitrah_launcher/features/settings/settings_screen.dart';
 import 'package:fitrah_launcher/providers/providers.dart';
@@ -34,10 +35,16 @@ void main() {
       bool useSampleData = true,
       bool emptyTasks = false,
       double textScale = 1,
+      bool showUnverifiedPrayerSchedule = false,
       SadarRepository? sadarRepository,
     }) {
       final storage = NoteStorage()
-        ..raw = LauncherSettings(widgetDisplayMode: 'focus_clock').toJson();
+        ..raw = LauncherSettings(
+          widgetDisplayMode: showUnverifiedPrayerSchedule
+              ? 'prayer'
+              : 'focus_clock',
+          showPrayerTimes: true,
+        ).toJson();
       return ProviderScope(
         overrides: [
           secureStorageServiceProvider.overrideWithValue(storage),
@@ -95,7 +102,10 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Tampilkan waktu salat'));
         await tester.pumpAndSettle();
-        expect(find.byIcon(Icons.mosque_outlined), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('home-prayer-setup-cue')),
+          findsOneWidget,
+        );
 
         await tester.tap(find.byKey(const ValueKey('home-menu-button')));
         await tester.pumpAndSettle();
@@ -103,6 +113,51 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           find.byKey(const ValueKey('home-agenda-carousel')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'unverified default prayer times open setup without showing a clock time',
+      (tester) async {
+        await tester.pumpWidget(
+          createWidgetUnderTest(showUnverifiedPrayerSchedule: true),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('home-prayer-setup-cue')),
+          findsOneWidget,
+        );
+        expect(find.text('11:52'), findsNothing);
+
+        await tester.tap(find.byKey(const ValueKey('home-prayer-setup-cue')));
+        await tester.pumpAndSettle();
+        expect(find.byType(LauncherCustomizationSheet), findsOneWidget);
+        expect(
+          find.text(
+            'Nilai awal hanya contoh, bukan hasil lokasi otomatis. Cocokkan dengan sumber waktu di wilayahmu:',
+          ),
+          findsOneWidget,
+        );
+        final verifiedSwitch = find.widgetWithText(
+          SwitchListTile,
+          'Saya sudah mencocokkan semua waktu ini',
+        );
+        await tester.ensureVisible(verifiedSwitch);
+        await tester.pumpAndSettle();
+        await tester.tap(verifiedSwitch);
+        await tester.pumpAndSettle();
+        expect(tester.widget<SwitchListTile>(verifiedSwitch).value, isTrue);
+        Navigator.of(tester.element(verifiedSwitch)).pop();
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('home-prayer-setup-cue')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('home-prayer-schedule-cue')),
           findsOneWidget,
         );
       },

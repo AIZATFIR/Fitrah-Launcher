@@ -294,6 +294,8 @@ class _NiagaraUnifiedStreamViewState
                       dateStr,
                       hijriStr,
                       nextPrayer,
+                      settings.showPrayerTimes,
+                      settings.prayerTimesVerified,
                     ),
                     const SizedBox(height: 8),
 
@@ -577,6 +579,8 @@ class _NiagaraUnifiedStreamViewState
     String dateStr,
     String hijriStr,
     Map<String, dynamic> nextPrayer,
+    bool showPrayerTimes,
+    bool prayerTimesVerified,
   ) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -684,46 +688,58 @@ class _NiagaraUnifiedStreamViewState
             ),
           ),
 
-          // Next Prayer Pill
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => const LauncherCustomizationSheet(),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E1E24),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+          // Prayer times are opt-in only after the user checks their local values.
+          if (showPrayerTimes) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              key: ValueKey(
+                prayerTimesVerified
+                    ? 'niagara-next-prayer-cue'
+                    : 'niagara-prayer-setup-cue',
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.wb_twilight_rounded,
-                    size: 12,
-                    color: Color(0xFFE5A93C),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${nextPrayer['nextName']}: ${nextPrayer['countdown']}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white70,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const LauncherCustomizationSheet(),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E24),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.wb_twilight_rounded,
+                      size: 12,
+                      color: Color(0xFFE5A93C),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 6),
+                    Text(
+                      prayerTimesVerified
+                          ? '${nextPrayer['nextName']}: ${nextPrayer['countdown']}'
+                          : 'Atur jadwal salat',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

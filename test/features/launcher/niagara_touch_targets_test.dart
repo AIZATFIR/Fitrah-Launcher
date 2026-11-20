@@ -42,6 +42,11 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
+    expect(
+      find.byKey(const ValueKey('niagara-prayer-setup-cue')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('11:52'), findsNothing);
     final start = find.widgetWithText(FilledButton, 'Buka Laptop & Play Timer');
     expect(start, findsOneWidget);
     expect(tester.getSemantics(start).rect.height, greaterThanOrEqualTo(48));
