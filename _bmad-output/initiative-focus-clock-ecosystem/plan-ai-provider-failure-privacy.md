@@ -3,7 +3,7 @@ title: 'Keep AI conversation private when the chosen provider fails'
 type: bugfix
 ticket: ''
 created: '2026-11-20'
-status: in-progress
+status: 'built'
 baseline_revision: 'd3c5ca5c4c700b877efca82c7e6c8e5036800071'
 route: 'full'
 route_source: 'pinned'
