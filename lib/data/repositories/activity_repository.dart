@@ -67,6 +67,7 @@ class ActivityRepository {
       final list = _memStore.values.where((a) {
         if (dateOnly(a.date) != targetDate) return false;
         if (half != null && a.ampmHalf != half) return false;
+        if (_isExcludedOccurrence(a, targetDate)) return false;
         return true;
       }).toList();
       list.sort((a, b) {
@@ -89,13 +90,16 @@ class ActivityRepository {
     AmPmHalf? half,
   }) {
     return direct.asyncMap((list) async {
+      final visibleDirect = list
+          .where((activity) => !_isExcludedOccurrence(activity, targetDate))
+          .toList();
       final recurring = await _getRecurring(targetDate, half: half);
       // Only add recurring entries not already covered by an explicit entry
-      final existingIds = list.map((activity) => activity.id).toSet();
+      final existingIds = visibleDirect.map((activity) => activity.id).toSet();
       final projected = recurring.where(
         (activity) => !existingIds.contains(activity.id),
       );
-      final all = [...list, ...projected];
+      final all = [...visibleDirect, ...projected];
       all.sort((a, b) {
         final halfCmp = a.ampmHalf.index.compareTo(b.ampmHalf.index);
         if (halfCmp != 0) return halfCmp;
@@ -104,6 +108,12 @@ class ActivityRepository {
       return all;
     });
   }
+
+  bool _isExcludedOccurrence(Activity activity, DateTime targetDate) =>
+      activity.recurrence != 'none' &&
+      activity.excludedDates.any(
+        (date) => dateOnly(date) == dateOnly(targetDate),
+      );
 
   Future<List<Activity>> _getRecurring(
     DateTime targetDate, {
