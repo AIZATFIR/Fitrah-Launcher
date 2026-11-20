@@ -289,8 +289,10 @@ void main() {
 
       final hijriDate = find.textContaining('Hijriah ·');
       expect(hijriDate, findsOneWidget);
+      final dateParagraph = tester.renderObject<RenderParagraph>(hijriDate);
+      expect(dateParagraph.size.height, greaterThan(30));
       expect(
-        tester.renderObject<RenderParagraph>(hijriDate).didExceedMaxLines,
+        dateParagraph.didExceedMaxLines,
         isFalse,
       );
       expect(tester.takeException(), isNull);

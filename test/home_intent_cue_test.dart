@@ -216,12 +216,11 @@ void main() {
     );
 
     expect(find.text('Tanya AI'), findsOneWidget);
-    expect(
-      tester
-          .renderObject<RenderParagraph>(find.text('TUJUAN UTAMA'))
-          .didExceedMaxLines,
-      isFalse,
+    final heading = tester.renderObject<RenderParagraph>(
+      find.text('TUJUAN UTAMA'),
     );
+    expect(heading.size.height, greaterThan(30));
+    expect(heading.didExceedMaxLines, isFalse);
     expect(tester.takeException(), isNull);
   });
 
