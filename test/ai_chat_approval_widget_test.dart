@@ -16,30 +16,27 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  testWidgets('goal-first chat includes the selected goal with free-form chat', (
+  testWidgets('failed delivery offers explicit retry and replaces its status', (
     tester,
   ) async {
-    var requestCount = 0;
-    Map<String, dynamic>? requestBody;
-    var openedAiSettings = false;
-    final activities = ActivityRepository(null, NotificationService());
+    var calls = 0;
     final ai = AiService(
-      baseUrl: 'https://model.test/v1',
-      apiKey: 'test-key',
-      model: 'test-model',
-      activityRepo: activities,
+      baseUrl: 'https://provider.test/v1',
+      apiKey: '',
+      model: 'chosen-model',
+      activityRepo: ActivityRepository(null, NotificationService()),
       presetRepo: PresetRepository.store(null),
       secureStorage: _TestSecureStorage(),
-      httpClient: MockClient((request) async {
-        requestCount++;
-        requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+      httpClient: MockClient((_) async {
+        calls++;
+        if (calls == 1) return http.Response('unsafe body', 503);
         return http.Response(
           jsonEncode({
             'choices': [
               {
                 'message': {
                   'role': 'assistant',
-                  'content': 'Kita mulai dari satu langkah kecil.',
+                  'content': 'Jawaban berhasil.',
                 },
               },
             ],
@@ -60,52 +57,190 @@ void main() {
             _SilentVoiceAssistant(),
           ),
         ],
-        child: MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              height: 700,
-              child: AiChatPanel(
-                initialGoal: 'Menang LKS Nasional IT Software Solution',
-                onOpenAiSettings: () => openedAiSettings = true,
-              ),
-            ),
-          ),
+        child: const MaterialApp(
+          home: Scaffold(body: SizedBox(height: 700, child: AiChatPanel())),
         ),
       ),
     );
     await tester.pumpAndSettle();
-
-    expect(
-      find.text('Tujuanmu: Menang LKS Nasional IT Software Solution'),
-      findsOneWidget,
-    );
-    expect(find.text('Bantu aku menyusun langkah'), findsOneWidget);
-    expect(requestCount, 0);
-    expect(find.text('Atur provider & API key'), findsOneWidget);
-    await tester.tap(find.text('Atur provider & API key'));
-    expect(openedAiSettings, isTrue);
-    await tester.enterText(
-      find.byType(TextField),
-      'Apa langkah kecil hari ini?',
-    );
+    await tester.enterText(find.byType(TextField), 'Private failed turn');
     await tester.tap(find.byIcon(Icons.send_rounded));
     await tester.pumpAndSettle();
 
-    expect(requestCount, 1);
-    final messages = requestBody!['messages'] as List;
-    final providerTurn = messages.last as Map<String, dynamic>;
-    expect(
-      providerTurn['content'],
-      contains('Menang LKS Nasional IT Software Solution'),
+    expect(find.text('Pesan belum terkirim'), findsOneWidget);
+    expect(find.text('Coba lagi'), findsOneWidget);
+    expect(find.text('unsafe body'), findsNothing);
+    await tester.tap(find.text('Coba lagi'));
+    await tester.pumpAndSettle();
+
+    expect(calls, 2);
+    expect(find.textContaining('Jawaban berhasil.'), findsOneWidget);
+    expect(find.text('Pesan belum terkirim'), findsNothing);
+    expect(find.text('Coba lagi'), findsNothing);
+    expect(find.text('Private failed turn'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('new input supersedes an older retry action', (tester) async {
+    final requestBodies = <Map<String, dynamic>>[];
+    var calls = 0;
+    final ai = AiService(
+      baseUrl: 'https://provider.test/v1',
+      apiKey: '',
+      model: 'chosen-model',
+      activityRepo: ActivityRepository(null, NotificationService()),
+      presetRepo: PresetRepository.store(null),
+      secureStorage: _TestSecureStorage(),
+      httpClient: MockClient((request) async {
+        calls++;
+        requestBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+        if (calls == 1) return http.Response('unsafe body', 503);
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'role': 'assistant', 'content': 'New reply.'},
+              },
+            ],
+          }),
+          200,
+        );
+      }),
     );
-    expect(providerTurn['content'], contains('Apa langkah kecil hari ini?'));
-    expect(find.text('Apa langkah kecil hari ini?'), findsOneWidget);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiServiceProvider.overrideWithValue(ai),
+          voiceAssistantServiceProvider.overrideWithValue(
+            _SilentVoiceAssistant(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: SizedBox(height: 700, child: AiChatPanel())),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Failed turn');
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('Coba lagi'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Different message');
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pumpAndSettle();
+
+    expect(calls, 2);
+    expect(find.text('Pesan belum terkirim'), findsOneWidget);
+    expect(find.text('Coba lagi'), findsNothing);
+    expect(find.textContaining('New reply.'), findsOneWidget);
+    final sentMessages = requestBodies.last['messages'] as List;
     expect(
-      find.textContaining('Menang LKS Nasional IT Software Solution'),
-      findsNothing,
+      sentMessages.where(
+        (message) =>
+            (message as Map)['role'] == 'user' &&
+            (message['content'] as String).contains('Failed turn'),
+      ),
+      isEmpty,
     );
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets(
+    'goal-first chat includes the selected goal with free-form chat',
+    (tester) async {
+      var requestCount = 0;
+      Map<String, dynamic>? requestBody;
+      var openedAiSettings = false;
+      final activities = ActivityRepository(null, NotificationService());
+      final ai = AiService(
+        baseUrl: 'https://model.test/v1',
+        apiKey: 'test-key',
+        model: 'test-model',
+        activityRepo: activities,
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _TestSecureStorage(),
+        httpClient: MockClient((request) async {
+          requestCount++;
+          requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'role': 'assistant',
+                    'content': 'Kita mulai dari satu langkah kecil.',
+                  },
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiServiceProvider.overrideWithValue(ai),
+            voiceAssistantServiceProvider.overrideWithValue(
+              _SilentVoiceAssistant(),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                height: 700,
+                child: AiChatPanel(
+                  initialGoal: 'Menang LKS Nasional IT Software Solution',
+                  onOpenAiSettings: () => openedAiSettings = true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Tujuanmu: Menang LKS Nasional IT Software Solution'),
+        findsOneWidget,
+      );
+      expect(find.text('Bantu aku menyusun langkah'), findsOneWidget);
+      expect(requestCount, 0);
+      expect(find.text('Atur provider & API key'), findsOneWidget);
+      await tester.tap(find.text('Atur provider & API key'));
+      expect(openedAiSettings, isTrue);
+      await tester.enterText(
+        find.byType(TextField),
+        'Apa langkah kecil hari ini?',
+      );
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pumpAndSettle();
+
+      expect(requestCount, 1);
+      final messages = requestBody!['messages'] as List;
+      final providerTurn = messages.last as Map<String, dynamic>;
+      expect(
+        providerTurn['content'],
+        contains('Menang LKS Nasional IT Software Solution'),
+      );
+      expect(providerTurn['content'], contains('Apa langkah kecil hari ini?'));
+      expect(find.text('Apa langkah kecil hari ini?'), findsOneWidget);
+      expect(
+        find.textContaining('Menang LKS Nasional IT Software Solution'),
+        findsNothing,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   testWidgets('AI settings stay reachable after a conversation has messages', (
     tester,

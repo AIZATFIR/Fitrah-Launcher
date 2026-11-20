@@ -67,6 +67,18 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
     if (text.isEmpty || _sending) return;
 
     if (customText == null) _ctrl.clear();
+    final transcript = [...ref.read(aiTranscriptProvider)];
+    ref.read(aiTranscriptProvider.notifier).state = [
+      for (final message in transcript)
+        message.isDeliveryFailure
+            ? ChatMessage(
+                role: message.role,
+                text: message.text,
+                isDeliveryFailure: true,
+                isRetryAvailable: false,
+              )
+            : message,
+    ];
     _append(ChatMessage(role: 'user', text: text));
     _append(ChatMessage(role: 'model', text: '', isLoading: true));
     setState(() => _sending = true);
@@ -90,11 +102,15 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
           modeLabel: modeLabel,
           proposals: ai.pendingActions,
           goalPlanProposal: ai.pendingGoalPlan,
+          isDeliveryFailure: ai.hasRetryableTurn,
+          isRetryAvailable: ai.hasRetryableTurn,
         ),
       );
 
       // Aura Voice Output (TTS)
-      ref.read(voiceAssistantServiceProvider).speak(reply);
+      if (!ai.hasRetryableTurn) {
+        ref.read(voiceAssistantServiceProvider).speak(reply);
+      }
     } catch (e) {
       _replaceLast(
         ChatMessage(
@@ -106,6 +122,42 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
       if (mounted) setState(() => _sending = false);
       _scrollToBottom();
       _focus.requestFocus();
+    }
+  }
+
+  Future<void> _retry(ChatMessage message) async {
+    if (_sending || !message.isRetryAvailable) return;
+    final messages = [...ref.read(aiTranscriptProvider)];
+    final index = messages.indexOf(message);
+    if (index < 0) return;
+    messages[index] = ChatMessage(
+      role: 'model',
+      text: message.text,
+      isDeliveryFailure: true,
+      isRetryAvailable: true,
+      isRetryLoading: true,
+    );
+    ref.read(aiTranscriptProvider.notifier).state = messages;
+    setState(() => _sending = true);
+    try {
+      final ai = ref.read(aiServiceProvider);
+      final reply = await ai.retry();
+      messages[index] = ChatMessage(
+        role: 'model',
+        text: reply ?? message.text,
+        modeLabel: ai.activeMode.label,
+        proposals: ai.pendingActions,
+        goalPlanProposal: ai.pendingGoalPlan,
+        isDeliveryFailure: ai.hasRetryableTurn,
+        isRetryAvailable: ai.hasRetryableTurn,
+      );
+      ref.read(aiTranscriptProvider.notifier).state = [...messages];
+      if (!ai.hasRetryableTurn && reply != null) {
+        ref.read(voiceAssistantServiceProvider).speak(reply);
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+      _scrollToBottom();
     }
   }
 
@@ -387,6 +439,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   itemCount: messages.length,
                   itemBuilder: (_, i) => _Bubble(
                     msg: messages[i],
+                    onRetry: () => _retry(messages[i]),
                     goalPlanService: ref.watch(
                       goalPlanApplicationServiceProvider,
                     ),
@@ -506,10 +559,12 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
 class _Bubble extends StatelessWidget {
   const _Bubble({
     required this.msg,
+    required this.onRetry,
     required this.onProposalChanged,
     this.goalPlanService,
   });
   final ChatMessage msg;
+  final VoidCallback onRetry;
   final VoidCallback onProposalChanged;
   final GoalPlanApplicationService? goalPlanService;
 
@@ -585,6 +640,50 @@ class _Bubble extends StatelessWidget {
                             listBullet: const TextStyle(color: AppPalette.text),
                           ),
                         ),
+                        if (msg.isDeliveryFailure) ...[
+                          const SizedBox(height: 8),
+                          Wrap(
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 16,
+                                color: AppPalette.textDim,
+                              ),
+                              const SizedBox(width: 5),
+                              const Text(
+                                'Pesan belum terkirim',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppPalette.textDim,
+                                ),
+                              ),
+                              if (msg.isRetryAvailable) ...[
+                                const SizedBox(width: 8),
+                                TextButton.icon(
+                                  onPressed: msg.isRetryLoading
+                                      ? null
+                                      : onRetry,
+                                  icon: msg.isRetryLoading
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.refresh, size: 16),
+                                  label: const Text('Coba lagi'),
+                                  style: TextButton.styleFrom(
+                                    minimumSize: const Size(44, 36),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
                         for (final proposal in msg.proposals)
                           _AiProposalCard(
                             proposal: proposal,

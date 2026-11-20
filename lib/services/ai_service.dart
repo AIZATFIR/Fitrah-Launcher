@@ -277,6 +277,9 @@ class ChatMessage {
     this.modeLabel,
     this.proposals = const [],
     this.goalPlanProposal,
+    this.isDeliveryFailure = false,
+    this.isRetryAvailable = false,
+    this.isRetryLoading = false,
   });
   final String role; // 'user' | 'model'
   final String text;
@@ -284,6 +287,27 @@ class ChatMessage {
   final String? modeLabel;
   final List<AiActionProposal> proposals;
   final AiGoalPlanProposal? goalPlanProposal;
+  final bool isDeliveryFailure;
+  final bool isRetryAvailable;
+  final bool isRetryLoading;
+}
+
+class _PendingAiRetry {
+  const _PendingAiRetry({
+    required this.userMessage,
+    required this.apiKey,
+    required this.allowActions,
+    required this.goalContext,
+    required this.goalId,
+    required this.expectedGoalRevision,
+  });
+
+  final String userMessage;
+  final String apiKey;
+  final bool allowActions;
+  final String? goalContext;
+  final String? goalId;
+  final int? expectedGoalRevision;
 }
 
 // ── AiService ─────────────────────────────────────────────────────────────────
@@ -321,10 +345,12 @@ class AiService {
   AiExecutionMode _activeMode = AiExecutionMode.demoFallback;
   List<AiActionProposal> _pendingActions = const [];
   AiGoalPlanProposal? _pendingGoalPlan;
+  _PendingAiRetry? _pendingRetry;
 
   AiExecutionMode get activeMode => _activeMode;
   List<AiActionProposal> get pendingActions => _pendingActions;
   AiGoalPlanProposal? get pendingGoalPlan => _pendingGoalPlan;
+  bool get hasRetryableTurn => _pendingRetry != null;
 
   /// Guidance for supportive, user-led goal conversations.
   String _buildAuraSystemPrompt(
@@ -383,7 +409,9 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
     _pendingActions = const [];
     _pendingGoalPlan?.dismiss();
     _pendingGoalPlan = null;
+    _pendingRetry = null;
     await _ensureInit();
+    final historyBeforeTurn = _history.length;
     final userTurn = {'role': 'user', 'content': userMessage};
     _history.add(userTurn);
 
@@ -411,20 +439,84 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
         }
         return reply;
       } catch (_) {
+        _restoreFailedTurn(historyBeforeTurn);
+        _clearPendingProposals();
+        _pendingRetry = _PendingAiRetry(
+          userMessage: userMessage,
+          apiKey: userGeminiKey,
+          allowActions: allowActions,
+          goalContext: goalContext,
+          goalId: goalId,
+          expectedGoalRevision: expectedGoalRevision,
+        );
         return 'Provider pilihan tidak merespons. Pesan tetap di perangkat dan tidak dikirim ke provider lain. Coba lagi atau buka Pengaturan AI untuk menguji koneksi.';
       }
     } else {
       _activeMode = AiExecutionMode.serverOpenRouter;
-      final reply = await _sendServerFallback(
-        userMessage,
-        allowActions: allowActions,
-        goalContext: goalContext,
-        goalContextTurn: userTurn,
-      );
+      late final String reply;
+      try {
+        reply = await _sendServerFallback(
+          userMessage,
+          allowActions: allowActions,
+          goalContext: goalContext,
+          goalContextTurn: userTurn,
+        );
+      } catch (_) {
+        _restoreFailedTurn(historyBeforeTurn);
+        _clearPendingProposals();
+        return 'Provider pilihan tidak merespons. Pesan tetap di perangkat. Coba lagi atau buka Pengaturan AI untuk menguji koneksi.';
+      }
       if (allowActions && _pendingActions.isEmpty) {
         return '${_guardUnapprovedActionClaim(reply)}\n\nBelum ada perubahan jadwal diterapkan.';
       }
       return reply;
+    }
+  }
+
+  void _restoreFailedTurn(int historyLength) {
+    if (_history.length > historyLength) {
+      _history.removeRange(historyLength, _history.length);
+    }
+  }
+
+  void _clearPendingProposals() {
+    for (final action in _pendingActions) {
+      action.dismiss();
+    }
+    _pendingActions = const [];
+    _pendingGoalPlan?.dismiss();
+    _pendingGoalPlan = null;
+  }
+
+  /// Explicitly retries the latest failed turn against its original provider.
+  Future<String?> retry() async {
+    final pending = _pendingRetry;
+    if (pending == null) return null;
+    _pendingRetry = null;
+    final historyBeforeTurn = _history.length;
+    final userTurn = {'role': 'user', 'content': pending.userMessage};
+    _history.add(userTurn);
+    try {
+      final reply = await _callOpenRouterDirect(
+        pending.apiKey,
+        allowActions: pending.allowActions,
+        configuredProvider: true,
+        goalContext: pending.goalContext,
+        goalContextTurn: userTurn,
+        goalId: pending.goalId,
+        expectedGoalRevision: pending.expectedGoalRevision,
+      );
+      if (pending.allowActions && _pendingActions.isEmpty) {
+        return '''${_guardUnapprovedActionClaim(reply)}
+
+Belum ada perubahan jadwal diterapkan.''';
+      }
+      return reply;
+    } catch (_) {
+      _restoreFailedTurn(historyBeforeTurn);
+      _clearPendingProposals();
+      _pendingRetry = pending;
+      return 'Provider pilihan tidak merespons. Pesan tetap di perangkat dan tidak dikirim ke provider lain. Coba lagi atau buka Pengaturan AI untuk menguji koneksi.';
     }
   }
 
@@ -833,16 +925,18 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
       },
     });
 
-    final resp = await _httpClient.post(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        if (key.trim().isNotEmpty) 'Authorization': 'Bearer $key',
-        if (url.contains('openrouter'))
-          'HTTP-Referer': 'https://focusclock.app',
-      },
-      body: body,
-    );
+    final resp = await _httpClient
+        .post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            if (key.trim().isNotEmpty) 'Authorization': 'Bearer $key',
+            if (url.contains('openrouter'))
+              'HTTP-Referer': 'https://focusclock.app',
+          },
+          body: body,
+        )
+        .timeout(const Duration(seconds: 8));
 
     if (resp.statusCode != 200) {
       if ((resp.statusCode == 400 || resp.statusCode == 422) &&
@@ -1488,6 +1582,7 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
   void reset() {
     _history.clear();
     _initialized = false;
+    _pendingRetry = null;
     for (final action in _pendingActions) {
       action.dismiss();
     }

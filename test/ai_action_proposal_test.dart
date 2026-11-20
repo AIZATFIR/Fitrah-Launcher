@@ -260,16 +260,122 @@ void main() {
         goalContext: 'Tujuan privat',
       );
 
-      expect(
-        requestUris,
-        [Uri.parse('https://provider.test/v1/chat/completions')],
-      );
+      expect(requestUris, [
+        Uri.parse('https://provider.test/v1/chat/completions'),
+      ]);
       expect(requestBodies.single, contains('Curhat rahasia'));
       expect(requestBodies.single, contains('Tujuan privat'));
       expect(reply.toLowerCase(), contains('provider'));
       expect(reply, isNot(contains('unexpected fallback reply')));
       expect(reply, isNot(contains('provider unavailable')));
       expect(reply, isNot(contains('sk-custom-provider-key')));
+    },
+  );
+
+  test(
+    'failed turn retries once with committed context and stays on provider',
+    () async {
+      final requestUris = <Uri>[];
+      final requestBodies = <Map<String, dynamic>>[];
+      var calls = 0;
+      final ai = AiService(
+        baseUrl: 'https://provider.test/v1',
+        apiKey: '',
+        model: 'chosen-model',
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ConfiguredProviderStorage(),
+        httpClient: MockClient((request) async {
+          calls++;
+          requestUris.add(request.url);
+          requestBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+          if (calls == 2) return http.Response('private provider body', 503);
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'role': 'assistant', 'content': 'Reply $calls'},
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      await ai.send('Committed earlier turn');
+      final failedReply = await ai.send(
+        'Exact failed text',
+        allowActions: true,
+      );
+      expect(ai.hasRetryableTurn, isTrue);
+      expect(failedReply, contains('Provider pilihan'));
+      final retryReply = await ai.retry();
+      expect(retryReply, contains('\n\n'));
+      expect(retryReply, isNot(contains(r'\n\n')));
+      expect(ai.hasRetryableTurn, isFalse);
+      await ai.send('Follow-up');
+
+      expect(
+        requestUris,
+        everyElement(Uri.parse('https://provider.test/v1/chat/completions')),
+      );
+      final retryMessages = requestBodies[2]['messages'] as List;
+      final retryUserTurns = retryMessages.where(
+        (message) =>
+            (message as Map)['role'] == 'user' &&
+            (message['content'] as String).contains('Exact failed text'),
+      );
+      expect(retryUserTurns, hasLength(1));
+      expect((retryMessages[1] as Map)['content'], 'Committed earlier turn');
+      final followUpMessages = requestBodies[3]['messages'] as List;
+      expect(
+        followUpMessages.where(
+          (message) =>
+              (message as Map)['role'] == 'user' &&
+              (message['content'] as String).contains('Exact failed text'),
+        ),
+        hasLength(1),
+      );
+      expect(followUpMessages.last['content'], 'Follow-up');
+      expect(
+        requestBodies[2].toString(),
+        isNot(contains('private provider body')),
+      );
+    },
+  );
+
+  test(
+    'a failed explicit retry stays available without duplicating history',
+    () async {
+      final requests = <Map<String, dynamic>>[];
+      final ai = AiService(
+        baseUrl: 'https://provider.test/v1',
+        apiKey: '',
+        model: 'chosen-model',
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository.store(null),
+        secureStorage: _ConfiguredProviderStorage(),
+        httpClient: MockClient((request) async {
+          requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response('unavailable', 503);
+        }),
+      );
+
+      await ai.send('Exact failed text');
+      expect(ai.hasRetryableTurn, isTrue);
+      await ai.retry();
+
+      expect(ai.hasRetryableTurn, isTrue);
+      final retryMessages = requests.last['messages'] as List;
+      expect(
+        retryMessages.where(
+          (message) =>
+              (message as Map)['role'] == 'user' &&
+              (message['content'] as String).contains('Exact failed text'),
+        ),
+        hasLength(1),
+      );
     },
   );
 
