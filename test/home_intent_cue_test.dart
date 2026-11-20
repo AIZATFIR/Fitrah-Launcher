@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:fitrah_launcher/data/repositories/intent_repository.dart';
 import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
 import 'package:fitrah_launcher/data/store/focus_store.dart';
@@ -73,6 +74,10 @@ void main() {
             intentStateProvider.overrideWith((ref) => intentStream),
         ],
         child: MaterialApp(
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+          ),
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(
               context,
@@ -219,7 +224,8 @@ void main() {
     final heading = tester.renderObject<RenderParagraph>(
       find.text('TUJUAN UTAMA'),
     );
-    expect(heading.size.height, lessThan(80));
+    expect(heading.size.height, lessThan(60));
+    expect(heading.size.width, greaterThan(280));
     expect(heading.didExceedMaxLines, isFalse);
     final headingBottom = tester.getBottomLeft(find.text('TUJUAN UTAMA')).dy;
     final assistantTop = tester.getTopLeft(find.text('Tanya AI')).dy;

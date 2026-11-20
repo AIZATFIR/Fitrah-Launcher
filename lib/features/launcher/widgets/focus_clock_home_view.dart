@@ -1355,10 +1355,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   showAgendaWidget: settings.showAgendaWidget,
                 ),
                 const SizedBox(height: 12),
-                if (settings.showDate) ...[
-                  _buildHomeDateCue(tc),
-                  const SizedBox(height: 12),
-                ],
                 widget.useSampleData
                     ? _buildFocusGoalCue(settings.focusGoal, tc)
                     : HomeIntentCue(
@@ -1376,6 +1372,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         onSession: () =>
                             setState(() => _currentScreen = 'timer'),
                       ),
+                if (settings.showDate) ...[
+                  const SizedBox(height: 12),
+                  _buildHomeDateCue(tc),
+                ],
                 if (!widget.useSampleData)
                   _buildTodayFocusSummary(tc, focusSessionsState),
                 const SizedBox(height: 14),

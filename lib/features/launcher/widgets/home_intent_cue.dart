@@ -128,9 +128,9 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                                 ),
                               ),
                             );
-                      final stack =
-                          constraints.maxWidth < 340 ||
-                          MediaQuery.textScalerOf(context).scale(1) >= 1.5;
+                      final largeText =
+                          MediaQuery.textScalerOf(context).scale(14) >= 21;
+                      final stack = constraints.maxWidth < 340 || largeText;
                       final title = Row(
                         children: [
                           Icon(
@@ -146,7 +146,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                       if (stack) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [title, ?assistant],
+                          children: [largeText ? label : title, ?assistant],
                         );
                       }
                       return Row(

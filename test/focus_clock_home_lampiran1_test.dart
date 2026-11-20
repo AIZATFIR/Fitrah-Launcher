@@ -289,12 +289,15 @@ void main() {
 
       final hijriDate = find.textContaining('Hijriah ·');
       expect(hijriDate, findsOneWidget);
+      final goalHeading = find.text('TUJUAN HARI INI');
+      expect(goalHeading, findsOneWidget);
+      expect(
+        tester.getTopLeft(goalHeading).dy,
+        lessThan(tester.getTopLeft(hijriDate).dy),
+      );
       final dateParagraph = tester.renderObject<RenderParagraph>(hijriDate);
       expect(dateParagraph.size.height, greaterThan(30));
-      expect(
-        dateParagraph.didExceedMaxLines,
-        isFalse,
-      );
+      expect(dateParagraph.didExceedMaxLines, isFalse);
       expect(tester.takeException(), isNull);
     });
 
