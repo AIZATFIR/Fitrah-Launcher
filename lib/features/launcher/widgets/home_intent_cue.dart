@@ -130,6 +130,26 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                             );
                       final largeText =
                           MediaQuery.textScalerOf(context).scale(14) >= 21;
+                      final accessibleAssistant = widget.onAssistant == null
+                          ? null
+                          : Align(
+                              alignment: Alignment.centerRight,
+                              child: IconButton(
+                                tooltip: 'Tanya AI tentang tujuan',
+                                constraints: const BoxConstraints.tightFor(
+                                  width: 48,
+                                  height: 48,
+                                ),
+                                padding: EdgeInsets.zero,
+                                onPressed: () =>
+                                    widget.onAssistant?.call(intent.pinnedGoal),
+                                icon: Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 20,
+                                  color: widget.accent,
+                                ),
+                              ),
+                            );
                       final stack = constraints.maxWidth < 340 || largeText;
                       final title = Row(
                         children: [
@@ -146,7 +166,11 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                       if (stack) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [largeText ? label : title, ?assistant],
+                          children: [
+                            largeText ? label : title,
+                            if (largeText) ?accessibleAssistant,
+                            if (!largeText) ?assistant,
+                          ],
                         );
                       }
                       return Row(
