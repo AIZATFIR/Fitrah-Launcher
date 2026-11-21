@@ -12,11 +12,11 @@ The main navigation has three destinations:
 
 Focus sessions, goals, schedules, habits, and backup are available in the app. AI planning is optional and uses a provider/API key configured by the user. It can prepare a reviewable goal plan; applying it requires the user's approval. Screen-time overlay and waiting features are optional and off by default.
 
-Try the [Focus Clock web app](https://focus-clock-web.vercel.app/). Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and Home role are Android-only. See the [latest web checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-21-focus-clock-web-vercel.md), [v8117 Android preview](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-20-empty-agenda-large-text-v8117.md), and [ecosystem plan](docs/ecosystem/2026-11-03/README.md) for tested behavior and remaining work.
+Try the [Focus Clock web app](https://focus-clock-web.vercel.app/). Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and Home role are Android-only. See the [latest v8118 Android preview](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-21-schedule-list-v8118.md), the [web checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-21-focus-clock-web-vercel.md), and [ecosystem plan](docs/ecosystem/2026-11-03/README.md) for tested behavior and remaining work.
 
 ## Try the owner preview
 
-The v8117 personal preview is in `release_dist/2026-11-20-focus-clock-v8117/` in the maintainer's local checkout. It is intentionally not presented as a public GitHub release. The Android APK is signed with a local Android Debug certificate, so it is a personal preview rather than a Play Store build. See that folder's `INSTALL.md` and `SHA256SUMS` before installing.
+The v8118 personal preview is in `release_dist/2026-11-21-focus-clock-schedule-list-v8118/` in the maintainer's local checkout. It is intentionally not presented as a public GitHub release. The Android APK is signed with a local Android Debug certificate, so it is a personal preview rather than a Play Store build. See that folder's `INSTALL.md` and `SHA256SUMS` before installing.
 
 ## Run from source
 
@@ -40,6 +40,6 @@ The Android app ID is `com.aizatfir.fitrah_launcher` (minimum Android API 24). T
 
 ## Project status and license
 
-This repository is under active development; the v8117 checkpoint is not completion of the ecosystem. Physical-device/OEM verification, sustained daily-use review, production signing, public releases, complete web/offline coverage, and later sync/WhatsApp/MCP milestones remain open. Track implementation gates in the [build roadmap](docs/ecosystem/2026-11-03/BUILD-ROADMAP.md).
+This repository is under active development; v8118 is a personal checkpoint, not completion of the ecosystem. Physical-device/OEM verification, sustained daily-use review, production signing, public releases, complete web/offline coverage, and later sync/WhatsApp/MCP milestones remain open. Track implementation gates in the [build roadmap](docs/ecosystem/2026-11-03/BUILD-ROADMAP.md).
 
 There is currently no `LICENSE` file. Until the owner selects and adds a license, do not assume the source may be redistributed or reused under MIT or another open-source license.
