@@ -15,6 +15,8 @@ The floating screen-time cue now uses a fixed 11 dp visual text size instead of 
 - Installed over v8122 on the API 36 AVD. Android still assigns Fitrah the HOME role; the saved QA goal and daily choice remain visible after upgrade.
 - Enabled the cue on the release package at 200% font scale. The pill remains compact and displays measured minutes plus **Tujuan**; screenshot: [QA_Screen_Time_Cue_200pct_v8123.png](../../../release_dist/2026-11-21-fitrah-screen-time-compact-v8123/QA_Screen_Time_Cue_200pct_v8123.png).
 - Disabled the cue after QA. The captured Home has no overlay; screenshot: [QA_Home_200pct_v8123.png](../../../release_dist/2026-11-21-fitrah-screen-time-compact-v8123/QA_Home_200pct_v8123.png).
+- Started a QA timer, force-stopped the app in the same device boot, and reopened it through Android Home. The saved session returned to Home and then to its timer view; the countdown had continued in real time and **Jeda** was available. The QA session was canceled afterward, and the Home duration remained at its prior 35 seconds. Screenshots: [before process stop](../../../release_dist/2026-11-21-fitrah-screen-time-compact-v8123/QA_Timer_Before_Process_Stop_200pct_v8123.png) and [recovered session](../../../release_dist/2026-11-21-fitrah-screen-time-compact-v8123/QA_Timer_Recovered_200pct_v8123.png).
+- Sampled logcat after the timer and cue checks contained no app `FATAL EXCEPTION`, Flutter error, or ANR.
 
 ## Artifact
 
@@ -22,5 +24,5 @@ Owner preview APK: [Fitrah_Launcher_0.5.32_universal_v8123.apk](../../../release
 
 ## Limits
 
-The runtime check used one emulator and synthetic UsageStats. It does not establish physical-device/OEM behavior, TalkBack, real screen-time accuracy, or sustained daily use. The full test suite was not rerun for this native text-size change; verification here is release compilation, signature verification, install/upgrade, and emulator interaction.
+The runtime check used one emulator and synthetic UsageStats. It does not establish physical-device/OEM behavior, TalkBack, real screen-time accuracy, reboot recovery, or sustained daily use. The full test suite was not rerun for this native text-size change; verification here is release compilation, signature verification, install/upgrade, and emulator interaction.
 
