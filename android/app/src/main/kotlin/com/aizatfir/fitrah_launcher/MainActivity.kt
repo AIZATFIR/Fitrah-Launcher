@@ -19,6 +19,7 @@ import android.widget.TextView
 import android.os.Handler
 import android.os.Looper
 import android.util.LruCache
+import android.util.TypedValue
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs
 import io.flutter.embedding.engine.FlutterEngine
@@ -144,7 +145,7 @@ class MainActivity : FlutterActivity() {
         }
         if (screenTimeView == null) {
             val view = TextView(this).apply {
-                textSize = 11f
+                setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11f)
                 setTextColor(0xFFF5EEE0.toInt())
                 gravity = Gravity.CENTER
                 isFocusable = true
