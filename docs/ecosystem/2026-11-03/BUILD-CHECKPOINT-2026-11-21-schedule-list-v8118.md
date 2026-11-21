@@ -24,6 +24,8 @@ The maintainer's local preview package is at [INSTALL.md](../../../release_dist/
 - Vercel deployment `dpl_7R5gyjRAfxfqQLBTzuxc11V8gvHU` reached READY and `https://focus-clock-web.vercel.app/` returned HTTP 200.
 - APK and web ZIP passed SHA-256 checks; ZIP integrity passed.
 
+**Follow-up:** installing v8118 on the API36 QA emulator at 200% text exposed a clipped “Tidak ada jadwal tersisa” summary in Jam. The text-wrap fix is included and verified in [v8119](BUILD-CHECKPOINT-2026-11-21-jam-large-text-v8119.md); use v8119 for the current preview.
+
 ## Limits
 
 No Android device or emulator was connected. This build has not been installed or exercised as the default Home app; Android TalkBack and OEM behavior remain unverified. The full Flutter suite, live AI provider and sustained daily use were not rerun. The web app stores data in the current browser profile and does not sync with Android. This checkpoint does not close E0–E11 or complete the ecosystem.
