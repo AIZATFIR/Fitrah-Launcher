@@ -32,13 +32,12 @@ class FirebaseSyncService {
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
-        googleProvider.addScope('https://www.googleapis.com/auth/calendar');
         final cred = await _auth.signInWithPopup(googleProvider);
         debugPrint('🔥 Firebase Google Sign-In Success: ${cred.user?.email}');
         return cred;
       } else {
         final GoogleSignIn googleSignIn = GoogleSignIn(
-          scopes: ['email', 'profile', 'https://www.googleapis.com/auth/calendar'],
+          scopes: ['email', 'profile'],
         );
         final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
         if (googleUser == null) return null;

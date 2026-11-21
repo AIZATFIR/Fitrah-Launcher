@@ -13,8 +13,6 @@ import '../../models/app_settings.dart';
 import '../../providers/providers.dart';
 import '../../services/secure_storage_service.dart';
 import '../../services/ai_provider_probe.dart';
-import '../../services/firebase_sync_service.dart';
-import '../../widgets/google_auth_dialog.dart';
 
 // Provider presets
 const _providerPresets = [
@@ -834,11 +832,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
 
-              // ── Google Calendar ─────────────────────────────────────────────
-              const Divider(),
-              const _Section(title: 'Google Calendar'),
-              _GCalTile(),
-
               // ── Keyboard Shortcuts ──────────────────────────────────────────
               const Divider(),
               const _Section(title: 'Keyboard Shortcuts'),
@@ -1596,8 +1589,6 @@ class _AiConfigTileState extends State<_AiConfigTile> {
   }
 }
 
-// ── Google Calendar tile ──────────────────────────────────────────────────────
-
 class _BackupRestoreSection extends ConsumerStatefulWidget {
   const _BackupRestoreSection();
 
@@ -1777,80 +1768,6 @@ class _BackupRestoreSectionState extends ConsumerState<_BackupRestoreSection> {
   void _message(String text) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(text), duration: const Duration(seconds: 6)),
-    );
-  }
-}
-
-class _GCalTile extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<_GCalTile> createState() => _GCalTileState();
-}
-
-class _GCalTileState extends ConsumerState<_GCalTile> {
-  final bool _loading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _restoreSilent();
-  }
-
-  Future<void> _restoreSilent() async {
-    final svc = ref.read(gcalServiceProvider);
-    await svc.restoreSilent();
-    if (mounted) {
-      ref.read(gcalSignedInProvider.notifier).state = svc.isSignedIn;
-    }
-  }
-
-  Future<void> _toggle() async {
-    showGoogleAuthDialog(context, ref);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = ref.watch(authStateChangesProvider).valueOrNull;
-    final signedIn = user != null && (user.email?.isNotEmpty ?? false);
-    final userEmail = user?.email ?? '';
-
-    return ListTile(
-      leading: user?.photoURL != null && user!.photoURL!.isNotEmpty
-          ? CircleAvatar(
-              radius: 14,
-              backgroundImage: NetworkImage(user.photoURL!),
-            )
-          : const Icon(Icons.calendar_month_outlined, size: 22),
-      title: Text(
-        signedIn
-            ? 'Terhubung: ${user.displayName ?? "Akun Google"}'
-            : 'Hubungkan Google Calendar',
-      ),
-      subtitle: Text(
-        signedIn
-            ? '$userEmail • Sinkronisasi Cloud Firestore & Calendar aktif'
-            : 'Tap untuk masuk dengan Google (Web, Android & Desktop)',
-        style: const TextStyle(fontSize: 12),
-      ),
-      trailing: _loading
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : signedIn
-          ? TextButton(
-              onPressed: _toggle,
-              style: TextButton.styleFrom(foregroundColor: AppPalette.danger),
-              child: const Text('Kelola'),
-            )
-          : FilledButton(
-              onPressed: _toggle,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppPalette.accent,
-                foregroundColor: Colors.black,
-              ),
-              child: const Text('Connect'),
-            ),
     );
   }
 }

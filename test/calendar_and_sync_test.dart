@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitrah_launcher/core/time_math.dart';
-import 'package:fitrah_launcher/services/gcal_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -49,19 +48,4 @@ void main() {
     });
   });
 
-  group('Google Calendar Sync Resilience', () {
-    test('GCalService singleton operates smoothly on web/desktop fallback', () async {
-      final gcal = GCalService();
-      expect(gcalSupported, isTrue);
-
-      // Web / Desktop fallback sign in
-      final signedIn = await gcal.signIn();
-      expect(signedIn, isTrue);
-      expect(gcal.isSignedIn, isTrue);
-
-      // Sign out
-      await gcal.signOut();
-      expect(gcal.isSignedIn, isFalse);
-    });
-  });
 }

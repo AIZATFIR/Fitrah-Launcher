@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +9,7 @@ import 'data/store/store_factory.dart';
 import 'data/storage_unavailable_app.dart';
 import 'features/launcher/fitrah_launcher_shell.dart';
 import 'features/launcher/providers/launcher_settings_provider.dart';
+import 'firebase_options.dart';
 import 'providers/providers.dart';
 import 'services/notification_service.dart';
 
@@ -38,6 +40,16 @@ class _LauncherBootstrapState extends State<_LauncherBootstrap> {
   }
 
   Future<_BootstrapResult> _open() async {
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+    } catch (e) {
+      debugPrint('Google account services unavailable; continuing locally: $e');
+    }
+
     debugPrint('Opening Focus Clock storage');
     final store = await openFocusStore();
     debugPrint('Focus Clock storage opened');

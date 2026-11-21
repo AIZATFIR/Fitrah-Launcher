@@ -19,7 +19,6 @@ import '../services/ai_service.dart';
 import '../services/ai_provider_probe.dart';
 import '../services/goal_plan_application_service.dart';
 import '../services/blueprint_applier_service.dart';
-import '../services/gcal_service.dart';
 import '../services/notification_service.dart';
 import '../services/secure_storage_service.dart';
 
@@ -116,12 +115,6 @@ final tabIndexProvider = StateProvider<int>((_) => 1);
 final weekActivitiesProvider = StreamProvider<List<Activity>>((ref) {
   return ref.watch(activityRepoProvider).watchWeek(DateTime.now());
 });
-
-/// Google Calendar service singleton.
-final gcalServiceProvider = Provider<GCalService>((_) => GCalService());
-
-/// Whether the user is currently signed into GCal (updated after sign-in/out).
-final gcalSignedInProvider = StateProvider<bool>((_) => false);
 
 /// Tasks for Eisenhower Matrix.
 final eisenhowerTasksProvider = StreamProvider<List<Task>>((ref) {
@@ -258,7 +251,8 @@ final aiServiceProvider = Provider<AiService>((ref) {
     baseUrl: settings?.aiBaseUrl ?? 'https://openrouter.ai/api/v1',
     apiKey: settings?.aiApiKey ?? '',
     model: settings?.aiModel ?? 'google/gemini-2.0-flash-exp:free',
-    allowUnauthenticatedProvider: settings != null &&
+    allowUnauthenticatedProvider:
+        settings != null &&
         settings.aiBaseUrl.trim().isNotEmpty &&
         settings.aiBaseUrl !=
             'https://generativelanguage.googleapis.com/v1beta/openai' &&
