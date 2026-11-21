@@ -721,10 +721,12 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
         selected == null || selected.sourceStoreId != initial.sourceStoreId
         ? null
         : '${selected.type.name}/${selected.legacyId}';
-    String? goalId = initial.links
-        .where((l) => l.sourceId == selected?.id)
-        .firstOrNull
-        ?.goalId;
+    String? goalId =
+        initial.links
+            .where((l) => l.sourceId == selected?.id)
+            .firstOrNull
+            ?.goalId ??
+        (initial.selectionFor(date) == null ? initial.pinnedGoal?.id : null);
     final available = <String, String>{
       for (final h in sources.habits.where((h) => !h.isArchived))
         'habit/${h.id}': h.name,
