@@ -10,7 +10,7 @@
 
 ## Smoke evidence
 
-The production alias opened as **Focus Clock** and rendered the unified app's **Jam / Hari Ini / Aplikasi** navigation. The empty Home showed the goal prompt, add-activity action, current time, analog dial, and habit area. Enabling Flutter's accessibility tree exposed labels for the goal, AI entry, date, dial actions, habits, and all three navigation destinations. No personal goal or schedule was entered during this check.
+The production alias opened as **Focus Clock** and rendered the unified app's **Jam / Hari Ini / Aplikasi** navigation. The empty Home showed the goal prompt, add-activity action, current time, analog dial, and habit area. Jam opened to the day view. Aplikasi clearly explained that the installed-app list is available only on Android instead of showing fake apps. Enabling Flutter's accessibility tree exposed labels for the goal, AI entry, date, dial actions, habits, and all three navigation destinations. No personal goal or schedule was entered during this check.
 
 ## Limits
 
