@@ -1462,67 +1462,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 ),
               ],
             ),
-
-            // ── Floating Mini Timer Bar (Active State) ──
-            if (_activeTimer != null && _activeTimer!.hasStarted)
-              Positioned(
-                bottom: 16,
-                left: 14,
-                right: 14,
-                child: GestureDetector(
-                  key: const ValueKey('home-mini-timer'),
-                  onTap: () => setState(() => _currentScreen = 'timer'),
-                  child: Container(
-                    height: 52,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppPalette.accent,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppPalette.accent.withOpacity(0.35),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              _activeTimer!.isRunning
-                                  ? Icons.play_arrow_rounded
-                                  : Icons.pause_rounded,
-                              color: AppPalette.card,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _activeTimer!.label,
-                              style: const TextStyle(
-                                color: AppPalette.card,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          _formatMmSs(_activeTimer!.leftSeconds),
-                          style: const TextStyle(
-                            color: AppPalette.card,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 18,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

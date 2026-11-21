@@ -299,7 +299,7 @@ void main() {
     await container.read(timerEngineProvider.notifier).cancel();
   });
 
-  testWidgets('completed timer state does not leave a Home mini timer', (
+  testWidgets('active session does not float over the Home clock face', (
     tester,
   ) async {
     final repository = SadarRepository(null);
@@ -338,7 +338,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(timer.state.isRunning, isTrue);
-    expect(find.byKey(const ValueKey('home-mini-timer')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-mini-timer')), findsNothing);
     timer.emit(
       const TimerState(
         habitId: 12,
