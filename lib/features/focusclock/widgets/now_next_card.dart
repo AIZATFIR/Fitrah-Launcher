@@ -410,8 +410,6 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
                 next != null
                     ? 'Berikutnya: ${next.title}'
                     : 'Tidak ada jadwal tersisa',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 11, color: AppPalette.textDim),
               ),
             ],
