@@ -35,7 +35,7 @@ class HomeIntentCue extends ConsumerStatefulWidget {
   final Future<void> Function(Task, {String? goalId, String? goalTitle})
   onTaskAction;
   final VoidCallback onSession;
-  final VoidCallback? onAddTask;
+  final Future<int?> Function()? onAddTask;
   @override
   ConsumerState<HomeIntentCue> createState() => _HomeIntentCueState();
 }
@@ -285,7 +285,9 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                       if (primary && !hasAvailableSource) {
                         return FilledButton.icon(
                           style: _primaryStyle,
-                          onPressed: widget.onAddTask,
+                          onPressed: _busy || widget.onAddTask == null
+                              ? null
+                              : () => _addTask(intent, date),
                           icon: const Icon(Icons.add_rounded),
                           label: const Text('Tambah kegiatan'),
                         );
@@ -335,6 +337,39 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     minimumSize: const Size(48, 48),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
   );
+
+  Future<void> _addTask(IntentState initial, String date) async {
+    final addTask = widget.onAddTask;
+    if (addTask == null || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final taskId = await addTask();
+      if (taskId == null || !mounted) return;
+      await ref
+          .read(intentRepositoryProvider)
+          .choose(
+            localDate: date,
+            type: IntentSourceType.task,
+            legacyId: taskId,
+            goalId: initial.pinnedGoal?.id,
+            expectedRevision: initial.selectionFor(date)?.revision,
+          );
+      if (!mounted) return;
+      ref.invalidate(intentSourceDataProvider);
+    } catch (_) {
+      if (!mounted) return;
+      ref.invalidate(intentSourceDataProvider);
+      setState(() {
+        _error =
+            'Kegiatan tersimpan di Inbox, tapi belum dipilih untuk hari ini. Pilih tindakan dari daftar.';
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   ThemeData _intentDialogTheme(BuildContext context) {
     final base = Theme.of(context);

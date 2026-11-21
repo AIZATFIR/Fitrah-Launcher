@@ -1368,7 +1368,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             _openScheduleToClockSheet(initialHabit: habit),
                         onAssistant: _openGoalAssistant,
                         onTaskAction: _openIntentTask,
-                        onAddTask: () => _openQuickDumpTaskDialog(tc),
+                        onAddTask: () =>
+                            _openQuickDumpTaskDialog(tc, startToday: true),
                         onSession: () =>
                             setState(() => _currentScreen = 'timer'),
                       ),
@@ -6389,11 +6390,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     );
   }
 
-  void _openQuickDumpTaskDialog(_HomeThemeColors tc) {
+  Future<int?> _openQuickDumpTaskDialog(
+    _HomeThemeColors tc, {
+    bool startToday = false,
+  }) async {
     final ctrl = TextEditingController();
     bool saving = false;
     String? error;
-    showDialog(
+    final taskId = await showDialog<int>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
@@ -6406,7 +6410,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               side: BorderSide(color: tc.stroke),
             ),
             title: Text(
-              'Catat Cepat ke Dump Inbox',
+              startToday
+                  ? 'Tambah tindakan hari ini'
+                  : 'Catat Cepat ke Dump Inbox',
               style: TextStyle(
                 color: tc.textPrimary,
                 fontSize: 16,
@@ -6446,12 +6452,14 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           error = null;
                         });
                         try {
+                          late final int taskId;
                           if (widget.useSampleData) {
+                            taskId = _nextId++;
                             setState(
                               () => _dumpedTasks.insert(
                                 0,
                                 Task()
-                                  ..id = _nextId++
+                                  ..id = taskId
                                   ..title = t
                                   ..createdAt = DateTime.now(),
                               ),
@@ -6461,7 +6469,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                             if (repo.isar == null || !repo.isar!.isDurable) {
                               throw StateError('storage unavailable');
                             }
-                            await repo.add(
+                            taskId = await repo.add(
                               Task()
                                 ..title = t
                                 ..createdAt = DateTime.now(),
@@ -6469,8 +6477,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           }
                           if (!ctx.mounted || !mounted) return;
                           setDialogState(() => saving = false);
-                          Navigator.pop(ctx);
-                          _showToast('Tugas ditambahkan ke dump');
+                          Navigator.pop(ctx, taskId);
+                          if (!startToday) {
+                            _showToast('Tugas ditambahkan ke dump');
+                          }
                         } catch (_) {
                           if (ctx.mounted) {
                             setDialogState(() {
@@ -6491,6 +6501,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
         ),
       ),
     );
+    ctrl.dispose();
+    return taskId;
   }
 
   // ── 7. Habit Actions Popover (Ya, Tidak, Mulai, Catatan, Gambar) ──
