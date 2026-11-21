@@ -606,7 +606,7 @@ void main() {
         },
       );
       expect(find.text('Tujuan: Long direction'), findsOneWidget);
-      await tester.tap(find.text('Jadwalkan tugas'));
+      await tester.tap(find.text('Mulai fokus · 25 mnt'));
       await tester.pumpAndSettle();
       expect(taskId, 7);
     },

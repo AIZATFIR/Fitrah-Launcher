@@ -11,6 +11,8 @@ import '../../../providers/intent_providers.dart';
 import '../../../providers/sadar_providers.dart';
 import '../../../services/sadar_timer_engine.dart';
 
+const int homeQuickTaskFocusMinutes = 25;
+
 class HomeIntentCue extends ConsumerStatefulWidget {
   const HomeIntentCue({
     super.key,
@@ -21,6 +23,7 @@ class HomeIntentCue extends ConsumerStatefulWidget {
     required this.onHabitTimer,
     this.onAttributedHabitTimer,
     this.onHabitSchedule,
+    this.onTaskSchedule,
     this.onAssistant,
     required this.onTaskAction,
     required this.onSession,
@@ -31,6 +34,7 @@ class HomeIntentCue extends ConsumerStatefulWidget {
   final void Function(Habit, String? goalId, String? goalTitle)?
   onAttributedHabitTimer;
   final void Function(Habit)? onHabitSchedule;
+  final Future<void> Function(Task)? onTaskSchedule;
   final ValueChanged<IntentGoal?>? onAssistant;
   final Future<void> Function(Task, {String? goalId, String? goalTitle})
   onTaskAction;
@@ -437,6 +441,9 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
     ],
   );
   Widget _choice(IntentState state, IntentSourceData data, String date) {
+    final timerActive = ref.watch(
+      timerEngineProvider.select((value) => value.isActive),
+    );
     final choice = TodayIntentProjection.calculate(
       state: state,
       actualDate: date,
@@ -520,7 +527,9 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
             ? 'Mulai fokus'
             : choice.task?.startMinute != null
             ? 'Buka jadwal tugas'
-            : 'Jadwalkan tugas',
+            : timerActive
+            ? 'Buka sesi fokus'
+            : 'Mulai fokus · $homeQuickTaskFocusMinutes mnt',
       IntentActionKind.unsupported => 'Lihat rincian',
       IntentActionKind.unavailable => 'Sumber tidak tersedia',
     };
@@ -562,6 +571,17 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                 ? null
                 : () => _act(choice, date, state),
             child: Text(label),
+          ),
+        if (choice.kind == IntentActionKind.task &&
+            choice.task?.activityId == null &&
+            choice.task?.startMinute == null &&
+            widget.onTaskSchedule != null)
+          TextButton.icon(
+            onPressed: _busy
+                ? null
+                : () => widget.onTaskSchedule!(choice.task!),
+            icon: const Icon(Icons.schedule_rounded),
+            label: const Text('Atur waktu'),
           ),
       ],
     );

@@ -1197,7 +1197,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       widget.onOpenFocusClock();
       return;
     }
-    _openScheduleToClockSheet(inboxTask: task, title: task.title);
+    await _startTimer(
+      task.title,
+      homeQuickTaskFocusMinutes,
+      source: 'free',
+      goalId: goalId,
+      goalTitle: goalTitle,
+    );
   }
 
   void _openHabitFocusTimer(Habit habit) {
@@ -1366,6 +1372,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         onAttributedHabitTimer: _openAttributedHabitFocusTimer,
                         onHabitSchedule: (habit) =>
                             _openScheduleToClockSheet(initialHabit: habit),
+                        onTaskSchedule: (task) => _openScheduleToClockSheet(
+                          inboxTask: task,
+                          title: task.title,
+                        ),
                         onAssistant: _openGoalAssistant,
                         onTaskAction: _openIntentTask,
                         onAddTask: () =>
