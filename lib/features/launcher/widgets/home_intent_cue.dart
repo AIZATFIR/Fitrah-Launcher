@@ -866,7 +866,12 @@ class _GoalEditor extends ConsumerWidget {
                         .where((g) => !g.archived)
                         .toList();
                     final addGoal = TextButton.icon(
-                      onPressed: () => _edit(context, ref, null),
+                      onPressed: () => _edit(
+                        context,
+                        ref,
+                        null,
+                        pinByDefault: state.pinnedGoal == null,
+                      ),
                       icon: const Icon(Icons.add),
                       label: const Text('Tambah tujuan'),
                     );
@@ -896,10 +901,17 @@ class _GoalEditor extends ConsumerWidget {
                             ListTile(
                               title: Text(goal.title),
                               subtitle: Text(
-                                goal.pinned ? 'Disematkan di Home' : 'Tujuan',
+                                goal.pinned
+                                    ? 'Tujuan utama di Home'
+                                    : 'Ketuk untuk tampilkan di Home',
                               ),
-                              onTap: () => _edit(context, ref, goal),
-                              trailing: const Icon(Icons.edit_outlined),
+                              selected: goal.pinned,
+                              onTap: () => _select(context, ref, goal),
+                              trailing: IconButton(
+                                tooltip: 'Ubah tujuan ${goal.title}',
+                                onPressed: () => _edit(context, ref, goal),
+                                icon: const Icon(Icons.edit_outlined),
+                              ),
                             ),
                           addGoal,
                         ],
@@ -912,14 +924,43 @@ class _GoalEditor extends ConsumerWidget {
       ),
     ),
   );
+
+  Future<void> _select(
+    BuildContext context,
+    WidgetRef ref,
+    IntentGoal goal,
+  ) async {
+    if (!goal.pinned) {
+      try {
+        await ref
+            .read(intentRepositoryProvider)
+            .saveGoal(
+              id: goal.id,
+              title: goal.title,
+              expectedRevision: goal.revision,
+              pinned: true,
+            );
+      } catch (error) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal memilih tujuan: $error')),
+          );
+        }
+        return;
+      }
+    }
+    if (context.mounted) Navigator.pop(context);
+  }
+
   Future<void> _edit(
     BuildContext context,
     WidgetRef ref,
-    IntentGoal? goal,
-  ) async {
+    IntentGoal? goal, {
+    bool pinByDefault = false,
+  }) async {
     final title = TextEditingController(text: goal?.title ?? '');
     final id = goal?.id ?? IntentRepository.newId();
-    bool pinned = goal?.pinned ?? false;
+    bool pinned = goal?.pinned ?? pinByDefault;
     bool archived = false;
     await _showIntentDialog(
       context: context,

@@ -450,6 +450,31 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                 ),
         ),
 
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                size: 16,
+                color: AppPalette.textDim,
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Chat tidak disimpan oleh app setelah ditutup. Pesan dan tujuan Home (jika ada) dikirim ke provider pilihanmu; retensi mengikuti kebijakan provider.',
+                  style: TextStyle(
+                    color: AppPalette.textDim,
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
         // Input bar with Microphone Voice button
         Container(
           padding: EdgeInsets.fromLTRB(12, 8, 12, 12 + pad),
@@ -1271,86 +1296,93 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Apa tujuan yang ingin kamu jaga?',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Ceritakan tujuanmu atau hal yang terasa berat. Kita mulai dari satu langkah.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppPalette.textDim,
-                fontSize: 13,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (initialGoal != null && initialGoal!.trim().isNotEmpty) ...[
-              Text(
-                'Tujuanmu: ${initialGoal!.trim()}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppPalette.textDim,
-                  fontSize: 13,
-                  height: 1.4,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: (constraints.maxHeight - 48).clamp(0.0, double.infinity),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Apa tujuan yang ingin kamu jaga?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
-              ),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: () => onPrompt(
-                  'Bantu aku memahami langkah realistis yang bisa kupilih hari ini. '
-                  'Tanyakan dulu jika ada informasi penting yang kamu perlukan. '
-                  'Jangan menyimpan atau mengubah jadwal sebelum aku menyetujui usulan.',
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppPalette.accent,
-                  alignment: Alignment.center,
-                  minimumSize: const Size(48, 48),
-                ),
-                icon: const Icon(Icons.flag_outlined, size: 16),
-                label: const Text('Bantu aku menyusun langkah'),
-              ),
-              if (onOpenAiSettings != null)
-                TextButton.icon(
-                  onPressed: onOpenAiSettings,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppPalette.textDim,
-                    minimumSize: const Size(48, 44),
+                const SizedBox(height: 8),
+                const Text(
+                  'Ceritakan tujuanmu atau hal yang terasa berat. Kita mulai dari satu langkah.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppPalette.textDim,
+                    fontSize: 13,
+                    height: 1.45,
                   ),
-                  icon: const Icon(Icons.tune_rounded, size: 16),
-                  label: const Text('Atur provider & API key'),
                 ),
-            ] else ...[
-              ...const [
-                'Aku ingin menang LKS nasional IT Software Solution',
-                'Aku kewalahan. Bantu pilih satu langkah hari ini',
-              ].map(
-                (s) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: TextButton(
-                    onPressed: () => onPrompt(s),
+                const SizedBox(height: 16),
+                if (initialGoal != null && initialGoal!.trim().isNotEmpty) ...[
+                  Text(
+                    'Tujuanmu: ${initialGoal!.trim()}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppPalette.textDim,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () => onPrompt(
+                      'Bantu aku memahami langkah realistis yang bisa kupilih hari ini. '
+                      'Tanyakan dulu jika ada informasi penting yang kamu perlukan. '
+                      'Jangan menyimpan atau mengubah jadwal sebelum aku menyetujui usulan.',
+                    ),
                     style: TextButton.styleFrom(
                       foregroundColor: AppPalette.accent,
                       alignment: Alignment.center,
-                      minimumSize: const Size(44, 44),
+                      minimumSize: const Size(48, 48),
                     ),
-                    child: Text(
-                      s,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 13),
+                    icon: const Icon(Icons.flag_outlined, size: 16),
+                    label: const Text('Bantu aku menyusun langkah'),
+                  ),
+                  if (onOpenAiSettings != null)
+                    TextButton.icon(
+                      onPressed: onOpenAiSettings,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppPalette.textDim,
+                        minimumSize: const Size(48, 44),
+                      ),
+                      icon: const Icon(Icons.tune_rounded, size: 16),
+                      label: const Text('Atur provider & API key'),
+                    ),
+                ] else ...[
+                  ...const [
+                    'Aku ingin menang LKS nasional IT Software Solution',
+                    'Aku kewalahan. Bantu pilih satu langkah hari ini',
+                  ].map(
+                    (s) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: TextButton(
+                        onPressed: () => onPrompt(s),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppPalette.accent,
+                          alignment: Alignment.center,
+                          minimumSize: const Size(44, 44),
+                        ),
+                        child: Text(
+                          s,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
-          ],
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );

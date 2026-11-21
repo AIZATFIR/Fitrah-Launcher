@@ -351,6 +351,71 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
   });
 
+  testWidgets('first new goal is pinned to Home by default', (tester) async {
+    await show(tester);
+    await tester.tap(find.byTooltip('Ubah tujuan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tambah tujuan'));
+    await tester.pumpAndSettle();
+
+    final pinned = tester.widget<CheckboxListTile>(
+      find.widgetWithText(CheckboxListTile, 'Sematkan di Home'),
+    );
+    expect(pinned.value, isTrue);
+
+    await tester.enterText(find.byType(TextField), 'Menang LKS Nasional');
+    await tester.tap(find.text('Simpan'));
+    await tester.pumpAndSettle();
+
+    expect((await repo.read()).pinnedGoal?.title, 'Menang LKS Nasional');
+
+    await tester.tap(find.text('Tambah tujuan'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<CheckboxListTile>(
+            find.widgetWithText(CheckboxListTile, 'Sematkan di Home'),
+          )
+          .value,
+      isFalse,
+    );
+    await tester.tap(find.text('Batal'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Tutup'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('tapping a saved goal makes it the Home direction', (
+    tester,
+  ) async {
+    const current = IntentGoal(
+      id: '22222222-2222-4222-8222-222222222222',
+      title: 'Current direction',
+      pinned: true,
+    );
+    const next = IntentGoal(
+      id: '44444444-4444-4444-8444-444444444444',
+      title: 'LKS nasional',
+    );
+    await show(
+      tester,
+      state: IntentState(
+        sourceStoreId: storeId,
+        legacyImported: true,
+        goals: const [current, next],
+      ),
+    );
+    await tester.tap(find.byTooltip('Ubah tujuan'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('LKS nasional'));
+    await tester.tap(find.text('LKS nasional'));
+    await tester.pumpAndSettle();
+
+    expect((await repo.read()).pinnedGoal?.id, next.id);
+    expect(find.text('LKS nasional'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
   testWidgets(
     'goal save retains draft on failure and locks fields, cancel and duplicate submit while pending',
     (tester) async {

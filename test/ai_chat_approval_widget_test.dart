@@ -16,6 +16,54 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  testWidgets('shows AI data handling before a chat message is sent', (
+    tester,
+  ) async {
+    final ai = AiService(
+      baseUrl: 'https://provider.test/v1',
+      apiKey: '',
+      model: 'chosen-model',
+      activityRepo: ActivityRepository(null, NotificationService()),
+      presetRepo: PresetRepository.store(null),
+      secureStorage: _TestSecureStorage(),
+      httpClient: MockClient((_) async => http.Response('{}', 500)),
+    );
+    tester.view.physicalSize = const Size(320, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          aiServiceProvider.overrideWithValue(ai),
+          voiceAssistantServiceProvider.overrideWithValue(
+            _SilentVoiceAssistant(),
+          ),
+        ],
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: const Scaffold(body: AiChatPanel()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Chat tidak disimpan oleh app setelah ditutup. Pesan dan tujuan Home (jika ada) dikirim ke provider pilihanmu; retensi mengikuti kebijakan provider.',
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('failed delivery offers explicit retry and replaces its status', (
     tester,
   ) async {

@@ -27,3 +27,11 @@ The deployment is separate from the Android owner preview in [v8117](BUILD-CHECK
 - `npm run build:focus` compiled the standard JavaScript target. The existing optional Wasm dry run still reports unsupported dependencies. Production deployment `dpl_5zrvh6dzis4jVQzb8PUf1ESgLUQF` reached `READY`; `https://focus-clock-web.vercel.app/` returned HTTP 200.
 
 This follow-up did not produce a new Android APK. No ADB device is attached, so the shared Android layout and TalkBack behavior still need phone/emulator validation. It does not close E0–E11, physical/OEM, live AI, or sustained-use gates.
+
+## Follow-up: visible and selectable Home goals (21 November 2026)
+
+Deployment `dpl_4evYQyJiYvgaYjrZzzHQeULdmbkn` rebuilt the Focus Clock web app with the v8121 Home behavior. Creating a new goal checks **Sematkan di Home** when no goal is pinned. Tapping a saved goal selects it as the Home direction in one step; editing remains separate, and adding another goal leaves the current primary goal unchanged. The deployment reached READY and the production alias returned HTTP 200. Web data remains browser-local; Android installation and Home role are unavailable on this target.
+
+## v8122 runtime-assets correction
+
+Flutter 3.41's default web output omitted static assets needed by `index.html`, Flutter's runtime, and Drift. `scripts/vercel_build.sh` now requests the offline-first PWA bundle and runs `scripts/verify_web_bundle.sh` before reporting success. Vercel production deployment `dpl_GqVwfikggysU96zvKA46GJXoWF3y` reached READY with build number 8122. The live version endpoint plus asset manifest, Material font, background, icon, web manifest, Drift worker/WASM, and service worker returned HTTP 200. The local v8122 web Home and AI privacy disclosure rendered in the browser. Browser data remains local to its profile and does not sync with Android.
