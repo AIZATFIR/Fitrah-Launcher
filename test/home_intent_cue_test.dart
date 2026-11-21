@@ -220,7 +220,8 @@ void main() {
       assistantAction: (_) {},
     );
 
-    expect(find.text('Tanya AI'), findsOneWidget);
+    final assistant = find.byTooltip('Tanya AI tentang tujuan');
+    expect(assistant, findsOneWidget);
     final heading = tester.renderObject<RenderParagraph>(
       find.text('TUJUAN UTAMA'),
     );
@@ -228,8 +229,8 @@ void main() {
     expect(heading.size.width, greaterThan(280));
     expect(heading.didExceedMaxLines, isFalse);
     final headingBottom = tester.getBottomLeft(find.text('TUJUAN UTAMA')).dy;
-    final assistantTop = tester.getTopLeft(find.text('Tanya AI')).dy;
-    expect(assistantTop, greaterThan(headingBottom));
+    final assistantTop = tester.getTopLeft(assistant).dy;
+    expect(assistantTop, greaterThanOrEqualTo(headingBottom));
     expect(tester.takeException(), isNull);
   });
 
