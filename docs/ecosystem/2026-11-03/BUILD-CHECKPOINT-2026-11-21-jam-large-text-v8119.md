@@ -17,6 +17,7 @@ The local personal preview package is at [INSTALL.md](../../../release_dist/2026
 ## Verification
 
 - Schedule-list and large-text widget regressions: **2 passed**. The latter was observed failing before the fix.
+- Full serial Flutter suite: **451 passed** (`flutter test --no-pub --concurrency=1 --reporter expanded`).
 - Scoped Flutter analyzer: clean for the changed Jam widget and tests.
 - Universal Android release APK built and verified: package `com.aizatfir.fitrah_launcher`, versionCode 8119, min API 24, target API 35, APK Signature Scheme v2. Certificate matches v8117/v8118.
 - API 36 x86_64 `FocusClock_UI_QA` at 1080×2400 and 200% text upgraded from v8118 to v8119, retained Fitrah as Home role holder, relaunched after force-stop, and returned to Fitrah on the Android Home key. The 200% Jam summary wraps fully, menu text and schedule sheet are readable, and Home's **Buka jam** opens Jam in one tap. [QA screenshots and package notes](../../../release_dist/2026-11-21-focus-clock-wrapped-jam-summary-v8119/BUILD-CHECKPOINT.md).
@@ -25,4 +26,4 @@ The local personal preview package is at [INSTALL.md](../../../release_dist/2026
 
 ## Limits
 
-Physical handset/OEM behavior, TalkBack, live AI provider calls and seven-day owner use remain unverified. The full Flutter suite was not rerun. Web data is local to the browser profile, without cross-device sync. Production signing, public release and E0–E11 remain open; this checkpoint is not ecosystem completion.
+Physical handset/OEM behavior, TalkBack, live AI provider calls and seven-day owner use remain unverified. Web data is local to the browser profile, without cross-device sync. Production signing, public release and E0–E11 remain open; this checkpoint is not ecosystem completion.
