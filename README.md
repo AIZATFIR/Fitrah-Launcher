@@ -1,126 +1,45 @@
-# Fitrah Launcher
+# Focus Clock · Fitrah Launcher
 
-Distraction-free digital minimalism home launcher for Android, Linux, and Windows. Built on the philosophy of human fitrah, conscious attention, and intentional computing.
+Focus Clock helps you keep a meaningful goal in view, see today's plan, and begin the next activity. Fitrah Launcher brings that flow to Android Home. The current app keeps the clock face and bookpaper themes alongside the goal-first **Hari Ini** screen.
 
----
+## Current app
 
-## Overview
+The main navigation has three destinations:
 
-Modern mobile operating systems are optimized to extract human attention through high-saturation visual clutter, algorithmic recommendation loops, and aggressive badge notifications.
+- **Jam** — plan and review the day on the analog clock.
+- **Hari Ini** — see the pinned goal, current/next action, agenda, and habits.
+- **Aplikasi** — search and open installed Android apps; favorites and hidden apps are managed here.
 
-Fitrah Launcher redesigns the primary device interface into a calm, functional instrument. It combines analog time-blocking with habit awareness and streamlined application navigation into a coherent three-screen spatial model.
+Focus sessions, goals, schedules, habits, and backup are available in the app. AI planning is optional and uses a provider/API key configured by the user. It can prepare a reviewable goal plan; applying it requires the user's approval. Screen-time overlay and waiting features are optional and off by default.
 
-```
-+---------------------------+---------------------------+---------------------------+
-|        SLIDE LEFT         |       CENTER (HOME)       |        SLIDE RIGHT        |
-|     Focus Clock Face      |     Fitrah Dashboard      |     Minimalist Drawer     |
-|                           |                           |                           |
-| * 24h / 12h Analog Dial   | * Minimalist Date & Time  | * Niagara-style List      |
-| * Visual Time-Blocking    | * Ongoing Main Event Hero | * A-Z Alphabet Scrubber   |
-| * Direct Arc Drag-to-Plan | * Today's Scheduled Blocks| * Real-time Text Search   |
-| * Routine Templates       | * Sadar Habit Fulfillment | * Pinned Favorites        |
-| * Deep Work Segments      | * 4-Slot Essential Dock   | * Zero Notification Dots  |
-+---------------------------+---------------------------+---------------------------+
-```
+Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and Home role are Android-only. See the [ecosystem plan](docs/ecosystem/2026-11-03/README.md) and [latest v8117 checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-20-empty-agenda-large-text-v8117.md) for tested behavior and remaining work.
 
----
+## Try the owner preview
 
-## Core Capabilities
+The v8117 personal preview is in `release_dist/2026-11-20-focus-clock-v8117/` in the maintainer's local checkout. It is intentionally not presented as a public GitHub release. The Android APK is signed with a local Android Debug certificate, so it is a personal preview rather than a Play Store build. See that folder's `INSTALL.md` and `SHA256SUMS` before installing.
 
-### 1. Spatial Three-Screen Navigation
-* **Center (Home Dashboard)**: An executive display showing current time, the ongoing primary event with remaining duration countdown, today's schedule boxes, daily habit check-ins, and a four-icon utility dock.
-* **Slide Left (Focus Clock Face)**: Direct access to an interactive 720-minute analog clock dial where scheduled activities appear as physical segments. Drag directly on the circumference to define and adjust blocks.
-* **Slide Right (Minimalist Drawer)**: A linear application index inspired by the Niagara interface. Features an integrated vertical A-Z alphabet scrubber with haptic feedback, real-time filtering, and custom pinning.
+## Run from source
 
-### 2. Fitrah Philosophy & Digital Health
-* **Zero Algorithmic Clutter**: No news feeds, no endless vertical shorts, and no predictive recommendation engines.
-* **No Badge Traps**: Red badge counters and attention hooks are eliminated entirely.
-* **Systematic Rest & Focus**: Integrates ultradian rhythms (90-minute focus blocks) and deliberate breaks to align device interaction with human biology.
-* **Local-First & Private**: Operational entirely offline. All activity and habit data is stored securely on-device via local embedded storage.
+Requirements: Flutter 3.41.9 / Dart 3.11.5, Android SDK, and JDK 17 or newer for Android builds. The checked-in lockfile is the dependency source of truth.
 
----
-
-## Downloads
-
-Official binary releases are published on GitHub Releases:
-
-| Platform | Target Package | Architecture |
-|---|---|---|
-| **Android** | `Fitrah-Launcher-v0.1-Android.apk` | ARM64 / ARMv7 / x86_64 |
-| **Linux** | `Fitrah-Launcher-v0.1-Linux-x64.tar.gz` | x86_64 |
-| **Windows** | `focus-clock-windows.zip` | x86_64 |
-| **Web** | `Fitrah-Launcher-v0.1-Web.zip` | WebAssembly / HTML5 |
-
-Releases: [https://github.com/AIZATFIR/Fitrah-Launcher/releases](https://github.com/AIZATFIR/Fitrah-Launcher/releases)
-
----
-
-## Installation & Setup
-
-### Android Home Launcher Setup
-1. Download and install `Fitrah-Launcher-v0.1-Android.apk` on your device.
-2. Open device **Settings** -> **Apps** -> **Default Apps** -> **Home App**.
-3. Select **Fitrah Launcher** as your default home application.
-4. Swipe left to manage your schedule on the clock dial; swipe right to browse and search installed applications.
-
----
-
-## Technical Stack
-
-* **Framework**: Flutter (Engine 3.x, Dart 3.x)
-* **Local Storage**: Isar Database / SharedPreferences / Secure Storage
-* **Android Native Layer**: Kotlin `MethodChannel` (`fitrah_launcher/apps`)
-  * `android.intent.category.HOME`
-  * `android.intent.category.DEFAULT`
-  * `android.permission.QUERY_ALL_PACKAGES`
-* **State Management**: Flutter Riverpod
-* **Typography**: Clean variable monospace and sans-serif system fonts
-
----
-
-## Building from Source
-
-### Prerequisites
-* Flutter SDK (version 3.24 or newer)
-* Android SDK (API 34+) / JDK 17
-* CMake 3.15+ (for Linux and Windows builds)
-
-### Development Setup
-```bash
-# Clone the repository
+```sh
 git clone https://github.com/AIZATFIR/Fitrah-Launcher.git
 cd Fitrah-Launcher
-
-# Fetch dependencies
 flutter pub get
-
-# Run code generator
-dart run build_runner build --delete-conflicting-outputs
-
-# Execute test suite
-flutter test
-
-# Run application on connected device
 flutter run
 ```
 
-### Production Compilation
-```bash
-# Build Android APK
+Useful release commands:
+
+```sh
 flutter build apk --release
-
-# Build Windows executable
-flutter build windows --release
-
-# Build Linux bundle
-flutter build linux --release
-
-# Build Web distribution
 flutter build web --release
 ```
 
----
+The Android app ID is `com.aizatfir.fitrah_launcher` (minimum Android API 24). To make it the Home app, install and launch it, then select **Fitrah Launcher** in Android's Home app/default apps settings. You can use the app without making it the default launcher.
 
-## License
+## Project status and license
 
-This project is open source under the MIT License.
+This repository is under active development; the v8117 checkpoint is not completion of the ecosystem. Physical-device/OEM verification, sustained daily-use review, production signing, public releases, complete web/offline coverage, and later sync/WhatsApp/MCP milestones remain open. Track implementation gates in the [build roadmap](docs/ecosystem/2026-11-03/BUILD-ROADMAP.md).
+
+There is currently no `LICENSE` file. Until the owner selects and adds a license, do not assume the source may be redistributed or reused under MIT or another open-source license.
