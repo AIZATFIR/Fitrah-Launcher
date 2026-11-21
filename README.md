@@ -12,7 +12,7 @@ The main navigation has three destinations:
 
 Focus sessions, goals, schedules, habits, and backup are available in the app. AI planning is optional and uses a provider/API key configured by the user. It can prepare a reviewable goal plan; applying it requires the user's approval. Screen-time overlay and waiting features are optional and off by default.
 
-Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and Home role are Android-only. See the [ecosystem plan](docs/ecosystem/2026-11-03/README.md) and [latest v8117 checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-20-empty-agenda-large-text-v8117.md) for tested behavior and remaining work.
+Try the [Focus Clock web app](https://focus-clock-web.vercel.app/). Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and Home role are Android-only. See the [ecosystem plan](docs/ecosystem/2026-11-03/README.md) and [latest v8117 checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-20-empty-agenda-large-text-v8117.md) for tested behavior and remaining work.
 
 ## Try the owner preview
 
