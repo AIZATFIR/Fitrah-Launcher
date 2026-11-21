@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
@@ -835,7 +837,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 top: 14,
                 left: 18,
                 right: 18,
-                child: Row(
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  runSpacing: 8,
                   children: [
                     // App Title & Contextual Menu (Routines & Reflection)
                     PopupMenuButton<String>(
@@ -854,6 +859,15 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             context,
                             ref.read(currentDateProvider),
                           );
+                        } else if (val == 'schedule_list') {
+                          _showScheduleList(
+                            context,
+                            date,
+                            activities,
+                            isLoading: activitiesAsync.isLoading,
+                            hasError: activitiesAsync.hasError,
+                            is24h: is24hDial,
+                          );
                         } else if (val == 'command') {
                           showDialog(
                             context: context,
@@ -868,6 +882,20 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       },
                       itemBuilder: (ctx) => [
                         const PopupMenuItem(
+                          value: 'schedule_list',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.view_agenda_outlined,
+                                size: 16,
+                                color: AppPalette.accent,
+                              ),
+                              SizedBox(width: 10),
+                              Text('Jadwal', style: TextStyle(fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
                           value: 'routines',
                           child: Row(
                             children: [
@@ -877,10 +905,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 color: AppPalette.accent,
                               ),
                               SizedBox(width: 10),
-                              Text(
-                                'Routine Templates',
-                                style: TextStyle(fontSize: 13),
-                              ),
+                              Text('Rutinitas', style: TextStyle(fontSize: 13)),
                             ],
                           ),
                         ),
@@ -895,7 +920,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                               ),
                               SizedBox(width: 10),
                               Text(
-                                'Copy Schedule',
+                                'Salin hari',
                                 style: TextStyle(fontSize: 13),
                               ),
                             ],
@@ -912,10 +937,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 color: AppPalette.textDim,
                               ),
                               SizedBox(width: 10),
-                              Text(
-                                'Command Palette (Ctrl+K)',
-                                style: TextStyle(fontSize: 13),
-                              ),
+                              Text('Perintah', style: TextStyle(fontSize: 13)),
                             ],
                           ),
                         ),
@@ -929,10 +951,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 color: AppPalette.textDim,
                               ),
                               SizedBox(width: 10),
-                              Text(
-                                'Bantuan Shortcut',
-                                style: TextStyle(fontSize: 13),
-                              ),
+                              Text('Pintasan', style: TextStyle(fontSize: 13)),
                             ],
                           ),
                         ),
@@ -988,11 +1007,12 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       ),
                     ),
 
-                    const Spacer(),
-
                     // Current Date & Time Display
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 6,
                       children: [
                         Semantics(
                           button: true,
@@ -1041,7 +1061,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
                         _AmPmMini(
                           half: half,
                           onChanged: (h) {
@@ -1049,7 +1068,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             ref.read(ampmHalfProvider.notifier).state = h;
                           },
                         ),
-                        const SizedBox(width: 8),
                         Text(
                           formatTimeOfDay(now, is24h: is24h),
                           style: const TextStyle(
@@ -1105,6 +1123,158 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       'Dec',
     ];
     return months[month - 1];
+  }
+
+  Future<void> _showScheduleList(
+    BuildContext context,
+    DateTime date,
+    List<Activity> activities, {
+    required bool isLoading,
+    required bool hasError,
+    required bool is24h,
+  }) async {
+    final sorted = [...activities]
+      ..sort((a, b) {
+        final halfOrder = a.ampmHalf.index.compareTo(b.ampmHalf.index);
+        return halfOrder != 0
+            ? halfOrder
+            : a.startMinute.compareTo(b.startMinute);
+      });
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: 0.72,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppPalette.card,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+                border: Border.all(color: AppPalette.stroke),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 8, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Jadwal',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${date.day} ${_monthName(date.month)} ${date.year}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppPalette.textDim,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Tutup daftar jadwal',
+                          onPressed: () => Navigator.pop(sheetContext),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: AppPalette.stroke),
+                  Expanded(
+                    child: hasError
+                        ? const Center(child: Text('Jadwal belum bisa dimuat.'))
+                        : isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : sorted.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Belum ada jadwal untuk tanggal ini.',
+                              style: TextStyle(color: AppPalette.textDim),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: sorted.length,
+                            separatorBuilder: (_, __) => const Divider(
+                              height: 1,
+                              indent: 20,
+                              endIndent: 20,
+                              color: AppPalette.stroke,
+                            ),
+                            itemBuilder: (context, index) {
+                              final activity = sorted[index];
+                              final start = formatMinuteOfHalf(
+                                activity.startMinute,
+                                activity.ampmHalf,
+                                is24h: is24h,
+                              );
+                              final end = formatMinuteOfHalf(
+                                activity.endMinute,
+                                activity.ampmHalf,
+                                is24h: is24h,
+                              );
+                              return Semantics(
+                                key: ValueKey(
+                                  'focus-clock-schedule-${activity.id}',
+                                ),
+                                button: true,
+                                label: '$start sampai $end, ${activity.title}',
+                                child: ListTile(
+                                  minVerticalPadding: 12,
+                                  leading: Container(
+                                    width: 4,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: Color(activity.colorValue),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  title: Text(activity.title),
+                                  subtitle: Text('$start–$end'),
+                                  onTap: () {
+                                    Navigator.pop(sheetContext);
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                          if (mounted) {
+                                            unawaited(
+                                              showActivityDetailSheet(
+                                                context,
+                                                activity: activity,
+                                                mode: DetailMode.view,
+                                              ),
+                                            );
+                                          }
+                                        });
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   int? _hitActivity(Offset local, Size size, List<Activity> activities) {

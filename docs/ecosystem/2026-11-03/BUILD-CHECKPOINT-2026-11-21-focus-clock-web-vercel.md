@@ -17,3 +17,13 @@ The production alias opened as **Focus Clock** and rendered the unified app's **
 This deploy makes the current unified Focus Clock/Fitrah app available on the web; it does not create cross-device sync. Browser data remains in that browser profile. Android-only app drawer capabilities are not available on web. We did not verify offline startup after browser eviction, mobile Safari/Firefox, TalkBack, live AI provider calls, or seven-day daily use. The optional Wasm build remains unsupported by current dependencies; Vercel serves the JavaScript build.
 
 The deployment is separate from the Android owner preview in [v8117](BUILD-CHECKPOINT-2026-11-20-empty-agenda-large-text-v8117.md). It does not complete the remaining ecosystem roadmap.
+
+## Follow-up: schedule access and narrow-screen header (21 November 2026)
+
+- Source revision: committed with this checkpoint.
+- The Jam menu now opens a labeled, chronological schedule list. Selecting an activity opens its existing detail sheet; loading, error, and empty states have explicit messages.
+- The top date/time controls wrap on narrow screens. Shorter Indonesian menu labels prevent the popup menu from overflowing at a 390 dp viewport.
+- `test/focus_clock_schedule_list_test.dart` exercises the real FocusClock tab at 390×844, opens the schedule list, checks its row label and action semantics, and passes. Scoped analyzer and `git diff --check` are clean.
+- `npm run build:focus` compiled the standard JavaScript target. The existing optional Wasm dry run still reports unsupported dependencies. Production deployment `dpl_5zrvh6dzis4jVQzb8PUf1ESgLUQF` reached `READY`; `https://focus-clock-web.vercel.app/` returned HTTP 200.
+
+This follow-up did not produce a new Android APK. No ADB device is attached, so the shared Android layout and TalkBack behavior still need phone/emulator validation. It does not close E0–E11, physical/OEM, live AI, or sustained-use gates.
