@@ -36,4 +36,4 @@ context:
 
 - Updated Home primary action to start the linked unscheduled task as a 25-minute goal-attributed timer; scheduling remains secondary.
 - `flutter analyze --no-pub`, JS web/offline build, isolated web flow, universal v8128 APK build/signature, and production Vercel verification completed. Automated tests were not run.
-- Android device is unavailable; no real-device Home-role smoke was possible.
+- API 36 x86_64 QA AVD installed v8128 over the existing preview and confirmed Fitrah remains HOME, existing goal persists, scheduled timer opens/cancels without changing the 35-second total, and no sampled fatal/ANR/Flutter error. No physical handset/OEM check was possible; the unscheduled-task flow was manually verified on isolated web only.
