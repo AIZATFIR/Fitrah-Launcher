@@ -147,9 +147,13 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   final TimerClockSnapshotReader? _clockSnapshotReader;
   late final Future<void> _restoreFuture;
   Timer? _ticker;
+  Future<void>? _runningCheckpoint;
+  bool _runningCheckpointsSuppressed = false;
+  int _lastCheckpointElapsedSeconds = 0;
   Stopwatch? _segmentClock;
   _AndroidClockSnapshot? _androidClockSnapshot;
   static const _androidClockChannel = MethodChannel('fitrah_launcher/apps');
+  static const _runningCheckpointIntervalSeconds = 15;
 
   TimerState get currentState => state;
 
@@ -175,6 +179,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       return;
     }
     _sessionRevision = saved.revision;
+    _lastCheckpointElapsedSeconds = saved.accumulatedDurationSeconds;
     _goalId = saved.goalId;
     _goalTitleSnapshot = saved.goalTitleSnapshot;
 
@@ -502,6 +507,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _sessionStartedAt = _startedAt;
     _attributionLocalDate = _formatLocalDate(_startedAt!);
     _accumulatedSeconds = 0;
+    _lastCheckpointElapsedSeconds = 0;
     _sourceIdentity = null;
     _sourceColorValue = null;
     _goalId = goalId;
@@ -627,6 +633,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _sessionStartedAt = _startedAt;
     _attributionLocalDate = _formatLocalDate(_startedAt!);
     _accumulatedSeconds = 0;
+    _lastCheckpointElapsedSeconds = 0;
     _sourceIdentity = sourceIdentity;
     _sourceColorValue = sourceColorValue;
     _goalId = goalId;
@@ -701,9 +708,19 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
 
   void _startTicker() {
     _ticker?.cancel();
+    _runningCheckpointsSuppressed = false;
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.status == TimerStateStatus.running && _startedAt != null) {
         final elapsed = _elapsedSeconds();
+        if (!_runningCheckpointsSuppressed &&
+            elapsed - _lastCheckpointElapsedSeconds >=
+                _runningCheckpointIntervalSeconds &&
+            _runningCheckpoint == null) {
+          _lastCheckpointElapsedSeconds = elapsed;
+          _runningCheckpoint = _persistRunningCheckpoint().whenComplete(() {
+            _runningCheckpoint = null;
+          });
+        }
         final remaining = (state.targetSeconds - elapsed).clamp(
           0,
           state.targetSeconds,
@@ -784,6 +801,10 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     await _restoreFuture;
     if (state.status != TimerStateStatus.running) return;
 
+    _runningCheckpointsSuppressed = true;
+    _ticker?.cancel();
+    await _runningCheckpoint;
+
     final previousState = state;
     final elapsedAtPause = _elapsedSeconds();
     if (_startedAt != null) {
@@ -824,6 +845,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
       _startedAt = DateTime.now();
       _segmentClock = Stopwatch()..start();
       state = previousState;
+      _runningCheckpointsSuppressed = false;
       _startTicker();
       rethrow;
     }
@@ -839,6 +861,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _androidClockSnapshot = await _readAndroidClockSnapshot();
     _startedAt = DateTime.now();
     _segmentClock = Stopwatch()..start();
+    _lastCheckpointElapsedSeconds = _accumulatedSeconds;
     _sessionStartedAt ??= _startedAt;
     _attributionLocalDate ??= _formatLocalDate(_sessionStartedAt!);
     state = TimerState(
@@ -909,6 +932,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     await _restoreFuture;
     if (state.restoreError != null) throw StateError(state.restoreError!);
     if (!state.isActive) return;
+    _runningCheckpointsSuppressed = true;
+    _ticker?.cancel();
+    await _runningCheckpoint;
     final actualDurationSeconds = _startedAt == null
         ? _accumulatedSeconds
         : _elapsedSeconds();
@@ -959,7 +985,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     await _restoreFuture;
     if (state.isSavePending) return;
     final wasFloating = state.isFloating;
+    _runningCheckpointsSuppressed = true;
     _ticker?.cancel();
+    await _runningCheckpoint;
     try {
       await _repo.clearTimerSession();
     } catch (_) {
@@ -973,6 +1001,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _sessionStartedAt = null;
     _attributionLocalDate = null;
     _accumulatedSeconds = 0;
+    _lastCheckpointElapsedSeconds = 0;
     _sourceIdentity = null;
     _sourceColorValue = null;
     _goalId = null;
@@ -996,7 +1025,9 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     _isCompleting = true;
 
     try {
+      _runningCheckpointsSuppressed = true;
       _ticker?.cancel();
+      await _runningCheckpoint;
 
       if (autoRecord && state.activityId != null) {
         await _repo.completeActivityTimerSession(
@@ -1102,6 +1133,40 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
     final session = _buildSession();
     await _repo.saveTimerSession(session);
     _sessionRevision = session.revision;
+  }
+
+  Future<void> _persistRunningCheckpoint() async {
+    if (_runningCheckpointsSuppressed ||
+        state.status != TimerStateStatus.running ||
+        _startedAt == null) {
+      return;
+    }
+    try {
+      final clockSnapshot = await _readAndroidClockSnapshot();
+      if (_runningCheckpointsSuppressed ||
+          state.status != TimerStateStatus.running ||
+          _startedAt == null) {
+        return;
+      }
+      final checkpointElapsed = _elapsedSeconds();
+      final checkpointAt = DateTime.now();
+      final session = _buildSession()
+        ..accumulatedDurationSeconds = checkpointElapsed
+        ..runningSince = checkpointAt
+        ..clockBootCount =
+            clockSnapshot?.bootCount ?? _androidClockSnapshot?.bootCount
+        ..clockElapsedRealtimeMillis =
+            clockSnapshot?.elapsedRealtimeMillis ??
+            _androidClockSnapshot?.elapsedRealtimeMillis;
+      await _repo.saveTimerSession(session);
+      _sessionRevision = session.revision;
+    } catch (error) {
+      debugPrint('Timer running checkpoint will retry: $error');
+      _lastCheckpointElapsedSeconds = math.max(
+        0,
+        _lastCheckpointElapsedSeconds - _runningCheckpointIntervalSeconds,
+      );
+    }
   }
 
   Future<void> _syncTimerReminder() async {

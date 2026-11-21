@@ -18,6 +18,13 @@ This deploy makes the current unified Focus Clock/Fitrah app available on the we
 
 The deployment is separate from the Android owner preview in [v8117](BUILD-CHECKPOINT-2026-11-20-empty-agenda-large-text-v8117.md). It does not complete the remaining ecosystem roadmap.
 
+## v8125 deployment and production smoke check (21 November 2026)
+
+- Deployment: `dpl_DW2J5LNKgDbkStuBxJz8Lebbk49Q`, ready on [the production alias](https://focus-clock-web.vercel.app/); source was the reconciled v8125 worktree.
+- `npm run build:focus` completed and `scripts/verify_web_bundle.sh` confirmed the required browser storage assets. The deployment's `/version.json`, `main.dart.js`, `drift_worker.js`, and `sqlite3.wasm` returned HTTP 200 with expected content types.
+- Opened both the unique deployment URL and production alias in a clean browser origin. Home rendered the empty goal prompt, **Tambah kegiatan**, date/Hijri label, Bookpaper clock, habits and Jam/Hari Ini/Aplikasi navigation. Opening then dismissing the empty activity form worked without writing test data. The production alias initially showed its startup loader, then rendered normally on recheck.
+- Web data remains local to each browser profile and does not sync with Android. No user goal, schedule or AI prompt was entered. Offline recovery, mobile Safari/Firefox, live AI calls and sustained daily use remain unverified.
+
 ## Follow-up: schedule access and narrow-screen header (21 November 2026)
 
 - Source revision: committed with this checkpoint.
