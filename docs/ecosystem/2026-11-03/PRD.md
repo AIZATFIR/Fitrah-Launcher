@@ -2,7 +2,7 @@
 title: Focus Clock ecosystem
 status: draft-for-owner-review
 created: 2026-11-03
-updated: 2026-11-04
+updated: 2026-11-21
 ---
 
 # PRD: Focus Clock ecosystem
@@ -63,7 +63,7 @@ UJ-1 sampai UJ-6 diturunkan dari konteks pemilik, bukan wawancara observasi baru
 
 **FR-04 — Pilihan berikutnya yang dapat dikuasai.** User dapat memilih/pin tindakan untuk Hari Ini dan menggantinya. Pilihan tindakan disimpan per tanggal dan referensi habit/task, terpisah dari Goal utama; setelah restart pilihannya tetap ada. Default cue: sesi aktif/paused, pilihan user yang belum selesai, blok terjadwal saat ini, lalu blok berikutnya. Bila tidak ada, tawarkan memilih habit/tindakan. App tidak mengarang prioritas atau moral score.
 
-**FR-04a — Pendamping tujuan opsional.** User dapat bercerita dengan bahasanya sendiri atau menjawab pertanyaan singkat seperti “Apa tujuanmu?” Pendamping memahami tujuan, batas waktu, komitmen yang sudah ada, waktu luang, kebutuhan istirahat, dan tindakan berulang; ia bertanya hanya untuk informasi yang memang mengubah rencana. Untuk contoh “menang LKS nasional IT Software Solution”, pendamping membantu mengurai kesiapan dan mengusulkan jadwal harian yang dapat disesuaikan. Rencana selalu berupa pratinjau yang dapat diedit dan disetujui user sebelum mengubah jadwal/habit. User boleh melewati AI dan menyusun manual. Ketiadaan model, jaringan atau API key tidak menghalangi Focus Clock inti.
+**FR-04a — Pendamping tujuan opsional.** User dapat bercerita dengan bahasanya sendiri atau menjawab pertanyaan singkat seperti “Apa tujuanmu?” Pendamping memahami tujuan, batas waktu, komitmen yang sudah ada, waktu luang, kebutuhan istirahat, dan tindakan berulang; ia bertanya hanya untuk informasi yang memang mengubah rencana. Untuk contoh “menang LKS nasional IT Software Solution”, pendamping membantu mengurai kesiapan dan mengusulkan jadwal harian yang dapat disesuaikan. Rencana selalu berupa pratinjau yang dapat diedit dan disetujui user sebelum mengubah jadwal/habit. **Chat bersifat sementara di memori proses: jangan menyimpan transkrip ke database, preferences, backup atau backend app; setelah proses app ditutup, chat tidak dipulihkan.** Tujuan/rencana yang user setujui adalah data produk terpisah. Saat provider eksternal digunakan, teks dan konteks yang diperlukan dikirim ke endpoint pilihan user; retensi di layanan provider mengikuti kebijakan provider tersebut. User boleh melewati AI dan menyusun manual. Ketiadaan model, jaringan atau API key tidak menghalangi Focus Clock inti.
 
 **FR-04b — Tidak terikat vendor/model.** Percakapan dan proposal memakai kontrak domain terstruktur yang sama untuk setiap provider. Identitas/gaya model tidak mengubah data, hak aksi atau validasi. Model tidak boleh membuat blok langsung, menandai kegiatan selesai, atau menganggap jadwal sebagai tindakan terlaksana tanpa persetujuan/aksi user. Ketika provider gagal atau jawaban tidak valid, rencana yang sudah ada tetap utuh dan user mendapat jalur manual.
 

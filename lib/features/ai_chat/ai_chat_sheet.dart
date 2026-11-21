@@ -12,7 +12,7 @@ import '../../domain/goal_plan_proposal.dart';
 import '../../services/voice_assistant_service.dart';
 
 /// Embeddable chat panel — lives in the pull-up sheet under the Clock tab.
-/// Transcript is provider-backed: conversation continues across open/close.
+/// Transcript stays in process memory across panel open/close; never persisted.
 class AiChatPanel extends ConsumerStatefulWidget {
   const AiChatPanel({
     super.key,

@@ -339,7 +339,7 @@ class AiService {
   final SecureStorageService _secureStorage;
   final http.Client _httpClient;
 
-  // History for OpenAI format requests
+  // Request context only; this remains in RAM and is never persisted.
   final List<Map<String, dynamic>> _history = [];
   bool _initialized = false;
   AiExecutionMode _activeMode = AiExecutionMode.demoFallback;

@@ -169,7 +169,8 @@ final tasksForActivityProvider = StreamProvider.family<List<Task>, int>((
 /// The task currently being scheduled into the clock.
 final schedulingTaskProvider = StateProvider<Task?>((_) => null);
 
-/// Chat transcript — survives panel open/close so conversation continues.
+/// Ephemeral chat transcript — survives panel open/close in process memory.
+/// Never persist it; process recreation starts with an empty transcript.
 /// "New chat" replaces it with an empty list.
 final aiTranscriptProvider = StateProvider<List<ChatMessage>>(
   (_) => <ChatMessage>[],

@@ -12,6 +12,7 @@ Status: catatan kebutuhan per 3 November 2026. Bahasa dipertahankan sedekat mung
 6. Pemilik telah memilih dial Flutter lama sebagai fallback sebelum perombakan “Simplicity First”. Ini referensi pelestarian visual, bukan persetujuan otomatis untuk semua logic lama.
 7. Kegunaan sehari-hari menggantikan pembingkaian pendidikan/lomba SFT. Proposal IoT dan AI lama bukan daftar fitur wajib.
 8. Landasan pribadi pemilik adalah Tauhid, Ar-Rahman dan Ar-Rahim; keseimbangan kerja, istirahat dan kenikmatan penting. Bahasa aplikasi perlu menghormati itu tanpa menghakimi pengguna.
+9. Pemilik memilih **jangan simpan riwayat curhat/chat AI**. Percakapan tidak menjadi riwayat yang dipulihkan setelah app ditutup; tujuan dan rencana baru disimpan hanya melalui alur produk yang disetujui user.
 
 ## Kutipan yang pemilik berikan kembali pada 3 November
 
