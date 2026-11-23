@@ -34,13 +34,15 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
   late final PageController _pageCtrl;
   bool _returningHome = false;
   final _screenTime = ScreenTimeService();
-  int _currentPage = 1; // 0 = Clock, 1 = Home, 2 = Habits, 3 = Apps
+  late int _currentPage; // 0 = Clock, 1 = Home, 2 = Habits, 3 = Apps
 
   @override
   void initState() {
     super.initState();
+    final initialPage = ref.read(selectedAppModeProvider) == 'focus' ? 0 : 1;
+    _currentPage = initialPage;
     WidgetsBinding.instance.addObserver(this);
-    _pageCtrl = PageController(initialPage: 1);
+    _pageCtrl = PageController(initialPage: initialPage);
     _homeChannel.setMethodCallHandler((call) async {
       if (call.method == 'home') await _returnHome();
     });

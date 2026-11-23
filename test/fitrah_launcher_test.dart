@@ -194,6 +194,28 @@ void main() {
       await tester.pump();
     });
 
+    testWidgets('Focus mode opens the Jam destination first', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            selectedAppModeProvider.overrideWith((ref) => 'focus'),
+          ],
+          child: const MaterialApp(home: FitrahLauncherShell()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        0,
+      );
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page,
+        0,
+      );
+      await tester.pumpWidget(const SizedBox());
+    });
+
     testWidgets('active launcher shell applies the saved wallpaper preset', (
       tester,
     ) async {
