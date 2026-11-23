@@ -805,6 +805,8 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
               DropdownButtonFormField<String>(
                 initialValue: key,
                 isExpanded: true,
+                isDense: false,
+                itemHeight: null,
                 decoration: const InputDecoration(
                   labelText: 'Habit atau tugas',
                 ),
@@ -812,20 +814,14 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                   if (unavailableKey != null)
                     DropdownMenuItem<String>(
                       value: unavailableKey,
-                      child: const Text(
-                        'Pilihan tersimpan tidak tersedia',
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child: const Text('Pilihan tersimpan tidak tersedia'),
                     ),
                   const DropdownMenuItem<String>(
                     value: null,
                     child: Text('Kosongkan pilihan'),
                   ),
                   ...available.entries.map(
-                    (e) => DropdownMenuItem(
-                      value: e.key,
-                      child: Text(e.value, overflow: TextOverflow.ellipsis),
-                    ),
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
                   ),
                 ],
                 onChanged: (v) => update(() => key = v),
@@ -834,9 +830,9 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
               DropdownButtonFormField<String>(
                 initialValue: goalId,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Hubungkan tujuan (opsional)',
-                ),
+                isDense: false,
+                itemHeight: null,
+                decoration: const InputDecoration(labelText: 'Tujuan'),
                 items: [
                   const DropdownMenuItem<String>(
                     value: null,
@@ -845,10 +841,8 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                   ...initial.goals
                       .where((g) => !g.archived)
                       .map(
-                        (g) => DropdownMenuItem(
-                          value: g.id,
-                          child: Text(g.title, overflow: TextOverflow.ellipsis),
-                        ),
+                        (g) =>
+                            DropdownMenuItem(value: g.id, child: Text(g.title)),
                       ),
                 ],
                 onChanged: key == unavailableKey && unavailableKey != null
