@@ -31,6 +31,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   late List<String> _allowedPackages;
   late List<ProgressionStep> _progressionSteps;
   late int _selectedColor;
+  String? _validationMessage;
 
   static const List<String> _popularIcons = [
     'book',
@@ -61,19 +62,19 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     super.initState();
     final h = widget.habit;
     _nameCtrl = TextEditingController(text: h?.name ?? '');
-    _targetCtrl = TextEditingController(text: (h?.target ?? 20).toString());
+    _targetCtrl = TextEditingController(text: h == null ? '' : '${h.target}');
     _hybridSetsCtrl = TextEditingController(
-      text: (h?.hybridSets ?? 3).toString(),
+      text: h == null ? '' : '${h.hybridSets}',
     );
     _hybridSecsCtrl = TextEditingController(
-      text: (h?.hybridDurationSeconds ?? 60).toString(),
+      text: h == null ? '' : '${h.hybridDurationSeconds}',
     );
     _selectedIcon = h?.iconKey.isNotEmpty == true ? h!.iconKey : 'target';
     _selectedUnit = h?.unit ?? HabitUnit.min;
     _habitType = h?.effectiveHabitType ?? 'timed';
     _allowedPackages = List.from(h?.allowedPackages ?? []);
     _progressionSteps = List.from(
-      h?.progressionSteps ?? defaultBodybuildingSteps,
+      h?.progressionSteps ?? const <ProgressionStep>[],
     );
     _selectedColor = h?.colorValue ?? _colorOptions[0];
   }
@@ -89,16 +90,38 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
 
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty) {
+      _message('Isi nama kebiasaan dulu.');
+      return;
+    }
 
-    final target = int.tryParse(_targetCtrl.text.trim()) ?? 20;
-    final hybridSets = int.tryParse(_hybridSetsCtrl.text.trim()) ?? 3;
-    final hybridSecs = int.tryParse(_hybridSecsCtrl.text.trim()) ?? 60;
+    final parsedTarget = int.tryParse(_targetCtrl.text.trim());
+    final parsedHybridSets = int.tryParse(_hybridSetsCtrl.text.trim());
+    final parsedHybridSecs = int.tryParse(_hybridSecsCtrl.text.trim());
+    if ((_habitType == 'timed' || _habitType == 'count') &&
+        (parsedTarget == null || parsedTarget < 1 || parsedTarget > 9999)) {
+      _message('Isi target antara 1 dan 9.999.');
+      return;
+    }
+    if (_habitType == 'hybrid' &&
+        (parsedHybridSets == null ||
+            parsedHybridSets < 1 ||
+            parsedHybridSets > 100 ||
+            parsedHybridSecs == null ||
+            parsedHybridSecs < 5 ||
+            parsedHybridSecs > 3600)) {
+      _message('Isi jumlah set (1–100) dan detik per set (5–3.600).');
+      return;
+    }
+    if (_habitType == 'progression' && _progressionSteps.isEmpty) {
+      _message('Tambahkan jadwal progresi dulu.');
+      return;
+    }
 
     final habit = widget.habit ?? Habit();
     habit.name = name;
     habit.iconKey = _selectedIcon;
-    habit.target = target.clamp(1, 9999);
+    habit.target = (parsedTarget ?? habit.target).clamp(1, 9999);
     habit.unit = _selectedUnit;
     habit.habitType = _habitType;
     habit.timerEnabled = _habitType == 'timed' || _habitType == 'hybrid';
@@ -106,8 +129,9 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     habit.progressionPlanJson = jsonEncode(
       _progressionSteps.map((s) => s.toJson()).toList(),
     );
-    habit.hybridSets = hybridSets.clamp(1, 100);
-    habit.hybridDurationSeconds = hybridSecs.clamp(5, 3600);
+    habit.hybridSets = (parsedHybridSets ?? habit.hybridSets).clamp(1, 100);
+    habit.hybridDurationSeconds =
+        (parsedHybridSecs ?? habit.hybridDurationSeconds).clamp(5, 3600);
     habit.colorValue = _selectedColor;
     if (widget.habit == null) {
       habit.createdAt = DateTime.now();
@@ -116,6 +140,10 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     HapticFeedback.mediumImpact();
     await ref.read(sadarRepoProvider).upsertHabit(habit);
     widget.onSaved();
+  }
+
+  void _message(String text) {
+    setState(() => _validationMessage = text);
   }
 
   Future<void> _delete() async {
@@ -563,6 +591,14 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
             ),
             const SizedBox(height: 24),
 
+            if (_validationMessage != null) ...[
+              Text(
+                _validationMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppPalette.danger, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+            ],
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppPalette.accent,

@@ -10,6 +10,7 @@ import '../../../widgets/activity_icon.dart';
 import '../../../models/habit.dart';
 import '../../../models/habit_entry.dart';
 import '../../../providers/sadar_providers.dart';
+import '../../sadar/widgets/habit_editor_sheet.dart';
 
 /// Diagonal Stripes Painter for Loop-style Skipped Habit Days
 class DiagonalStripesPainter extends CustomPainter {
@@ -83,22 +84,6 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
   String? _actionError;
   int _selectedDayIndex = 0; // 0..6 (Mon..Sun)
   late DateTime _referenceDate;
-
-  // Preset habit ideas matching user's actual habits
-  static const List<String> _habitIdeas = [
-    'Baca satu ayat Al-Qur’an',
-    'Buka laptop dan jauhkan ponsel selama 10 menit',
-    'Selesaikan satu modul Dicoding',
-    'Latihan kekuatan tubuh',
-    'Baca satu kalam harian',
-    'Baca 5 halaman',
-    'Tonton 2 video edukasi tersimpan',
-    'Main gitar selama 10 menit',
-    'Tulis satu kalimat di jurnal',
-    'Fokus mendalam selama 45 menit',
-    'Kardio atau joging selama 20 menit',
-    'Refleksi selama 10 menit',
-  ];
 
   @override
   void initState() {
@@ -309,30 +294,33 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                const [
-                                  'Sen',
-                                  'Sel',
-                                  'Rab',
-                                  'Kam',
-                                  'Jum',
-                                  'Sab',
-                                  'Min',
-                                ][day.weekday - 1],
-                                style: GoogleFonts.outfit(
-                                  fontSize: 13,
-                                  fontWeight: isToday
-                                      ? FontWeight.w700
-                                      : (isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.w500),
-                                  color: isToday
-                                      ? const Color(
-                                          0xFFF59E0B,
-                                        ) // Vibrant Amber/Orange for active day like Screenshot 1
-                                      : (isSelected
-                                            ? AppPalette.text
-                                            : AppPalette.textDim),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  const [
+                                    'Sen',
+                                    'Sel',
+                                    'Rab',
+                                    'Kam',
+                                    'Jum',
+                                    'Sab',
+                                    'Min',
+                                  ][day.weekday - 1],
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    fontWeight: isToday
+                                        ? FontWeight.w700
+                                        : (isSelected
+                                              ? FontWeight.w600
+                                              : FontWeight.w500),
+                                    color: isToday
+                                        ? const Color(0xFFF59E0B)
+                                        : (isSelected
+                                              ? AppPalette.text
+                                              : AppPalette.textDim),
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -365,7 +353,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                             ),
                           ),
                           OutlinedButton.icon(
-                            onPressed: () => _openNewJournalSheet(context),
+                            onPressed: () => _openHabitEditor(context),
                             icon: const Icon(Icons.add_rounded, size: 18),
                             label: const Text('Tambah'),
                             style: OutlinedButton.styleFrom(
@@ -421,10 +409,8 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                     Expanded(
                                       child: GestureDetector(
                                         behavior: HitTestBehavior.opaque,
-                                        onTap: () => _openNewJournalSheet(
-                                          context,
-                                          habit,
-                                        ),
+                                        onTap: () =>
+                                            _openHabitEditor(context, habit),
                                         child: Text(
                                           habit.name,
                                           style: GoogleFonts.outfit(
@@ -480,7 +466,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                       ),
                                       padding: EdgeInsets.zero,
                                       onPressed: () =>
-                                          _openNewJournalSheet(context, habit),
+                                          _openHabitEditor(context, habit),
                                     ),
                                   ],
                                 ),
@@ -803,11 +789,8 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                 style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                 onPressed: _actionBusy
                     ? null
-                    : () => _progressionAction(
-                        habit,
-                        date,
-                        progressionSnapshot,
-                      ),
+                    : () =>
+                          _progressionAction(habit, date, progressionSnapshot),
                 icon: Icon(
                   progressionSnapshot == null
                       ? Icons.check_circle_outline
@@ -1102,7 +1085,7 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                     InkWell(
                       onTap: () {
                         Navigator.pop(ctx);
-                        _openNewJournalSheet(context);
+                        _openHabitEditor(context);
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -1246,275 +1229,15 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
     );
   }
 
-  // ── New Journal / Edit Journal Screen (Pixel-faithful to Screenshot 3) ──
-  void _openNewJournalSheet(BuildContext context, [Habit? habitToEdit]) {
-    final nameCtrl = TextEditingController(text: habitToEdit?.name ?? '');
-    int target = habitToEdit?.target ?? 20;
-    bool saving = false;
-    String? saveError;
-
+  void _openHabitEditor(BuildContext context, [Habit? habitToEdit]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: AppPalette.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => HabitEditorSheet(
+        habit: habitToEdit,
+        onSaved: () => Navigator.of(ctx).pop(),
       ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return PopScope(
-              canPop: !saving,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 18,
-                  right: 18,
-                  top: 10,
-                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Row: ← New Journal, SAVE
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.arrow_back,
-                                color: AppPalette.text,
-                              ),
-                              onPressed: saving
-                                  ? null
-                                  : () => Navigator.pop(ctx),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              habitToEdit == null
-                                  ? 'Kebiasaan baru'
-                                  : 'Ubah kebiasaan',
-                              style: GoogleFonts.outfit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: AppPalette.text,
-                              ),
-                            ),
-                          ],
-                        ),
-                        TextButton(
-                          onPressed: saving
-                              ? null
-                              : () async {
-                                  final name = nameCtrl.text.trim();
-                                  if (name.isEmpty) return;
-                                  setModalState(() {
-                                    saving = true;
-                                    saveError = null;
-                                  });
-                                  final previousName = habitToEdit?.name;
-                                  final previousTarget = habitToEdit?.target;
-                                  final previousUpdatedAt =
-                                      habitToEdit?.updatedAt;
-                                  try {
-                                    final habit =
-                                        habitToEdit ??
-                                        (Habit()
-                                          ..name = name
-                                          ..iconKey = ''
-                                          ..target = target
-                                          ..unit = HabitUnit.min
-                                          ..colorValue = 0xFF48C774
-                                          ..timerEnabled = true
-                                          ..createdAt = DateTime.now());
-                                    habit
-                                      ..name = name
-                                      ..target = target;
-                                    await ref
-                                        .read(sadarRepoProvider)
-                                        .upsertHabit(habit);
-                                    if (ctx.mounted) Navigator.pop(ctx);
-                                  } catch (_) {
-                                    if (habitToEdit != null) {
-                                      habitToEdit
-                                        ..name = previousName!
-                                        ..target = previousTarget!
-                                        ..updatedAt = previousUpdatedAt;
-                                    }
-                                    if (ctx.mounted) {
-                                      setModalState(() {
-                                        saving = false;
-                                        saveError =
-                                            'Belum tersimpan. Coba lagi.';
-                                      });
-                                    }
-                                  }
-                                },
-                          child: Text(
-                            saving ? 'Menyimpan…' : 'Simpan',
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                              color: AppPalette.accent,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    if (saveError != null)
-                      Text(
-                        saveError!,
-                        style: const TextStyle(color: AppPalette.danger),
-                      ),
-
-                    const SizedBox(height: 14),
-
-                    // Name Row with IDEAS Button
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: nameCtrl,
-                            enabled: !saving,
-                            autofocus: habitToEdit == null,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              color: AppPalette.text,
-                            ),
-                            decoration: InputDecoration(
-                              labelText: 'Name',
-                              labelStyle: const TextStyle(
-                                color: AppPalette.textDim,
-                                fontSize: 14,
-                              ),
-                              border: UnderlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: AppPalette.text.withOpacity(0.2),
-                                ),
-                              ),
-                              focusedBorder: const UnderlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: AppPalette.accent,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(
-                              color: AppPalette.accent,
-                              width: 1.4,
-                            ),
-                            foregroundColor: AppPalette.accent,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          onPressed: saving
-                              ? null
-                              : () {
-                                  _showIdeasPicker(context, (chosenIdea) {
-                                    setModalState(() {
-                                      nameCtrl.text = chosenIdea;
-                                    });
-                                  });
-                                },
-                          child: Text(
-                            'IDE KEGIATAN',
-                            style: GoogleFonts.outfit(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // ── IDEAS Preset Bottom Sheet ──
-  void _showIdeasPicker(BuildContext context, ValueChanged<String> onSelect) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppPalette.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
-              child: Text(
-                'IDE KEGIATAN',
-                style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: AppPalette.accent,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ),
-            const Divider(height: 1, color: AppPalette.stroke),
-            Expanded(
-              child: ListView.separated(
-                itemCount: _habitIdeas.length,
-                separatorBuilder: (_, __) => Divider(
-                  height: 1,
-                  color: AppPalette.text.withOpacity(0.04),
-                ),
-                itemBuilder: (context, idx) {
-                  final idea = _habitIdeas[idx];
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 4,
-                    ),
-                    title: Text(
-                      idea,
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        color: AppPalette.text,
-                      ),
-                    ),
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      onSelect(idea);
-                      Navigator.pop(ctx);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 

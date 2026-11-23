@@ -6142,7 +6142,9 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               state?.hasError != true &&
               state?.isLoading != true) ...[
             const SizedBox(height: 4),
-            Row(
+            Wrap(
+              spacing: 4,
+              runSpacing: 0,
               children: [
                 TextButton.icon(
                   style: TextButton.styleFrom(
@@ -6152,7 +6154,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   ),
                   onPressed: () => _openQuickDumpTaskDialog(tc),
                   icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Tambah kegiatan'),
+                  label: const Text('Tambah'),
                 ),
                 TextButton.icon(
                   style: TextButton.styleFrom(
@@ -6379,103 +6381,106 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       builder: (ctx) {
         dialogRoute = ModalRoute.of<int>(ctx);
         return StatefulBuilder(
-        builder: (ctx, setDialogState) => PopScope(
-          canPop: !saving,
-          child: AlertDialog(
-            backgroundColor: tc.card,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-              side: BorderSide(color: tc.stroke),
-            ),
-            title: Text(
-              startToday
-                  ? 'Tambah tindakan hari ini'
-                  : 'Catat Cepat ke Dump Inbox',
-              style: TextStyle(
-                color: tc.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+          builder: (ctx, setDialogState) => PopScope(
+            canPop: !saving,
+            child: AlertDialog(
+              backgroundColor: tc.card,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+                side: BorderSide(color: tc.stroke),
               ),
-            ),
-            content: TextField(
-              key: const ValueKey('home-quick-task-input'),
-              controller: ctrl,
-              enabled: !saving,
-              autofocus: true,
-              style: TextStyle(color: tc.textPrimary),
-              decoration: InputDecoration(
-                errorText: error,
-                filled: true,
-                fillColor: tc.cardAlt,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: tc.stroke),
+              title: Text(
+                startToday
+                    ? 'Tambah tindakan hari ini'
+                    : 'Catat Cepat ke Dump Inbox',
+                style: TextStyle(
+                  color: tc.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: saving ? null : () => Navigator.pop(ctx),
-                child: Text('Batal', style: TextStyle(color: tc.textSecondary)),
+              content: TextField(
+                key: const ValueKey('home-quick-task-input'),
+                controller: ctrl,
+                enabled: !saving,
+                autofocus: true,
+                style: TextStyle(color: tc.textPrimary),
+                decoration: InputDecoration(
+                  errorText: error,
+                  filled: true,
+                  fillColor: tc.cardAlt,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: tc.stroke),
+                  ),
+                ),
               ),
-              ElevatedButton(
-                onPressed: saving
-                    ? null
-                    : () async {
-                        final t = ctrl.text.trim();
-                        if (t.isEmpty) return;
-                        setDialogState(() {
-                          saving = true;
-                          error = null;
-                        });
-                        try {
-                          late final int taskId;
-                          if (widget.useSampleData) {
-                            taskId = _nextId++;
-                            setState(
-                              () => _dumpedTasks.insert(
-                                0,
+              actions: [
+                TextButton(
+                  onPressed: saving ? null : () => Navigator.pop(ctx),
+                  child: Text(
+                    'Batal',
+                    style: TextStyle(color: tc.textSecondary),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          final t = ctrl.text.trim();
+                          if (t.isEmpty) return;
+                          setDialogState(() {
+                            saving = true;
+                            error = null;
+                          });
+                          try {
+                            late final int taskId;
+                            if (widget.useSampleData) {
+                              taskId = _nextId++;
+                              setState(
+                                () => _dumpedTasks.insert(
+                                  0,
+                                  Task()
+                                    ..id = taskId
+                                    ..title = t
+                                    ..createdAt = DateTime.now(),
+                                ),
+                              );
+                            } else {
+                              final repo = ref.read(taskRepoProvider);
+                              if (repo.isar == null || !repo.isar!.isDurable) {
+                                throw StateError('storage unavailable');
+                              }
+                              taskId = await repo.add(
                                 Task()
-                                  ..id = taskId
                                   ..title = t
                                   ..createdAt = DateTime.now(),
-                              ),
-                            );
-                          } else {
-                            final repo = ref.read(taskRepoProvider);
-                            if (repo.isar == null || !repo.isar!.isDurable) {
-                              throw StateError('storage unavailable');
+                              );
                             }
-                            taskId = await repo.add(
-                              Task()
-                                ..title = t
-                                ..createdAt = DateTime.now(),
-                            );
+                            if (!ctx.mounted || !mounted) return;
+                            setDialogState(() => saving = false);
+                            Navigator.pop(ctx, taskId);
+                            if (!startToday) {
+                              _showToast('Tugas ditambahkan ke dump');
+                            }
+                          } catch (_) {
+                            if (ctx.mounted) {
+                              setDialogState(() {
+                                saving = false;
+                                error = 'Gagal menyimpan. Coba lagi.';
+                              });
+                            }
                           }
-                          if (!ctx.mounted || !mounted) return;
-                          setDialogState(() => saving = false);
-                          Navigator.pop(ctx, taskId);
-                          if (!startToday) {
-                            _showToast('Tugas ditambahkan ke dump');
-                          }
-                        } catch (_) {
-                          if (ctx.mounted) {
-                            setDialogState(() {
-                              saving = false;
-                              error = 'Gagal menyimpan. Coba lagi.';
-                            });
-                          }
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: tc.accent,
-                  foregroundColor: tc.background,
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: tc.accent,
+                    foregroundColor: tc.background,
+                  ),
+                  child: const Text('Simpan'),
                 ),
-                child: const Text('Simpan'),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         );
       },
     );
