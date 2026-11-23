@@ -68,7 +68,7 @@ context:
 
 ## Implementation Notes
 
-Source changes implemented. Focused `dart analyze` on the six edited Dart files and `git diff --check` passed; no test suite was run. Built Android APK v0.5.53+8145 (74.6 MB), verified its v2 signature, installed it on the available emulator, opened the Jam page, and confirmed the removed text-entry card is absent. Emulator QA data already contains a saved goal, so no user data was cleared for first-run verification. Built and bundle-verified Fitrah, Focus Clock, and Sadar web entry points; all three deployed to Vercel production and returned HTTP 200 with version.json 0.5.53 / 8145. Flutter emitted non-blocking Wasm dry-run compatibility warnings from existing dependencies. Confirmed `.github/workflows/release.yml` provides Linux and Windows package jobs. Local Linux packaging is blocked by the host clang++ loader missing `libLLVM.so.23.1`; Windows packaging requires its configured Windows CI runner. No test suite was run.
+Source changes implemented. Focused `dart analyze` on the six edited Dart files and `git diff --check` passed; no test suite was run. Built Android APK v0.5.54+8146 (74.6 MB), verified its v2 signature, installed it on the available emulator, opened the Jam page, and confirmed the removed text-entry card is absent. Large Home status text wraps without ellipsis at 200%. Emulator QA data already contains a saved goal, so no user data was cleared for first-run verification. Built and bundle-verified Fitrah, Focus Clock, and Sadar web entry points; all three deployed to Vercel production and returned HTTP 200 with version.json 0.5.53 / 8145. Flutter emitted non-blocking Wasm dry-run compatibility warnings from existing dependencies. Confirmed `.github/workflows/release.yml` provides Linux and Windows package jobs. Local Linux packaging is blocked by the host clang++ loader missing `libLLVM.so.23.1`; Windows packaging requires its configured Windows CI runner. No test suite was run.
 
 ## Plan Change Log
 
@@ -78,7 +78,7 @@ Quick review: no findings.
 
 ## Verification
 
-Production deployments: [Fitrah](https://fitrah-web-three.vercel.app), [Focus Clock](https://focus-clock-web.vercel.app), [Sadar](https://sadar-web.vercel.app). Download bundle: `release_dist/2026-11-23-focus-clock-v0.5.53-8145`.
+Production deployments: [Fitrah](https://fitrah-web-three.vercel.app), [Focus Clock](https://focus-clock-web.vercel.app), [Sadar](https://sadar-web.vercel.app). Current download bundle: `release_dist/2026-11-23-focus-clock-v0.5.54-8146`.
 
 **Commands:**
 - `dart analyze` on six changed Dart files -- passed.

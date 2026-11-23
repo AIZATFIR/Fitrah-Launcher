@@ -2107,8 +2107,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                       const SizedBox(height: 4),
                       Text(
                         currentAct['name'] as String,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(color: tc.textSecondary, height: 1.3),
                       ),
                       const SizedBox(height: 12),
