@@ -21,14 +21,21 @@ class _ControllableTimerEngine extends SadarTimerEngine {
 }
 
 void main() {
-  Widget homeWithActivities(List<Activity> activities) => ProviderScope(
-    overrides: [
-      activitiesByDateProvider.overrideWith((ref) => Stream.value(activities)),
-    ],
-    child: const MaterialApp(
-      home: FocusClockHomeView(onOpenFocusClock: _noop, onOpenAppDrawer: _noop),
-    ),
-  );
+  Widget homeWithActivities(List<Activity> activities, {DateTime? now}) =>
+      ProviderScope(
+        overrides: [
+          activitiesByDateProvider.overrideWith(
+            (ref) => Stream.value(activities),
+          ),
+        ],
+        child: MaterialApp(
+          home: FocusClockHomeView(
+            onOpenFocusClock: _noop,
+            onOpenAppDrawer: _noop,
+            now: now == null ? null : () => now,
+          ),
+        ),
+      );
 
   testWidgets('Home shows completed and cancelled focus history', (
     tester,
@@ -125,6 +132,27 @@ void main() {
       expect(find.text('Kebiasaan & Rutinitas'), findsNothing);
     },
   );
+
+  testWidgets('past-only schedule does not occupy the upcoming strip', (
+    tester,
+  ) async {
+    final now = DateTime(2026, 11, 23, 15);
+    final pastActivity = Activity()
+      ..id = 423
+      ..title = 'Latihan yang sudah lewat'
+      ..startMinute = 60
+      ..endMinute = 90
+      ..ampmHalf = AmPmHalf.pm
+      ..date = DateTime(2026, 11, 23)
+      ..colorValue = const Color(0xFF8BAE9A).value;
+
+    await tester.pumpWidget(homeWithActivities([pastActivity], now: now));
+    await tester.pumpAndSettle();
+
+    final strip = find.byKey(const ValueKey('home-agenda-carousel'));
+    expect(strip, findsOneWidget);
+    expect(tester.getSize(strip).height, 0);
+  });
 
   testWidgets('Hari Ini remains usable at 320dp and 200% text', (tester) async {
     tester.view.physicalSize = const Size(320, 740);

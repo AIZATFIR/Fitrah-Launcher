@@ -1834,10 +1834,16 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     _HomeThemeColors tc, {
     int? currentActivityId,
   }) {
+    final nowHour = _hourNow();
     final nonSleep =
-        _blocksFromActivities(
-            activitiesState.valueOrNull ?? const [],
-          ).where((block) => block.id != currentActivityId).toList()
+        _blocksFromActivities(activitiesState.valueOrNull ?? const [])
+            .where(
+              (block) =>
+                  block.id != currentActivityId &&
+                  !block.isDone &&
+                  block.startHour > nowHour,
+            )
+            .toList()
           ..sort((a, b) => a.startHour.compareTo(b.startHour));
 
     if (activitiesState.hasError || activitiesState.isLoading) {
@@ -1849,22 +1855,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       );
     }
     if (nonSleep.isEmpty) {
-      return Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: tc.card,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: tc.stroke),
-        ),
-        alignment: Alignment.centerLeft,
-        child: Text(
-          currentActivityId == null
-              ? 'Belum ada jadwal hari ini.'
-              : 'Jadwal sedang berjalan.',
-          style: TextStyle(color: tc.textSecondary, fontSize: 12),
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     final hr = _hourNow();

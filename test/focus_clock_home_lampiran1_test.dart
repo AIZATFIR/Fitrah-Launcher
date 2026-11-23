@@ -27,6 +27,8 @@ void main() {
     Future<void> expandSupportTools(WidgetTester tester) async {
       final tile = find.text('Catatan & alat');
       await tester.scrollUntilVisible(tile, 300, scrollable: homeScrollable());
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
       await tester.tap(tile);
       await tester.pumpAndSettle();
     }
@@ -306,7 +308,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Empty agenda label grows to fit at 200% text scale', (
+    testWidgets('Empty Home does not repeat its schedule status at 200%', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(360, 1000);
@@ -324,22 +326,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final label = find.text('Belum ada jadwal hari ini.');
-      expect(label, findsOneWidget);
-      final status = find.ancestor(
-        of: label,
-        matching: find.byWidgetPredicate(
-          (widget) =>
-              widget is Container &&
-              widget.child is Text &&
-              widget.decoration is BoxDecoration,
-        ),
-      );
-      expect(status, findsOneWidget);
-      expect(
-        tester.getSize(status).height,
-        greaterThanOrEqualTo(tester.getSize(label).height),
-      );
+      expect(find.text('Belum ada jadwal hari ini.'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
