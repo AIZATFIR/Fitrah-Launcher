@@ -21,6 +21,18 @@ jobs:
         with:
           flutter-version: '3.41.9'
           channel: 'stable'
+      - name: Restore stable owner-preview Android signing key
+        if: github.event_name != 'pull_request'
+        env:
+          ANDROID_PREVIEW_KEYSTORE_B64: ${{ secrets.ANDROID_PREVIEW_KEYSTORE_B64 }}
+        run: |
+          if [[ -z "$ANDROID_PREVIEW_KEYSTORE_B64" ]]; then
+            echo 'ANDROID_PREVIEW_KEYSTORE_B64 secret is required for tagged/manual owner-preview builds.' >&2
+            exit 1
+          fi
+          mkdir -p "$HOME/.android"
+          printf '%s' "$ANDROID_PREVIEW_KEYSTORE_B64" | base64 --decode > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
       - name: Build Android APK
         run: flutter build apk --release --android-skip-build-dependency-validation
       - name: Upload Android Artifact
