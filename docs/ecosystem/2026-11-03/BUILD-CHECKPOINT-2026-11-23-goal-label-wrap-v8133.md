@@ -10,6 +10,7 @@ At 200% Android text scale, the Home action dialog clipped “Hubungkan tujuan (
 - Runtime Home loop: selected `Latihan LKS` linked to the QA goal; started the 30-minute focus timer; force-stopped and relaunched Fitrah; Home restored the active session; **Buka sesi** returned to the running timer at 29:22. Canceled the QA session and restored the prior empty daily selection. Sampled logs showed no fatal exception, ANR or Flutter error.
 - `npm run build:focus` and required offline asset verification passed. Wasm dry run continues to flag existing Isar, secure-storage and TTS incompatibilities.
 - Production deployment `dpl_E6SwD5uuBS8kd6mW1WdiStwpwrSt` is READY. Root and `main.dart.js` return HTTP 200; `/version.json` reports 0.5.42 / 8133. APK signature, web ZIP integrity, hashes and `git diff --check` verified.
+- Production web rendered in a 320×640 phone viewport: goal cue, blank-state **Tambah kegiatan**, analog dial, timer entry and three-tab navigation stayed visible without horizontal overflow.
 - Automated tests and physical phone/OEM checks were not run for this slice.
 
 Runtime screenshots are retained locally under `.dart_tool/android-qa/v8132/goal-field-v8133-steady.png` and `timer-return-v8133.png`.
