@@ -14,6 +14,9 @@ import '../focusclock/focusclock_tab.dart';
 import 'widgets/focus_clock_home_view.dart';
 import 'widgets/minimalist_app_drawer.dart';
 import 'services/screen_time_service.dart';
+import 'widgets/habit_library_view.dart';
+import '../sadar/widgets/sadar_timer_view.dart';
+import '../../models/habit.dart';
 
 class FitrahLauncherShell extends ConsumerStatefulWidget {
   const FitrahLauncherShell({super.key, this.onExitLauncher});
@@ -31,8 +34,7 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
   late final PageController _pageCtrl;
   bool _returningHome = false;
   final _screenTime = ScreenTimeService();
-  int _currentPage =
-      1; // 0 = Focus Clock Face, 1 = Home (Center), 2 = Minimalist App Drawer
+  int _currentPage = 1; // 0 = Clock, 1 = Home, 2 = Habits, 3 = Apps
 
   @override
   void initState() {
@@ -122,6 +124,17 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
     }
   }
 
+  void _openHabitTimer(Habit habit) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => SadarTimerView(
+          habit: habit,
+          onClose: () => Navigator.of(routeContext).pop(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(launcherSettingsProvider);
@@ -155,6 +168,11 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
               icon: Icon(Icons.today_outlined),
               selectedIcon: Icon(Icons.today_rounded),
               label: 'Hari Ini',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.checklist_outlined),
+              selectedIcon: Icon(Icons.checklist_rounded),
+              label: 'Habit',
             ),
             NavigationDestination(
               icon: Icon(Icons.apps_outlined),
@@ -192,17 +210,26 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
                     constraints: const BoxConstraints(maxWidth: 500),
                     child: FocusClockHomeView(
                       onOpenFocusClock: () => _goToPage(0),
-                      onOpenAppDrawer: () => _goToPage(2),
+                      onOpenAppDrawer: () => _goToPage(3),
+                      onOpenHabits: () => _goToPage(2),
                     ),
                   ),
                 ),
 
-                // Page 2 (Slide Right): Minimalist App Drawer (Niagara wave scrubber)
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: HabitLibraryView(onStartTimer: _openHabitTimer),
+                  ),
+                ),
+
+                // Page 3 (last): Minimalist App Drawer (Niagara wave scrubber)
                 Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 500),
                     child: MinimalistAppDrawer(
-                      isActive: _currentPage == 2,
+                      isActive: _currentPage == 3,
                       onBackToHome: () => _goToPage(1),
                     ),
                   ),

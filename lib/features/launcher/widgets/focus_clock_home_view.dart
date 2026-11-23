@@ -259,12 +259,14 @@ class FocusClockHomeView extends ConsumerStatefulWidget {
     super.key,
     required this.onOpenFocusClock,
     required this.onOpenAppDrawer,
+    this.onOpenHabits,
     this.useSampleData = false,
     this.now,
   });
 
   final VoidCallback onOpenFocusClock;
   final VoidCallback onOpenAppDrawer;
+  final VoidCallback? onOpenHabits;
   final bool useSampleData;
   final DateTime Function()? now;
 
@@ -1411,16 +1413,29 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(left: 4, bottom: 4),
-                        child: Text(
-                          'Kebiasaan hari ini',
-                          style: TextStyle(
-                            color: tc.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Kebiasaan hari ini',
+                                style: TextStyle(
+                                  color: tc.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: widget.onOpenHabits,
+                              child: const Text('Semua'),
+                            ),
+                          ],
                         ),
                       ),
-                      LoopHabitGridWidget(onStartTimer: _openHabitFocusTimer),
+                      LoopHabitGridWidget(
+                        onStartTimer: _openHabitFocusTimer,
+                        maxHabits: 3,
+                      ),
                     ],
                   ),
                 const SizedBox(height: 14),

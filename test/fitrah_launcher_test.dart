@@ -16,6 +16,9 @@ import 'package:fitrah_launcher/features/launcher/widgets/fitrah_home_view.dart'
 import 'package:fitrah_launcher/features/launcher/widgets/minimalist_app_drawer.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/niagara_wave_scrubber.dart';
+import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
+import 'package:fitrah_launcher/models/habit.dart';
+import 'package:fitrah_launcher/providers/sadar_providers.dart';
 
 void main() {
   group('Fitrah Launcher Tests', () {
@@ -106,7 +109,29 @@ void main() {
       expect(find.byType(PageView), findsOneWidget);
       expect(find.text('Hari Ini'), findsOneWidget);
       expect(find.text('Jam'), findsOneWidget);
+      expect(find.text('Habit'), findsOneWidget);
       expect(find.text('Aplikasi'), findsOneWidget);
+      await tester.drag(
+        find.byKey(const ValueKey('focus-clock-home-list')),
+        const Offset(0, -1400),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Semua'), findsWidgets);
+      final semuaButton = find.widgetWithText(TextButton, 'Semua');
+      expect(tester.widget<TextButton>(semuaButton).onPressed, isNotNull);
+      await tester.drag(
+        find.byKey(const ValueKey('focus-clock-home-list')),
+        const Offset(0, 450),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(semuaButton);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page,
+        2,
+      );
+      await tester.tap(find.text('Hari Ini'));
+      await tester.pumpAndSettle();
       final shellScaffold = tester.widget<Scaffold>(
         find
             .descendant(
@@ -128,7 +153,7 @@ void main() {
         tester.widget<PageView>(find.byType(PageView)).controller!.page,
         1,
       );
-      await tester.tap(find.text('Aplikasi'));
+      await tester.tap(find.text('Habit'));
       await tester.pumpAndSettle();
       expect(
         tester.widget<PageView>(find.byType(PageView)).controller!.page,
@@ -137,6 +162,22 @@ void main() {
       expect(
         tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
         2,
+      );
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page,
+        1,
+      );
+      await tester.tap(find.text('Aplikasi'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page,
+        3,
+      );
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        3,
       );
       final container = ProviderScope.containerOf(
         tester.element(find.byType(FitrahLauncherShell)),
@@ -334,5 +375,153 @@ void main() {
       expect(decoded.dockPackages, ['app1', 'app2', 'app3', 'app4']);
       expect(decoded.autoFocusSearch, false);
     });
+  });
+
+  testWidgets('four destination labels remain operable at 200% text scale', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 720);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: const FitrahLauncherShell(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    const labels = ['Jam', 'Hari Ini', 'Habit', 'Aplikasi'];
+    for (var index = 0; index < labels.length; index++) {
+      final label = labels[index];
+      expect(find.text(label), findsWidgets);
+      await tester.tap(find.text(label).last);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        index,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Home habits title and Semua route fit 320dp at 200% text', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 720);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sadarRepoProvider.overrideWithValue(SadarRepository(null))],
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: const FitrahLauncherShell(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final homeList = find.byKey(const ValueKey('focus-clock-home-list'));
+    final title = find.text('Kebiasaan hari ini');
+    for (var i = 0; i < 14; i++) {
+      final rect = title.evaluate().isEmpty ? null : tester.getRect(title);
+      if (rect != null && rect.top >= 0 && rect.bottom <= 720) break;
+      await tester.drag(
+        homeList,
+        Offset(0, rect != null && rect.top < 0 ? 240 : -500),
+      );
+      await tester.pumpAndSettle();
+    }
+    expect(title, findsOneWidget);
+    expect(find.text('Semua'), findsWidgets);
+    final viewport = const Rect.fromLTWH(0, 0, 320, 720);
+    expect(viewport.contains(tester.getRect(title).topLeft), isTrue);
+    final button = find.widgetWithText(TextButton, 'Semua');
+    expect(viewport.contains(tester.getRect(button).topLeft), isTrue);
+    expect(viewport.contains(tester.getRect(button).bottomRight), isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(tester.widget<PageView>(find.byType(PageView)).controller!.page, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Habits library starts at the top at large text scale', (
+    tester,
+  ) async {
+    final repo = SadarRepository(null);
+    for (final existing in await repo.getHabits()) {
+      await repo.deleteHabit(existing.id, hardDelete: true);
+    }
+    await repo.upsertHabit(
+      Habit()
+        ..name = 'Latihan LKS'
+        ..createdAt = DateTime(2026, 1, 1)
+        ..colorValue = Colors.blue.toARGB32(),
+    );
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(411, 914);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sadarRepoProvider.overrideWithValue(repo)],
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: const FitrahLauncherShell(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Habit'));
+    await tester.pumpAndSettle();
+
+    final title = tester.getRect(find.text('Semua kebiasaan'));
+    expect(title.top, lessThan(64));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty Habits destination keeps its create action available', (
+    tester,
+  ) async {
+    final repo = SadarRepository(null);
+    for (final habit in await repo.getHabits()) {
+      await repo.deleteHabit(habit.id, hardDelete: true);
+    }
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sadarRepoProvider.overrideWithValue(repo)],
+        child: const MaterialApp(home: FitrahLauncherShell()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Habit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Semua kebiasaan'), findsOneWidget);
+    expect(find.text('Belum ada kebiasaan'), findsOneWidget);
+    final addButton = find.widgetWithText(OutlinedButton, 'Tambah');
+    expect(tester.widget<OutlinedButton>(addButton).onPressed, isNotNull);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+    expect(find.text('Kebiasaan Bermakna Baru'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

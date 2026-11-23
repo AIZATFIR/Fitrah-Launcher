@@ -32,6 +32,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   late List<ProgressionStep> _progressionSteps;
   late int _selectedColor;
   String? _validationMessage;
+  bool _saving = false;
 
   static const List<String> _popularIcons = [
     'book',
@@ -89,6 +90,7 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       _message('Isi nama kebiasaan dulu.');
@@ -138,8 +140,21 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     }
 
     HapticFeedback.mediumImpact();
-    await ref.read(sadarRepoProvider).upsertHabit(habit);
-    widget.onSaved();
+    setState(() {
+      _saving = true;
+      _validationMessage = null;
+    });
+    try {
+      await ref.read(sadarRepoProvider).upsertHabit(habit);
+      widget.onSaved();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _validationMessage = 'Belum tersimpan. Coba lagi.';
+        });
+      }
+    }
   }
 
   void _message(String text) {
@@ -608,9 +623,13 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              onPressed: _save,
+              onPressed: _saving ? null : _save,
               child: Text(
-                isEditing ? 'Simpan Perubahan' : 'Buat Kebiasaan',
+                _saving
+                    ? 'Menyimpan…'
+                    : isEditing
+                    ? 'Simpan Perubahan'
+                    : 'Buat Kebiasaan',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,

@@ -69,9 +69,10 @@ class _TriangleCaretPainter extends CustomPainter {
 
 /// Loop Habit Tracker Inspired 7-Day Grid Widget
 class LoopHabitGridWidget extends ConsumerStatefulWidget {
-  const LoopHabitGridWidget({super.key, this.onStartTimer});
+  const LoopHabitGridWidget({super.key, this.onStartTimer, this.maxHabits});
 
   final void Function(Habit habit)? onStartTimer;
+  final int? maxHabits;
 
   @override
   ConsumerState<LoopHabitGridWidget> createState() =>
@@ -377,8 +378,11 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                         )[e.dateString] = e;
                       }
 
+                      final visibleHabits = habits.take(
+                        widget.maxHabits ?? habits.length,
+                      );
                       return Column(
-                        children: habits.map((habit) {
+                        children: visibleHabits.map((habit) {
                           final isExpanded = _expandedHabitId == habit.id;
                           final habitEntries = entryMap[habit.id] ?? {};
                           final selectedDate = weekDays[_selectedDayIndex];
