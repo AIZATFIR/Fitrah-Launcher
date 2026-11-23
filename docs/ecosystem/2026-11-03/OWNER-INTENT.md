@@ -13,6 +13,7 @@ Status: catatan kebutuhan per 3 November 2026. Bahasa dipertahankan sedekat mung
 7. Kegunaan sehari-hari menggantikan pembingkaian pendidikan/lomba SFT. Proposal IoT dan AI lama bukan daftar fitur wajib.
 8. Landasan pribadi pemilik adalah Tauhid, Ar-Rahman dan Ar-Rahim; keseimbangan kerja, istirahat dan kenikmatan penting. Bahasa aplikasi perlu menghormati itu tanpa menghakimi pengguna.
 9. Pemilik memilih **jangan simpan riwayat curhat/chat AI**. Percakapan tidak menjadi riwayat yang dipulihkan setelah app ditutup; tujuan dan rencana baru disimpan hanya melalui alur produk yang disetujui user.
+10. **Pembaruan 23 November:** ekosistem ditujukan agar Fitrah benar-benar menjadi Home/launcher utama di HP pemilik. Jangan perlakukan pemakaian launcher sebagai fitur opsional terpisah dari Focus Clock. Pemilihan tetap lewat dialog Android dan persetujuan eksplisit pengguna.
 
 ## Kutipan yang pemilik berikan kembali pada 3 November
 

@@ -6,7 +6,7 @@ Tujuan kerja: saat membuka HP, Fahim melihat hal yang ia pedulikan, memahami kea
 
 ## Rekomendasi yang perlu diputuskan
 
-Bangun satu aplikasi Android utama lebih dahulu dari repository `Fitrah-Launcher`, dengan modul Focus Clock, Sadar, dan launcher. Semua layar memakai data yang sama dan satu pengelola sesi fokus. Pertahankan dial yang sudah dipilih pemilik. Sajikan habits di Home, dengan detail riwayat dan pengaturan di layar tersendiri. Pemakaian sebagai launcher bersifat opsional.
+Bangun satu aplikasi Android utama dari repository `Fitrah-Launcher`, dengan Focus Clock, Sadar, dan fungsi launcher pada satu jalur data dan satu pengelola sesi fokus. Fitrah ditujukan menjadi Home utama di HP pemilik; Android tetap meminta pengguna memilihnya lewat dialog sistem. Pertahankan dial yang sudah dipilih, tampilkan habits dekat tujuan, dan letakkan detail/riwayat di tempat yang mudah ditemukan.
 
 Setelah aplikasi ini tahan dipakai sehari-hari, bagikan domain yang sama ke web dan desktop. Sinkronisasi lintas perangkat mendapat protokol tersendiri; membuka aplikasi lewat tautan tidak dianggap sinkronisasi. Aplikasi mandiri Focus Clock dan Sadar tetap menjadi arah lanjutan yang mungkin, bukan tiga implementasi yang harus dipelihara sekaligus sekarang.
 
@@ -53,7 +53,7 @@ Pilot U0 sudah dapat dipakai sesudah E3a: Goal, habit timed/binary, sesi tahan r
 
 | Usulan | Default untuk merencanakan | Kapan perlu keputusan |
 |---|---|---|
-| Aplikasi utama | Fitrah Android; Focus Clock/Sadar sebagai modul | Sebelum E0 memilih jalur distribusi |
+| Aplikasi utama | Fitrah sebagai Home utama di HP pemilik; Focus Clock/Sadar sebagai modul | Tujuan pemilik; Android selection tetap eksplisit |
 | Home | Tujuan, status sekarang, dial dan habits dalam satu hierarki | Review mockup sebelum E4 |
 | Gaya visual | Pertahankan palet pilihan (termasuk Warm Bookpaper/Amber) dan dial analog | Mockup menetapkan hierarki; warna dan gaya dial tidak diganti |
 | Penyimpanan baru | Belum dipilih; E1 membuktikan kandidat | Sebelum migrasi schema/domain |

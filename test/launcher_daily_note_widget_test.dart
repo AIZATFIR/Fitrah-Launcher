@@ -30,6 +30,13 @@ class Storage extends SecureStorageService {
 }
 
 void main() {
+  void setHomeTestViewport(WidgetTester tester) {
+    tester.view.physicalSize = const Size(800, 6000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
   Future<void> revealTools(WidgetTester tester) async {
     final note = find.byKey(const ValueKey('home-daily-note-input'));
     if (note.evaluate().isEmpty) {
@@ -49,10 +56,7 @@ void main() {
     Storage storage,
     DateTime Function() now,
   ) async {
-    tester.view.physicalSize = const Size(800, 6000);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+    setHomeTestViewport(tester);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [secureStorageServiceProvider.overrideWithValue(storage)],
@@ -73,10 +77,7 @@ void main() {
   testWidgets('recreated Home surfaces a failed previous-day draft', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(800, 6000);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+    setHomeTestViewport(tester);
     var today = DateTime(2026, 11, 7);
     final storage = Storage()..failWrite = true;
     final container = ProviderContainer(
@@ -119,6 +120,7 @@ void main() {
   testWidgets('recreated Home observes an in-flight save finish', (
     tester,
   ) async {
+    setHomeTestViewport(tester);
     final storage = Storage();
     final container = ProviderContainer(
       overrides: [secureStorageServiceProvider.overrideWithValue(storage)],
@@ -176,6 +178,7 @@ void main() {
   testWidgets('editing waits for the initial saved note to load', (
     tester,
   ) async {
+    setHomeTestViewport(tester);
     final storage = Storage()
       ..raw = LauncherSettings(dailyNotes: {'2026-11-07': 'saved'}).toJson()
       ..readGate = Completer<void>();

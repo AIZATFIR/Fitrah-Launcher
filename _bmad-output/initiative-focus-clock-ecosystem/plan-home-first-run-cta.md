@@ -32,5 +32,6 @@ Reuse the existing native Home-role request and actual status provider. Show a c
 ## Verification
 - Quick code review found the 200% narrow-screen risk; a 320dp / 200% widget case passes with a 48dp minimum action target.
 - Focused suites: 38 passed across the CTA, Home role control, and Home intent cue.
+- Full Flutter suite: 468 tests passed serially. Four pre-existing stale test assumptions were corrected without changing production behavior: viewport size, primary CTA type/label, and pending animation timing.
 - Analyzer reports 5 existing info diagnostics in unrelated files; no errors or warnings. `git diff --check` is clean.
-- APK and three JavaScript release web bundles build as 0.5.49 / 8141; API36 system chooser smoke and deployment checks are being completed for the release package.
+- APK and three JavaScript release web bundles build and deploy as 0.5.49 / 8141. API36 clean-install system chooser smoke verified the HOME role, reboot persistence, foreground Home activity, and force-stop relaunch; no app fatal/FlutterError/ANR in sampled logs.

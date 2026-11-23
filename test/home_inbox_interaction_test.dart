@@ -93,8 +93,8 @@ void main() {
   testWidgets('save locks dialog until write succeeds', (tester) async {
     final store = _Store()..gate = Completer<void>();
     await showHome(tester, store);
-    await tester.tap(find.widgetWithText(TextButton, 'Tambah kegiatan').last);
-    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tambah kegiatan').last);
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.enterText(find.byType(TextField).last, 'Tertahan');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Simpan'));
     await tester.pump();
@@ -116,21 +116,21 @@ void main() {
     );
     await tester.binding.handlePopRoute();
     await tester.pump();
-    expect(find.text('Catat Cepat ke Dump Inbox'), findsOneWidget);
+    expect(find.text('Tambah tindakan hari ini'), findsOneWidget);
     store.gate!.complete();
     await tester.pumpAndSettle();
     expect(store.taskRows.values.single.title, 'Tertahan');
-    expect(find.text('Catat Cepat ke Dump Inbox'), findsNothing);
+    expect(find.text('Tambah tindakan hari ini'), findsNothing);
   });
 
   testWidgets('failed save retains input and enables retry', (tester) async {
     final store = _Store()..failTaskWrite = true;
     await showHome(tester, store);
-    await tester.tap(find.widgetWithText(TextButton, 'Tambah kegiatan').last);
-    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tambah kegiatan').last);
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.enterText(find.byType(TextField).last, 'Coba lagi');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Simpan'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Gagal menyimpan. Coba lagi.'), findsOneWidget);
     expect(
       tester.widget<TextField>(find.byType(TextField).last).controller!.text,
@@ -144,7 +144,7 @@ void main() {
     );
     store.failTaskWrite = false;
     await tester.tap(find.widgetWithText(ElevatedButton, 'Simpan'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(store.taskRows.values.single.title, 'Coba lagi');
   });
 
