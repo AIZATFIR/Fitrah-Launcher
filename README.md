@@ -12,11 +12,11 @@ The main navigation has three destinations:
 
 Focus sessions, goals, schedules, habits, and backup are available in the app. AI planning is optional and uses a provider/API key configured by the user. It can prepare a reviewable goal plan; applying it requires the user's approval. Screen-time overlay and waiting features are optional and off by default.
 
-Try the [Focus Clock web app](https://focus-clock-web.vercel.app/). Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and Home role are Android-only. See the [latest v8131 Android preview](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-23-quick-capture-v8131.md), the [download package](release_dist/2026-11-23-quick-capture-v8131/INSTALL.md), and [ecosystem plan](docs/ecosystem/2026-11-03/README.md) for tested behavior and remaining work.
+Try [Focus Clock](https://focus-clock-web.vercel.app/) or [Fitrah](https://fitrah-web-three.vercel.app/). Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and default Home role are Android-only. See the [latest v8141 checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-23-home-default-cta-v8141.md), the [owner download/install package](release_dist/2026-11-23-home-default-cta-v8141/INSTALL.md), and [ecosystem plan](docs/ecosystem/2026-11-03/README.md) for verified behavior and remaining work.
 
 ## Try the owner preview
 
-The v8131 personal Android preview is in `release_dist/2026-11-23-quick-capture-v8131/` in the maintainer's local checkout. It is intentionally not presented as a public GitHub release. The Android APK is signed with a local Android Debug certificate, so it is a personal preview rather than a Play Store build. See that folder's `INSTALL.md` and `SHA256SUMS` before installing.
+The v8141 personal Android preview and offline web bundles are in `release_dist/2026-11-23-home-default-cta-v8141/` in the maintainer's local checkout. The Android APK is signed with a local Android Debug certificate, so it is a personal preview rather than a Play Store build. See that folder's `INSTALL.md` and `SHA256SUMS` before installing.
 
 ## Run from source
 
