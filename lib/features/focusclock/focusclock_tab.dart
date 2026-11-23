@@ -1771,7 +1771,40 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   ) async {
     if (_draggingActivity != null) return;
     final hit = _hitActivity(p, size, activities);
-    if (hit == null) return;
+    if (hit == null) {
+      final centered = _toCenter(p, size);
+      final radius = centered.distance;
+      final outer = size.shortestSide / 2 * 0.85 * _grow;
+      final inner = size.shortestSide / 2 * 0.55 * _grow;
+      if (radius < inner || radius > outer) return;
+
+      final is24h = _is24h;
+      final start = _snap(offsetToMinute(centered, is24h: is24h));
+      final half = ref.read(ampmHalfProvider);
+      final start24 = is24h
+          ? start
+          : start + (half == AmPmHalf.pm ? 720 : 0);
+      final startDate = dateOnly(ref.read(currentDateProvider)).add(
+        Duration(days: start24 ~/ 1440),
+      );
+      final startMinute = start24 % 1440;
+      final endMinute = startMinute + 30;
+      final dbHalf = toDbHalf(startMinute);
+      final activity = Activity()
+        ..title = ''
+        ..startMinute = toDbMinute(startMinute)
+        ..endMinute = toDbEndMinute(endMinute, dbHalf)
+        ..ampmHalf = dbHalf
+        ..date = startDate
+        ..colorValue = presetColors.first;
+
+      await showActivityDetailSheet(
+        context,
+        activity: activity,
+        mode: DetailMode.create,
+      );
+      return;
+    }
 
     final a = activities.firstWhere((x) => x.id == hit);
     if (ref.read(schedulingTaskProvider) != null) {

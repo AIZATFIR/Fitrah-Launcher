@@ -1,5 +1,6 @@
 import 'package:fitrah_launcher/core/time_math.dart';
 import 'package:fitrah_launcher/features/focusclock/focusclock_tab.dart';
+import 'package:fitrah_launcher/features/focusclock/analog_clock_face.dart';
 import 'package:fitrah_launcher/models/activity.dart';
 import 'package:fitrah_launcher/models/app_settings.dart';
 import 'package:fitrah_launcher/providers/providers.dart';
@@ -9,6 +10,46 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('tapping an empty clock time opens a blank activity at that time', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final date = DateTime(2026, 11, 21);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsProvider.overrideWith((ref) => Stream.value(AppSettings())),
+          currentDateProvider.overrideWith((ref) => date),
+          currentTimeProvider.overrideWith(
+            (ref) => Stream.value(DateTime(2026, 11, 21, 8)),
+          ),
+          ampmHalfProvider.overrideWith((ref) => AmPmHalf.am),
+          activitiesByHalfProvider.overrideWith((ref) => const Stream.empty()),
+          activitiesByDateProvider.overrideWith((ref) => const Stream.empty()),
+          tasksByHalfProvider.overrideWith((ref) => const []),
+        ],
+        child: const MaterialApp(home: Scaffold(body: FocusClockTab())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final clock = find.byType(AnalogClockFace);
+    final rect = tester.getRect(clock);
+    final tapPoint = rect.center + Offset(rect.width * 0.36, 0);
+    await tester.tapAt(tapPoint);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kegiatan baru'), findsOneWidget);
+    expect(find.text('03:00 AM'), findsOneWidget);
+    expect(find.text('03:30 AM'), findsOneWidget);
+    expect(find.text('Tambah kegiatan'), findsNothing);
+  });
+
   testWidgets('clock offers a labeled schedule list without dial gestures', (
     tester,
   ) async {
