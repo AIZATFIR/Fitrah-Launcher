@@ -38,6 +38,12 @@ void main() {
 
     final summary = find.text('Tidak ada jadwal tersisa');
     expect(summary, findsOneWidget);
+    await tester.tap(find.byTooltip('Buka Input Niat'));
+    await tester.pumpAndSettle();
+    final intentField = tester.widget<TextField>(find.byType(TextField));
+    expect(intentField.controller?.text, isEmpty);
+    expect(intentField.decoration?.hintText, isNull);
+    expect(find.text('Belajar 30 mnt'), findsNothing);
     final paragraph = tester.renderObject<RenderParagraph>(
       find.descendant(of: summary, matching: find.byType(RichText)),
     );

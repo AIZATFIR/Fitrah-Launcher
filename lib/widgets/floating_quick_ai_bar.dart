@@ -214,7 +214,6 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
                         ),
                         onSubmitted: (val) => _submitCommand(val),
                         decoration: const InputDecoration(
-                          hintText: 'Ceritakan tujuan atau kegiatanmu',
                           hintStyle: TextStyle(
                             color: AppPalette.textDim,
                             fontSize: 11,

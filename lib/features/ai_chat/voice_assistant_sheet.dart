@@ -161,11 +161,6 @@ class _VoiceAssistantSheetState extends ConsumerState<VoiceAssistantSheet>
                   controller: _voiceInputCtrl,
                   onSubmitted: _submitVoiceCommand,
                   decoration: InputDecoration(
-                    hintText: 'Contoh: "Timer 15 menit fokus"',
-                    hintStyle: const TextStyle(
-                      color: AppPalette.textDim,
-                      fontSize: 13,
-                    ),
                     filled: true,
                     fillColor: AppPalette.bg,
                     isDense: true,

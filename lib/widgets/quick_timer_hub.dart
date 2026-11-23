@@ -567,11 +567,6 @@ class _QuickTimerHubState extends ConsumerState<QuickTimerHub> {
                       _startTimer(_selectedDuration, customTitle: val),
                   style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'Ngapain persis? (misal: Coding fitur A)',
-                    hintStyle: const TextStyle(
-                      color: AppPalette.textDim,
-                      fontSize: 12,
-                    ),
                     filled: true,
                     fillColor: AppPalette.bg,
                     isDense: true,

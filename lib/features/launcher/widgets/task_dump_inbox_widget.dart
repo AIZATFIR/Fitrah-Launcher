@@ -103,8 +103,6 @@ class _TaskDumpInboxWidgetState extends ConsumerState<TaskDumpInboxWidget> {
                     focusNode: _inputFocusNode,
                     style: const TextStyle(fontSize: 13, color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Tulis tugas baru...',
-                      hintStyle: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.35)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
                       isDense: true,
                       filled: true,
@@ -141,7 +139,7 @@ class _TaskDumpInboxWidgetState extends ConsumerState<TaskDumpInboxWidget> {
                   padding: const EdgeInsets.all(16),
                   child: Center(
                     child: Text(
-                      'Belum ada task. Ketik di atas lalu tekan enter.',
+                      'Belum ada tugas',
                       style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.4)),
                     ),
                   ),

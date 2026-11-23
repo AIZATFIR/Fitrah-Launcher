@@ -2,7 +2,7 @@
 name: Focus Clock ecosystem experience
 status: draft-for-owner-review
 created: 2026-11-03
-updated: 2026-11-04
+updated: 2026-11-23
 sources:
   - PRD.md
   - DESIGN.md
@@ -51,6 +51,8 @@ Bahasa awal Indonesia yang lugas, mengikuti gaya isi user. Penggantian bahasa me
 | Save gagal | “Belum tersimpan. Coba lagi.” draft tetap terlihat |
 | Salat manual | “Waktu salat manual” dan akses ubah sumber/jam |
 | Refleksi | “Apa yang terasa berarti hari ini?”; user boleh menggantinya dengan prompt pribadi |
+
+**Ruang untuk berpikir:** Kolom tujuan, niat, jurnal, refleksi, kebiasaan dan catatan dimulai kosong. Jangan taruh contoh jawaban, prompt panjang atau sample pilihan di dalam maupun tepat di bawahnya. Saat mengedit, isi yang memang ditulis user tetap tampil. Pakai satu label singkat bila fungsi kolom belum jelas; bantuan tambahan hanya muncul saat diperlukan untuk melanjutkan.
 
 Hindari teguran “kamu malas”, urgensi merah untuk habit terlewat, claim energi akurat, dan skor agama. Pengingat mengikuti jadwal serta izin user, bukan jam yang agent anggap ideal.
 

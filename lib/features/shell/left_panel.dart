@@ -79,10 +79,7 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
           controller: titleCtrl,
           autofocus: true,
           style: const TextStyle(fontSize: 14),
-          decoration: const InputDecoration(
-            hintText: 'Enter task title...',
-            isDense: true,
-          ),
+          decoration: const InputDecoration(isDense: true),
           onSubmitted: (val) => Navigator.pop(ctx, val),
         ),
         actions: [
@@ -133,10 +130,7 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
           controller: titleCtrl,
           autofocus: true,
           style: const TextStyle(fontSize: 14),
-          decoration: const InputDecoration(
-            hintText: 'Enter task title...',
-            isDense: true,
-          ),
+          decoration: const InputDecoration(isDense: true),
           onSubmitted: (val) => Navigator.pop(ctx, val),
         ),
         actions: [
@@ -1214,11 +1208,6 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                     controller: _quickAddCtrl,
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'Add an unscheduled task...',
-                      hintStyle: const TextStyle(
-                        fontSize: 12,
-                        color: AppPalette.textDim,
-                      ),
                       prefixIcon: const Icon(
                         Icons.add,
                         size: 16,

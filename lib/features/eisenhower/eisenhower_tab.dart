@@ -46,7 +46,6 @@ class _EisenhowerTabState extends ConsumerState<EisenhowerTab> {
                   controller: _textCtrl,
                   onSubmitted: (_) => _addTask(),
                   decoration: InputDecoration(
-                    hintText: 'Add a new task...',
                     filled: true,
                     fillColor: AppPalette.card,
                     border: OutlineInputBorder(

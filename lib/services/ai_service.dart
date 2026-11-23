@@ -17,6 +17,7 @@ import 'secure_storage_service.dart';
 enum AiExecutionMode {
   byokGeminiDirect('BYOK (Gemini Direct)'),
   serverOpenRouter('Provider / fallback'),
+  notConfigured('Belum diatur'),
   demoFallback('Demo Mode');
 
   const AiExecutionMode(this.label);
@@ -452,7 +453,7 @@ Jika pengguna ingin merencanakan jadwal, bantu menyusun usulan yang bisa ditinja
         return 'Provider pilihan tidak merespons. Pesan tetap di perangkat dan tidak dikirim ke provider lain. Coba lagi atau buka Pengaturan AI untuk menguji koneksi.';
       }
     } else {
-      _activeMode = AiExecutionMode.serverOpenRouter;
+      _activeMode = AiExecutionMode.notConfigured;
       late final String reply;
       try {
         reply = await _sendServerFallback(
@@ -628,6 +629,7 @@ Belum ada perubahan jadwal diterapkan.''';
         final reply =
             (data['reply'] as String?)?.trim() ??
             'Siap, Aura sudah memproses jadwal Anda.';
+        _activeMode = AiExecutionMode.serverOpenRouter;
         _history.add({'role': 'assistant', 'content': reply});
         return reply;
       }
@@ -680,7 +682,7 @@ Belum ada perubahan jadwal diterapkan.''';
         : (model.isNotEmpty ? model : demoModel);
 
     if (effectiveKey.isEmpty && !configuredProvider) {
-      return 'Halo! Aura siap membantu. Silakan masukkan GEMINI_API_KEY Anda di Settings untuk mode BYOK, atau nyalakan Server Backend OpenRouter.';
+      return 'Sambungkan provider di Pengaturan AI untuk mulai.';
     }
 
     // Agentic loop

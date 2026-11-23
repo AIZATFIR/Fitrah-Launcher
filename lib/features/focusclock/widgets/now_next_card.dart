@@ -248,7 +248,7 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
             const Divider(height: 1, color: AppPalette.stroke),
             const SizedBox(height: 12),
 
-            // Row 3: Frictionless Natural Intent Bar
+            // Keep the intent field open for the user's own wording.
             Row(
               children: [
                 Expanded(
@@ -261,12 +261,6 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
                     ),
                     onSubmitted: _submitIntent,
                     decoration: InputDecoration(
-                      hintText:
-                          'Tulis niat (misal: "Belajar coding 1 jam jam 8 malam")',
-                      hintStyle: const TextStyle(
-                        fontSize: 12,
-                        color: AppPalette.textDim,
-                      ),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -298,25 +292,6 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
                   ),
                 ),
               ],
-            ),
-
-            // Row 4: Quick Intent Chips (Intelligent Suggestions)
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _suggestionChip('Kerja fokus 45 mnt', 'Kerja fokus 45m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('Belajar 30 mnt', 'Belajar 30m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('Istirahat 15 mnt', 'Istirahat 15m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('Olahraga 30 mnt', 'Olahraga 30m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('Menulis 30 mnt', 'Menulis 30m'),
-                ],
-              ),
             ),
           ],
         ],
@@ -416,29 +391,6 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _suggestionChip(String label, String intent) {
-    return InkWell(
-      onTap: () => _submitIntent(intent),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppPalette.bg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppPalette.stroke),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: AppPalette.textDim,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
     );
   }
 }

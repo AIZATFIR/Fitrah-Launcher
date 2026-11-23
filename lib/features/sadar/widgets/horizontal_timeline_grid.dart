@@ -808,11 +808,6 @@ class _HorizontalTimelineGridState
                         color: AppPalette.text,
                       ),
                       decoration: const InputDecoration(
-                        hintText: 'Tulis catatan harian singkat...',
-                        hintStyle: TextStyle(
-                          fontSize: 13,
-                          color: AppPalette.textDim,
-                        ),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(vertical: 8),

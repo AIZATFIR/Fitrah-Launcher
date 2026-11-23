@@ -14,6 +14,42 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('missing AI setup gives provider-neutral guidance', () async {
+    final ai = AiService(
+      baseUrl: 'https://default-provider.test/v1',
+      apiKey: '',
+      model: 'default-model',
+      activityRepo: ActivityRepository(null, NotificationService()),
+      presetRepo: PresetRepository.store(null),
+      secureStorage: _ReadOnlyBackendStorage(),
+      httpClient: MockClient((_) async => http.Response('', 503)),
+    );
+
+    final reply = await ai.send('Bantu aku mulai');
+
+    expect(reply, contains('Pengaturan AI'));
+    expect(reply, isNot(contains('GEMINI_API_KEY')));
+    expect(reply, isNot(contains('OpenRouter')));
+    expect(ai.activeMode.label, 'Belum diatur');
+  });
+
+  test('working backend reports its active provider mode', () async {
+    final ai = AiService(
+      baseUrl: 'https://default-provider.test/v1',
+      apiKey: '',
+      model: 'default-model',
+      activityRepo: ActivityRepository(null, NotificationService()),
+      presetRepo: PresetRepository.store(null),
+      secureStorage: _ReadOnlyBackendStorage(),
+      httpClient: MockClient(
+        (_) async => http.Response(jsonEncode({'reply': 'Terhubung'}), 200),
+      ),
+    );
+
+    expect(await ai.send('Bantu aku mulai'), 'Terhubung');
+    expect(ai.activeMode.label, 'Provider / fallback');
+  });
+
   test(
     'configured provider uses its exact URL and model regardless of key prefix',
     () async {

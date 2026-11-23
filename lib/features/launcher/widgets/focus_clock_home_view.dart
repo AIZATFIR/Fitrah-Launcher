@@ -2406,8 +2406,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
               filled: false,
-              hintText: 'Tulis pemikiran, niat, atau catatan hari ini...',
-              hintStyle: GoogleFonts.outfit(fontSize: 13, color: tc.textMuted),
             ),
             onChanged: (val) {
               _dailyNote = val;
@@ -3377,10 +3375,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           maxLength: 120,
           maxLines: 3,
           textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            hintText: 'Contoh: Selesaikan latihan LKS',
-            alignLabelWithHint: true,
-          ),
+          decoration: const InputDecoration(alignLabelWithHint: true),
           onSubmitted: (_) => Navigator.of(dialogContext).pop(controller.text),
         ),
         actions: [
@@ -3955,12 +3950,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                   maxLines: 3,
                   style: const TextStyle(color: AppPalette.text),
                   decoration: InputDecoration(
-                    hintText:
-                        'Tulis catatan harian untuk ${_formatDateShort(_selectedNoteDate)}...',
-                    hintStyle: TextStyle(
-                      color: AppPalette.textDim,
-                      fontSize: 13,
-                    ),
                     filled: true,
                     fillColor: AppPalette.card,
                     border: OutlineInputBorder(
@@ -4286,22 +4275,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             ),
             const SizedBox(height: 10),
             ...[0, 1, 2].map((i) {
-              final placeholders = [
-                'Ya Allah, terima kasih atas karunia-Mu',
-                'Terima kasih untuk...',
-                'Lepaskan perfeksionisme, menuju penguasaan',
-              ];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: TextField(
                   maxLines: 2,
                   style: const TextStyle(color: AppPalette.text, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: placeholders[i],
-                    hintStyle: const TextStyle(
-                      color: AppPalette.textDim,
-                      fontSize: 12,
-                    ),
                     filled: true,
                     fillColor: AppPalette.card,
                     border: OutlineInputBorder(
@@ -4615,11 +4594,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     controller: nameCtrl,
                     style: const TextStyle(color: AppPalette.text),
                     decoration: InputDecoration(
-                      hintText: 'Misal: Musisi, Desainer, Penulis',
-                      hintStyle: const TextStyle(
-                        color: AppPalette.textDim,
-                        fontSize: 13,
-                      ),
                       filled: true,
                       fillColor: AppPalette.bg,
                       border: OutlineInputBorder(
@@ -4793,11 +4767,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     controller: nameCtrl,
                     style: const TextStyle(color: AppPalette.text),
                     decoration: InputDecoration(
-                      hintText: 'Nama Preset (misal: Deep Work)',
-                      hintStyle: const TextStyle(
-                        color: AppPalette.textDim,
-                        fontSize: 13,
-                      ),
                       filled: true,
                       fillColor: AppPalette.bg,
                       border: OutlineInputBorder(
@@ -4976,11 +4945,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     controller: titleCtrl,
                     style: const TextStyle(color: AppPalette.text),
                     decoration: InputDecoration(
-                      hintText: 'Nama kebiasaan / tugas',
-                      hintStyle: const TextStyle(
-                        color: AppPalette.textDim,
-                        fontSize: 13,
-                      ),
                       filled: true,
                       fillColor: AppPalette.bg,
                       border: OutlineInputBorder(
@@ -6436,8 +6400,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               style: TextStyle(color: tc.textPrimary),
               decoration: InputDecoration(
                 errorText: error,
-                hintText: 'Nama kegiatan / habit / tugas...',
-                hintStyle: TextStyle(color: tc.textSecondary),
                 filled: true,
                 fillColor: tc.cardAlt,
                 border: OutlineInputBorder(
@@ -6689,7 +6651,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 maxLines: 4,
                 style: const TextStyle(color: AppPalette.text),
                 decoration: InputDecoration(
-                  hintText: 'Tulis refleksi atau jurnal...',
                   filled: true,
                   fillColor: AppPalette.bg,
                   border: OutlineInputBorder(

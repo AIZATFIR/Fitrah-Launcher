@@ -1394,11 +1394,6 @@ class _LoopHabitGridWidgetState extends ConsumerState<LoopHabitGridWidget> {
                                 color: AppPalette.textDim,
                                 fontSize: 14,
                               ),
-                              hintText: 'e.g. 1 ayat Al quran',
-                              hintStyle: TextStyle(
-                                color: AppPalette.textDim.withOpacity(0.5),
-                                fontSize: 13,
-                              ),
                               border: UnderlineInputBorder(
                                 borderSide: BorderSide(
                                   color: AppPalette.text.withOpacity(0.2),

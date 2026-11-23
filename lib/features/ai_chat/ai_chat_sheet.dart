@@ -269,7 +269,6 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
               controller: goalCtrl,
               decoration: const InputDecoration(
                 labelText: 'Target/Tugas (pisahkan dengan koma)',
-                hintText: 'misal: Belajar Matematika, Koding, Olahraga',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -527,12 +526,6 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   minLines: 1,
                   maxLines: 4,
                   decoration: InputDecoration(
-                    hintText:
-                        'Ceritakan tujuanmu atau apa yang terasa berat...',
-                    hintStyle: const TextStyle(
-                      color: AppPalette.textDim,
-                      fontSize: 14,
-                    ),
                     filled: true,
                     fillColor: AppPalette.bg,
                     contentPadding: const EdgeInsets.symmetric(
@@ -1311,16 +1304,6 @@ class _EmptyState extends StatelessWidget {
                   'Apa tujuan yang ingin kamu jaga?',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Ceritakan tujuanmu atau hal yang terasa berat. Kita mulai dari satu langkah.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppPalette.textDim,
-                    fontSize: 13,
-                    height: 1.45,
-                  ),
-                ),
                 const SizedBox(height: 16),
                 if (initialGoal != null && initialGoal!.trim().isNotEmpty) ...[
                   Text(
@@ -1357,28 +1340,6 @@ class _EmptyState extends StatelessWidget {
                       icon: const Icon(Icons.tune_rounded, size: 16),
                       label: const Text('Atur provider & API key'),
                     ),
-                ] else ...[
-                  ...const [
-                    'Aku ingin menang LKS nasional IT Software Solution',
-                    'Aku kewalahan. Bantu pilih satu langkah hari ini',
-                  ].map(
-                    (s) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: TextButton(
-                        onPressed: () => onPrompt(s),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppPalette.accent,
-                          alignment: Alignment.center,
-                          minimumSize: const Size(44, 44),
-                        ),
-                        child: Text(
-                          s,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ],
             ),

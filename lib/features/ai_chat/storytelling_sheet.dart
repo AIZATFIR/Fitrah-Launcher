@@ -212,13 +212,6 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
             maxLines: 4,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              hintText: _isEveningMode
-                  ? 'Ceritakan tentang harimu... Apa yang sudah kamu capai? Apa yang ingin kamu tuntaskan besok agar pikiranmu tenang?'
-                  : 'Apa target utama hari ini? Ke mana kamu ingin menyalurkan energi kreatifmu agar hari ini bermakna?',
-              hintStyle: const TextStyle(
-                color: AppPalette.textDim,
-                fontSize: 12,
-              ),
               filled: true,
               fillColor: AppPalette.bg,
               border: OutlineInputBorder(

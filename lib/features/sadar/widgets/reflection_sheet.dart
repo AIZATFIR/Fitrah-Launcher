@@ -172,12 +172,6 @@ class _ReflectionSheetState extends ConsumerState<ReflectionSheet> {
               controller: _proudCtrl,
               style: const TextStyle(fontSize: 14, color: AppPalette.text),
               decoration: InputDecoration(
-                hintText:
-                    'misal: Aku belajar bahasa walau awalnya terasa lelah.',
-                hintStyle: const TextStyle(
-                  color: AppPalette.textDim,
-                  fontSize: 13,
-                ),
                 filled: true,
                 fillColor: AppPalette.bg,
                 border: OutlineInputBorder(
@@ -209,11 +203,6 @@ class _ReflectionSheetState extends ConsumerState<ReflectionSheet> {
               controller: _noteCtrl,
               style: const TextStyle(fontSize: 13, color: AppPalette.text),
               decoration: InputDecoration(
-                hintText: 'Catatan tambahan tentang hari ini...',
-                hintStyle: const TextStyle(
-                  color: AppPalette.textDim,
-                  fontSize: 13,
-                ),
                 filled: true,
                 fillColor: AppPalette.bg,
                 border: OutlineInputBorder(

@@ -305,11 +305,6 @@ class _QuickActionSheetState extends ConsumerState<QuickActionSheet> {
                       color: AppPalette.text,
                     ),
                     decoration: const InputDecoration(
-                      hintText: 'Tulis refleksi singkat untuk hari ini...',
-                      hintStyle: TextStyle(
-                        color: AppPalette.textDim,
-                        fontSize: 13,
-                      ),
                       border: InputBorder.none,
                       isDense: true,
                     ),

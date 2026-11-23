@@ -238,7 +238,7 @@ class _CommandPaletteModalState extends ConsumerState<CommandPaletteModal> {
                 ),
                 onChanged: (_) => setState(() => _selectedIndex = 0),
                 decoration: InputDecoration(
-                  hintText: 'Ketik perintah atau cari senjata (Ctrl+K)...',
+                  hintText: 'Cari perintah',
                   hintStyle: const TextStyle(
                     color: AppPalette.textDim,
                     fontSize: 14,

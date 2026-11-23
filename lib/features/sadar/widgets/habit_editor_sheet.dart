@@ -191,7 +191,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
               style: const TextStyle(fontSize: 15, color: AppPalette.text),
               decoration: InputDecoration(
                 labelText: 'Nama Kebiasaan',
-                hintText: 'misal: Deep Work, Olahraga, Belajar Bahasa, Membaca',
                 labelStyle: const TextStyle(color: AppPalette.textDim),
                 filled: true,
                 fillColor: AppPalette.bg,
@@ -373,8 +372,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                 style: const TextStyle(fontSize: 14, color: AppPalette.text),
                 decoration: InputDecoration(
                   labelText: 'Target Jumlah / Repetisi',
-                  hintText:
-                      'misal: 1 untuk course/kegiatan harian, 20 untuk push up',
                   labelStyle: const TextStyle(color: AppPalette.textDim),
                   filled: true,
                   fillColor: AppPalette.bg,
@@ -470,7 +467,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                       ),
                       decoration: InputDecoration(
                         labelText: 'Jumlah Set',
-                        hintText: '3',
                         labelStyle: const TextStyle(color: AppPalette.textDim),
                         filled: true,
                         fillColor: AppPalette.bg,
@@ -494,7 +490,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                       ),
                       decoration: InputDecoration(
                         labelText: 'Detik per Set',
-                        hintText: '60',
                         labelStyle: const TextStyle(color: AppPalette.textDim),
                         filled: true,
                         fillColor: AppPalette.bg,
@@ -510,10 +505,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                 ],
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Kombinasi Repetisi Set x Timer. Contoh: Plank 3 set @ 60 detik.',
-                style: TextStyle(fontSize: 11, color: Colors.white38),
-              ),
             ],
             const SizedBox(height: 16),
 
