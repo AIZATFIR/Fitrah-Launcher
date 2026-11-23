@@ -898,6 +898,10 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
 
   PlanProposal _draft() {
     final date = _targetDate.text.trim();
+    final title = _title.text.trim();
+    if (title.isEmpty) {
+      throw const FormatException('Tujuan belum diisi.');
+    }
     final blocks = <WeeklyPracticeBlock>[];
     for (var i = 0; i < _weekdays.length; i++) {
       final match = RegExp(
@@ -917,6 +921,9 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
       if (duration == null) {
         throw const FormatException('Durasi harus berupa angka menit.');
       }
+      if (duration < 15 || duration > 360) {
+        throw const FormatException('Durasi harus 15–360 menit.');
+      }
       blocks.add(
         WeeklyPracticeBlock(
           weekday: _weekdays[i],
@@ -927,7 +934,7 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
     }
     return PlanProposal(
       goal: GoalUnderstanding(
-        title: _title.text,
+        title: title,
         why: _why.text,
         targetDate: date.isEmpty ? null : date,
       ),
@@ -963,6 +970,9 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
     } on FormatException {
       // A new/partially edited block stays visually empty until it is complete.
       if (mounted) setState(() => _conflicts = const []);
+    } on ArgumentError {
+      // Keep incomplete assumption/title edits calm until the user applies them.
+      if (mounted) setState(() => _conflicts = const []);
     } catch (error) {
       if (mounted) setState(() => _conflicts = [error.toString()]);
     }
@@ -986,7 +996,13 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
       await widget.proposal.approve(edited);
       widget.onChanged();
     } catch (error) {
-      _error = error.toString();
+      if (error is FormatException) {
+        _error = error.message.toString();
+      } else if (error is ArgumentError) {
+        _error = 'Periksa kembali tujuan dan asumsi.';
+      } else {
+        _error = error.toString();
+      }
     }
     if (mounted) setState(() => _working = false);
   }
