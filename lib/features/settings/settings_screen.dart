@@ -1349,7 +1349,6 @@ class _AiConfigTileState extends State<_AiConfigTile> {
             onChanged: (_) => _clearConnectionResult(),
             style: const TextStyle(fontSize: 13),
             decoration: const InputDecoration(
-              hintText: 'https://openrouter.ai/api/v1',
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: 12,
@@ -1372,7 +1371,6 @@ class _AiConfigTileState extends State<_AiConfigTile> {
             obscureText: _obscureKey,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              hintText: 'sk-or-...',
               border: const OutlineInputBorder(),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
@@ -1428,7 +1426,6 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                 },
                 style: const TextStyle(fontSize: 13),
                 decoration: const InputDecoration(
-                  hintText: 'gemini-2.5-flash',
                   border: OutlineInputBorder(),
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 12,

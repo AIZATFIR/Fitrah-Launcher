@@ -960,6 +960,9 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
         goalId: widget.proposal.goalId,
       );
       if (mounted) setState(() => _conflicts = conflicts);
+    } on FormatException {
+      // A new/partially edited block stays visually empty until it is complete.
+      if (mounted) setState(() => _conflicts = const []);
     } catch (error) {
       if (mounted) setState(() => _conflicts = [error.toString()]);
     }
@@ -1100,7 +1103,6 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
                     enabled: editable && !_working,
                     decoration: const InputDecoration(
                       labelText: 'Jam',
-                      hintText: '18:00',
                       isDense: true,
                     ),
                     onChanged: (_) => _refreshConflicts(),
@@ -1144,8 +1146,8 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
                   : () {
                       setState(() {
                         _weekdays.add(1);
-                        _times.add(TextEditingController(text: '18:00'));
-                        _durations.add(TextEditingController(text: '60'));
+                        _times.add(TextEditingController());
+                        _durations.add(TextEditingController());
                       });
                       _refreshConflicts();
                     },

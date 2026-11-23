@@ -757,7 +757,6 @@ class _LauncherCustomizationSheetState
               controller: _urlCtrl,
               style: const TextStyle(fontSize: 13, color: AppPalette.text),
               decoration: InputDecoration(
-                hintText: 'https://images.unsplash.com/...',
                 hintStyle: const TextStyle(color: AppPalette.textDim),
                 filled: true,
                 fillColor: AppPalette.bg,
