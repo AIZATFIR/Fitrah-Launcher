@@ -9,6 +9,7 @@ Removed illustrative sample values from empty AI provider and wallpaper URL fiel
 - `flutter analyze --no-pub` reports no errors or warnings; eight info-level notices remain (several in pre-existing files, including three formatting notices in the launcher customization file).
 - Web production deployment `dpl_AMUnUKuvwi4faVKuLUtWP61twCty` is READY. Production root and `main.dart.js` return HTTP 200; `/version.json` reports 0.5.41 / 8132.
 - APK signature, web ZIP integrity, `SHA256SUMS`, and `git diff --check` verified.
+- API36 x86_64 AVD `FocusClock_UI_QA` installed v8132 over the existing owner preview. Fitrah remained Android HOME, first-install time stayed `2026-11-16 10:41:54`, the QA goal and clock remained visible at 1080×2400 / 200% font scale, and force-stop/cold launch had no sampled fatal, ANR or Flutter error. Screenshot: `.dart_tool/android-qa/v8132/home.png`.
 - Automated tests and physical-device checks were not run for this copy/empty-field slice.
 
 This is a personal owner preview. Android and browser data do not sync. Physical OEM, TalkBack, live provider and sustained-use checks remain open.
