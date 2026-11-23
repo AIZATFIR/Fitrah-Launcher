@@ -3,11 +3,13 @@ import 'drawer_preferences_controls.dart';
 import 'launcher_action_feedback.dart';
 import 'default_home_status_control.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../models/habit.dart';
 import '../../../models/timer_session.dart';
+import '../../../providers/providers.dart';
 import '../../../core/theme.dart';
 import '../../sadar/widgets/sadar_ypt_focus_view.dart';
 import '../models/launcher_settings.dart';
@@ -31,6 +33,9 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
   bool _overlayGranted = false;
   bool _cueActive = false;
   bool _cueWindowFailed = false;
+  bool _goalCuePermissionGranted = false;
+  bool _goalCuePermissionDenied = false;
+  bool _goalCuePreferenceSaveFailed = false;
   Completer<void>? _settingsReturn;
 
   @override
@@ -38,6 +43,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _refreshScreenTimePermissions();
+    _refreshGoalCuePermission();
   }
 
   @override
@@ -51,6 +57,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
     if (state == AppLifecycleState.resumed) {
       if (!(_settingsReturn?.isCompleted ?? true)) _settingsReturn?.complete();
       _refreshScreenTimePermissions();
+      _refreshGoalCuePermission();
     }
   }
 
@@ -74,6 +81,68 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
       _cueWindowFailed =
           settings.screenTimeCueEnabled && usage && overlay && !cueActive;
     });
+  }
+
+  bool get _androidOnly =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  Future<void> _refreshGoalCuePermission() async {
+    await ref.read(launcherSettingsProvider.notifier).hydration;
+    if (!mounted) return;
+    if (!ref.read(launcherSettingsProvider).lockScreenGoalCueEnabled) {
+      setState(() {
+        _goalCuePermissionGranted = false;
+        _goalCuePermissionDenied = false;
+      });
+      return;
+    }
+    final granted = await ref
+        .read(notificationServiceProvider)
+        .goalCuePermissionGranted();
+    if (!mounted) return;
+    setState(() {
+      _goalCuePermissionGranted = granted;
+      _goalCuePermissionDenied = false;
+    });
+  }
+
+  Future<void> _toggleGoalCue(bool enabled) async {
+    final notifications = ref.read(notificationServiceProvider);
+    final notifier = ref.read(launcherSettingsProvider.notifier);
+    if (!enabled) {
+      final saved = await notifier.setLockScreenGoalCueEnabled(false);
+      await notifications.cancelPinnedGoal();
+      if (mounted) {
+        setState(() {
+          _goalCuePermissionDenied = false;
+          _goalCuePreferenceSaveFailed = !saved;
+        });
+      }
+      return;
+    }
+    final granted = _goalCuePermissionGranted
+        ? true
+        : await notifications.requestGoalCuePermission();
+    if (!granted) {
+      await notifications.cancelPinnedGoal();
+      if (mounted) {
+        setState(() {
+          _goalCuePermissionGranted = false;
+          _goalCuePermissionDenied = true;
+          _goalCuePreferenceSaveFailed = false;
+        });
+      }
+      return;
+    }
+    final saved = await notifier.setLockScreenGoalCueEnabled(true);
+    if (!saved) await notifications.cancelPinnedGoal();
+    if (mounted) {
+      setState(() {
+        _goalCuePermissionGranted = true;
+        _goalCuePermissionDenied = false;
+        _goalCuePreferenceSaveFailed = !saved;
+      });
+    }
   }
 
   Future<bool> _explainAndOpen(String capability) async {
@@ -185,6 +254,7 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               children: [
                 _buildScreenTimeSection(settings),
+                if (_androidOnly) _buildGoalCueSection(settings),
                 const SizedBox(height: 20),
                 const DrawerPreferencesControls(),
 
@@ -386,6 +456,58 @@ class _FitrahSettingsScreenState extends ConsumerState<FitrahSettingsScreen>
                 ).textTheme.bodySmall?.copyWith(color: AppPalette.textDim),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoalCueSection(LauncherSettings settings) {
+    final status = _goalCuePreferenceSaveFailed
+        ? 'Pengaturan belum tersimpan. Coba lagi.'
+        : _goalCuePermissionDenied
+        ? 'Pengingat belum aktif. Izinkan notifikasi Android untuk menyalakannya.'
+        : settings.lockScreenGoalCueEnabled && !_goalCuePermissionGranted
+        ? 'Notifikasi Android dinonaktifkan; tujuan tidak ditampilkan.'
+        : _goalCuePermissionGranted
+        ? 'Akses notifikasi Android tersedia.'
+        : 'Belum aktif.';
+    return Card(
+      color: AppPalette.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppPalette.stroke),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tujuan di layar kunci',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppPalette.bookpaperText,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Menampilkan tujuan pilihanmu di notifikasi perangkat ini. Teks mengikuti pengaturan privasi layar kunci Android.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppPalette.textDim),
+            ),
+            const SizedBox(height: 8),
+            _permissionStatus(status),
+            SwitchListTile.adaptive(
+              key: const ValueKey('lock-screen-goal-cue-switch'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Tampilkan tujuan pilihan'),
+              subtitle: const Text(
+                'Mati secara default; bisa dimatikan kapan saja.',
+              ),
+              value: settings.lockScreenGoalCueEnabled,
+              onChanged: _toggleGoalCue,
+            ),
           ],
         ),
       ),

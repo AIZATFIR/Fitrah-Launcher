@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import '../../core/time_math.dart';
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
 import '../../providers/intent_providers.dart';
+import '../../domain/focus_intent.dart';
 import 'models/launcher_settings.dart';
 import 'providers/launcher_settings_provider.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +36,10 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
   late final PageController _pageCtrl;
   bool _returningHome = false;
   final _screenTime = ScreenTimeService();
+  AsyncValue<IntentState> _goalState = const AsyncLoading();
+  LauncherSettings _goalCueSettings = LauncherSettings();
+  Future<void> _goalCueQueue = Future.value();
+  late final StreamSubscription<void> _goalCueTapSubscription;
   late int _currentPage; // 0 = Clock, 1 = Home, 2 = Habits, 3 = Apps
 
   @override
@@ -43,18 +49,38 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
     _currentPage = initialPage;
     WidgetsBinding.instance.addObserver(this);
     _pageCtrl = PageController(initialPage: initialPage);
+    _goalCueTapSubscription = ref
+        .read(notificationServiceProvider)
+        .goalCueTaps
+        .listen((_) => _returnHome());
+    _goalCueSettings = ref.read(launcherSettingsProvider);
+    ref.listenManual<LauncherSettings>(launcherSettingsProvider, (_, next) {
+      _goalCueSettings = next;
+      _queueGoalCueReconciliation();
+    }, fireImmediately: true);
+    ref.listenManual<AsyncValue<IntentState>>(intentStateProvider, (_, next) {
+      _goalState = next;
+      _queueGoalCueReconciliation();
+    }, fireImmediately: true);
     _homeChannel.setMethodCallHandler((call) async {
       if (call.method == 'home') await _returnHome();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(launcherSettingsProvider.notifier).hydration;
-      if (mounted) _syncScreenTime(ref.read(launcherSettingsProvider));
+      if (mounted) {
+        _syncScreenTime(ref.read(launcherSettingsProvider));
+        if (ref.read(notificationServiceProvider).consumeGoalCueLaunch()) {
+          _refreshHomeDate();
+          if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(1);
+        }
+      }
     });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _goalCueTapSubscription.cancel();
     _homeChannel.setMethodCallHandler(null);
     _pageCtrl.dispose();
     super.dispose();
@@ -64,6 +90,7 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _syncScreenTime(ref.read(launcherSettingsProvider));
+      _queueGoalCueReconciliation();
     }
   }
 
@@ -74,6 +101,21 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
         optedIn: settings.screenTimeCueEnabled,
       ),
     );
+  }
+
+  void _queueGoalCueReconciliation() {
+    _goalCueQueue = _goalCueQueue
+        .then((_) async {
+          final settings = _goalCueSettings;
+          final goal = _goalState.valueOrNull?.pinnedGoal;
+          final notifications = ref.read(notificationServiceProvider);
+          if (!settings.lockScreenGoalCueEnabled || goal == null) {
+            await notifications.cancelPinnedGoal();
+            return;
+          }
+          await notifications.showPinnedGoal(goal.title);
+        })
+        .catchError((_) {});
   }
 
   Future<void> _returnHome() async {

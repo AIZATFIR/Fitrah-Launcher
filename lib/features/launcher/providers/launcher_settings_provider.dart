@@ -259,6 +259,9 @@ class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
   Future<bool> setScreenTimeCueEnabled(bool enabled) =>
       _mutate((s) => s.copyWith(screenTimeCueEnabled: enabled));
 
+  Future<bool> setLockScreenGoalCueEnabled(bool enabled) =>
+      _mutate((s) => s.copyWith(lockScreenGoalCueEnabled: enabled));
+
   Future<bool> setGentleLimitEnabled(bool enabled) =>
       _mutate((s) => s.copyWith(gentleLimitEnabled: enabled));
 

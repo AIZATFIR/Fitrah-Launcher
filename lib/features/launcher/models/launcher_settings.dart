@@ -35,6 +35,7 @@ class LauncherSettings {
   final String themePalette;
   final String focusGoal;
   final bool screenTimeCueEnabled;
+  final bool lockScreenGoalCueEnabled;
   final bool gentleLimitEnabled;
   final int dailyLimitMinutes;
   final int gentleWaitSeconds;
@@ -111,6 +112,7 @@ class LauncherSettings {
     this.themePalette = 'full_book',
     this.focusGoal = '',
     this.screenTimeCueEnabled = false,
+    this.lockScreenGoalCueEnabled = false,
     this.gentleLimitEnabled = false,
     this.dailyLimitMinutes = 120,
     this.gentleWaitSeconds = 20,
@@ -147,6 +149,7 @@ class LauncherSettings {
     String? themePalette,
     String? focusGoal,
     bool? screenTimeCueEnabled,
+    bool? lockScreenGoalCueEnabled,
     bool? gentleLimitEnabled,
     int? dailyLimitMinutes,
     int? gentleWaitSeconds,
@@ -180,6 +183,8 @@ class LauncherSettings {
       themePalette: themePalette ?? this.themePalette,
       focusGoal: focusGoal ?? this.focusGoal,
       screenTimeCueEnabled: screenTimeCueEnabled ?? this.screenTimeCueEnabled,
+      lockScreenGoalCueEnabled:
+          lockScreenGoalCueEnabled ?? this.lockScreenGoalCueEnabled,
       gentleLimitEnabled: gentleLimitEnabled ?? this.gentleLimitEnabled,
       dailyLimitMinutes: dailyLimitMinutes ?? this.dailyLimitMinutes,
       gentleWaitSeconds: gentleWaitSeconds ?? this.gentleWaitSeconds,
@@ -216,6 +221,7 @@ class LauncherSettings {
       'themePalette': themePalette,
       'focusGoal': focusGoal,
       'screenTimeCueEnabled': screenTimeCueEnabled,
+      'lockScreenGoalCueEnabled': lockScreenGoalCueEnabled,
       'gentleLimitEnabled': gentleLimitEnabled,
       'dailyLimitMinutes': dailyLimitMinutes,
       'gentleWaitSeconds': gentleWaitSeconds,
@@ -267,6 +273,8 @@ class LauncherSettings {
       },
       focusGoal: map['focusGoal'] as String? ?? '',
       screenTimeCueEnabled: map['screenTimeCueEnabled'] as bool? ?? false,
+      lockScreenGoalCueEnabled:
+          map['lockScreenGoalCueEnabled'] as bool? ?? false,
       gentleLimitEnabled: map['gentleLimitEnabled'] as bool? ?? false,
       dailyLimitMinutes: ((map['dailyLimitMinutes'] as num?)?.toInt() ?? 120)
           .clamp(15, 1440),
