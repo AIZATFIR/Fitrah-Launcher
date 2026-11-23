@@ -10,6 +10,7 @@ import '../../../models/task.dart';
 import '../../../providers/intent_providers.dart';
 import '../../../providers/sadar_providers.dart';
 import '../../../services/sadar_timer_engine.dart';
+import 'default_home_status_control.dart';
 
 const int homeQuickTaskFocusMinutes = 25;
 
@@ -225,6 +226,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                     ],
                   ),
                   const SizedBox(height: 8),
+                  const DefaultHomeQuickAction(),
                   Divider(
                     height: 1,
                     color: widget.secondary.withValues(alpha: 0.22),

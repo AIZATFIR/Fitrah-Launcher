@@ -12,6 +12,88 @@ class DefaultHomeStatusControl extends ConsumerStatefulWidget {
       _DefaultHomeStatusControlState();
 }
 
+/// Small first-run shortcut for the Home goal card. The detailed status stays
+/// in Settings; this only appears when Android confirms Fitrah is not Home.
+class DefaultHomeQuickAction extends ConsumerStatefulWidget {
+  const DefaultHomeQuickAction({super.key});
+
+  @override
+  ConsumerState<DefaultHomeQuickAction> createState() =>
+      _DefaultHomeQuickActionState();
+}
+
+class _DefaultHomeQuickActionState
+    extends ConsumerState<DefaultHomeQuickAction> {
+  bool _pending = false;
+  String? _failure;
+
+  Future<void> _choose() async {
+    if (_pending) return;
+    setState(() {
+      _pending = true;
+      _failure = null;
+    });
+    var dispatched = false;
+    try {
+      dispatched = await ref
+          .read(appLauncherServiceProvider)
+          .requestDefaultHome();
+    } catch (_) {
+      dispatched = false;
+    }
+    if (!mounted) return;
+    setState(() {
+      _pending = false;
+      if (!dispatched) {
+        _failure = 'Tidak dapat membuka pilihan Android. Coba lagi.';
+      }
+    });
+    ref.invalidate(defaultHomeStatusProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final service = ref.watch(appLauncherServiceProvider);
+    if (!service.isSupported) return const SizedBox.shrink();
+    final status = ref.watch(defaultHomeStatusProvider);
+    if (status.isLoading || status.hasError || status.value == true) {
+      return const SizedBox.shrink();
+    }
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton.icon(
+          style: TextButton.styleFrom(
+            foregroundColor: colors.primary,
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+          onPressed: _pending ? null : _choose,
+          icon: _pending
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.home_outlined, size: 18),
+          label: Text(_pending ? 'Membuka pilihan…' : 'Jadikan layar utama'),
+        ),
+        if (_failure != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Text(
+              _failure!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _DefaultHomeStatusControlState
     extends ConsumerState<DefaultHomeStatusControl> {
   bool _pending = false;
