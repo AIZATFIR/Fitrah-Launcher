@@ -82,15 +82,29 @@ jobs:
         with:
           flutter-version: '3.41.9'
           channel: 'stable'
-      - name: Build Web
+      - name: Build Fitrah, Focus Clock and Sadar
         run: |
-          flutter build web --release
-          cd build/web && zip -r ../../Fitrah-Launcher-Web.zip .
-      - name: Upload Web Artifact
+          npm run build:fitrah -- --output=build/web/fitrah
+          npm run build:focus -- --output=build/web/focus
+          npm run build:sadar -- --output=build/web/sadar
+          (cd build/web/fitrah && zip -qr ../../../Fitrah-Launcher-Web-Fitrah.zip .)
+          (cd build/web/focus && zip -qr ../../../Fitrah-Launcher-Web-Focus-Clock.zip .)
+          (cd build/web/sadar && zip -qr ../../../Fitrah-Launcher-Web-Sadar.zip .)
+      - name: Upload Fitrah Web Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Fitrah-Launcher-Web
-          path: Fitrah-Launcher-Web.zip
+          name: Fitrah-Launcher-Web-Fitrah
+          path: Fitrah-Launcher-Web-Fitrah.zip
+      - name: Upload Focus Clock Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fitrah-Launcher-Web-Focus-Clock
+          path: Fitrah-Launcher-Web-Focus-Clock.zip
+      - name: Upload Sadar Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fitrah-Launcher-Web-Sadar
+          path: Fitrah-Launcher-Web-Sadar.zip
   publish-release:
     if: startsWith(github.ref, 'refs/tags/')
     needs: [build-android, build-linux, build-windows, build-web]
@@ -110,10 +124,17 @@ jobs:
           mv release-assets/Fitrah-Launcher-Android-APK/app-release.apk release-assets/Fitrah-Launcher-Android-APK.apk
           mv release-assets/Fitrah-Launcher-Linux-x64/Fitrah-Launcher-Linux-x64.tar.gz release-assets/Fitrah-Launcher-Linux-x64.tar.gz
           mv release-assets/Fitrah-Launcher-Windows-x64/Fitrah-Launcher-Windows-x64.zip release-assets/Fitrah-Launcher-Windows-x64.zip
-          mv release-assets/Fitrah-Launcher-Web/Fitrah-Launcher-Web.zip release-assets/Fitrah-Launcher-Web.zip
+          mv release-assets/Fitrah-Launcher-Web-Fitrah/Fitrah-Launcher-Web-Fitrah.zip release-assets/Fitrah-Launcher-Web-Fitrah.zip
+          mv release-assets/Fitrah-Launcher-Web-Focus-Clock/Fitrah-Launcher-Web-Focus-Clock.zip release-assets/Fitrah-Launcher-Web-Focus-Clock.zip
+          mv release-assets/Fitrah-Launcher-Web-Sadar/Fitrah-Launcher-Web-Sadar.zip release-assets/Fitrah-Launcher-Web-Sadar.zip
+          cd release-assets
+          sha256sum Fitrah-Launcher-Android-APK.apk Fitrah-Launcher-Linux-x64.tar.gz Fitrah-Launcher-Windows-x64.zip Fitrah-Launcher-Web-Fitrah.zip Fitrah-Launcher-Web-Focus-Clock.zip Fitrah-Launcher-Web-Sadar.zip > SHA256SUMS.txt
           gh release create "$TAG_NAME" \
-            release-assets/Fitrah-Launcher-Android-APK.apk \
-            release-assets/Fitrah-Launcher-Linux-x64.tar.gz \
-            release-assets/Fitrah-Launcher-Windows-x64.zip \
-            release-assets/Fitrah-Launcher-Web.zip \
+            Fitrah-Launcher-Android-APK.apk \
+            Fitrah-Launcher-Linux-x64.tar.gz \
+            Fitrah-Launcher-Windows-x64.zip \
+            Fitrah-Launcher-Web-Fitrah.zip \
+            Fitrah-Launcher-Web-Focus-Clock.zip \
+            Fitrah-Launcher-Web-Sadar.zip \
+            SHA256SUMS.txt \
             --verify-tag --title "Fitrah Launcher $TAG_NAME — Ecosystem Preview" --generate-notes --prerelease
