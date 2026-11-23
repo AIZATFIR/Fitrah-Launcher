@@ -17,7 +17,6 @@ import '../presets/presets_tab.dart';
 import '../../widgets/command_palette.dart';
 import '../../widgets/hotkeys_modal.dart';
 import 'analog_clock_face.dart';
-import 'widgets/now_next_card.dart';
 
 /// Returns a Preset if user picked one, null if user chose "Custom".
 /// Returns false (via pop with no result) if user dismissed.
@@ -1080,20 +1079,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       ],
                     ),
                   ],
-                ),
-              ),
-
-              // Bottom Contextual Card (Now, Next & Natural Intent Engine)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 8,
-                child: Center(
-                  child: NowNextCard(
-                    activities: activities,
-                    now: now,
-                    date: date,
-                  ),
                 ),
               ),
             ],

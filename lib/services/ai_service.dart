@@ -179,9 +179,10 @@ const _tools = [
     'function': {
       'name': 'schedule_adaptive_goal',
       'description':
-          'Analyze a long-term target goal (e.g. LKS IT Software Solutions, Juara Competition, Master Skill) '
-          'and adaptively schedule required daily practice/study blocks from current date until target event date. '
-          'Calculates target daily hours and plots flexible recurring blocks into empty clock face slots.',
+          'Analyze the user\'s stated long-term goal. Only when asked, '
+          'adaptively schedule required daily practice/study blocks from current date until target event date. '
+          'Never invent or suggest a goal; preserve the user\'s own wording. '
+          'Calculate target daily hours and plot flexible recurring blocks into empty clock face slots.',
       'parameters': {
         'type': 'object',
         'required': ['goal_title', 'target_date', 'daily_hours'],
@@ -189,7 +190,7 @@ const _tools = [
           'goal_title': {
             'type': 'string',
             'description':
-                'Title of goal/identity, e.g. "Juara 1 LKS IT Software Solutions"',
+                'The goal or identity the user stated, using their own wording.',
           },
           'target_date': {
             'type': 'string',

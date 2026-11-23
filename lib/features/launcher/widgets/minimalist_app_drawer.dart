@@ -38,6 +38,8 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
 
   String _searchQuery = '';
   bool _isSearchOpen = false;
+  bool _isScrubbing = false;
+  String? _scrubLetter;
   Timer? _clockTicker;
   int _focusRevision = 0;
 
@@ -418,14 +420,6 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                           ),
                         ),
 
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size(48, 48),
-                        ),
-                        onPressed: () => showHiddenApps(context),
-                        icon: const Icon(Icons.visibility_off_outlined),
-                        label: const Text('Aplikasi tersembunyi'),
-                      ),
                       // Main List
                       Expanded(
                         child: !preferences.isLoaded
@@ -484,7 +478,16 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                             app.appName.toLowerCase().contains(
                                               _searchQuery,
                                             ) &&
-                                            (_isSearchOpen ||
+                                            (_scrubLetter == null ||
+                                                _scrubLetter == '○' ||
+                                                (_scrubLetter == '☆'
+                                                    ? favorites.contains(
+                                                        app.packageName,
+                                                      )
+                                                    : app.firstLetter ==
+                                                          _scrubLetter)) &&
+                                            (_scrubLetter != null ||
+                                                _isSearchOpen ||
                                                 _searchQuery.isNotEmpty ||
                                                 !favorites.contains(
                                                   app.packageName,
@@ -497,13 +500,19 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                             favorites.contains(a.packageName),
                                       )
                                       .toList();
-                                  if (filtered.isEmpty && shortcuts.isEmpty) {
+                                  if (filtered.isEmpty &&
+                                      (shortcuts.isEmpty ||
+                                          _scrubLetter != null)) {
                                     return ListView(
                                       padding: const EdgeInsets.all(24),
                                       children: [
-                                        if (!_isSearchOpen) _buildClockHeader(),
+                                        if (!_isSearchOpen &&
+                                            _scrubLetter == null)
+                                          _buildClockHeader(),
                                         Text(
-                                          _searchQuery.isNotEmpty
+                                          _scrubLetter != null
+                                              ? 'Tidak ada aplikasi di bagian ini.'
+                                              : _searchQuery.isNotEmpty
                                               ? 'Tidak ada aplikasi yang cocok dengan pencarian.'
                                               : allApps.isEmpty
                                               ? 'Tidak ada aplikasi terpasang yang dapat dibuka.'
@@ -527,12 +536,14 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                     ),
                                     itemCount:
                                         filtered.length +
-                                        (_isSearchOpen
+                                        (_isSearchOpen || _scrubLetter != null
                                             ? 0
                                             : 2), // Header + Apps + Footer
                                     itemBuilder: (context, index) {
                                       // In normal mode, index 0 is Clock/Date Header
-                                      if (!_isSearchOpen && index == 0) {
+                                      if (!_isSearchOpen &&
+                                          _scrubLetter == null &&
+                                          index == 0) {
                                         return Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -557,10 +568,12 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                       }
 
                                       // Bottom Footer section (Niagara Launcher settings etc.)
-                                      final appIndex = _isSearchOpen
+                                      final appIndex =
+                                          _isSearchOpen || _scrubLetter != null
                                           ? index
                                           : index - 1;
                                       if (!_isSearchOpen &&
+                                          _scrubLetter == null &&
                                           appIndex == filtered.length) {
                                         return _buildFooterSection();
                                       }
@@ -634,7 +647,20 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                   child: NiagaraWaveScrubber(
                     alphabet: _alphabet,
                     selectedLetter: '',
-                    onLetterSelected: _scrollToLetter,
+                    onLetterSelected: (letter) {
+                      if (_isScrubbing) {
+                        setState(() => _scrubLetter = letter);
+                      }
+                      _scrollToLetter(letter);
+                    },
+                    onScrubStart: () => setState(() {
+                      _isScrubbing = true;
+                      _scrubLetter = null;
+                    }),
+                    onScrubEnd: () => setState(() {
+                      _isScrubbing = false;
+                      _scrubLetter = null;
+                    }),
                   ),
                 ),
 
@@ -692,29 +718,43 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: () => runLauncherAction(
-              context,
-              ref.read(appLauncherServiceProvider),
-              (service) => service.launchClock(),
-            ),
-            onLongPress: () {
-              HapticFeedback.mediumImpact();
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const FitrahSettingsScreen()),
-              );
-            },
-            child: Text(
-              timeStr,
-              style: GoogleFonts.outfit(
-                fontSize: 32,
-                fontWeight: FontWeight.w300,
-                color: AppPalette.text,
-                letterSpacing: -0.6,
-                height: 1.1,
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => runLauncherAction(
+                    context,
+                    ref.read(appLauncherServiceProvider),
+                    (service) => service.launchClock(),
+                  ),
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FitrahSettingsScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    timeStr,
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w300,
+                      color: AppPalette.text,
+                      letterSpacing: -0.6,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              IconButton(
+                tooltip: 'Aplikasi tersembunyi',
+                onPressed: () => showHiddenApps(context),
+                icon: const Icon(Icons.visibility_off_outlined),
+                color: AppPalette.textDim,
+              ),
+            ],
           ),
           const SizedBox(height: 2),
           GestureDetector(

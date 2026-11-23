@@ -1350,6 +1350,15 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
               children: [
+                _buildCenterFocusClockDial(
+                  hr,
+                  currentAct,
+                  activitiesState,
+                  tc,
+                  showHeroEvent: settings.showHeroEvent,
+                  compact: true,
+                ),
+                const SizedBox(height: 14),
                 // Keep navigation at the top; it must not split the goal cue
                 // from the clock that makes the day visible.
                 _buildTopHeaderBar(
@@ -1392,17 +1401,8 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 if (!widget.useSampleData)
                   _buildTodayFocusSummary(tc, focusSessionsState),
                 const SizedBox(height: 14),
-                // ── Center Focus Clock Analog Face Dial with AM/PM pill switch ──
-                _isListView
-                    ? _buildChronologicalListView(activitiesState, tc)
-                    : _buildCenterFocusClockDial(
-                        hr,
-                        currentAct,
-                        activitiesState,
-                        tc,
-                        showHeroEvent: settings.showHeroEvent,
-                        compact: true,
-                      ),
+                if (_isListView)
+                  _buildChronologicalListView(activitiesState, tc),
                 const SizedBox(height: 14),
 
                 // Habits stay close to the goal and clock cue.
@@ -2514,18 +2514,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     letterSpacing: -0.2,
                     color: tc.textPrimary,
                   ),
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.schedule_rounded, size: 16),
-                  label: const Text('Ke Jam'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: tc.accent,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                  ),
-                  onPressed: () => setState(() => _isListView = false),
                 ),
               ],
             ),
@@ -7085,9 +7073,11 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                 }),
                 _buildMenuRow(
                   _isListView
-                      ? Icons.schedule_rounded
+                      ? Icons.visibility_off_outlined
                       : Icons.format_list_bulleted_rounded,
-                  _isListView ? 'Lihat jam analog' : 'Lihat daftar jadwal',
+                  _isListView
+                      ? 'Sembunyikan daftar jadwal'
+                      : 'Lihat daftar jadwal',
                   () {
                     Navigator.pop(ctx);
                     setState(() => _isListView = !_isListView);

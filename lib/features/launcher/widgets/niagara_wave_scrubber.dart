@@ -49,7 +49,11 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber> {
     }
   }
 
-  void _handleTouch(Offset localPosition, double height) {
+  void _handleTouch(
+    Offset localPosition,
+    double height, {
+    bool forceSelection = false,
+  }) {
     if (widget.alphabet.isEmpty) return;
     final availableHeight = height - widget.topPadding - widget.bottomPadding;
     if (availableHeight <= 0) return;
@@ -61,12 +65,15 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber> {
     final index = (y / availableHeight * (widget.alphabet.length - 1))
         .round()
         .clamp(0, widget.alphabet.length - 1);
-    _selectLetter(widget.alphabet[index], haptic: true);
+    _selectLetter(widget.alphabet[index], haptic: true, force: forceSelection);
     setState(() => _touchY = localPosition.dy);
   }
 
-  void _selectLetter(String letter, {bool haptic = false}) {
-    if (_activeLetter == letter) return;
+  void _selectLetter(String letter, {bool haptic = false, bool force = false}) {
+    if (_activeLetter == letter) {
+      if (force) widget.onLetterSelected(letter);
+      return;
+    }
     _activeLetter = letter;
     if (haptic) HapticFeedback.selectionClick();
     widget.onLetterSelected(letter);
@@ -185,7 +192,7 @@ class _NiagaraWaveScrubberState extends State<NiagaraWaveScrubber> {
             onPanStart: (details) {
               _isDragging = true;
               widget.onScrubStart?.call();
-              _handleTouch(details.localPosition, height);
+              _handleTouch(details.localPosition, height, forceSelection: true);
             },
             onPanUpdate: (details) =>
                 _handleTouch(details.localPosition, height),

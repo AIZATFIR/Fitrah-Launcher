@@ -198,33 +198,6 @@ class _FitrahLauncherShellState extends ConsumerState<FitrahLauncherShell>
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _currentPage,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          onDestinationSelected: _goToPage,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.schedule_outlined),
-              selectedIcon: Icon(Icons.schedule_rounded),
-              label: 'Jam',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.today_outlined),
-              selectedIcon: Icon(Icons.today_rounded),
-              label: 'Hari Ini',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.checklist_outlined),
-              selectedIcon: Icon(Icons.checklist_rounded),
-              label: 'Habit',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.apps_outlined),
-              selectedIcon: Icon(Icons.apps_rounded),
-              label: 'Aplikasi',
-            ),
-          ],
-        ),
         body: Stack(
           fit: StackFit.expand,
           children: [
