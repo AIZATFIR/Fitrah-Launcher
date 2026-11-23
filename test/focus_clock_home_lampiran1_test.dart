@@ -229,7 +229,7 @@ void main() {
       );
       expect(find.text('Catatan hari ini'), findsOneWidget);
       expect(
-        find.text('Tulis pemikiran, niat, atau catatan hari ini...'),
+        find.byKey(const ValueKey('home-daily-note-input')),
         findsOneWidget,
       );
     });
@@ -645,11 +645,7 @@ void main() {
       expect(find.text('Pilih Identitas:'), findsNothing);
       expect(tester.takeException(), isNull);
 
-      final captureField = find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField &&
-            widget.decoration?.hintText == 'Nama kegiatan / habit / tugas...',
-      );
+      final captureField = find.byKey(const ValueKey('home-quick-task-input'));
       await tester.enterText(captureField, 'Latihan LKS');
       expect(
         tester.widget<TextField>(captureField).controller?.text,
@@ -682,11 +678,11 @@ void main() {
         await tester.ensureVisible(addActivity);
         await tester.pumpAndSettle();
         await tester.tap(addActivity);
-        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 300));
 
         expect(find.text('Pilih yang Ada'), findsNothing);
         expect(find.text('Pilih Identitas:'), findsNothing);
-        expect(find.text('Catat Cepat ke Dump Inbox'), findsOneWidget);
+        expect(find.text('Tambah tindakan hari ini'), findsOneWidget);
         expect(find.text('Pilih yang Ada'), findsNothing);
         expect(find.text('Pilih Identitas:'), findsNothing);
       },

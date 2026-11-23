@@ -31,20 +31,15 @@ class Storage extends SecureStorageService {
 
 void main() {
   Future<void> revealTools(WidgetTester tester) async {
-    if (find
-        .text('Tulis pemikiran, niat, atau catatan hari ini...')
-        .evaluate()
-        .isEmpty) {
-      final homeList = find.byKey(const ValueKey('focus-clock-home-list'));
-      for (
-        var i = 0;
-        i < 16 && find.text('Catatan & alat').evaluate().isEmpty;
-        i++
-      ) {
-        await tester.drag(homeList, const Offset(0, -400));
-        await tester.pump();
-      }
-      await tester.tap(find.text('Catatan & alat'));
+    final note = find.byKey(const ValueKey('home-daily-note-input'));
+    if (note.evaluate().isEmpty) {
+      final tools = find.text('Catatan & alat');
+      await tester.scrollUntilVisible(
+        tools,
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(tools);
       await tester.pumpAndSettle();
     }
   }
@@ -74,10 +69,7 @@ void main() {
     await revealTools(tester);
   }
 
-  final note = find.widgetWithText(
-    TextField,
-    'Tulis pemikiran, niat, atau catatan hari ini...',
-  );
+  final note = find.byKey(const ValueKey('home-daily-note-input'));
   testWidgets('recreated Home surfaces a failed previous-day draft', (
     tester,
   ) async {

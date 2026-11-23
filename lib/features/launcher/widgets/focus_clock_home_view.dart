@@ -2390,6 +2390,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           ),
           const SizedBox(height: 6),
           TextField(
+            key: const ValueKey('home-daily-note-input'),
             enabled: ref.read(launcherSettingsProvider.notifier).isLoaded,
             controller: _dailyNoteController,
             maxLines: 4,
@@ -6371,10 +6372,13 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
     final ctrl = TextEditingController();
     bool saving = false;
     String? error;
+    ModalRoute<int>? dialogRoute;
     final taskId = await showDialog<int>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
+      builder: (ctx) {
+        dialogRoute = ModalRoute.of<int>(ctx);
+        return StatefulBuilder(
         builder: (ctx, setDialogState) => PopScope(
           canPop: !saving,
           child: AlertDialog(
@@ -6394,6 +6398,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
             ),
             content: TextField(
+              key: const ValueKey('home-quick-task-input'),
               controller: ctrl,
               enabled: !saving,
               autofocus: true,
@@ -6471,8 +6476,10 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
             ],
           ),
         ),
-      ),
+        );
+      },
     );
+    await dialogRoute?.completed;
     ctrl.dispose();
     return taskId;
   }

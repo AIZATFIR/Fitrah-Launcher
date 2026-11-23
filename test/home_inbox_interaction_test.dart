@@ -62,6 +62,7 @@ void main() {
     await tester.enterText(find.byType(TextField).last, 'Sama');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Simpan'));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
     expect(store.taskRows.keys, containsAll([1, 2]));
     expect(find.text('Sama'), findsNWidgets(2));
     final close = find.descendant(

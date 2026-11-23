@@ -59,6 +59,19 @@ void main() {
       overrides: [
         activitiesByDateProvider.overrideWith((ref) => Stream.value(const [])),
         sadarRepoProvider.overrideWithValue(repository),
+        intentInitializationProvider.overrideWith((ref) async {}),
+        intentStateProvider.overrideWith(
+          (ref) => Stream.value(
+            IntentState(
+              sourceStoreId: '11111111-1111-4111-8111-111111111111',
+              legacyImported: true,
+            ),
+          ),
+        ),
+        intentSourceDataProvider.overrideWith(
+          (ref) => Stream.value(const IntentSourceData([], [], [])),
+        ),
+        intentNowProvider.overrideWithValue(DateTime(2026, 11, 23, 10)),
         terminalFocusSessionsForDateProvider(
           date,
         ).overrideWith((ref) => Stream.value([completed, cancelled])),
@@ -84,6 +97,8 @@ void main() {
       240,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(tools);
+    await tester.pumpAndSettle();
     await tester.tap(tools);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -272,6 +287,19 @@ void main() {
       overrides: [
         activitiesByDateProvider.overrideWith((ref) => Stream.value(const [])),
         sadarRepoProvider.overrideWithValue(repository),
+        intentInitializationProvider.overrideWith((ref) async {}),
+        intentStateProvider.overrideWith(
+          (ref) => Stream.value(
+            IntentState(
+              sourceStoreId: '11111111-1111-4111-8111-111111111111',
+              legacyImported: true,
+            ),
+          ),
+        ),
+        intentSourceDataProvider.overrideWith(
+          (ref) => Stream.value(const IntentSourceData([], [], [])),
+        ),
+        intentNowProvider.overrideWithValue(DateTime(2026, 11, 23, 10)),
       ],
     );
     addTearDown(container.dispose);
@@ -295,7 +323,9 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.text('Shared preset timer'), findsOneWidget);
+    await tester.pump();
+    expect(find.text('Sesi berjalan: Shared preset timer'), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-mini-timer')), findsNothing);
     await container.read(timerEngineProvider.notifier).cancel();
   });
 
@@ -321,6 +351,19 @@ void main() {
       overrides: [
         activitiesByDateProvider.overrideWith((ref) => Stream.value(const [])),
         sadarRepoProvider.overrideWithValue(repository),
+        intentInitializationProvider.overrideWith((ref) async {}),
+        intentStateProvider.overrideWith(
+          (ref) => Stream.value(
+            IntentState(
+              sourceStoreId: '11111111-1111-4111-8111-111111111111',
+              legacyImported: true,
+            ),
+          ),
+        ),
+        intentSourceDataProvider.overrideWith(
+          (ref) => Stream.value(const IntentSourceData([], [], [])),
+        ),
+        intentNowProvider.overrideWithValue(DateTime(2026, 11, 23, 10)),
         timerEngineProvider.overrideWith((ref) => timer),
       ],
     );
@@ -363,6 +406,19 @@ void main() {
       overrides: [
         activitiesByDateProvider.overrideWith((ref) => Stream.value(const [])),
         sadarRepoProvider.overrideWithValue(repository),
+        intentInitializationProvider.overrideWith((ref) async {}),
+        intentStateProvider.overrideWith(
+          (ref) => Stream.value(
+            IntentState(
+              sourceStoreId: '11111111-1111-4111-8111-111111111111',
+              legacyImported: true,
+            ),
+          ),
+        ),
+        intentSourceDataProvider.overrideWith(
+          (ref) => Stream.value(const IntentSourceData([], [], [])),
+        ),
+        intentNowProvider.overrideWithValue(DateTime(2026, 11, 23, 10)),
       ],
     );
     addTearDown(() async {
@@ -388,7 +444,7 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.tap(find.text('Cancelable preset'));
+    await tester.tap(find.text('Buka sesi'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Batalkan timer'), findsOneWidget);
