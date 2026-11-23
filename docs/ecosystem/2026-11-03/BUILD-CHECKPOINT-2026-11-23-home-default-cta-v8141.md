@@ -20,12 +20,12 @@ Fitrah now shows a compact **Jadikan layar utama** action inside the Home goal c
 - Focus Clock: `dpl_BWpveaNPv69CrwLCi2daWbGjPgAX` — [focus-clock-web.vercel.app](https://focus-clock-web.vercel.app/)
 - Sadar: `dpl_GhpgWD3jb2TSWM6s2wfb6QttP9it` — [sadar-web.vercel.app](https://sadar-web.vercel.app/)
 
-All three production aliases return HTTP 200, and each `/version.json` reports `0.5.49 / 8141`.
+All three production aliases, `/main.dart.js`, and `/sqlite3.wasm` return HTTP 200; each `/version.json` reports `0.5.49 / 8141`.
 
 ## Downloads and limits
 
 - [Complete ecosystem bundle](../../../release_dist/2026-11-23-home-default-cta-v8141/Focus_Clock_Ecosystem_0.5.49_v8141.zip)
 - [Android APK](../../../release_dist/2026-11-23-home-default-cta-v8141/Fitrah_Launcher_0.5.49_universal_v8141.apk)
-- [Install guide](../../../release_dist/2026-11-23-home-default-cta-v8141/INSTALL.md) · [SHA-256 list](../../../release_dist/2026-11-23-home-default-cta-v8141/SHA256SUMS)
+- [Install guide](../../../release_dist/2026-11-23-home-default-cta-v8141/INSTALL.md) · [APK/web SHA-256 list](../../../release_dist/2026-11-23-home-default-cta-v8141/SHA256SUMS) · [bundle SHA-256](../../../release_dist/2026-11-23-home-default-cta-v8141/BUNDLE.SHA256)
 
 The APK uses a local debug key and is for owner preview, not Play Store distribution. Physical/OEM behavior, TalkBack, live AI provider use, sustained owner use, and cross-device sync remain unverified or unimplemented. Android and web keep separate local data.
