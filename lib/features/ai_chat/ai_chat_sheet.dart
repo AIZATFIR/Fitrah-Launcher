@@ -854,7 +854,16 @@ class GoalPlanReviewCard extends StatefulWidget {
 }
 
 class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
-  static const _days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+  static const _days = [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ];
+  static const _shortDays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
   late final TextEditingController _title;
   late final TextEditingController _why;
   late final TextEditingController _targetDate;
@@ -1090,70 +1099,99 @@ class _GoalPlanReviewCardState extends State<GoalPlanReviewCard> {
             ),
           ),
           for (var i = 0; i < _weekdays.length; i++)
-            Row(
-              children: [
-                SizedBox(
-                  width: 88,
-                  child: DropdownButtonFormField<int>(
-                    value: _weekdays[i],
-                    decoration: const InputDecoration(isDense: true),
-                    items: List.generate(
-                      7,
-                      (i) =>
-                          DropdownMenuItem(value: i + 1, child: Text(_days[i])),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final dayLabels = constraints.maxWidth < 480
+                    ? _days
+                    : _shortDays;
+                final dayField = DropdownButtonFormField<int>(
+                  value: _weekdays[i],
+                  isExpanded: true,
+                  decoration: const InputDecoration(isDense: true),
+                  items: List.generate(
+                    7,
+                    (i) => DropdownMenuItem(
+                      value: i + 1,
+                      child: Text(dayLabels[i]),
                     ),
-                    onChanged: !editable || _working
-                        ? null
-                        : (value) {
-                            if (value != null) {
-                              setState(() => _weekdays[i] = value);
-                            }
-                            _refreshConflicts();
-                          },
                   ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: TextField(
-                    controller: _times[i],
-                    enabled: editable && !_working,
-                    decoration: const InputDecoration(
-                      labelText: 'Jam',
-                      isDense: true,
-                    ),
-                    onChanged: (_) => _refreshConflicts(),
+                  onChanged: !editable || _working
+                      ? null
+                      : (value) {
+                          if (value != null) {
+                            setState(() => _weekdays[i] = value);
+                          }
+                          _refreshConflicts();
+                        },
+                );
+                final timeField = TextField(
+                  controller: _times[i],
+                  enabled: editable && !_working,
+                  decoration: const InputDecoration(
+                    labelText: 'Jam',
+                    isDense: true,
                   ),
-                ),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 82,
-                  child: TextField(
-                    controller: _durations[i],
-                    enabled: editable && !_working,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Menit',
-                      isDense: true,
-                    ),
-                    onChanged: (_) => _refreshConflicts(),
+                  onChanged: (_) => _refreshConflicts(),
+                );
+                final durationField = TextField(
+                  controller: _durations[i],
+                  enabled: editable && !_working,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Menit',
+                    isDense: true,
                   ),
-                ),
-                if (editable)
-                  IconButton(
-                    tooltip: 'Hapus blok',
-                    onPressed: _working || _weekdays.length <= 1
-                        ? null
-                        : () {
-                            setState(() {
-                              _weekdays.removeAt(i);
-                              _times.removeAt(i).dispose();
-                              _durations.removeAt(i).dispose();
-                            });
-                            _refreshConflicts();
-                          },
-                    icon: const Icon(Icons.remove_circle_outline),
-                  ),
-              ],
+                  onChanged: (_) => _refreshConflicts(),
+                );
+                final removeButton = editable
+                    ? IconButton(
+                        tooltip: 'Hapus blok',
+                        onPressed: _working || _weekdays.length <= 1
+                            ? null
+                            : () {
+                                setState(() {
+                                  _weekdays.removeAt(i);
+                                  _times.removeAt(i).dispose();
+                                  _durations.removeAt(i).dispose();
+                                });
+                                _refreshConflicts();
+                              },
+                        icon: const Icon(Icons.remove_circle_outline),
+                      )
+                    : null;
+
+                if (constraints.maxWidth < 480) {
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: dayField),
+                          ?removeButton,
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(child: timeField),
+                          const SizedBox(width: 8),
+                          Expanded(child: durationField),
+                        ],
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    SizedBox(width: 88, child: dayField),
+                    const SizedBox(width: 6),
+                    Expanded(child: timeField),
+                    const SizedBox(width: 6),
+                    SizedBox(width: 82, child: durationField),
+                    ?removeButton,
+                  ],
+                );
+              },
             ),
           if (editable && _weekdays.length < 14)
             TextButton.icon(
