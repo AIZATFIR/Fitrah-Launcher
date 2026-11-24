@@ -3,7 +3,7 @@ title: 'Focus Clock v8150 clarity and preview release'
 type: 'chore'
 ticket: ''
 created: '2026-11-24'
-status: 'in-review'
+status: 'built'
 baseline_revision: 'd2d422927b88841ab207c39feec14557703420b7'
 route: 'oneshot'
 route_source: 'auto'
@@ -36,9 +36,12 @@ context: []
 ## Review Triage Log
 
 - medium — patch: at review time, the local v8150 package contained only APK and QA screenshots despite the plan requiring all existing targets. Resolve by collecting the tagged workflow's Android, Linux, Windows, and three web artifacts, then verify checksums and install instructions before marking built.
+- resolution: release run 45414831872 completed successfully for Android, Linux, Windows, three web builds, and publication. All six downloaded platform artifacts passed the published SHA-256 list; the install guide, manifest, and combined ZIP are present.
 
 ## Verification
 
 - `flutter analyze --no-pub lib/features/ai_chat/ai_chat_sheet.dart lib/features/launcher/widgets/focus_clock_home_view.dart` — no diagnostics.
-- Release APK build and package workflow — succeed for declared platforms; inspect APK version/signature and run the available API 36 upgrade smoke.
-- Confirm the tagged release and production web version only after authoritative CI/deployment checks report success.
+- Release APK reports versionCode 8150 / versionName 0.5.58 and passes v2 signature verification with the stable owner-preview certificate.
+- API 36 AVD upgrade from 8149 retains HOME role, daily choice and focus total; timer copy is visible and cancel preserves the existing total.
+- Release workflow 45414831872 passed all six platform builds and published six assets; every SHA-256 check passes.
+- Production Fitrah, Focus Clock and Sadar domains return HTTP 200 for `/`, `/main.dart.js`, and `/version.json`; each reports v0.5.58 / 8150.
