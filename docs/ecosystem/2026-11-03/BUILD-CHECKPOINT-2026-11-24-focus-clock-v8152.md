@@ -23,7 +23,8 @@
   - Sadar: `dpl_PFGpJBwrNRLoZsFybQhrGUjseb7n`
 - Opened the deployed Focus Clock page in the browser and confirmed the clock rendered without the floating free-text prompt.
 - The six-artifact bundle checksums and combined ZIP checksum were verified. GitHub's uploaded asset SHA-256 digest matches the local ZIP checksum. Package details are included in the ZIP's `BUILD-MANIFEST.json`.
+- A temporary Android 16/API 36 x86_64 AVD at 1080x2400 installed the release APK. RoleManager reported Fitrah as HOME, and pressing HOME opened `MainActivity`. The role was assigned through shell, not Android's chooser. The drawer showed actual installed apps; holding the scrubber at S showed only Safety and Settings, then release restored the full list with S still selected and visible. Launching Android Settings from the drawer and pressing HOME returned to Fitrah. The sampled logcat tail had no FATAL EXCEPTION, FlutterError, ANR, or PlatformException match. Captures are in the local release folder and the updated one-file package.
 
 ## Limits still open
 
-No Android device or configured emulator was available (`adb devices -l` empty; `emulator -list-avds` empty). Physical/OEM Home role, scrub gesture, and TalkBack need on-device verification. Android/browser data remain separate; real-provider behavior and a sustained daily-use trial are still open. This is an owner preview, not a Play Store build or completion of ecosystem milestones E0–E11.
+No physical/OEM phone was available. The emulator run does not verify the Android Home chooser, vendor launcher restrictions, TalkBack, or long-term reliability. Android/browser data remain separate; real-provider behavior and a sustained daily-use trial are still open. This is an owner preview, not a Play Store build or completion of ecosystem milestones E0–E11.

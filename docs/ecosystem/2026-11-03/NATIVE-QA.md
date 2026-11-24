@@ -1,5 +1,13 @@
 # Native Android QA
 
+## v8152 fresh AVD HOME and app-index scrub — 24 Nov 2026
+
+Installed the owner-preview release APK `0.5.60 / 8152` on a temporary Android 16/API 36 x86_64 `medium_phone` AVD at 1080×2400. This AVD used the already-installed Google Play system image, ran headless with SwiftShader, and was removed after the run. `cmd role add-role-holder` assigned `com.aizatfir.fitrah_launcher` as `android.app.role.HOME`; pressing Android HOME opened Fitrah `MainActivity`. The Android system Home chooser was not exercised.
+
+The goal-first Home loaded in its blank state. The menu opened **Buka Apps Drawer**; the drawer listed actual installed app names and icons. Holding the alphabet index on **S** displayed only **Safety** and **Settings**. Releasing restored the full list with the S section visible and S still selected. Opening Android Settings from the drawer and pressing HOME returned to Fitrah `MainActivity`. RoleManager still reported Fitrah as HOME. A sampled 2,000-line logcat tail had no `FATAL EXCEPTION`, `FlutterError`, `ANR in`, or `PlatformException` matches.
+
+Screenshots: `release_dist/2026-11-24-focus-clock-v0.5.60-8152/QA_Fitrah_Home_HomeRole_v8152.png`, `QA_Fitrah_AppDrawer_ScrubHeld_S_v8152.png`, and `QA_Fitrah_AppDrawer_ScrubReleased_S_v8152.png`. This verifies one temporary emulator run, not the chooser, physical/OEM home behavior, TalkBack, or long-term daily use. See [v8152 checkpoint](BUILD-CHECKPOINT-2026-11-24-focus-clock-v8152.md).
+
 ## API 36 timer-flow evidence — v8087 (18 Nov 2026)
 
 The disposable `FocusClock_UI_QA` API36 x86_64 AVD installed universal v8087 successfully; package metadata reported versionName `0.5.12`, versionCode `8087`. Fitrah was already the Android HOME role holder. Through the real UI, the saved LKS goal was linked to the `Latihan LKS 30 menit` action, then the timer was started. Android's notification prompt was granted. `dumpsys alarm` showed a scheduled RTC_WAKEUP reminder at the saved session duration; pausing removed the active alarm and resuming scheduled the remaining duration. Ending early returned to Home with the selected goal/action still visible. Opening the timer hub worked; returning from Android Home also restored the central goal Home. Hierarchy snapshots are under ignored `.dart_tool/android-qa/v8087-*.xml`.

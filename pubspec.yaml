@@ -1,7 +1,7 @@
 name: fitrah_launcher
 description: "Fitrah Launcher - Minimalist Niagara-style launcher with Focus Clock integration."
 publish_to: 'none'
-version: 0.5.60+8152
+version: 0.5.61+8153
 
 environment:
   sdk: ^3.11.4

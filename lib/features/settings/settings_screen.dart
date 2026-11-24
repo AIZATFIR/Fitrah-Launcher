@@ -431,7 +431,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const _Section(title: 'UI Layout'),
               SwitchListTile(
                 title: const Text('AI Assistant'),
-                subtitle: const Text('Show bottom AI trigger button'),
+                subtitle: const Text(
+                  'Show AI chat shortcut on the clock screen',
+                ),
                 value: curEnableAiAssistant,
                 activeColor: AppPalette.accent,
                 onChanged: (v) {

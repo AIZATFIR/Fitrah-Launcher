@@ -38,8 +38,8 @@ Root cause: the held filter made the selected section's header sit at the list o
 - `apksigner verify --verbose build/app/outputs/flutter-apk/app-release.apk` -- passed with APK v2 signing; metadata reports 0.5.59 / 8151 and matches the stable owner-preview certificate.
 
 **Manual checks:**
-- During a held alphabet scrub, only the selected section is visible and the index responds continuously.
-- On release or gesture cancel, the full app list returns positioned at the selected letter.
-- No Android device is currently connected (`adb devices -l` is empty), so device gesture confirmation remains pending.
+- On a temporary Android 16/API 36 x86_64 AVD at 1080x2400, holding the index on S showed only Safety and Settings.
+- Releasing restored the full list with S selected and the matching section visible. Launching Android Settings from the list and pressing HOME returned to Fitrah `MainActivity`.
+- Android RoleManager reported Fitrah as HOME; role was assigned via shell, so the system chooser flow was not exercised.
 
-Implementation checks: focused analyzer and `git diff --check` passed; the quick review found no issues. Commit `ebaaaeb` was published in owner-preview release v0.5.59-v8151; multi-platform workflow 45423577710 passed. Release v8152 contains this fix plus the clock prompt cleanup. No Android device or configured emulator was available for a gesture runtime check, so landing behavior remains unverified on-device.
+Implementation checks: focused analyzer and `git diff --check` passed; the quick review found no issues. Commit `ebaaaeb` was published in owner-preview release v0.5.59-v8151; multi-platform workflow 45423577710 passed. Release v8152 contains this fix plus the clock prompt cleanup. The temporary AVD run showed no FATAL EXCEPTION, FlutterError, ANR, or PlatformException in the sampled logcat tail. Physical/OEM behavior and the Android system chooser remain unverified.

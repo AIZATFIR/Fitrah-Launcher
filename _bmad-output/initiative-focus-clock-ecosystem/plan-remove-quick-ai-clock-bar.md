@@ -21,13 +21,13 @@ context: []
 
 **Problem:** The Focus Clock surface shows a floating “Gemini AI Focus” prompt while a separate AI chat surface and a direct natural-language activity input already exist. The floating prompt sends free text through voice-command handling and displays a temporary status, which makes its purpose unclear.
 
-**Approach:** Remove the floating prompt only from the full clock surface. Preserve the activity input and full AI conversation surface. Keep the prompt in Simple Mode, where it is a distinct quick-command surface.
+**Approach:** Remove the floating prompt from the full clock and Simple Mode. Preserve the activity input, the full AI conversation surface, and the clock screen's dedicated AI chat shortcut.
 
 </frozen-after-approval>
 
 ## Implementation Notes
 
-Removed the floating quick-AI overlay and its import from `HomeShell`. This is applied in the standalone Focus Clock checkout and the Fitrah Launcher ecosystem source. No user data or settings change. Version advances to 0.5.60+8152 for the next distributable.
+Removed the floating quick-AI overlay from `HomeShell` and Simple Mode, then deleted its unused component. The settings copy now describes the remaining AI chat shortcut. The activity input, full AI conversation surface, and clock screen's AI chat shortcut remain. No user data or settings change. Version advances to 0.5.61+8153 for the next distributable.
 
 ## Verification
 
@@ -36,4 +36,5 @@ Removed the floating quick-AI overlay and its import from `HomeShell`. This is a
 - GitHub workflow [45426062483](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45426062483) passed Android, Linux, Windows, and web builds; release v0.5.60-v8152 was published.
 - Fitrah, Focus Clock, and Sadar production aliases report 0.5.60 / 8152 and return HTTP 200 for their main web bundles. The deployed Focus Clock page loaded in-browser without the floating prompt.
 - The owner-preview ZIP and all six platform asset checksums verified.
-- No Android device or configured emulator was available for device-level visual/runtime verification.
+- A temporary API 36 AVD opened Fitrah as HOME and rendered the goal-first Home. The clock-page cleanup was visually checked on the deployed Focus Clock web page; no physical/OEM phone was available.
+- Fresh scoped analyzer after removing the remaining Simple Mode prompt: `flutter analyze lib/features/shell/simple_mode_view.dart lib/features/settings/settings_screen.dart` — passed. `git diff --check` — passed. v8153 release and deployment verification pending.

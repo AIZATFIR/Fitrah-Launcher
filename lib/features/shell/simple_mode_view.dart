@@ -8,7 +8,6 @@ import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../providers/providers.dart';
 import '../../services/sadar_timer_engine.dart';
-import '../../widgets/floating_quick_ai_bar.dart';
 import '../../widgets/quick_timer_hub.dart';
 import '../activity_detail/activity_detail_sheet.dart';
 import '../ai_chat/storytelling_sheet.dart';
@@ -393,18 +392,12 @@ class SimpleModeView extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(
-                        height: 80,
-                      ), // bottom clearance for floating AI bar
                     ],
                   ),
                 ),
               ),
             ),
           ),
-
-          // Floating Quick AI Command Bar ("P info...")
-          const Positioned(bottom: 20, right: 16, child: FloatingQuickAiBar()),
         ],
       ),
     );
