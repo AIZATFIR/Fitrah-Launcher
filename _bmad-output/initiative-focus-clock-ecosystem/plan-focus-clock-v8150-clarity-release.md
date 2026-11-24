@@ -37,6 +37,7 @@ context: []
 
 - medium — patch: at review time, the local v8150 package contained only APK and QA screenshots despite the plan requiring all existing targets. Resolve by collecting the tagged workflow's Android, Linux, Windows, and three web artifacts, then verify checksums and install instructions before marking built.
 - resolution: release run 45414831872 completed successfully for Android, Linux, Windows, three web builds, and publication. All six downloaded platform artifacts passed the published SHA-256 list; the install guide, manifest, and combined ZIP are present.
+- resolution: the combined ZIP and SHA-256 sidecar were uploaded to the tagged GitHub release; public download HEAD returned HTTP 200, and the ZIP integrity/checksum checks passed.
 
 ## Verification
 
