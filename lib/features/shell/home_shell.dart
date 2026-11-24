@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
 import '../../widgets/command_palette.dart';
-import '../../widgets/floating_quick_ai_bar.dart';
 import '../../widgets/hotkeys_modal.dart';
 import 'simple_mode_view.dart';
 import '../agenda/agenda_tab.dart';
@@ -420,14 +419,6 @@ class _HomeShellState extends ConsumerState<HomeShell>
                   isExpanded: _rightExpanded,
                   onTap: () => setState(() => _rightExpanded = !_rightExpanded),
                 ),
-              ),
-
-            // Gemini Ambient Floating Bar
-            if (enableAi && !_showAi)
-              const Positioned(
-                bottom: 20,
-                right: 20,
-                child: FloatingQuickAiBar(),
               ),
 
             if (_showAi)
