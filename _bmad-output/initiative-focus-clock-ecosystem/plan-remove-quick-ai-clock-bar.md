@@ -33,8 +33,7 @@ Removed the floating quick-AI overlay from `HomeShell` and Simple Mode, then del
 
 - `flutter analyze --no-pub lib/features/shell/home_shell.dart` — passed.
 - `git diff --check` — passed.
-- GitHub workflow [45426062483](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45426062483) passed Android, Linux, Windows, and web builds; release v0.5.60-v8152 was published.
-- Fitrah, Focus Clock, and Sadar production aliases report 0.5.60 / 8152 and return HTTP 200 for their main web bundles. The deployed Focus Clock page loaded in-browser without the floating prompt.
-- The owner-preview ZIP and all six platform asset checksums verified.
-- A temporary API 36 AVD opened Fitrah as HOME and rendered the goal-first Home. The clock-page cleanup was visually checked on the deployed Focus Clock web page; no physical/OEM phone was available.
-- Fresh scoped analyzer after removing the remaining Simple Mode prompt: `flutter analyze lib/features/shell/simple_mode_view.dart lib/features/settings/settings_screen.dart` — passed. `git diff --check` — passed. v8153 release and deployment verification pending.
+- Fresh scoped analyzer for Simple Mode and Settings passed. `git diff --check` passed.
+- GitHub release run [45434240365](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45434240365) passed all six platform builds and APK signature verification; six artifact checksums passed.
+- Production deployments for all three web apps reached READY; authenticated requests for each main bundle returned HTTP 200.
+- v8153 release includes six platform downloads, checksums, and the verified all-platform ZIP. No v8153 emulator interaction test was run; HOME behavior evidence remains from v8152, and no physical/OEM phone was available.
