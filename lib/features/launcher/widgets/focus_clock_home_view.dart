@@ -13,7 +13,6 @@ import '../../../models/task.dart';
 import '../../../models/habit.dart';
 import '../../../providers/providers.dart';
 import '../../focusclock/analog_clock_face.dart';
-import '../../ai_chat/ai_chat_sheet.dart';
 import '../../sadar/widgets/sadar_timer_view.dart';
 import '../../settings/settings_screen.dart';
 import '../models/launcher_settings.dart';
@@ -25,7 +24,6 @@ import 'loop_habit_grid_widget.dart';
 import '../../../models/habit_entry.dart';
 import '../../../models/timer_session.dart';
 import '../../../models/terminal_focus_session.dart';
-import '../../../domain/focus_intent.dart';
 import '../../../providers/sadar_providers.dart';
 import '../../../services/sadar_timer_engine.dart';
 import '../../../services/home_schedule_service.dart';
@@ -1387,7 +1385,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                           inboxTask: task,
                           title: task.title,
                         ),
-                        onAssistant: _openGoalAssistant,
                         onTaskAction: _openIntentTask,
                         onAddTask: () =>
                             _openQuickDumpTaskDialog(tc, startToday: true),
@@ -5140,36 +5137,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
       title: '',
       initialDurationMinutes: 60,
       identity: '',
-    );
-  }
-
-  void _openGoalAssistant(IntentGoal? goal) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      backgroundColor: AppPalette.bg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        side: BorderSide(color: AppPalette.stroke),
-      ),
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.92,
-        child: AiChatPanel(
-          initialGoal: goal?.title,
-          goalId: goal?.id,
-          expectedGoalRevision: goal?.revision,
-          onOpenAiSettings: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) =>
-                    const SettingsScreen(focusAiConfiguration: true),
-              ),
-            );
-          },
-        ),
-      ),
     );
   }
 

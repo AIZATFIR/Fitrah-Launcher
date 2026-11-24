@@ -25,7 +25,6 @@ class HomeIntentCue extends ConsumerStatefulWidget {
     this.onAttributedHabitTimer,
     this.onHabitSchedule,
     this.onTaskSchedule,
-    this.onAssistant,
     required this.onTaskAction,
     required this.onSession,
     this.onAddTask,
@@ -36,7 +35,6 @@ class HomeIntentCue extends ConsumerStatefulWidget {
   onAttributedHabitTimer;
   final void Function(Habit)? onHabitSchedule;
   final Future<void> Function(Task)? onTaskSchedule;
-  final ValueChanged<IntentGoal?>? onAssistant;
   final Future<void> Function(Task, {String? goalId, String? goalTitle})
   onTaskAction;
   final VoidCallback onSession;
@@ -92,16 +90,11 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
               data: (intent) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final hasGoal = intent.pinnedGoal != null;
-                      final assistantLabel = hasGoal
-                          ? 'Susun langkah'
-                          : 'Temukan tujuan';
-                      final assistantTooltip = hasGoal
-                          ? 'Susun langkah untuk tujuan ini dengan AI'
-                          : 'Bantu temukan tujuan bersama AI';
-                      final label = Text(
+                  Row(
+                    children: [
+                      Icon(Icons.flag_outlined, size: 15, color: widget.accent),
+                      const SizedBox(width: 7),
+                      Text(
                         'TUJUAN UTAMA',
                         style: TextStyle(
                           color: widget.secondary,
@@ -109,95 +102,8 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.65,
                         ),
-                      );
-                      final assistant = widget.onAssistant == null
-                          ? null
-                          : Align(
-                              alignment: Alignment.centerRight,
-                              child: Tooltip(
-                                message: assistantTooltip,
-                                child: TextButton.icon(
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: widget.accent,
-                                    minimumSize: const Size(48, 44),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                    ),
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  onPressed: () => widget.onAssistant?.call(
-                                    intent.pinnedGoal,
-                                  ),
-                                  icon: const Icon(
-                                    Icons.chat_bubble_outline_rounded,
-                                    size: 16,
-                                  ),
-                                  label: Text(
-                                    assistantLabel,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ),
-                            );
-                      final largeText =
-                          MediaQuery.textScalerOf(context).scale(14) >= 21;
-                      final accessibleAssistant = widget.onAssistant == null
-                          ? null
-                          : Align(
-                              alignment: Alignment.centerRight,
-                              child: IconButton(
-                                tooltip: assistantTooltip,
-                                constraints: const BoxConstraints.tightFor(
-                                  width: 48,
-                                  height: 48,
-                                ),
-                                padding: EdgeInsets.zero,
-                                onPressed: () =>
-                                    widget.onAssistant?.call(intent.pinnedGoal),
-                                icon: Icon(
-                                  Icons.chat_bubble_outline_rounded,
-                                  size: 20,
-                                  color: widget.accent,
-                                ),
-                              ),
-                            );
-                      final stack = constraints.maxWidth < 340 || largeText;
-                      final title = Row(
-                        children: [
-                          Icon(
-                            Icons.flag_outlined,
-                            size: 15,
-                            color: widget.accent,
-                          ),
-                          const SizedBox(width: 7),
-                          Expanded(child: label),
-                        ],
-                      );
-
-                      if (stack) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            largeText ? label : title,
-                            if (largeText) ?accessibleAssistant,
-                            if (!largeText) ?assistant,
-                          ],
-                        );
-                      }
-                      return Row(
-                        children: [
-                          Icon(
-                            Icons.flag_outlined,
-                            size: 15,
-                            color: widget.accent,
-                          ),
-                          const SizedBox(width: 7),
-                          Expanded(child: label),
-                          ?assistant,
-                        ],
-                      );
-                    },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 5),
                   Row(
