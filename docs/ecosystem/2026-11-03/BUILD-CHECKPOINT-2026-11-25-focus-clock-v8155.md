@@ -16,9 +16,9 @@
 - Release workflow [45445264646](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45445264646) completed successfully: Android APK (including signature verification), Linux, Windows, and all three web bundles passed.
 - All six platform files downloaded from GitHub and passed `SHA256SUMS.txt`. The one-file bundle passed ZIP integrity and local SHA-256 checks; GitHub reports the same bundle digest. The release has nine assets, including the all-platform ZIP and sidecar.
 - Fitrah (`dpl_Cg9h9UyDH57sMUVEnJXUTGzPbLq5`), Focus Clock (`dpl_6Nt8t6s7AEVytN6ek9L3UFVowiHM`), and Sadar (`dpl_4EUApCCWaA5a4Rhhfbbo2NhoY5VJ`) production aliases reached READY. Each `/version.json` reports 0.5.63 / 8155.
-- No Android device was attached, so v8155 has no runtime install or panel walkthrough. The latest HOME runtime evidence remains v8154.
+- Upgraded the existing disposable API36 AVD from v8153 to v8155. Fitrah retained the Android HOME role, and pressing HOME resumed MainActivity with the blank goal and analog dial. The HOME role remained `com.aizatfir.fitrah_launcher`; 2,000 sampled logcat lines had no fatal, FlutterError, ANR, or PlatformException matches. Screenshot `QA_Fitrah_Home_v8155.png` is in the ZIP. No physical phone, AI panel, or live provider request was tested.
 
-**All-platform ZIP SHA-256:** `62ef902bee7d7af2024722a4730135b4adef4006425a0916e21e53b426620e14`
+**All-platform ZIP SHA-256:** `0fc8147a1afe33079a8f037c5459ac075a45345a79745215832eb0db5800cd55`
 
 ## Limits still open
 
