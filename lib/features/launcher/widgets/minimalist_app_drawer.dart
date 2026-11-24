@@ -649,18 +649,48 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                     selectedLetter: '',
                     onLetterSelected: (letter) {
                       if (_isScrubbing) {
+                        final selectionRevision = ++_navigationRevision;
+                        if (letter != '○' && _scrollCtrl.hasClients) {
+                          _scrollCtrl.jumpTo(0);
+                        }
                         setState(() => _scrubLetter = letter);
+                        if (letter == '○') {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted &&
+                                selectionRevision == _navigationRevision &&
+                                _isScrubbing &&
+                                _scrubLetter == letter) {
+                              _scrollToLetter(letter);
+                            }
+                          });
+                        }
+                      } else {
+                        _scrollToLetter(letter);
                       }
-                      _scrollToLetter(letter);
                     },
-                    onScrubStart: () => setState(() {
-                      _isScrubbing = true;
-                      _scrubLetter = null;
-                    }),
-                    onScrubEnd: () => setState(() {
-                      _isScrubbing = false;
-                      _scrubLetter = null;
-                    }),
+                    onScrubStart: () {
+                      _navigationRevision++;
+                      setState(() {
+                        _isScrubbing = true;
+                        _scrubLetter = null;
+                      });
+                    },
+                    onScrubEnd: () {
+                      final selectedLetter = _scrubLetter;
+                      final releaseRevision = ++_navigationRevision;
+                      setState(() {
+                        _isScrubbing = false;
+                        _scrubLetter = null;
+                      });
+                      if (selectedLetter != null) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted &&
+                              releaseRevision == _navigationRevision) {
+                            _scrollToLetter(selectedLetter);
+                          }
+                        });
+                      }
+                    },
                   ),
                 ),
 
