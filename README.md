@@ -12,11 +12,11 @@ The main navigation has three destinations:
 
 Focus sessions, goals, schedules, habits, and backup are available in the app. AI planning is optional and uses a provider/API key configured by the user. It can prepare a reviewable goal plan; applying it requires the user's approval. Screen-time overlay and waiting features are optional and off by default.
 
-Try [Focus Clock](https://focus-clock-web.vercel.app/) or [Fitrah](https://fitrah-web-three.vercel.app/). Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and default Home role are Android-only. See the [latest v8141 checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-23-home-default-cta-v8141.md), the [owner download/install package](release_dist/2026-11-23-home-default-cta-v8141/INSTALL.md), and [ecosystem plan](docs/ecosystem/2026-11-03/README.md) for verified behavior and remaining work.
+Try [Focus Clock](https://focus-clock-web.vercel.app/), [Fitrah](https://fitrah-web-three.vercel.app/), or [Sadar](https://sadar-web.vercel.app/). Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and default Home role are Android-only. See the [v8152 checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-24-focus-clock-v8152.md), the [owner-preview release downloads](https://github.com/AIZATFIR/Fitrah-Launcher/releases/tag/v0.5.60-v8152), the [single all-platform bundle](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.60-v8152/Focus_Clock_Ecosystem_0.5.60_v8152.zip), and the [ecosystem plan](docs/ecosystem/2026-11-03/README.md) for verified behavior and remaining work.
 
 ## Try the owner preview
 
-The v8141 personal Android preview and offline web bundles are in `release_dist/2026-11-23-home-default-cta-v8141/` in the maintainer's local checkout. The Android APK is signed with a local Android Debug certificate, so it is a personal preview rather than a Play Store build. See that folder's `INSTALL.md` and `SHA256SUMS` before installing.
+The current owner preview is v0.5.60 / 8152. Download the [single all-platform ZIP](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.60-v8152/Focus_Clock_Ecosystem_0.5.60_v8152.zip) or choose individual files from the [GitHub release page](https://github.com/AIZATFIR/Fitrah-Launcher/releases/tag/v0.5.60-v8152). The ZIP includes install notes and checksums. The Android APK is signed with the stable owner-preview key, not a Play Store distribution key.
 
 ## Run from source
 
@@ -40,6 +40,6 @@ The Android app ID is `com.aizatfir.fitrah_launcher` (minimum Android API 24). T
 
 ## Project status and license
 
-This repository is under active development; v8125 is a personal checkpoint, not completion of the ecosystem. Physical-device/OEM verification, sustained daily-use review, production signing, public releases, complete web/offline coverage, and later sync/WhatsApp/MCP milestones remain open. Track implementation gates in the [build roadmap](docs/ecosystem/2026-11-03/BUILD-ROADMAP.md).
+This repository is under active development; v8152 is a usable owner preview, not completion of the ecosystem. Physical-device/OEM verification, sustained daily-use review, public distribution signing, complete web/offline coverage, cross-device sync, and later agent/WhatsApp/MCP milestones remain open. Track implementation gates in the [build roadmap](docs/ecosystem/2026-11-03/BUILD-ROADMAP.md).
 
 There is currently no `LICENSE` file. Until the owner selects and adds a license, do not assume the source may be redistributed or reused under MIT or another open-source license.

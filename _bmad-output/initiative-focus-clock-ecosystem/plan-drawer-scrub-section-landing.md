@@ -42,4 +42,4 @@ Root cause: the held filter made the selected section's header sit at the list o
 - On release or gesture cancel, the full app list returns positioned at the selected letter.
 - No Android device is currently connected (`adb devices -l` is empty), so device gesture confirmation remains pending.
 
-Implementation checks: focused analyzer and `git diff --check` passed; the quick review found no issues. The Android release APK builds successfully. No test suite or runtime device interaction was run.
+Implementation checks: focused analyzer and `git diff --check` passed; the quick review found no issues. Commit `ebaaaeb` was published in owner-preview release v0.5.59-v8151; multi-platform workflow 45423577710 passed. Release v8152 contains this fix plus the clock prompt cleanup. No Android device or configured emulator was available for a gesture runtime check, so landing behavior remains unverified on-device.

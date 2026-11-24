@@ -33,5 +33,7 @@ Removed the floating quick-AI overlay and its import from `HomeShell`. This is a
 
 - `flutter analyze --no-pub lib/features/shell/home_shell.dart` — passed.
 - `git diff --check` — passed.
-- Full multi-platform release build and web deployment are pending for v8152.
-- No Android device is connected for a visual runtime check.
+- GitHub workflow [45426062483](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45426062483) passed Android, Linux, Windows, and web builds; release v0.5.60-v8152 was published.
+- Fitrah, Focus Clock, and Sadar production aliases report 0.5.60 / 8152 and return HTTP 200 for their main web bundles. The deployed Focus Clock page loaded in-browser without the floating prompt.
+- The owner-preview ZIP and all six platform asset checksums verified.
+- No Android device or configured emulator was available for device-level visual/runtime verification.
