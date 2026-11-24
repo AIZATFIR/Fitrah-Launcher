@@ -462,7 +462,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Pesan dan tujuanmu dikirim ke penyedia AI. Riwayat chat tidak disimpan di aplikasi.',
+                  'Pesan dan tujuanmu dikirim ke penyedia AI pilihanmu. Percakapan ini tidak disimpan di aplikasi.',
                   style: TextStyle(
                     color: AppPalette.textDim,
                     fontSize: 11,
