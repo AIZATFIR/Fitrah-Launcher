@@ -13,7 +13,12 @@
 
 ## Verification
 
-- Pending release build, package, deployment, and web-bundle checks.
+- Release workflow [45445264646](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45445264646) completed successfully: Android APK (including signature verification), Linux, Windows, and all three web bundles passed.
+- All six platform files downloaded from GitHub and passed `SHA256SUMS.txt`. The one-file bundle passed ZIP integrity and local SHA-256 checks; GitHub reports the same bundle digest. The release has nine assets, including the all-platform ZIP and sidecar.
+- Fitrah (`dpl_Cg9h9UyDH57sMUVEnJXUTGzPbLq5`), Focus Clock (`dpl_6Nt8t6s7AEVytN6ek9L3UFVowiHM`), and Sadar (`dpl_4EUApCCWaA5a4Rhhfbbo2NhoY5VJ`) production aliases reached READY. Each `/version.json` reports 0.5.63 / 8155.
+- No Android device was attached, so v8155 has no runtime install or panel walkthrough. The latest HOME runtime evidence remains v8154.
+
+**All-platform ZIP SHA-256:** `62ef902bee7d7af2024722a4730135b4adef4006425a0916e21e53b426620e14`
 
 ## Limits still open
 
