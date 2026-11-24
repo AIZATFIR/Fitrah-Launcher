@@ -430,10 +430,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const Divider(),
               const _Section(title: 'UI Layout'),
               SwitchListTile(
-                title: const Text('AI Assistant'),
-                subtitle: const Text(
-                  'Show AI chat shortcut on the clock screen',
-                ),
+                title: const Text('Pendamping tujuan'),
+                subtitle: const Text('Tampilkan pendamping tujuan di menu jam'),
                 value: curEnableAiAssistant,
                 activeColor: AppPalette.accent,
                 onChanged: (v) {
@@ -816,7 +814,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Column(
                   key: const ValueKey('ai-provider-settings'),
                   children: [
-                    const _Section(title: 'AI Assistant'),
+                    const _Section(title: 'Pengaturan AI'),
                     _AiConfigTile(
                       s: s,
                       storage: ref.read(secureStorageServiceProvider),

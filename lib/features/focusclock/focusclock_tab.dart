@@ -16,6 +16,8 @@ import '../activity_detail/activity_detail_sheet.dart';
 import '../presets/presets_tab.dart';
 import '../../widgets/command_palette.dart';
 import '../../widgets/hotkeys_modal.dart';
+import '../ai_chat/ai_chat_sheet.dart';
+import '../settings/settings_screen.dart';
 import 'analog_clock_face.dart';
 
 /// Returns a Preset if user picked one, null if user chose "Custom".
@@ -226,6 +228,33 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
   int _snap(int m) => _isPrecisionMode ? m : snap5(m);
 
+  void _openGoalCompanion() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: AppPalette.bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        side: BorderSide(color: AppPalette.stroke),
+      ),
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.92,
+        child: AiChatPanel(
+          onOpenAiSettings: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    const SettingsScreen(focusAiConfiguration: true),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -349,6 +378,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   Widget build(BuildContext context) {
     final is24hDial = ref.watch(
       settingsProvider.select((s) => s.valueOrNull?.is24hDial ?? false),
+    );
+    final enableAiAssistant = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.enableAiAssistant ?? true),
     );
     final is24hTime = ref.watch(
       settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false),
@@ -877,6 +909,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             context: context,
                             builder: (_) => const HotkeysModal(),
                           );
+                        } else if (val == 'goal_companion') {
+                          _openGoalCompanion();
                         }
                       },
                       itemBuilder: (ctx) => [
@@ -925,6 +959,24 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             ],
                           ),
                         ),
+                        if (enableAiAssistant)
+                          const PopupMenuItem(
+                            value: 'goal_companion',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome_outlined,
+                                  size: 16,
+                                  color: AppPalette.accent,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Bicarakan tujuan',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
 
                         const PopupMenuItem(
                           value: 'command',

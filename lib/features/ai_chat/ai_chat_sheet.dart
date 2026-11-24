@@ -343,7 +343,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   if (compact)
                     const Expanded(
                       child: Text(
-                        'Teman fokus',
+                        'Tujuan',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -354,7 +354,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                     )
                   else ...[
                     const Text(
-                      'Teman fokus',
+                      'Pendamping tujuan',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
