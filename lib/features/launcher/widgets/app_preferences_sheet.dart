@@ -307,14 +307,6 @@ class _HiddenAppsSheetState extends ConsumerState<HiddenAppsSheet> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const Text(
-                'Aplikasi tersembunyi',
-                style: TextStyle(
-                  color: AppPalette.text,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
               if (!notifier.isLoaded) ...[
                 Text(
                   notifier.loadFailed

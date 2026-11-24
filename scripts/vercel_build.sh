@@ -23,5 +23,5 @@ for ((i = 0; i < ${#args[@]}; i++)); do
   esac
 done
 
-flutter build web --release --pwa-strategy=offline-first "$@"
+flutter build web --release --pwa-strategy=offline-first --no-wasm-dry-run "$@"
 bash scripts/verify_web_bundle.sh "$bundle_dir"
