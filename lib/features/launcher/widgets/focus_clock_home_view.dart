@@ -3404,6 +3404,12 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
           startHour: _hourNow(),
         );
     final isIdle = !timer.hasStarted;
+    final recordDescription = switch (timer.source) {
+      'block' => 'Durasi sesi ditambahkan ke jadwal ini.',
+      'preset' => 'Sesi selesai dicatat sebagai kegiatan di jam.',
+      'free' => 'Sesi selesai menambah total fokus hari ini.',
+      _ => 'Catatan fokus muncul setelah timer dimulai.',
+    };
 
     return Scaffold(
       backgroundColor: AppPalette.bg,
@@ -3462,9 +3468,7 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
               ),
               const SizedBox(height: 4),
               Text(
-                timer.source != null
-                    ? 'Saat selesai, hasilnya dicatat otomatis ke jam.'
-                    : 'Timer bebas, tidak mencatat apa pun ke jam.',
+                recordDescription,
                 style: const TextStyle(fontSize: 13, color: AppPalette.textDim),
               ),
               const Spacer(),
