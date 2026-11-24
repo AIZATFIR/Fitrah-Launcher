@@ -94,6 +94,13 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                 children: [
                   LayoutBuilder(
                     builder: (context, constraints) {
+                      final hasGoal = intent.pinnedGoal != null;
+                      final assistantLabel = hasGoal
+                          ? 'Susun langkah'
+                          : 'Temukan tujuan';
+                      final assistantTooltip = hasGoal
+                          ? 'Susun langkah untuk tujuan ini dengan AI'
+                          : 'Bantu temukan tujuan bersama AI';
                       final label = Text(
                         'TUJUAN UTAMA',
                         style: TextStyle(
@@ -108,8 +115,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                           : Align(
                               alignment: Alignment.centerRight,
                               child: Tooltip(
-                                message:
-                                    'Susun langkah untuk tujuan ini dengan AI',
+                                message: assistantTooltip,
                                 child: TextButton.icon(
                                   style: TextButton.styleFrom(
                                     foregroundColor: widget.accent,
@@ -127,9 +133,9 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                                     Icons.chat_bubble_outline_rounded,
                                     size: 16,
                                   ),
-                                  label: const Text(
-                                    'Susun langkah',
-                                    style: TextStyle(fontSize: 12),
+                                  label: Text(
+                                    assistantLabel,
+                                    style: const TextStyle(fontSize: 12),
                                   ),
                                 ),
                               ),
@@ -141,8 +147,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                           : Align(
                               alignment: Alignment.centerRight,
                               child: IconButton(
-                                tooltip:
-                                    'Susun langkah untuk tujuan ini dengan AI',
+                                tooltip: assistantTooltip,
                                 constraints: const BoxConstraints.tightFor(
                                   width: 48,
                                   height: 48,
