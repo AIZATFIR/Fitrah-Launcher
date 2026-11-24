@@ -165,8 +165,8 @@ void main() {
       assistantAction: (goal) => goalSentToAssistant = goal,
     );
 
-    expect(find.text('Tanya AI'), findsOneWidget);
-    await tester.tap(find.text('Tanya AI'));
+    expect(find.text('Susun langkah'), findsOneWidget);
+    await tester.tap(find.text('Susun langkah'));
     expect(goalSentToAssistant?.id, '22222222-2222-4222-8222-222222222222');
     expect(
       goalSentToAssistant?.title,
@@ -174,30 +174,31 @@ void main() {
     );
   });
 
-  testWidgets('goal cue keeps Tanya AI visible at 320dp without overflow', (
-    tester,
-  ) async {
-    await show(
-      tester,
-      width: 320,
-      state: IntentState(
-        sourceStoreId: storeId,
-        legacyImported: true,
-        goals: const [
-          IntentGoal(
-            id: '22222222-2222-4222-8222-222222222222',
-            title: 'Menang LKS',
-            pinned: true,
-          ),
-        ],
-      ),
-      assistantAction: (_) {},
-    );
+  testWidgets(
+    'goal cue keeps goal planning visible at 320dp without overflow',
+    (tester) async {
+      await show(
+        tester,
+        width: 320,
+        state: IntentState(
+          sourceStoreId: storeId,
+          legacyImported: true,
+          goals: const [
+            IntentGoal(
+              id: '22222222-2222-4222-8222-222222222222',
+              title: 'Menang LKS',
+              pinned: true,
+            ),
+          ],
+        ),
+        assistantAction: (_) {},
+      );
 
-    expect(find.text('Menang LKS'), findsOneWidget);
-    expect(find.text('Tanya AI'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('Menang LKS'), findsOneWidget);
+      expect(find.text('Susun langkah'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('goal heading wraps at 200% text scale without truncation', (
     tester,
@@ -220,7 +221,9 @@ void main() {
       assistantAction: (_) {},
     );
 
-    final assistant = find.byTooltip('Tanya AI tentang tujuan');
+    final assistant = find.byTooltip(
+      'Susun langkah untuk tujuan ini dengan AI',
+    );
     expect(assistant, findsOneWidget);
     final heading = tester.renderObject<RenderParagraph>(
       find.text('TUJUAN UTAMA'),

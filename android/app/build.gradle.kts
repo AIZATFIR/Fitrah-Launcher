@@ -5,6 +5,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val ownerPreviewKeystore = file("${System.getProperty("user.home")}/.android/debug.keystore")
+
 android {
     namespace = "com.aizatfir.fitrah_launcher"
     compileSdk = 36
@@ -25,6 +27,16 @@ android {
             isV1SigningEnabled = true
             isV2SigningEnabled = true
         }
+        if (ownerPreviewKeystore.exists()) {
+            create("ownerPreview") {
+                storeFile = ownerPreviewKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+                isV1SigningEnabled = true
+                isV2SigningEnabled = true
+            }
+        }
     }
 
     defaultConfig {
@@ -39,7 +51,11 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (ownerPreviewKeystore.exists()) {
+                signingConfigs.getByName("ownerPreview")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles("proguard-rules.pro")
         }
     }

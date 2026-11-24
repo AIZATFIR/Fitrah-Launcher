@@ -108,7 +108,8 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                           : Align(
                               alignment: Alignment.centerRight,
                               child: Tooltip(
-                                message: 'Bicarakan tujuan dengan AI',
+                                message:
+                                    'Susun langkah untuk tujuan ini dengan AI',
                                 child: TextButton.icon(
                                   style: TextButton.styleFrom(
                                     foregroundColor: widget.accent,
@@ -127,7 +128,7 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                                     size: 16,
                                   ),
                                   label: const Text(
-                                    'Tanya AI',
+                                    'Susun langkah',
                                     style: TextStyle(fontSize: 12),
                                   ),
                                 ),
@@ -140,7 +141,8 @@ class _HomeIntentCueState extends ConsumerState<HomeIntentCue> {
                           : Align(
                               alignment: Alignment.centerRight,
                               child: IconButton(
-                                tooltip: 'Tanya AI tentang tujuan',
+                                tooltip:
+                                    'Susun langkah untuk tujuan ini dengan AI',
                                 constraints: const BoxConstraints.tightFor(
                                   width: 48,
                                   height: 48,

@@ -1356,9 +1356,14 @@ class _EmptyState extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Apa tujuan yang ingin kamu jaga?',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                Text(
+                  initialGoal != null && initialGoal!.trim().isNotEmpty
+                      ? 'Susun langkah untuk tujuan ini'
+                      : 'Apa tujuan yang ingin kamu jaga?',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 if (initialGoal != null && initialGoal!.trim().isNotEmpty) ...[

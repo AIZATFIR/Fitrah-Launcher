@@ -33,8 +33,26 @@ jobs:
           mkdir -p "$HOME/.android"
           printf '%s' "$ANDROID_PREVIEW_KEYSTORE_B64" | base64 --decode > "$HOME/.android/debug.keystore"
           chmod 600 "$HOME/.android/debug.keystore"
+      - name: Verify owner-preview signing key
+        if: github.event_name != 'pull_request'
+        run: |
+          fingerprint="$(keytool -list -v -alias androiddebugkey -keystore "$HOME/.android/debug.keystore" -storepass android | awk -F ': ' '/SHA256:/{gsub(":", "", $2); print tolower($2)}')"
+          if [[ "$fingerprint" != "b8af9d95bd72793e817c2bec78f3e1360d96456ef47db5260ed0d5a19934fe3e" ]]; then
+            echo "Owner-preview keystore fingerprint mismatch: $fingerprint" >&2
+            exit 1
+          fi
       - name: Build Android APK
         run: flutter build apk --release --android-skip-build-dependency-validation
+      - name: Verify owner-preview APK signature
+        if: github.event_name != 'pull_request'
+        run: |
+          sdk_dir="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          apksigner="$(find "$sdk_dir/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
+          fingerprint="$("$apksigner" verify --print-certs build/app/outputs/flutter-apk/app-release.apk | awk '/Signer #1 certificate SHA-256 digest:/{print $NF; exit}')"
+          if [[ "$fingerprint" != "b8af9d95bd72793e817c2bec78f3e1360d96456ef47db5260ed0d5a19934fe3e" ]]; then
+            echo "Owner-preview APK fingerprint mismatch: $fingerprint" >&2
+            exit 1
+          fi
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
         with:
