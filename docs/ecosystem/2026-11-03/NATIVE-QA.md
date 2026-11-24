@@ -196,3 +196,10 @@ This verifies one Android API36 x86_64 emulator run only. It does not verify own
 - Sampled 2,000 logcat lines after the Home/clock/drawer/Chrome loop; no `FATAL EXCEPTION`, `FlutterError`, `ANR in`, or `PlatformException` match.
 - Screenshots in release evidence: `QA_Fitrah_Home_v8153.png`, `QA_FocusClock_NoQuickPrompt_v8153.png`, `QA_Fitrah_AppDrawer_v8153.png`, and `QA_Fitrah_HomeReturn_v8153.png`.
 - This was emulator-only and used a clean install. It does not verify a physical/OEM device, TalkBack, or sustained daily use. No new build was installed on a physical phone.
+
+## v8154 launcher upgrade and hidden-app sheet — 24 Nov 2026
+
+- Upgraded the API36 x86_64 AVD from the v8153 install to v8154 with `adb install -r`; Fitrah remained Android HOME and returned to MainActivity after pressing HOME.
+- Opened the app drawer and hidden-app sheet. The sheet showed `Tidak ada aplikasi tersembunyi.` with no redundant heading. Sampled logcat after returning Home had no fatal or Flutter error matches.
+- Screenshots: `QA_Fitrah_Home_v8154.png`, `QA_Fitrah_AppDrawer_v8154.png`, and `QA_Fitrah_HiddenApps_NoHeader_v8154.png` in the v8154 release bundle.
+- This verifies one API36 emulator upgrade only; physical/OEM behavior, TalkBack, and sustained daily use remain open.
