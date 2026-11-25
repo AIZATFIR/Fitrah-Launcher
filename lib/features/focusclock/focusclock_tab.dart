@@ -11,6 +11,7 @@ import '../../widgets/activity_icon.dart';
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../models/preset.dart';
+import '../../providers/intent_providers.dart';
 import '../../providers/providers.dart';
 import '../activity_detail/activity_detail_sheet.dart';
 import '../presets/presets_tab.dart';
@@ -229,6 +230,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   int _snap(int m) => _isPrecisionMode ? m : snap5(m);
 
   void _openGoalCompanion() {
+    final goal = ref.read(intentStateProvider).valueOrNull?.pinnedGoal;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -242,6 +244,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       builder: (_) => FractionallySizedBox(
         heightFactor: 0.92,
         child: AiChatPanel(
+          initialGoal: goal?.title,
+          goalId: goal?.id,
+          expectedGoalRevision: goal?.revision,
           onOpenAiSettings: () {
             Navigator.of(context).push(
               MaterialPageRoute(
