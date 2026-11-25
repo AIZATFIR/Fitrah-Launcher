@@ -108,7 +108,8 @@ class AnalogClockFace extends StatelessWidget {
 
 /// Geometry scale shared with hit-testing: clock occupies more space in planning mode.
 double clockGrowFactor(double outerReveal, bool isPlanning) =>
-    isPlanning ? (0.92 + 0.06 * outerReveal) : (0.88 + 0.08 * outerReveal);
+    (isPlanning ? (0.92 + 0.06 * outerReveal) : (0.88 + 0.08 * outerReveal)) *
+    0.97; // Reserve a safe rim for the hour numerals outside the bezel.
 
 class _ClockPainter extends CustomPainter {
   _ClockPainter({
@@ -638,7 +639,15 @@ class _ClockPainter extends CustomPainter {
 
     // Hands sweep only if today and viewed half matches actual time (or in 24h)
     if (isToday && (is24hDial || halfOfNow(now) == viewHalf)) {
-      _drawHands(canvas, center, r, outerRadius, themeAccentColor, enableGlows);
+      _drawHands(
+        canvas,
+        center,
+        r,
+        outerRadius,
+        themeAccentColor,
+        enableGlows,
+        size,
+      );
     }
 
     // Elegant center pin
@@ -843,6 +852,7 @@ class _ClockPainter extends CustomPainter {
     double outerRadius,
     Color accentColor,
     bool enableGlows,
+    Size size,
   ) {
     final scale = is24hDial ? 1440.0 : 720.0;
     final totalMins = is24hDial
@@ -875,6 +885,7 @@ class _ClockPainter extends CustomPainter {
             outerRadius,
             accentColor,
             enableGlows,
+            size,
           );
         }
         break;
@@ -918,6 +929,7 @@ class _ClockPainter extends CustomPainter {
             outerRadius,
             accentColor,
             enableGlows,
+            size,
           );
         }
         break;
@@ -973,6 +985,7 @@ class _ClockPainter extends CustomPainter {
             outerRadius,
             accentColor,
             enableGlows,
+            size,
           );
         }
         break;
@@ -986,6 +999,7 @@ class _ClockPainter extends CustomPainter {
     double handLen,
     Color accentColor,
     bool enableGlows,
+    Size size,
   ) {
     final tipOffset = Offset(
       center.dx + math.cos(angle) * (handLen + 28),
@@ -997,17 +1011,6 @@ class _ClockPainter extends CustomPainter {
       format: currentTimeFormat,
     );
 
-    // Spotlight glow behind the current time (further outside the dial)
-    if (enableGlows && glowStyle != 'subtle') {
-      canvas.drawCircle(
-        tipOffset,
-        24,
-        Paint()
-          ..color = accentColor.withValues(alpha: 0.27)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
-      );
-    }
-
     final bool isFloating = floatTimeText || glowStyle == 'floating';
     final Color textColor;
     if (isFloating) {
@@ -1017,10 +1020,27 @@ class _ClockPainter extends CustomPainter {
     }
 
     final tp = _getPainter(txt, 11, FontWeight.w800, textColor);
+    final halfWidth = (tp.width + (isFloating ? 0 : 16)) / 2 + 4;
+    final halfHeight = (tp.height + (isFloating ? 0 : 8)) / 2 + 4;
+    final safeTipOffset = Offset(
+      tipOffset.dx.clamp(halfWidth, size.width - halfWidth).toDouble(),
+      tipOffset.dy.clamp(halfHeight, size.height - halfHeight).toDouble(),
+    );
+
+    // Keep the optional time label and its glow inside the visible canvas.
+    if (enableGlows && glowStyle != 'subtle') {
+      canvas.drawCircle(
+        safeTipOffset,
+        24,
+        Paint()
+          ..color = accentColor.withValues(alpha: 0.27)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+      );
+    }
 
     if (!isFloating) {
       final chipRect = Rect.fromCenter(
-        center: tipOffset,
+        center: safeTipOffset,
         width: tp.width + 16,
         height: tp.height + 8,
       );
@@ -1050,7 +1070,7 @@ class _ClockPainter extends CustomPainter {
 
     tp.paint(
       canvas,
-      Offset(tipOffset.dx - tp.width / 2, tipOffset.dy - tp.height / 2),
+      Offset(safeTipOffset.dx - tp.width / 2, safeTipOffset.dy - tp.height / 2),
     );
   }
 
