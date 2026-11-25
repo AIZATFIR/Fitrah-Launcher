@@ -10,13 +10,13 @@ The main navigation has three destinations:
 - **Hari Ini** — see the pinned goal, current/next action, agenda, and habits.
 - **Aplikasi** — search and open installed Android apps; favorites and hidden apps are managed here.
 
-Focus sessions, goals, schedules, habits, and backup are available in the app. AI provider settings and conversation code remain in the repository, but the current Fitrah Home and Focus Clock screens do not expose a general AI conversation or planning entry point. Do not expect AI chat/planning to be usable in this preview. Screen-time overlay and waiting features are optional and off by default.
+Focus sessions, goals, schedules, habits, and backup are available in the app. From Jam's **Menu Fokus**, **Susun langkah tujuan** opens the goal companion with your pinned goal, so it can help you think through a next step. Any schedule proposal stays reviewable before it is applied. The companion needs your own AI provider and API key; its conversation is not saved in the app. Screen-time overlay and waiting features are optional and off by default.
 
-Try [Focus Clock](https://focus-clock-web.vercel.app/), [Fitrah](https://fitrah-web-three.vercel.app/), or [Sadar](https://sadar-web.vercel.app/). Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and default Home role are Android-only. See the [latest checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-25-focus-clock-v8155.md), the [owner-preview release downloads](https://github.com/AIZATFIR/Fitrah-Launcher/releases/tag/v0.5.63-v8155), the [single all-platform bundle](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.63-v8155/Focus_Clock_Ecosystem_0.5.63_v8155.zip), and the [ecosystem plan](docs/ecosystem/2026-11-03/README.md) for verified behavior and remaining work.
+Try [Focus Clock](https://focus-clock-web.vercel.app/), [Fitrah](https://fitrah-web-three.vercel.app/), or [Sadar](https://sadar-web.vercel.app/). Android stores app data on-device. Web stores data in the current browser profile; this is not cloud sync or a backup. The installed-app drawer and default Home role are Android-only. See the [latest checkpoint](docs/ecosystem/2026-11-03/BUILD-CHECKPOINT-2026-11-25-focus-clock-v8158.md), the [owner-preview release downloads](https://github.com/AIZATFIR/Fitrah-Launcher/releases/tag/v0.5.66-v8158), the [single all-platform bundle](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.66-v8158/Focus_Clock_Ecosystem_0.5.66_v8158.zip), and the [ecosystem plan](docs/ecosystem/2026-11-03/README.md) for verified behavior and remaining work.
 
 ## Try the owner preview
 
-The current owner preview is v0.5.63 / 8155. Download the [single all-platform ZIP](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.63-v8155/Focus_Clock_Ecosystem_0.5.63_v8155.zip) or choose individual files from the [GitHub release page](https://github.com/AIZATFIR/Fitrah-Launcher/releases/tag/v0.5.63-v8155). The ZIP includes install notes and checksums. The Android APK is signed with the stable owner-preview key, not a Play Store distribution key.
+The current owner preview is v0.5.66 / 8158. Download the [single all-platform ZIP](https://github.com/AIZATFIR/Fitrah-Launcher/releases/download/v0.5.66-v8158/Focus_Clock_Ecosystem_0.5.66_v8158.zip) or choose individual files from the [GitHub release page](https://github.com/AIZATFIR/Fitrah-Launcher/releases/tag/v0.5.66-v8158). The ZIP includes install notes and checksums. The Android APK is signed with the stable owner-preview key, not a Play Store distribution key.
 
 ## Run from source
 
@@ -40,6 +40,6 @@ The Android app ID is `com.aizatfir.fitrah_launcher` (minimum Android API 24). T
 
 ## Project status and license
 
-This repository is under active development; v8155 is a usable owner preview, not completion of the ecosystem. Physical-device/OEM verification, sustained daily-use review, public distribution signing, complete web/offline coverage, cross-device sync, the AI companion entry point, and later agent/WhatsApp/MCP milestones remain open. Track implementation gates in the [build roadmap](docs/ecosystem/2026-11-03/BUILD-ROADMAP.md).
+This repository is under active development; v8158 is a usable owner preview, not completion of the ecosystem. Physical-device/OEM verification, sustained daily-use review, public distribution signing, complete web/offline coverage, cross-device sync, live AI provider behavior, and later agent/WhatsApp/MCP milestones remain open. Track implementation gates in the [build roadmap](docs/ecosystem/2026-11-03/BUILD-ROADMAP.md).
 
 There is currently no `LICENSE` file. Until the owner selects and adds a license, do not assume the source may be redistributed or reused under MIT or another open-source license.
