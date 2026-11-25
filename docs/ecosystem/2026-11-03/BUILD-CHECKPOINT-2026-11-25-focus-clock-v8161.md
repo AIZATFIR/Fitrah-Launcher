@@ -15,7 +15,7 @@ At 320 dp width and 200% system text, the compact clock card split its small all
 - Release APK built and installed over v8160 on API 36 emulator; package reports version 0.5.69 / code 8161.
 - Manual screenshot review at 320 dp / 200% text shows digital time, schedule status, and Timer without clipped words. The emulator was returned to 1080×2400 and 100% text afterward.
 - Fitrah (`dpl_Go8Xw8DF9X3hahBuQkw8c9bn1JXD`), Focus Clock (`dpl_Ffyz25M7nDC1vdVbE61FR1FKsd8b`), and Sadar (`dpl_Fb6K9RfaE9DLhsa4639wkgPFqipe`) production deployments reached READY; all three `/version.json` endpoints report 0.5.69 / 8161.
-- Tagged CI release will publish the APK, desktop builds, web exports, checksums, and all-platform ZIP.
+- Tagged workflow [45624718824](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45624718824) passed Android/signature, Windows, Linux, web, and publish jobs. The GitHub release contains the APK, desktop builds, web exports, checksums, and all-platform ZIP.
 - Automated test suites were not run. Physical-device/OEM and TalkBack behavior remain unverified.
 
 ## Remaining ecosystem gates
