@@ -2084,16 +2084,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'SEKARANG',
-                        style: TextStyle(
-                          color: tc.textSecondary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
                         _formatHour(hr),
                         style: TextStyle(
                           color: tc.textPrimary,
@@ -2107,16 +2097,6 @@ class _FocusClockHomeViewState extends ConsumerState<FocusClockHomeView> {
                         style: TextStyle(color: tc.textSecondary, height: 1.3),
                       ),
                       const SizedBox(height: 12),
-                      TextButton.icon(
-                        onPressed: widget.onOpenFocusClock,
-                        style: TextButton.styleFrom(
-                          foregroundColor: tc.accent,
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(48, 44),
-                        ),
-                        icon: const Icon(Icons.schedule_rounded, size: 18),
-                        label: const Text('Buka jam'),
-                      ),
                       TextButton.icon(
                         key: const ValueKey('home-open-focus-timer'),
                         onPressed: _openFocusTimerHub,
