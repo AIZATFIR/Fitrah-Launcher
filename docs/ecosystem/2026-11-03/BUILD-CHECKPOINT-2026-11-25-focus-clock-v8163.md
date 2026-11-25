@@ -14,6 +14,7 @@ When an Android user leaves the app to enable or disable notifications, the acti
 - `git diff --check`: clean.
 - Release APK 0.5.71 / 8163 built successfully (74.6 MB). A device/emulator was not connected during this run, so install and permission round-trip could not be repeated.
 - Focus Clock production deployment `dpl_58iKGxitfzKC21W24U5vbaqUpyc7`, Fitrah `dpl_3rYTRTx8bCd8SYRT5VavHMvksWba`, and Sadar `dpl_Gb58L3DvJs23Z2c9gBhdWVfGs774` reached READY. Their production `/version.json` endpoints all report 0.5.71 / 8163. Fitrah deployment protection remains enabled.
+- Tagged workflow [45636119802](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45636119802) passed Android signing/build, Windows, Linux, web bundle and release publishing. The [release page](https://github.com/AIZATFIR/Fitrah-Launcher/releases/tag/v0.5.71-v8163) lists all eight assets: APK, Windows/Linux archives, three web ZIPs, all-platform ZIP, and SHA256SUMS.
 - Automated suites were not run.
 
 ## Remaining ecosystem gates
