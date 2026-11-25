@@ -227,6 +227,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           final curKeyAiChat = _keyAiChat ?? s.keyAiChat;
           final curKeyPrecisionMode = _keyPrecisionMode ?? s.keyPrecisionMode;
           final curKeyPlanningMode = _keyPlanningMode ?? s.keyPlanningMode;
+          final showKeyboardShortcuts =
+              MediaQuery.sizeOf(context).shortestSide >= 600 ||
+              (defaultTargetPlatform != TargetPlatform.android &&
+                  defaultTargetPlatform != TargetPlatform.iOS);
 
           return ListView(
             controller: _settingsScrollController,
@@ -833,94 +837,105 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
 
               // ── Keyboard Shortcuts ──────────────────────────────────────────
-              const Divider(),
-              const _Section(title: 'Keyboard Shortcuts'),
-              ListTile(
-                title: const Text('Toggle Left Panel'),
-                subtitle: Text('Current shortcut: Ctrl + $curKeyLeftPanel'),
-                trailing: TextButton(
-                  onPressed: () {
-                    _recordKeybind('Toggle Left Panel', curKeyLeftPanel, (
-                      newKey,
-                    ) {
-                      setState(() {
-                        _keyLeftPanel = newKey;
-                      });
-                      _save(s, keyLeftPanel: newKey);
-                    });
-                  },
-                  child: const Text('Change'),
-                ),
-              ),
-              ListTile(
-                title: const Text('Toggle Right Panel'),
-                subtitle: Text('Current shortcut: Ctrl + $curKeyRightPanel'),
-                trailing: TextButton(
-                  onPressed: () {
-                    _recordKeybind('Toggle Right Panel', curKeyRightPanel, (
-                      newKey,
-                    ) {
-                      setState(() {
-                        _keyRightPanel = newKey;
-                      });
-                      _save(s, keyRightPanel: newKey);
-                    });
-                  },
-                  child: const Text('Change'),
-                ),
-              ),
-              ListTile(
-                title: const Text('Toggle AI Chat'),
-                subtitle: Text('Current shortcut: Ctrl + $curKeyAiChat'),
-                trailing: TextButton(
-                  onPressed: () {
-                    _recordKeybind('Toggle AI Chat', curKeyAiChat, (newKey) {
-                      setState(() {
-                        _keyAiChat = newKey;
-                      });
-                      _save(s, keyAiChat: newKey);
-                    });
-                  },
-                  child: const Text('Change'),
-                ),
-              ),
-              ListTile(
-                title: const Text('Toggle Precision Mode'),
-                subtitle: Text('Current shortcut: Ctrl + $curKeyPrecisionMode'),
-                trailing: TextButton(
-                  onPressed: () {
-                    _recordKeybind(
-                      'Toggle Precision Mode',
-                      curKeyPrecisionMode,
-                      (newKey) {
+              if (showKeyboardShortcuts) const Divider(),
+              if (showKeyboardShortcuts)
+                const _Section(title: 'Keyboard Shortcuts'),
+              if (showKeyboardShortcuts)
+                ListTile(
+                  title: const Text('Toggle Left Panel'),
+                  subtitle: Text('Current shortcut: Ctrl + $curKeyLeftPanel'),
+                  trailing: TextButton(
+                    onPressed: () {
+                      _recordKeybind('Toggle Left Panel', curKeyLeftPanel, (
+                        newKey,
+                      ) {
                         setState(() {
-                          _keyPrecisionMode = newKey;
+                          _keyLeftPanel = newKey;
                         });
-                        _save(s, keyPrecisionMode: newKey);
-                      },
-                    );
-                  },
-                  child: const Text('Change'),
-                ),
-              ),
-              ListTile(
-                title: const Text('Toggle Planning Mode'),
-                subtitle: Text('Current shortcut: Ctrl + $curKeyPlanningMode'),
-                trailing: TextButton(
-                  onPressed: () {
-                    _recordKeybind('Toggle Planning Mode', curKeyPlanningMode, (
-                      newKey,
-                    ) {
-                      setState(() {
-                        _keyPlanningMode = newKey;
+                        _save(s, keyLeftPanel: newKey);
                       });
-                      _save(s, keyPlanningMode: newKey);
-                    });
-                  },
-                  child: const Text('Change'),
+                    },
+                    child: const Text('Change'),
+                  ),
                 ),
-              ),
-
+              if (showKeyboardShortcuts)
+                ListTile(
+                  title: const Text('Toggle Right Panel'),
+                  subtitle: Text('Current shortcut: Ctrl + $curKeyRightPanel'),
+                  trailing: TextButton(
+                    onPressed: () {
+                      _recordKeybind('Toggle Right Panel', curKeyRightPanel, (
+                        newKey,
+                      ) {
+                        setState(() {
+                          _keyRightPanel = newKey;
+                        });
+                        _save(s, keyRightPanel: newKey);
+                      });
+                    },
+                    child: const Text('Change'),
+                  ),
+                ),
+              if (showKeyboardShortcuts)
+                ListTile(
+                  title: const Text('Toggle AI Chat'),
+                  subtitle: Text('Current shortcut: Ctrl + $curKeyAiChat'),
+                  trailing: TextButton(
+                    onPressed: () {
+                      _recordKeybind('Toggle AI Chat', curKeyAiChat, (newKey) {
+                        setState(() {
+                          _keyAiChat = newKey;
+                        });
+                        _save(s, keyAiChat: newKey);
+                      });
+                    },
+                    child: const Text('Change'),
+                  ),
+                ),
+              if (showKeyboardShortcuts)
+                ListTile(
+                  title: const Text('Toggle Precision Mode'),
+                  subtitle: Text(
+                    'Current shortcut: Ctrl + $curKeyPrecisionMode',
+                  ),
+                  trailing: TextButton(
+                    onPressed: () {
+                      _recordKeybind(
+                        'Toggle Precision Mode',
+                        curKeyPrecisionMode,
+                        (newKey) {
+                          setState(() {
+                            _keyPrecisionMode = newKey;
+                          });
+                          _save(s, keyPrecisionMode: newKey);
+                        },
+                      );
+                    },
+                    child: const Text('Change'),
+                  ),
+                ),
+              if (showKeyboardShortcuts)
+                ListTile(
+                  title: const Text('Toggle Planning Mode'),
+                  subtitle: Text(
+                    'Current shortcut: Ctrl + $curKeyPlanningMode',
+                  ),
+                  trailing: TextButton(
+                    onPressed: () {
+                      _recordKeybind(
+                        'Toggle Planning Mode',
+                        curKeyPlanningMode,
+                        (newKey) {
+                          setState(() {
+                            _keyPlanningMode = newKey;
+                          });
+                          _save(s, keyPlanningMode: newKey);
+                        },
+                      );
+                    },
+                    child: const Text('Change'),
+                  ),
+                ),
               const Divider(),
               const _Section(title: 'Backup & Restore'),
               const _BackupRestoreSection(),

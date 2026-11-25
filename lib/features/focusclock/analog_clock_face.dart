@@ -618,14 +618,13 @@ class _ClockPainter extends CustomPainter {
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
       }
     } else {
-      final bool useZeroToEleven = (theme == 5 || theme == 6);
       for (int h = 1; h <= 12; h++) {
         final angle = (h / 12) * 2 * math.pi - math.pi / 2;
         final pos = Offset(
           center.dx + math.cos(angle) * (outerRadius + 14),
           center.dy + math.sin(angle) * (outerRadius + 14),
         );
-        final label = useZeroToEleven ? (h == 12 ? '0' : '$h') : '$h';
+        final label = '$h';
         final tp = _getPainter(
           label,
           14,
