@@ -7,8 +7,12 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../models/activity.dart';
 import '../models/routine_blueprint.dart';
 
-final firebaseAuthProvider = Provider<FirebaseAuth>((ref) => FirebaseAuth.instance);
-final firestoreProvider = Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
+final firebaseAuthProvider = Provider<FirebaseAuth>(
+  (ref) => FirebaseAuth.instance,
+);
+final firestoreProvider = Provider<FirebaseFirestore>(
+  (ref) => FirebaseFirestore.instance,
+);
 
 final authStateChangesProvider = StreamProvider<User?>((ref) {
   return ref.watch(firebaseAuthProvider).authStateChanges();
@@ -19,11 +23,19 @@ class FirebaseSyncService {
   final FirebaseFirestore _db;
 
   FirebaseSyncService({FirebaseAuth? auth, FirebaseFirestore? db})
-      : _auth = auth ?? FirebaseAuth.instance,
-        _db = db ?? FirebaseFirestore.instance;
+    : _auth = auth ?? FirebaseAuth.instance,
+      _db = db ?? FirebaseFirestore.instance;
 
   User? get currentUser => _auth.currentUser;
-  bool get isAuthenticated => currentUser != null;
+  bool get isAuthenticated => currentUser?.isAnonymous == false;
+
+  User _requireRegisteredUser() {
+    final user = currentUser;
+    if (user == null || user.isAnonymous) {
+      throw StateError('Masuk ke akun untuk menyinkronkan data.');
+    }
+    return user;
+  }
 
   /// Real Sign in with Google (Web & Mobile)
   Future<UserCredential?> signInWithGoogle() async {
@@ -33,7 +45,7 @@ class FirebaseSyncService {
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
         final cred = await _auth.signInWithPopup(googleProvider);
-        debugPrint('🔥 Firebase Google Sign-In Success: ${cred.user?.email}');
+        debugPrint('Firebase Google Sign-In succeeded.');
         return cred;
       } else {
         final GoogleSignIn googleSignIn = GoogleSignIn(
@@ -41,49 +53,47 @@ class FirebaseSyncService {
         );
         final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
         if (googleUser == null) return null;
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
         final AuthCredential credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
         final cred = await _auth.signInWithCredential(credential);
-        debugPrint('🔥 Native Google Sign-In Success: ${cred.user?.email}');
+        debugPrint('Firebase Google Sign-In succeeded.');
         return cred;
       }
     } catch (e) {
-      debugPrint('Firebase signInWithGoogle error: $e');
+      debugPrint('Firebase signInWithGoogle failed (${e.runtimeType}).');
       rethrow;
-    }
-  }
-
-  /// Sign in anonymously for seamless instant sync
-  Future<UserCredential?> signInAnonymously() async {
-    try {
-      final cred = await _auth.signInAnonymously();
-      debugPrint('🔥 Firebase Signed in anonymously: ${cred.user?.uid}');
-      return cred;
-    } catch (e) {
-      debugPrint('Firebase signInAnonymously error: $e');
-      return null;
     }
   }
 
   /// Sign in with Email & Password
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {
-      return await _auth.signInWithEmailAndPassword(email: email, password: password);
+      return await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
     } catch (e) {
-      debugPrint('Firebase signInWithEmail error: $e');
+      debugPrint('Firebase signInWithEmail failed (${e.runtimeType}).');
       rethrow;
     }
   }
 
   /// Register with Email & Password
-  Future<UserCredential?> registerWithEmail(String email, String password) async {
+  Future<UserCredential?> registerWithEmail(
+    String email,
+    String password,
+  ) async {
     try {
-      return await _auth.createUserWithEmailAndPassword(email: email, password: password);
+      return await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
     } catch (e) {
-      debugPrint('Firebase registerWithEmail error: $e');
+      debugPrint('Firebase registerWithEmail failed (${e.runtimeType}).');
       rethrow;
     }
   }
@@ -93,14 +103,14 @@ class FirebaseSyncService {
     try {
       await _auth.signOut();
     } catch (e) {
-      debugPrint('Firebase signOut error: $e');
+      debugPrint('Firebase signOut failed (${e.runtimeType}).');
+      rethrow;
     }
   }
 
   /// Sync an Activity to Firestore
   Future<void> syncActivity(Activity activity) async {
-    final user = currentUser;
-    if (user == null) return;
+    final user = _requireRegisteredUser();
 
     try {
       final docRef = _db
@@ -124,14 +134,14 @@ class FirebaseSyncService {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firebase syncActivity error: $e');
+      debugPrint('Firebase syncActivity failed (${e.runtimeType}).');
+      rethrow;
     }
   }
 
   /// Sync a RoutineBlueprint to Firestore
   Future<void> syncBlueprint(RoutineBlueprint blueprint) async {
-    final user = currentUser;
-    if (user == null) return;
+    final user = _requireRegisteredUser();
 
     try {
       final docRef = _db
@@ -142,14 +152,15 @@ class FirebaseSyncService {
 
       await docRef.set(blueprint.toJson(), SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Firebase syncBlueprint error: $e');
+      debugPrint('Firebase syncBlueprint failed (${e.runtimeType}).');
+      rethrow;
     }
   }
 
   /// Stream of user activities from Firestore
   Stream<List<Map<String, dynamic>>> streamActivities() {
     final user = currentUser;
-    if (user == null) return const Stream.empty();
+    if (user == null || user.isAnonymous) return const Stream.empty();
 
     return _db
         .collection('users')

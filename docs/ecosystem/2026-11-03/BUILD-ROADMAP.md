@@ -281,7 +281,9 @@ Verifikasi setelah review: 29 tes launcher/provider/widget/session lulus, analyz
 
 **Hasil:** bila user menginginkannya, HP dan companion berbagi data dengan batas offline/konflik yang dapat dipahami.
 
-- [ ] Fahim memilih skenario riil (contoh: mulai sesi HP, lanjut laptop, lihat habit dari keduanya). Tentukan kebutuhan akun, biaya dan provider sebelum mengaktifkan Firebase/Supabase/layanan lain. Bukti library existing tidak sama dengan keputusan produk.
+- [x] Provider dipilih: Firebase dengan login opsional dan sync opt-in (25 Nov 2026).
+- [ ] Audit stub Auth/Firestore serta tentukan skenario lintas perangkat dan teks persetujuan data. Aturan awal kini membatasi dua koleksi yang dipakai stub ke UID akun pemilik; Firestore Emulator lokal berhasil membaca aturan dan menyala, tetapi matriks akses (pemilik/UID lain/anonim/path lain) belum diuji dan aturan belum di-deploy. Belum ada sync/upload aktif.
+- [ ] Sebelum deploy, validasi aturan untuk akun pemilik, UID lain, auth anonim, dan path yang tidak dikenal. Buat UI opt-in, outbox, merge dan sinkronisasi hanya untuk koleksi yang benar-benar siap.
 - [ ] Bangun adapter sync dengan auth per user, outbox lokal, operation ID, retries, cursor/ack, tombstones, contract version dan log yang tidak memuat isi pribadi. Test unauthorized access pada data lain.
 - [ ] Implement online handoff dengan expected revision/ownership ACK. Offline tetap lokal; overlap sessions dipertahankan untuk review, tidak diringkas ganda sebagai jam unik.
 - [ ] Gunakan owner epoch fencing, source checkpoint/release dan server CAS. Stale-owner control ditolak; offline evidence tetap disimpan disputed untuk rekonsiliasi. Jangan mengklaim handoff selesai jika perangkat sumber tidak mengakui pelepasan sesi.
