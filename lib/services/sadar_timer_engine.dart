@@ -136,9 +136,11 @@ class _AndroidClockSnapshot {
 
 typedef TimerClockSnapshotReader = Future<Map<String, int>?> Function();
 
-class SadarTimerEngine extends StateNotifier<TimerState> {
+class SadarTimerEngine extends StateNotifier<TimerState>
+    with WidgetsBindingObserver {
   SadarTimerEngine(this._repo, [this._notifier, this._clockSnapshotReader])
     : super(const TimerState()) {
+    WidgetsBinding.instance.addObserver(this);
     _restoreFuture = _restoreSavedSession();
   }
 
@@ -156,6 +158,18 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   static const _runningCheckpointIntervalSeconds = 15;
 
   TimerState get currentState => state;
+
+  Future<void> reconcileTimerReminder() async {
+    await _restoreFuture;
+    await _syncTimerReminder();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(reconcileTimerReminder());
+    }
+  }
 
   DateTime? _startedAt;
   DateTime? _sessionStartedAt;
@@ -1346,6 +1360,7 @@ class SadarTimerEngine extends StateNotifier<TimerState> {
   @override
   void dispose() {
     _ticker?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 }

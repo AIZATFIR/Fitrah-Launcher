@@ -149,6 +149,6 @@ Keberhasilan pemakaian: Fahim memakai build pribadi setidaknya tujuh hari, membu
 | A3 | Home menampilkan dial + status + habits, tampilan detail tersedia | Fahim, review mockup sebelum E4 |
 | A4 | Energy tag manual opsional, tanpa inference energi otomatis | Fahim, setelah kebutuhan core terpenuhi; tidak memblokir E0–E6 |
 | A5 | Nama rilis tetap Fitrah Launcher sementara; Focus Clock nama ekosistem | Fahim, sebelum release publik; jangan ganti applicationId karena nama tampilan |
-| A6 | Cloud provider dan login belum ditetapkan | Fahim + builder, hanya sebelum E8 berdasarkan kebutuhan perangkat dan biaya |
+| A6 | Firebase dipilih untuk sinkronisasi lintas perangkat; login opsional dan sync opt-in | Fahim, 25 Nov 2026. Implementasi E8 tetap menunggu security rules, data contract, outbox/merge, dan consent flow. |
 
 Asumsi adalah rancangan untuk ditinjau; tidak boleh diberi status owner-approved oleh agent berikutnya tanpa keputusan pemilik.

@@ -6,7 +6,7 @@ altitude: initiative
 paradigm: modular monolith with repository-owned state
 status: draft-for-owner-review
 created: 2026-11-03
-updated: 2026-11-04
+updated: 2026-11-25
 sources:
   - PRD.md
   - EVIDENCE.md
@@ -123,7 +123,7 @@ flowchart TB
 
 - **Binds:** FR-20–FR-22.
 - **Prevents:** app tidak bisa dipakai offline, deep link dianggap database bersama.
-- **Rule:** Core tidak memerlukan login/network. E8 memakai SyncPort; operasi lokal commit bersama outbox, remote merge masuk melalui use case yang memvalidasi. Backend bukan sumber kebenaran timer yang menghitung detik setiap tick. Pemilihan provider/auth dilakukan dalam ADR E8; existing Firebase code bukan keputusan otomatis. Separate Android package dan web origin memiliki storage berbeda. Cross-app route hanya navigasi/command transport yang harus diverifikasi.
+- **Rule:** Core tidak memerlukan login/network. E8 memakai SyncPort; operasi lokal commit bersama outbox, remote merge masuk melalui use case yang memvalidasi. Backend bukan sumber kebenaran timer yang menghitung detik setiap tick. Owner memilih Firebase dengan login opsional (25 Nov 2026); pemilihan ini belum mengaktifkan upload. Sync tetap mati sampai pengguna secara eksplisit memilih login dan mengaktifkan sync, dengan penjelasan data yang akan dikirim dan kontrol matikan/putus akun. Firebase Auth/Firestore code yang ada belum menjadi implementasi E8: perlu aturan akses Firestore, kontrak data, outbox, merge/recovery dan alur consent sebelum dipakai. Separate Android package dan web origin memiliki storage berbeda. Cross-app route hanya navigasi/command transport yang harus diverifikasi.
 
 ### AD-13 — Konflik lintas perangkat harus mempertahankan bukti
 
