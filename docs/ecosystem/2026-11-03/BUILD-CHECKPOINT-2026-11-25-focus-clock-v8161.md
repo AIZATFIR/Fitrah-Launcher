@@ -14,6 +14,7 @@ At 320 dp width and 200% system text, the compact clock card split its small all
 - `git diff --check`: clean.
 - Release APK built and installed over v8160 on API 36 emulator; package reports version 0.5.69 / code 8161.
 - Manual screenshot review at 320 dp / 200% text shows digital time, schedule status, and Timer without clipped words. The emulator was returned to 1080×2400 and 100% text afterward.
+- Reboot smoke on the installed AVD: after waiting for boot completion plus 10 seconds, Fitrah held Android's HOME role and `MainActivity` was foreground. The synthetic pinned goal `QA capai 🎯` remained visible. Sampled logcat had no app fatal, Flutter error, or ANR. An earlier snapshot taken immediately at `sys.boot_completed=1` showed Nexus; the settled reboot was the confirming observation, so this remains emulator evidence only.
 - Fitrah (`dpl_Go8Xw8DF9X3hahBuQkw8c9bn1JXD`), Focus Clock (`dpl_Ffyz25M7nDC1vdVbE61FR1FKsd8b`), and Sadar (`dpl_Fb6K9RfaE9DLhsa4639wkgPFqipe`) production deployments reached READY; all three `/version.json` endpoints report 0.5.69 / 8161.
 - Tagged workflow [45624718824](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45624718824) passed Android/signature, Windows, Linux, web, and publish jobs. The GitHub release contains the APK, desktop builds, web exports, checksums, and all-platform ZIP.
 - Automated test suites were not run. Physical-device/OEM and TalkBack behavior remain unverified.
