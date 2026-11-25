@@ -173,6 +173,52 @@ jobs:
           mv release-assets/Fitrah-Launcher-Web-Sadar/Fitrah-Launcher-Web-Sadar.zip release-assets/Fitrah-Launcher-Web-Sadar.zip
           cd release-assets
           sha256sum Fitrah-Launcher-Android-APK.apk Fitrah-Launcher-Linux-x64.tar.gz Fitrah-Launcher-Windows-x64.zip Fitrah-Launcher-Web-Fitrah.zip Fitrah-Launcher-Web-Focus-Clock.zip Fitrah-Launcher-Web-Sadar.zip > SHA256SUMS.txt
+          version="${TAG_NAME#v}"
+          bundle_name="Focus_Clock_Ecosystem_${version/-/_}.zip"
+          cat > INSTALL.md <<'INSTALL_EOF'
+          # Focus Clock ecosystem owner preview
+
+          This bundle contains the Android launcher APK, Windows and Linux desktop builds, and static web builds for Fitrah, Focus Clock, and Sadar.
+
+          ## Android
+          Install `Fitrah-Launcher-Android-APK.apk`. For upgrades, install over the existing app to retain local data. Set Fitrah Launcher as the phone's Home app in Android settings if desired. The APK uses the owner-preview signing key; it is not Play Store signed.
+
+          ## Desktop
+          Extract `Fitrah-Launcher-Windows-x64.zip` and run `focus_clock.exe`. Extract `Fitrah-Launcher-Linux-x64.tar.gz` and run `./focus_clock`.
+
+          ## Web
+          Fitrah: https://fitrah-web-three.vercel.app/
+          Focus Clock: https://focus-clock-web.vercel.app/
+          Sadar: https://sadar-web.vercel.app/
+
+          The web ZIP files are static exports for separate hosting. Local app data is not synchronized between Android and web or between browsers.
+
+          Verify the six platform files with `sha256sum --check SHA256SUMS.txt`.
+          INSTALL_EOF
+          cat > BUILD-MANIFEST.json <<MANIFEST_EOF
+          {
+            "release_tag": "${TAG_NAME}",
+            "source_commit": "${GITHUB_SHA}",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "included_artifacts": [
+              "Fitrah-Launcher-Android-APK.apk",
+              "Fitrah-Launcher-Linux-x64.tar.gz",
+              "Fitrah-Launcher-Windows-x64.zip",
+              "Fitrah-Launcher-Web-Fitrah.zip",
+              "Fitrah-Launcher-Web-Focus-Clock.zip",
+              "Fitrah-Launcher-Web-Sadar.zip"
+            ]
+          }
+          MANIFEST_EOF
+          zip -q "$bundle_name" \
+            Fitrah-Launcher-Android-APK.apk \
+            Fitrah-Launcher-Linux-x64.tar.gz \
+            Fitrah-Launcher-Windows-x64.zip \
+            Fitrah-Launcher-Web-Fitrah.zip \
+            Fitrah-Launcher-Web-Focus-Clock.zip \
+            Fitrah-Launcher-Web-Sadar.zip \
+            INSTALL.md BUILD-MANIFEST.json SHA256SUMS.txt
+          sha256sum "$bundle_name" >> SHA256SUMS.txt
           gh release create "$TAG_NAME" \
             Fitrah-Launcher-Android-APK.apk \
             Fitrah-Launcher-Linux-x64.tar.gz \
@@ -180,5 +226,6 @@ jobs:
             Fitrah-Launcher-Web-Fitrah.zip \
             Fitrah-Launcher-Web-Focus-Clock.zip \
             Fitrah-Launcher-Web-Sadar.zip \
+            "$bundle_name" \
             SHA256SUMS.txt \
             --verify-tag --title "Fitrah Launcher $TAG_NAME — Ecosystem Preview" --generate-notes --prerelease

@@ -520,40 +520,9 @@ class _ClockPainter extends CustomPainter {
       );
     }
 
-    // Draw static 5-minute labels around the clock face
+    // Minute tick marks carry the fine-grained time; keep the rim free of
+    // repeated 00/05/10 labels so the hour markers remain easy to scan.
     final bool showHoverEffects = (hoverMinute != null && theme <= 4);
-    for (int m = 5; m <= 60; m += 5) {
-      final minVal = m == 60 ? 0 : m;
-
-      bool isHovered = false;
-      if (showHoverEffects) {
-        final hoverMinVal = hoverMinute! % 60;
-        if ((hoverMinVal - minVal).abs() <= 1 ||
-            (hoverMinVal - minVal).abs() >= 59) {
-          isHovered = true;
-        }
-      }
-
-      if (!isHovered) {
-        final angle = (m / 60) * 2 * math.pi - math.pi / 2;
-        final textRadius = outerRadius + 14;
-        final pos = Offset(
-          center.dx + math.cos(angle) * textRadius,
-          center.dy + math.sin(angle) * textRadius,
-        );
-
-        final label = minVal.toString().padLeft(2, '0');
-        final tp = _getPainter(
-          label,
-          9.0,
-          FontWeight.w600,
-          (theme >= 5)
-              ? themeAccentColor.withValues(alpha: 0.85)
-              : Colors.white.withValues(alpha: 0.12),
-        );
-        tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
-      }
-    }
 
     // Draw 1 precise minute label inside a premium glassmorphic capsule chip
     if (showHoverEffects) {
@@ -628,7 +597,8 @@ class _ClockPainter extends CustomPainter {
       );
     }
 
-    // Hour numbers — 12h dial shows 1..12 (or 0..11 if theme >= 5), 24h dial shows 0..23
+    // Hour numbers: 12-hour labels sit outside the bezel; minute ticks mark
+    // the face itself. The 24-hour dial keeps its denser 0..23 inner labels.
     if (is24hDial) {
       for (int h = 0; h < 24; h++) {
         final angle = (h / 24) * 2 * math.pi - math.pi / 2;
@@ -651,8 +621,8 @@ class _ClockPainter extends CustomPainter {
       for (int h = 1; h <= 12; h++) {
         final angle = (h / 12) * 2 * math.pi - math.pi / 2;
         final pos = Offset(
-          center.dx + math.cos(angle) * (outerRadius - 38),
-          center.dy + math.sin(angle) * (outerRadius - 38),
+          center.dx + math.cos(angle) * (outerRadius + 14),
+          center.dy + math.sin(angle) * (outerRadius + 14),
         );
         final label = useZeroToEleven ? (h == 12 ? '0' : '$h') : '$h';
         final tp = _getPainter(
