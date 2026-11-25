@@ -976,7 +976,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 ),
                                 SizedBox(width: 10),
                                 Text(
-                                  'Bicarakan tujuan',
+                                  'Susun langkah tujuan',
                                   style: TextStyle(fontSize: 13),
                                 ),
                               ],
