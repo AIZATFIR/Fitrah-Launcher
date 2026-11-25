@@ -19,8 +19,8 @@ Kept the selected clock face and bookpaper palette. In the 12-hour dial, numeral
 
 ## Remaining ecosystem gates
 
-This is an owner preview, not ecosystem completion. The tagged all-platform release workflow, physical/OEM behavior, TalkBack, sustained daily use, public distribution signing, complete web/offline coverage, cross-device sync, a live AI provider call, and later agent/WhatsApp/MCP milestones remain open. Android data and each browser profile remain separate.
+This is an owner preview, not ecosystem completion. Physical/OEM behavior, TalkBack, sustained daily use, public distribution signing, complete web/offline coverage, cross-device sync, a live AI provider call, and later agent/WhatsApp/MCP milestones remain open. Android data and each browser profile remain separate.
 
 ## Downloads
 
-The tagged GitHub owner-preview release will publish the Android APK, Windows/Linux builds, all three web exports, checksums, and one all-platform ZIP after CI completes.
+The [tagged GitHub owner-preview release](https://github.com/AIZATFIR/Fitrah-Launcher/releases/tag/v0.5.70-v8162) is published. Successful workflow [45631176061](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45631176061) built and uploaded the owner-preview APK, Windows/Linux packages, all three web exports, `SHA256SUMS.txt`, and one all-platform ZIP. GitHub lists all eight release assets. The full 125 MB ZIP was not downloaded for a local integrity round-trip.
