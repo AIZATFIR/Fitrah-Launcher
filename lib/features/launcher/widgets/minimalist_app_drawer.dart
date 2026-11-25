@@ -1,16 +1,20 @@
+import 'app_preferences_sheet.dart';
+import 'launcher_action_feedback.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/theme.dart';
 import '../providers/launcher_settings_provider.dart';
 import '../services/app_launcher_service.dart';
+import '../services/screen_time_service.dart';
 import 'app_icon_widget.dart';
 import 'fitrah_settings_screen.dart';
 import 'niagara_wave_scrubber.dart';
 
-/// Minimalist Niagara-style launcher app drawer that floats directly
-/// over the phone's system wallpaper.
+/// Bookpaper app drawer with warm ink, quiet surfaces, and familiar app icons.
 class MinimalistAppDrawer extends ConsumerStatefulWidget {
   const MinimalistAppDrawer({
     super.key,
@@ -22,7 +26,8 @@ class MinimalistAppDrawer extends ConsumerStatefulWidget {
   final VoidCallback? onBackToHome;
 
   @override
-  ConsumerState<MinimalistAppDrawer> createState() => _MinimalistAppDrawerState();
+  ConsumerState<MinimalistAppDrawer> createState() =>
+      _MinimalistAppDrawerState();
 }
 
 class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
@@ -33,11 +38,41 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
 
   String _searchQuery = '';
   bool _isSearchOpen = false;
+  bool _isScrubbing = false;
+  String? _scrubLetter;
   Timer? _clockTicker;
+  int _focusRevision = 0;
 
   static const List<String> _alphabet = [
-    '☆', '#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '○'
+    '☆',
+    '#',
+    'A',
+    'B',
+    'C',
+    'D',
+    'E',
+    'F',
+    'G',
+    'H',
+    'I',
+    'J',
+    'K',
+    'L',
+    'M',
+    'N',
+    'O',
+    'P',
+    'Q',
+    'R',
+    'S',
+    'T',
+    'U',
+    'V',
+    'W',
+    'X',
+    'Y',
+    'Z',
+    '○',
   ];
 
   @override
@@ -62,24 +97,47 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     if (!oldWidget.isActive && widget.isActive) {
       _checkAutoFocus();
     } else if (oldWidget.isActive && !widget.isActive) {
+      _focusRevision++;
       _searchFocusNode.unfocus();
     }
   }
 
-  void _checkAutoFocus() {
-    final settings = ref.read(launcherSettingsProvider);
-    if (settings.autoFocusSearch) {
-      Future.delayed(const Duration(milliseconds: 180), () {
-        if (mounted && widget.isActive) {
-          setState(() => _isSearchOpen = true);
+  Future<void> _checkAutoFocus() async {
+    final revision = ++_focusRevision;
+    final notifier = ref.read(launcherSettingsProvider.notifier);
+    await notifier.hydration;
+    if (!mounted ||
+        revision != _focusRevision ||
+        !widget.isActive ||
+        !notifier.isLoaded ||
+        !ref.read(launcherSettingsProvider).autoFocusSearch ||
+        !(ModalRoute.of(context)?.isCurrent ?? true)) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          revision != _focusRevision ||
+          !widget.isActive ||
+          !ref.read(launcherSettingsProvider).autoFocusSearch ||
+          !(ModalRoute.of(context)?.isCurrent ?? true)) {
+        return;
+      }
+      setState(() => _isSearchOpen = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            revision == _focusRevision &&
+            widget.isActive &&
+            ref.read(launcherSettingsProvider).autoFocusSearch &&
+            (ModalRoute.of(context)?.isCurrent ?? true)) {
           _searchFocusNode.requestFocus();
         }
       });
-    }
+    });
   }
 
   @override
   void dispose() {
+    _focusRevision++;
     _clockTicker?.cancel();
     _searchCtrl.dispose();
     _searchFocusNode.dispose();
@@ -87,206 +145,186 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     super.dispose();
   }
 
-  void _scrollToLetter(String letter) {
-    if (letter == '☆') {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-      }
+  int _navigationRevision = 0;
+
+  Future<void> _scrollToLetter(String letter) async {
+    final revision = ++_navigationRevision;
+    if (!_scrollCtrl.hasClients) return;
+    if (letter == '☆' || letter == '○') {
+      await _scrollCtrl.animateTo(
+        letter == '☆' ? 0 : _scrollCtrl.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
       return;
     }
-
-    if (letter == '○') {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-      }
+    final hidden = ref.read(hiddenPackagesProvider);
+    final apps = ref.read(installedAppsFutureProvider).valueOrNull ?? [];
+    if (!apps.any(
+      (app) => !hidden.contains(app.packageName) && app.firstLetter == letter,
+    )) {
       return;
     }
-
-    final appsAsync = ref.read(installedAppsFutureProvider);
-    final allApps = appsAsync.valueOrNull ?? [];
-    final filtered = _searchQuery.isEmpty
-        ? allApps
-        : allApps.where((a) => a.appName.toLowerCase().contains(_searchQuery)).toList();
-
-    final targetIdx = filtered.indexWhere((a) => a.firstLetter == letter);
-    if (targetIdx != -1 && _scrollCtrl.hasClients) {
-      // Estimated header height ~130px, each app item ~56px
-      final targetOffset = (130.0 + targetIdx * 56.0).clamp(0.0, _scrollCtrl.position.maxScrollExtent);
-      _scrollCtrl.jumpTo(targetOffset);
-    } else {
-      final key = _letterKeys[letter];
-      if (key?.currentContext != null) {
-        Scrollable.ensureVisible(
-          key!.currentContext!,
+    // Walk overlapping viewports until the real header is laid out. This is
+    // bounded by the installed list size and cancelled by the next selection.
+    _scrollCtrl.jumpTo(0);
+    for (var step = 0; step < apps.length * 2 + 4; step++) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted ||
+          revision != _navigationRevision ||
+          !_scrollCtrl.hasClients ||
+          _isSearchOpen) {
+        return;
+      }
+      final target = _letterKeys[letter]?.currentContext;
+      if (target != null && target.mounted) {
+        await Scrollable.ensureVisible(
+          target,
+          alignment: 0,
           duration: const Duration(milliseconds: 150),
-          curve: Curves.easeInOut,
         );
+        return;
       }
+      final position = _scrollCtrl.position;
+      final next = (position.pixels + position.viewportDimension * .75).clamp(
+        0.0,
+        position.maxScrollExtent,
+      );
+      if (next == position.pixels) return;
+      _scrollCtrl.jumpTo(next);
     }
   }
 
   void _launchApp(InstalledApp app) {
     HapticFeedback.lightImpact();
-    ref.read(appLauncherServiceProvider).launchApp(app.packageName);
+    _launchAfterScreenTimeCheck(app);
+  }
+
+  Future<void> _launchAfterScreenTimeCheck(InstalledApp app) async {
+    final settings = ref.read(launcherSettingsProvider);
+    final screenTime = ScreenTimeService();
+    if (settings.gentleLimitEnabled && screenTime.supported) {
+      final usage = await screenTime.today();
+      if (!mounted) return;
+      if (usage.available &&
+          usage.minutes != null &&
+          usage.minutes! >= settings.dailyLimitMinutes) {
+        var remaining = settings.gentleWaitSeconds;
+        Timer? timer;
+        // Android draws this overlay above Flutter dialogs, so suspend it for
+        // the limit prompt and restore the user's opt-in in every exit path.
+        await screenTime.sync(cueEnabled: false);
+        bool? shouldContinue;
+        try {
+          if (!mounted) return;
+          shouldContinue = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) => StatefulBuilder(
+              builder: (context, refresh) {
+                timer ??= Timer.periodic(const Duration(seconds: 1), (tick) {
+                  if (remaining <= 1) {
+                    tick.cancel();
+                    refresh(() => remaining = 0);
+                  } else {
+                    refresh(() => remaining--);
+                  }
+                });
+                return AlertDialog(
+                  title: const Text('Saatnya melihat tujuan'),
+                  content: Text(
+                    'Hari ini sudah ${usage.minutes} menit. Ambil jeda singkat sebelum membuka aplikasi berikutnya.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        timer?.cancel();
+                        Navigator.pop(dialogContext, false);
+                      },
+                      child: const Text('Lihat tujuan'),
+                    ),
+                    FilledButton(
+                      onPressed: remaining == 0
+                          ? () {
+                              timer?.cancel();
+                              Navigator.pop(dialogContext, true);
+                            }
+                          : null,
+                      child: Text(
+                        remaining == 0
+                            ? 'Lanjutkan'
+                            : 'Lanjut setelah $remaining dtk',
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        } finally {
+          timer?.cancel();
+          await screenTime.sync(cueEnabled: settings.screenTimeCueEnabled);
+        }
+        if (shouldContinue != true) {
+          widget.onBackToHome?.call();
+          return;
+        }
+      }
+    }
+    if (!mounted) return;
+    runLauncherAction(
+      context,
+      ref.read(appLauncherServiceProvider),
+      (service) => service.launchApp(app.packageName),
+    );
   }
 
   void _showAppOptions(InstalledApp app) {
-    HapticFeedback.mediumImpact();
-    final favorites = ref.read(favoritePackagesProvider);
-    final isFav = favorites.contains(app.packageName);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF161618),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        side: BorderSide(color: Color(0xFF26262B)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    AppIconWidget(
-                      packageName: app.packageName,
-                      appName: app.appName,
-                      size: 46,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            app.appName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 18,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            app.packageName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.white.withOpacity(0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Divider(color: Color(0xFF26262B)),
-
-                _buildSheetTile(
-                  icon: isFav ? Icons.star_rounded : Icons.star_border_rounded,
-                  iconColor: isFav ? const Color(0xFFE5A93C) : Colors.white70,
-                  title: isFav ? 'Hapus dari Favorit' : 'Tambah ke Favorit',
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    final newSet = Set<String>.from(favorites);
-                    if (isFav) {
-                      newSet.remove(app.packageName);
-                    } else {
-                      newSet.add(app.packageName);
-                    }
-                    ref.read(favoritePackagesProvider.notifier).state = newSet;
-                  },
-                ),
-                _buildSheetTile(
-                  icon: Icons.info_outline_rounded,
-                  title: 'App info',
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    ref.read(appLauncherServiceProvider).openAppDetails(app.packageName);
-                  },
-                ),
-                _buildSheetTile(
-                  icon: Icons.delete_outline_rounded,
-                  iconColor: const Color(0xFFE05252),
-                  textColor: const Color(0xFFE05252),
-                  title: 'Uninstall app',
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    ref.read(appLauncherServiceProvider).uninstallApp(app.packageName);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSheetTile({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    Color iconColor = Colors.white70,
-    Color textColor = Colors.white,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 6),
-        child: Row(
-          children: [
-            Icon(icon, color: iconColor, size: 21),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      color: textColor,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.white54,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    showAppPreferences(context, app);
   }
 
   String _formatHeaderDate(DateTime dt) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const days = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
+    ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
     final dayName = days[dt.weekday - 1];
     final monthName = months[dt.month - 1];
-    return '$dayName, $monthName ${dt.day}';
+    return '$dayName, ${dt.day} $monthName';
   }
 
   @override
   Widget build(BuildContext context) {
     final appsAsync = ref.watch(installedAppsFutureProvider);
     final favorites = ref.watch(favoritePackagesProvider);
+    final hidden = ref.watch(hiddenPackagesProvider);
+    ref.watch(launcherSettingsProvider);
+    ref.listen(launcherSettingsProvider, (previous, next) {
+      if (previous?.autoFocusSearch != next.autoFocusSearch) {
+        _focusRevision++;
+        if (next.autoFocusSearch && widget.isActive) _checkAutoFocus();
+      }
+    });
+    final preferences = ref.read(launcherSettingsProvider.notifier);
 
     return PopScope(
       canPop: !_isSearchOpen,
@@ -300,7 +338,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppPalette.bg,
         body: SafeArea(
           child: Stack(
             children: [
@@ -315,31 +353,37 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                           height: 48,
                           margin: const EdgeInsets.fromLTRB(18, 12, 18, 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xCC0D1B2A),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.4),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
+                            color: AppPalette.card,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppPalette.stroke),
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Row(
                             children: [
-                              const Icon(Icons.search_rounded, size: 20, color: Colors.white70),
+                              const Icon(
+                                Icons.search_rounded,
+                                size: 20,
+                                color: AppPalette.accent,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: TextField(
                                   controller: _searchCtrl,
                                   focusNode: _searchFocusNode,
-                                  onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
-                                  style: const TextStyle(fontSize: 15, color: Colors.white),
+                                  onChanged: (val) => setState(
+                                    () =>
+                                        _searchQuery = val.trim().toLowerCase(),
+                                  ),
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 15,
+                                    color: AppPalette.text,
+                                  ),
                                   decoration: const InputDecoration(
-                                    hintText: 'Search apps',
-                                    hintStyle: TextStyle(fontSize: 15, color: Colors.white38),
+                                    hintText: 'Cari aplikasi',
+                                    hintStyle: TextStyle(
+                                      fontSize: 15,
+                                      color: AppPalette.textDim,
+                                    ),
                                     border: InputBorder.none,
                                     isDense: true,
                                   ),
@@ -351,7 +395,11 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                     _searchCtrl.clear();
                                     setState(() => _searchQuery = '');
                                   },
-                                  child: const Icon(Icons.clear_rounded, size: 18, color: Colors.white60),
+                                  child: const Icon(
+                                    Icons.clear_rounded,
+                                    size: 18,
+                                    color: AppPalette.textDim,
+                                  ),
                                 )
                               else
                                 GestureDetector(
@@ -362,7 +410,11 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                                     });
                                     _searchFocusNode.unfocus();
                                   },
-                                  child: const Icon(Icons.close_rounded, size: 18, color: Colors.white60),
+                                  child: const Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                    color: AppPalette.textDim,
+                                  ),
                                 ),
                             ],
                           ),
@@ -370,79 +422,214 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
 
                       // Main List
                       Expanded(
-                        child: appsAsync.when(
-                          data: (allApps) {
-                            final filtered = _searchQuery.isEmpty
-                                ? allApps
-                                : allApps.where((a) => a.appName.toLowerCase().contains(_searchQuery)).toList();
-
-                            if (filtered.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  'No apps found.',
-                                  style: TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 14,
-                                    shadows: [Shadow(color: Colors.black87, blurRadius: 6)],
-                                  ),
+                        child: !preferences.isLoaded
+                            ? ListView(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  4,
+                                  44,
+                                  90,
                                 ),
-                              );
-                            }
-
-                            return ListView.builder(
-                              controller: _scrollCtrl,
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(16, 4, 44, 90),
-                              itemCount: filtered.length + (_isSearchOpen ? 0 : 2), // Header + Apps + Footer
-                              itemBuilder: (context, index) {
-                                // In normal mode, index 0 is Clock/Date Header
-                                if (!_isSearchOpen && index == 0) {
-                                  return _buildClockHeader();
-                                }
-
-                                // Bottom Footer section (Niagara Launcher settings etc.)
-                                final appIndex = _isSearchOpen ? index : index - 1;
-                                if (!_isSearchOpen && appIndex == filtered.length) {
-                                  return _buildFooterSection();
-                                }
-
-                                final app = filtered[appIndex];
-                                final isFirstOfLetter = appIndex == 0 ||
-                                    filtered[appIndex - 1].firstLetter != app.firstLetter;
-
-                                final rowWidget = _buildAppRow(app, isFav: favorites.contains(app.packageName));
-
-                                if (isFirstOfLetter && _searchQuery.isEmpty) {
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Padding(
-                                        key: _letterKeys[app.firstLetter],
-                                        padding: const EdgeInsets.only(left: 18, top: 20, bottom: 6),
-                                        child: Text(
-                                          app.firstLetter,
+                                children: [
+                                  _buildClockHeader(),
+                                  Padding(
+                                    padding: const EdgeInsets.all(18),
+                                    child: Text(
+                                      preferences.loadFailed
+                                          ? 'Gagal memuat preferensi.'
+                                          : 'Memuat preferensi…',
+                                      style: const TextStyle(
+                                        color: AppPalette.textDim,
+                                      ),
+                                    ),
+                                  ),
+                                  if (preferences.loadFailed)
+                                    TextButton(
+                                      style: TextButton.styleFrom(
+                                        minimumSize: const Size(48, 48),
+                                      ),
+                                      onPressed: preferences.reload,
+                                      child: const Text('Coba lagi'),
+                                    ),
+                                  _buildFooterSection(),
+                                ],
+                              )
+                            : appsAsync.when(
+                                skipLoadingOnRefresh: false,
+                                data: (allApps) {
+                                  final visible =
+                                      {
+                                        for (final app in allApps)
+                                          if (!hidden.contains(app.packageName))
+                                            app.packageName: app,
+                                      }.values.toList()..sort((a, b) {
+                                        final section = a.firstLetter.compareTo(
+                                          b.firstLetter,
+                                        );
+                                        return section != 0
+                                            ? section
+                                            : a.appName.toLowerCase().compareTo(
+                                                b.appName.toLowerCase(),
+                                              );
+                                      });
+                                  final filtered = visible
+                                      .where(
+                                        (app) =>
+                                            app.appName.toLowerCase().contains(
+                                              _searchQuery,
+                                            ) &&
+                                            (_scrubLetter == null ||
+                                                _scrubLetter == '○' ||
+                                                (_scrubLetter == '☆'
+                                                    ? favorites.contains(
+                                                        app.packageName,
+                                                      )
+                                                    : app.firstLetter ==
+                                                          _scrubLetter)) &&
+                                            (_scrubLetter != null ||
+                                                _isSearchOpen ||
+                                                _searchQuery.isNotEmpty ||
+                                                !favorites.contains(
+                                                  app.packageName,
+                                                )),
+                                      )
+                                      .toList();
+                                  final shortcuts = visible
+                                      .where(
+                                        (a) =>
+                                            favorites.contains(a.packageName),
+                                      )
+                                      .toList();
+                                  if (filtered.isEmpty &&
+                                      (shortcuts.isEmpty ||
+                                          _scrubLetter != null)) {
+                                    return ListView(
+                                      padding: const EdgeInsets.all(24),
+                                      children: [
+                                        if (!_isSearchOpen &&
+                                            _scrubLetter == null)
+                                          _buildClockHeader(),
+                                        Text(
+                                          _scrubLetter != null
+                                              ? 'Tidak ada aplikasi di bagian ini.'
+                                              : _searchQuery.isNotEmpty
+                                              ? 'Tidak ada aplikasi yang cocok dengan pencarian.'
+                                              : allApps.isEmpty
+                                              ? 'Tidak ada aplikasi terpasang yang dapat dibuka.'
+                                              : 'Semua aplikasi disembunyikan.',
                                           style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                            shadows: [
-                                              Shadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 1)),
-                                            ],
+                                            color: AppPalette.textDim,
                                           ),
                                         ),
-                                      ),
-                                      rowWidget,
-                                    ],
+                                      ],
+                                    );
+                                  }
+
+                                  return ListView.builder(
+                                    controller: _scrollCtrl,
+                                    physics: const BouncingScrollPhysics(),
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      4,
+                                      48,
+                                      90,
+                                    ),
+                                    itemCount:
+                                        filtered.length +
+                                        (_isSearchOpen || _scrubLetter != null
+                                            ? 0
+                                            : 2), // Header + Apps + Footer
+                                    itemBuilder: (context, index) {
+                                      // In normal mode, index 0 is Clock/Date Header
+                                      if (!_isSearchOpen &&
+                                          _scrubLetter == null &&
+                                          index == 0) {
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            _buildClockHeader(),
+                                            if (shortcuts.isNotEmpty) ...[
+                                              const Padding(
+                                                padding: EdgeInsets.all(18),
+                                                child: Text(
+                                                  'Favorit',
+                                                  style: TextStyle(
+                                                    color: AppPalette.accent,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              for (final app in shortcuts)
+                                                _buildAppRow(app, isFav: true),
+                                            ],
+                                          ],
+                                        );
+                                      }
+
+                                      // Bottom Footer section (Niagara Launcher settings etc.)
+                                      final appIndex =
+                                          _isSearchOpen || _scrubLetter != null
+                                          ? index
+                                          : index - 1;
+                                      if (!_isSearchOpen &&
+                                          _scrubLetter == null &&
+                                          appIndex == filtered.length) {
+                                        return _buildFooterSection();
+                                      }
+
+                                      final app = filtered[appIndex];
+                                      final isFirstOfLetter =
+                                          appIndex == 0 ||
+                                          filtered[appIndex - 1].firstLetter !=
+                                              app.firstLetter;
+
+                                      final rowWidget = _buildAppRow(
+                                        app,
+                                        isFav: favorites.contains(
+                                          app.packageName,
+                                        ),
+                                      );
+
+                                      if (isFirstOfLetter &&
+                                          _searchQuery.isEmpty) {
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Padding(
+                                              key: _letterKeys[app.firstLetter],
+                                              padding: const EdgeInsets.only(
+                                                left: 18,
+                                                top: 20,
+                                                bottom: 6,
+                                              ),
+                                              child: Text(
+                                                app.firstLetter,
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: AppPalette.accent,
+                                                ),
+                                              ),
+                                            ),
+                                            rowWidget,
+                                          ],
+                                        );
+                                      }
+                                      return rowWidget;
+                                    },
                                   );
-                                }
-                                return rowWidget;
-                              },
-                            );
-                          },
-                          loading: () => const Center(child: CircularProgressIndicator(color: Colors.white54)),
-                          error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Color(0xFFEF4444)))),
-                        ),
+                                },
+                                loading: () => const Center(
+                                  child: CircularProgressIndicator(
+                                    color: AppPalette.accent,
+                                  ),
+                                ),
+                                error: (e, _) =>
+                                    LauncherAppListFailure(error: e),
+                              ),
                       ),
                     ],
                   ),
@@ -454,16 +641,60 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                 Positioned(
                   right: 0,
                   top: 60,
-                  bottom: 30,
-                  width: 44,
+                  // Keep the final index marker above the floating search action.
+                  bottom: 84,
+                  width: 48,
                   child: NiagaraWaveScrubber(
                     alphabet: _alphabet,
                     selectedLetter: '',
-                    onLetterSelected: _scrollToLetter,
+                    onLetterSelected: (letter) {
+                      if (_isScrubbing) {
+                        final selectionRevision = ++_navigationRevision;
+                        if (letter != '○' && _scrollCtrl.hasClients) {
+                          _scrollCtrl.jumpTo(0);
+                        }
+                        setState(() => _scrubLetter = letter);
+                        if (letter == '○') {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted &&
+                                selectionRevision == _navigationRevision &&
+                                _isScrubbing &&
+                                _scrubLetter == letter) {
+                              _scrollToLetter(letter);
+                            }
+                          });
+                        }
+                      } else {
+                        _scrollToLetter(letter);
+                      }
+                    },
+                    onScrubStart: () {
+                      _navigationRevision++;
+                      setState(() {
+                        _isScrubbing = true;
+                        _scrubLetter = null;
+                      });
+                    },
+                    onScrubEnd: () {
+                      final selectedLetter = _scrubLetter;
+                      final releaseRevision = ++_navigationRevision;
+                      setState(() {
+                        _isScrubbing = false;
+                        _scrubLetter = null;
+                      });
+                      if (selectedLetter != null) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted &&
+                              releaseRevision == _navigationRevision) {
+                            _scrollToLetter(selectedLetter);
+                          }
+                        });
+                      }
+                    },
                   ),
                 ),
 
-              // Niagara Blue Circular Search FAB at Bottom Right
+              // Bookpaper search action at Bottom Right
               if (!_isSearchOpen)
                 Positioned(
                   right: 22,
@@ -478,7 +709,7 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0D64A8),
+                        color: AppPalette.accent,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
@@ -489,7 +720,11 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                         ],
                       ),
                       child: const Center(
-                        child: Icon(Icons.search_rounded, color: Colors.white, size: 24),
+                        child: Icon(
+                          Icons.search_rounded,
+                          color: Color(0xFF2A2115),
+                          size: 24,
+                        ),
                       ),
                     ),
                   ),
@@ -509,45 +744,67 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
     final dateStr = _formatHeaderDate(now);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: () => ref.read(appLauncherServiceProvider).launchClock(),
-            onLongPress: () {
-              HapticFeedback.mediumImpact();
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const FitrahSettingsScreen()),
-              );
-            },
-            child: Text(
-              timeStr,
-              style: const TextStyle(
-                fontSize: 54,
-                fontWeight: FontWeight.w300,
-                color: Colors.white,
-                letterSpacing: -1.0,
-                height: 1.05,
-                shadows: [
-                  Shadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 2)),
-                ],
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => runLauncherAction(
+                    context,
+                    ref.read(appLauncherServiceProvider),
+                    (service) => service.launchClock(),
+                  ),
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FitrahSettingsScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    timeStr,
+                    style: GoogleFonts.outfit(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w300,
+                      color: AppPalette.text,
+                      letterSpacing: -0.6,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              IconButton(
+                tooltip: 'Aplikasi tersembunyi',
+                onPressed: () => showHiddenApps(context),
+                icon: const Icon(Icons.visibility_off_outlined),
+                color: AppPalette.textDim,
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           GestureDetector(
-            onTap: () => ref.read(appLauncherServiceProvider).launchCalendar(),
-            child: Text(
-              dateStr,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: Colors.white.withOpacity(0.85),
-                shadows: const [
-                  Shadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 1)),
-                ],
+            onTap: () => runLauncherAction(
+              context,
+              ref.read(appLauncherServiceProvider),
+              (service) => service.launchCalendar(),
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  dateStr,
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: AppPalette.textDim,
+                  ),
+                ),
               ),
             ),
           ),
@@ -564,48 +821,49 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          child: Row(
-            children: [
-              AppIconWidget(
-                packageName: app.packageName,
-                appName: app.appName,
-                size: 44,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      app.appName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white,
-                        letterSpacing: 0.2,
-                        shadows: [
-                          Shadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 1)),
-                        ],
-                      ),
-                    ),
-                    if (_isSearchOpen) ...[
-                      const SizedBox(height: 1),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 34),
+            child: Row(
+              children: [
+                if (ref.read(launcherSettingsProvider).showAppIcons) ...[
+                  AppIconWidget(
+                    packageName: app.packageName,
+                    appName: app.appName,
+                    size: 44,
+                  ),
+                  const SizedBox(width: 16),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        isFav ? 'Favorit' : app.packageName,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withOpacity(0.55),
-                          shadows: const [
-                            Shadow(color: Colors.black87, blurRadius: 6),
-                          ],
+                        app.appName,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                          color: AppPalette.text,
+                          letterSpacing: 0,
                         ),
                       ),
+                      if (_isSearchOpen) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          isFav ? 'Favorit' : app.packageName,
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            color: AppPalette.textDim,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -618,17 +876,14 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(left: 18, bottom: 8),
             child: Text(
               'Fitrah Launcher',
-              style: TextStyle(
+              style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
-                shadows: [
-                  Shadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 1)),
-                ],
+                color: AppPalette.text,
               ),
             ),
           ),
@@ -648,21 +903,24 @@ class _MinimalistAppDrawerState extends ConsumerState<MinimalistAppDrawer> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
+                      color: AppPalette.cardHigh,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.settings_outlined, color: Colors.white, size: 22),
+                    child: const Icon(
+                      Icons.settings_outlined,
+                      color: AppPalette.accent,
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 16),
-                  const Text(
-                    'Pengaturan Launcher',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 1)),
-                      ],
+                  Expanded(
+                    child: Text(
+                      'Pengaturan Launcher',
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                        color: AppPalette.text,
+                      ),
                     ),
                   ),
                 ],

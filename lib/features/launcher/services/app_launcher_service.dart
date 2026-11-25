@@ -1,6 +1,7 @@
-import 'dart:io' show Platform;
+import '../providers/launcher_settings_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class InstalledApp {
@@ -41,136 +42,107 @@ class InstalledApp {
 class AppLauncherService {
   static const MethodChannel _channel = MethodChannel('fitrah_launcher/apps');
 
+  bool get isSupported =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
   Future<List<InstalledApp>> getInstalledApps() async {
-    if (kIsWeb || !Platform.isAndroid) {
-      return _getDesktopOrWebApps();
+    if (!isSupported) {
+      throw UnsupportedError('Android app capabilities unavailable');
     }
 
-    try {
-      final List<dynamic>? rawApps = await _channel.invokeMethod('getInstalledApps');
-      if (rawApps == null) return _getDesktopOrWebApps();
-
-      final List<InstalledApp> apps = [];
-      for (final item in rawApps) {
-        if (item is Map) {
-          final name = (item['appName'] as String?)?.trim() ?? '';
-          final pkg = (item['packageName'] as String?)?.trim() ?? '';
-          final isSys = (item['isSystem'] as bool?) ?? false;
-
-          if (name.isNotEmpty && pkg.isNotEmpty) {
-            apps.add(InstalledApp(
-              appName: name,
-              packageName: pkg,
-              isSystem: isSys,
-            ));
-          }
-        }
+    final rawApps = await _channel.invokeMethod<Object?>('getInstalledApps');
+    if (rawApps is! List) {
+      throw const FormatException('Invalid installed app list');
+    }
+    final apps = <String, InstalledApp>{};
+    for (final item in rawApps) {
+      if (item is! Map ||
+          item['appName'] is! String ||
+          (item['appName'] as String).trim().isEmpty ||
+          item['packageName'] is! String ||
+          (item['packageName'] as String).trim().isEmpty ||
+          (item['isSystem'] != null && item['isSystem'] is! bool)) {
+        throw const FormatException('Invalid installed app');
       }
-
-      apps.sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
-      return apps;
-    } catch (e) {
-      debugPrint('AppLauncherService getInstalledApps error: $e');
-      return _getDesktopOrWebApps();
+      final package = (item['packageName'] as String).trim();
+      apps.putIfAbsent(
+        package,
+        () => InstalledApp(
+          appName: item['appName'] as String,
+          packageName: package,
+          isSystem: item['isSystem'] as bool? ?? false,
+        ),
+      );
     }
+    return apps.values.toList()..sort(
+      (a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()),
+    );
   }
 
-  Future<bool> launchApp(String packageName) async {
-    if (kIsWeb || !Platform.isAndroid) {
-      debugPrint('Simulated launch on desktop/web: $packageName');
-      return true;
-    }
-
+  // A true result means Android accepted dispatch, not that the destination opened.
+  Future<bool> _invokeAction(
+    String method, [
+    Map<String, Object?>? arguments,
+  ]) async {
+    if (!isSupported) return false;
     try {
-      final bool? success = await _channel.invokeMethod('launchApp', {'packageName': packageName});
-      return success ?? false;
-    } catch (e) {
-      debugPrint('AppLauncherService launchApp error: $e');
+      return await _channel.invokeMethod<Object?>(method, arguments) == true;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
       return false;
     }
   }
 
-  /// Connect & Launch Standalone Sadar App (com.aizatfir.sadar)
-  Future<bool> launchSadar() async {
-    return launchApp('com.aizatfir.sadar');
-  }
+  Future<bool> launchApp(String packageName) =>
+      _invokeAction('launchApp', {'packageName': packageName});
 
-  /// Connect & Launch Standalone Focus Clock App (com.aizatfir.focusclock)
-  Future<bool> launchFocusClock() async {
-    return launchApp('com.aizatfir.focusclock');
-  }
+  Future<bool> launchSadar() => launchApp('com.aizatfir.sadar');
 
-  Future<void> openAppDetails(String packageName) async {
-    if (kIsWeb || !Platform.isAndroid) return;
-    try {
-      await _channel.invokeMethod('openAppDetails', {'packageName': packageName});
-    } catch (e) {
-      debugPrint('AppLauncherService openAppDetails error: $e');
+  Future<bool> launchFocusClock() => launchApp('com.aizatfir.focus_clock');
+
+  Future<bool> openAppDetails(String packageName) =>
+      _invokeAction('openAppDetails', {'packageName': packageName});
+
+  Future<bool> openHomeSettings() => _invokeAction('openHomeSettings');
+
+  Future<bool> isDefaultHome() async {
+    if (!isSupported) {
+      throw UnsupportedError('Default Home is only available on Android');
     }
+    final result = await _channel.invokeMethod<Object?>('isDefaultHome');
+    if (result is! bool) {
+      throw const FormatException('Invalid default Home status');
+    }
+    return result;
   }
 
-  Future<void> openHomeSettings() async {
-    if (kIsWeb || !Platform.isAndroid) return;
-    try {
-      await _channel.invokeMethod('openHomeSettings');
-    } catch (e) {
-      debugPrint('AppLauncherService openHomeSettings error: $e');
-    }
+  // Dispatch is not selection; read isDefaultHome again after returning.
+  Future<bool> requestDefaultHome() => _invokeAction('requestDefaultHome');
+
+  Future<bool> openNotificationListenerSettings() =>
+      _invokeAction('openNotificationListenerSettings');
+
+  Future<bool> launchClock() => _invokeAction('launchClock');
+
+  Future<bool> launchCalendar() => _invokeAction('launchCalendar');
+
+  Future<bool> launchDialer() => _invokeAction('launchDialer');
+
+  Future<bool> launchCamera() => _invokeAction('launchCamera');
+
+  Future<bool> uninstallApp(String packageName) =>
+      _invokeAction('uninstallApp', {'packageName': packageName});
+
+  Future<bool> expandNotificationsPanel() =>
+      _invokeAction('expandNotificationsPanel');
+
+  void clearIconCache() {
+    _iconGeneration++;
+    _iconCache.clear();
   }
 
-  Future<void> openNotificationListenerSettings() async {
-    if (kIsWeb || !Platform.isAndroid) return;
-    try {
-      await _channel.invokeMethod('openNotificationListenerSettings');
-    } catch (e) {
-      debugPrint('AppLauncherService openNotificationListenerSettings error: $e');
-    }
-  }
-
-  Future<void> launchClock() async {
-    if (kIsWeb || !Platform.isAndroid) return;
-    try {
-      await _channel.invokeMethod('launchClock');
-    } catch (e) {
-      debugPrint('AppLauncherService launchClock error: $e');
-    }
-  }
-
-  Future<void> launchCalendar() async {
-    if (kIsWeb || !Platform.isAndroid) return;
-    try {
-      await _channel.invokeMethod('launchCalendar');
-    } catch (e) {
-      debugPrint('AppLauncherService launchCalendar error: $e');
-    }
-  }
-
-  Future<void> launchDialer() async {
-    if (kIsWeb || !Platform.isAndroid) return;
-    try {
-      await _channel.invokeMethod('launchDialer');
-    } catch (e) {
-      debugPrint('AppLauncherService launchDialer error: $e');
-    }
-  }
-
-  Future<void> launchCamera() async {
-    if (kIsWeb || !Platform.isAndroid) return;
-    try {
-      await _channel.invokeMethod('launchCamera');
-    } catch (e) {
-      debugPrint('AppLauncherService launchCamera error: $e');
-    }
-  }
-
-  Future<void> uninstallApp(String packageName) async {
-    if (kIsWeb || !Platform.isAndroid) return;
-    try {
-      await _channel.invokeMethod('uninstallApp', {'packageName': packageName});
-    } catch (e) {
-      debugPrint('AppLauncherService uninstallApp error: $e');
-    }
-  }
+  int _iconGeneration = 0;
 
   final Map<String, Uint8List?> _iconCache = {};
 
@@ -178,50 +150,22 @@ class AppLauncherService {
     if (_iconCache.containsKey(packageName)) {
       return _iconCache[packageName];
     }
-    if (kIsWeb || !Platform.isAndroid) return null;
+    if (!isSupported) return null;
+    final generation = _iconGeneration;
     try {
       final dynamic raw = await _channel.invokeMethod('getAppIcon', {
         'packageName': packageName,
       });
       if (raw != null) {
         final bytes = raw as Uint8List;
-        _iconCache[packageName] = bytes;
+        if (generation == _iconGeneration) _iconCache[packageName] = bytes;
         return bytes;
       }
-      _iconCache[packageName] = null;
       return null;
     } catch (e) {
       debugPrint('AppLauncherService getAppIcon error: $e');
-      _iconCache[packageName] = null;
       return null;
     }
-  }
-
-  Future<void> expandNotificationsPanel() async {
-    if (kIsWeb || !Platform.isAndroid) return;
-    try {
-      await _channel.invokeMethod('expandNotificationsPanel');
-    } catch (e) {
-      debugPrint('AppLauncherService expandNotificationsPanel error: $e');
-    }
-  }
-
-  List<InstalledApp> _getDesktopOrWebApps() {
-    return const [
-      InstalledApp(appName: 'Browser', packageName: 'com.android.browser', isFavorite: true),
-      InstalledApp(appName: 'Calculator', packageName: 'com.android.calculator2'),
-      InstalledApp(appName: 'Calendar', packageName: 'com.android.calendar', isFavorite: true),
-      InstalledApp(appName: 'Camera', packageName: 'com.android.camera', isFavorite: true),
-      InstalledApp(appName: 'Clock', packageName: 'com.android.deskclock'),
-      InstalledApp(appName: 'Contacts', packageName: 'com.android.contacts'),
-      InstalledApp(appName: 'Email', packageName: 'com.android.email'),
-      InstalledApp(appName: 'Files', packageName: 'com.android.documentsui'),
-      InstalledApp(appName: 'Messages', packageName: 'com.android.mms', isFavorite: true),
-      InstalledApp(appName: 'Notes', packageName: 'com.android.notes'),
-      InstalledApp(appName: 'Phone', packageName: 'com.android.dialer', isFavorite: true),
-      InstalledApp(appName: 'Settings', packageName: 'com.android.settings'),
-      InstalledApp(appName: 'Terminal', packageName: 'com.termux'),
-    ];
   }
 }
 
@@ -229,25 +173,39 @@ final appLauncherServiceProvider = Provider<AppLauncherService>((ref) {
   return AppLauncherService();
 });
 
-final installedAppsFutureProvider = FutureProvider<List<InstalledApp>>((ref) async {
+final installedAppsFutureProvider = FutureProvider<List<InstalledApp>>((
+  ref,
+) async {
   final service = ref.watch(appLauncherServiceProvider);
+  final listener = AppLifecycleListener(onResume: ref.invalidateSelf);
+  ref.onDispose(listener.dispose);
+  service.clearIconCache();
   return service.getInstalledApps();
 });
 
-final favoritePackagesProvider = StateProvider<Set<String>>((ref) {
-  return {
-    'com.android.dialer',
-    'com.android.mms',
-    'com.android.browser',
-    'com.android.camera',
-  };
+final defaultHomeStatusProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final service = ref.watch(appLauncherServiceProvider);
+  if (!service.isSupported) {
+    throw UnsupportedError('Default Home is only available on Android');
+  }
+  final listener = AppLifecycleListener(onResume: ref.invalidateSelf);
+  ref.onDispose(listener.dispose);
+  return service.isDefaultHome();
 });
 
-final hiddenPackagesProvider = StateProvider<Set<String>>((ref) {
-  return <String>{};
-});
+final favoritePackagesProvider = Provider<Set<String>>(
+  (ref) => ref.watch(launcherSettingsProvider).favoritePackages,
+);
 
-final appIconProvider = FutureProvider.family<Uint8List?, String>((ref, packageName) async {
+final hiddenPackagesProvider = Provider<Set<String>>(
+  (ref) => ref.watch(launcherSettingsProvider).hiddenPackages,
+);
+
+final appIconProvider = FutureProvider.family<Uint8List?, String>((
+  ref,
+  packageName,
+) async {
+  ref.watch(installedAppsFutureProvider);
   final service = ref.watch(appLauncherServiceProvider);
   return service.getAppIcon(packageName);
 });

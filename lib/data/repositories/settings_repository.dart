@@ -1,14 +1,19 @@
 import 'dart:async';
-import 'package:isar/isar.dart';
+import '../store/focus_store.dart';
+import '../store/native_focus_store.dart';
+import 'package:isar_community/isar.dart';
 
 import '../../models/app_settings.dart';
 
 class SettingsRepository {
-  SettingsRepository(this._isar);
-  final Isar? _isar;
+  SettingsRepository(Isar? isar)
+    : _isar = isar == null ? null : NativeFocusStore(isar);
+  SettingsRepository.store(this._isar);
+  final FocusStore? _isar;
 
   AppSettings _memorySettings = AppSettings();
-  final StreamController<AppSettings> _memController = StreamController<AppSettings>.broadcast();
+  final StreamController<AppSettings> _memController =
+      StreamController<AppSettings>.broadcast();
 
   Stream<AppSettings> watch() {
     if (_isar == null) {

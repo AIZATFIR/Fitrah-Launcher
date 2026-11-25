@@ -8,7 +8,8 @@ class VoiceAssistantSheet extends ConsumerStatefulWidget {
   const VoiceAssistantSheet({super.key});
 
   @override
-  ConsumerState<VoiceAssistantSheet> createState() => _VoiceAssistantSheetState();
+  ConsumerState<VoiceAssistantSheet> createState() =>
+      _VoiceAssistantSheetState();
 }
 
 class _VoiceAssistantSheetState extends ConsumerState<VoiceAssistantSheet>
@@ -64,7 +65,11 @@ class _VoiceAssistantSheetState extends ConsumerState<VoiceAssistantSheet>
           const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.graphic_eq_rounded, color: AppPalette.accent, size: 20),
+              Icon(
+                Icons.graphic_eq_rounded,
+                color: AppPalette.accent,
+                size: 20,
+              ),
               SizedBox(width: 8),
               Text(
                 'Sekretaris Suara (Presidential Desk)',
@@ -115,20 +120,24 @@ class _VoiceAssistantSheetState extends ConsumerState<VoiceAssistantSheet>
                               color: AppPalette.accent.withValues(alpha: 0.4),
                               blurRadius: 20,
                               spreadRadius: 4,
-                            )
+                            ),
                           ]
                         : null,
                   ),
                   child: AnimatedBuilder(
                     animation: _waveCtrl,
                     builder: (context, child) {
-                      final scale = listening ? (1.0 + 0.15 * math.sin(_waveCtrl.value * math.pi)) : 1.0;
+                      final scale = listening
+                          ? (1.0 + 0.15 * math.sin(_waveCtrl.value * math.pi))
+                          : 1.0;
                       return Transform.scale(
                         scale: scale,
                         child: Icon(
                           listening ? Icons.mic : Icons.mic_none_rounded,
                           size: 38,
-                          color: listening ? AppPalette.accent : AppPalette.textDim,
+                          color: listening
+                              ? AppPalette.accent
+                              : AppPalette.textDim,
                         ),
                       );
                     },
@@ -152,12 +161,13 @@ class _VoiceAssistantSheetState extends ConsumerState<VoiceAssistantSheet>
                   controller: _voiceInputCtrl,
                   onSubmitted: _submitVoiceCommand,
                   decoration: InputDecoration(
-                    hintText: 'Contoh: "Timer 15 menit fokus"',
-                    hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 13),
                     filled: true,
                     fillColor: AppPalette.bg,
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -183,16 +193,23 @@ class _VoiceAssistantSheetState extends ConsumerState<VoiceAssistantSheet>
             spacing: 8,
             children: [
               ActionChip(
-                label: const Text('⏱️ Timer 15m', style: TextStyle(fontSize: 11)),
+                label: const Text(
+                  'Timer 15 mnt',
+                  style: TextStyle(fontSize: 11),
+                ),
                 onPressed: () => _submitVoiceCommand('Timer 15 menit'),
               ),
               ActionChip(
-                label: const Text('⚡ Timer 30m', style: TextStyle(fontSize: 11)),
+                label: const Text(
+                  'Timer 30 mnt',
+                  style: TextStyle(fontSize: 11),
+                ),
                 onPressed: () => _submitVoiceCommand('Timer 30 menit'),
               ),
               ActionChip(
-                label: const Text('📅 Cek Jadwal', style: TextStyle(fontSize: 11)),
-                onPressed: () => _submitVoiceCommand('Apa jadwal saya hari ini?'),
+                label: const Text('Cek Jadwal', style: TextStyle(fontSize: 11)),
+                onPressed: () =>
+                    _submitVoiceCommand('Apa jadwal saya hari ini?'),
               ),
             ],
           ),

@@ -92,7 +92,9 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _isEveningMode ? Icons.nights_stay_rounded : Icons.wb_sunny_rounded,
+                  _isEveningMode
+                      ? Icons.nights_stay_rounded
+                      : Icons.wb_sunny_rounded,
                   color: AppPalette.accent,
                   size: 20,
                 ),
@@ -103,8 +105,13 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _isEveningMode ? 'Refleksi Malam: Talking About Your Day' : 'Niat Pagi: Seize The Day',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      _isEveningMode
+                          ? 'Refleksi Malam: Talking About Your Day'
+                          : 'Niat Pagi: Seize The Day',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     const Text(
@@ -115,7 +122,11 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.close, size: 18, color: AppPalette.textDim),
+                icon: const Icon(
+                  Icons.close,
+                  size: 18,
+                  color: AppPalette.textDim,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -141,16 +152,20 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: _isEveningMode ? AppPalette.accent : Colors.transparent,
+                        color: _isEveningMode
+                            ? AppPalette.accent
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: Center(
                         child: Text(
-                          '🌙 Cerita Malam Ini',
+                          'Cerita Malam Ini',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: _isEveningMode ? Colors.black : AppPalette.textDim,
+                            color: _isEveningMode
+                                ? Colors.black
+                                : AppPalette.textDim,
                           ),
                         ),
                       ),
@@ -166,16 +181,20 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: !_isEveningMode ? AppPalette.accent : Colors.transparent,
+                        color: !_isEveningMode
+                            ? AppPalette.accent
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: Center(
                         child: Text(
-                          '☀️ Niat Pagi Hari',
+                          'Niat pagi',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: !_isEveningMode ? Colors.black : AppPalette.textDim,
+                            color: !_isEveningMode
+                                ? Colors.black
+                                : AppPalette.textDim,
                           ),
                         ),
                       ),
@@ -193,10 +212,6 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
             maxLines: 4,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              hintText: _isEveningMode
-                  ? 'Ceritakan tentang harimu... Apa yang sudah kamu capai? Apa yang ingin kamu tuntaskan besok agar pikiranmu tenang?'
-                  : 'Apa target utama hari ini? Ke mana kamu ingin menyalurkan energi kreatifmu agar hari ini bermakna?',
-              hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 12),
               filled: true,
               fillColor: AppPalette.bg,
               border: OutlineInputBorder(
@@ -215,7 +230,11 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
                   backgroundColor: AppPalette.bg,
                   side: const BorderSide(color: AppPalette.stroke),
                 ),
-                icon: const Icon(Icons.mic_rounded, color: AppPalette.accent, size: 20),
+                icon: const Icon(
+                  Icons.mic_rounded,
+                  color: AppPalette.accent,
+                  size: 20,
+                ),
                 tooltip: 'Bicara Langsung',
                 onPressed: () {
                   final service = ref.read(voiceAssistantServiceProvider);
@@ -227,7 +246,10 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppPalette.accent,
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -237,7 +259,10 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
                       )
                     : const Icon(Icons.send_rounded, size: 16),
                 label: Text(
@@ -259,12 +284,18 @@ class _StorytellingSheetState extends ConsumerState<StorytellingSheet> {
                   decoration: BoxDecoration(
                     color: AppPalette.bg,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppPalette.accent.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppPalette.accent.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.auto_awesome_rounded, color: AppPalette.accent, size: 18),
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: AppPalette.accent,
+                        size: 18,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(

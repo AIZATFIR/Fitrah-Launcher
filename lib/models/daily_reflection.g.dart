@@ -7,7 +7,7 @@ part of 'daily_reflection.dart';
 // **************************************************************************
 
 // coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types, experimental_member_use
 
 extension GetDailyReflectionCollection on Isar {
   IsarCollection<DailyReflection> get dailyReflections => this.collection();
@@ -15,7 +15,7 @@ extension GetDailyReflectionCollection on Isar {
 
 const DailyReflectionSchema = CollectionSchema(
   name: r'DailyReflection',
-  id: 329460378031511,
+  id: 775552801871002 * 10000 + 4762,
   properties: {
     r'completedCount': PropertySchema(
       id: 0,
@@ -33,11 +33,7 @@ const DailyReflectionSchema = CollectionSchema(
       type: IsarType.byte,
       enumMap: _DailyReflectionfeelingEnumValueMap,
     ),
-    r'note': PropertySchema(
-      id: 3,
-      name: r'note',
-      type: IsarType.string,
-    ),
+    r'note': PropertySchema(id: 3, name: r'note', type: IsarType.string),
     r'proudOfToday': PropertySchema(
       id: 4,
       name: r'proudOfToday',
@@ -52,8 +48,9 @@ const DailyReflectionSchema = CollectionSchema(
       id: 6,
       name: r'updatedAt',
       type: IsarType.dateTime,
-    )
+    ),
   },
+
   estimateSize: _dailyReflectionEstimateSize,
   serialize: _dailyReflectionSerialize,
   deserialize: _dailyReflectionDeserialize,
@@ -61,7 +58,7 @@ const DailyReflectionSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'dateString': IndexSchema(
-      id: 3858744797826177,
+      id: 239076654730418 * 10000 + 8792,
       name: r'dateString',
       unique: false,
       replace: false,
@@ -70,16 +67,17 @@ const DailyReflectionSchema = CollectionSchema(
           name: r'dateString',
           type: IndexType.hash,
           caseSensitive: true,
-        )
+        ),
       ],
-    )
+    ),
   },
   links: {},
   embeddedSchemas: {},
+
   getId: _dailyReflectionGetId,
   getLinks: _dailyReflectionGetLinks,
   attach: _dailyReflectionAttach,
-  version: '3.1.0+1',
+  version: '3.4.1',
 );
 
 int _dailyReflectionEstimateSize(
@@ -120,7 +118,7 @@ DailyReflection _dailyReflectionDeserialize(
   object.dateString = reader.readString(offsets[1]);
   object.feeling =
       _DailyReflectionfeelingValueEnumMap[reader.readByteOrNull(offsets[2])] ??
-          ReflectionFeeling.notSatisfied;
+      ReflectionFeeling.notSatisfied;
   object.id = id;
   object.note = reader.readString(offsets[3]);
   object.proudOfToday = reader.readString(offsets[4]);
@@ -141,9 +139,11 @@ P _dailyReflectionDeserializeProp<P>(
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (_DailyReflectionfeelingValueEnumMap[
-              reader.readByteOrNull(offset)] ??
-          ReflectionFeeling.notSatisfied) as P;
+      return (_DailyReflectionfeelingValueEnumMap[reader.readByteOrNull(
+                offset,
+              )] ??
+              ReflectionFeeling.notSatisfied)
+          as P;
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
@@ -179,7 +179,10 @@ List<IsarLinkBase<dynamic>> _dailyReflectionGetLinks(DailyReflection object) {
 }
 
 void _dailyReflectionAttach(
-    IsarCollection<dynamic> col, Id id, DailyReflection object) {
+  IsarCollection<dynamic> col,
+  Id id,
+  DailyReflection object,
+) {
   object.id = id;
 }
 
@@ -195,17 +198,15 @@ extension DailyReflectionQueryWhereSort
 extension DailyReflectionQueryWhere
     on QueryBuilder<DailyReflection, DailyReflection, QWhereClause> {
   QueryBuilder<DailyReflection, DailyReflection, QAfterWhereClause> idEqualTo(
-      Id id) {
+    Id id,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: id,
-        upper: id,
-      ));
+      return query.addWhereClause(IdWhereClause.between(lower: id, upper: id));
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterWhereClause>
-      idNotEqualTo(Id id) {
+  idNotEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -228,7 +229,7 @@ extension DailyReflectionQueryWhere
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterWhereClause>
-      idGreaterThan(Id id, {bool include = false}) {
+  idGreaterThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: id, includeLower: include),
@@ -237,8 +238,9 @@ extension DailyReflectionQueryWhere
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterWhereClause> idLessThan(
-      Id id,
-      {bool include = false}) {
+    Id id, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: id, includeUpper: include),
@@ -253,56 +255,65 @@ extension DailyReflectionQueryWhere
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: lowerId,
-        includeLower: includeLower,
-        upper: upperId,
-        includeUpper: includeUpper,
-      ));
+      return query.addWhereClause(
+        IdWhereClause.between(
+          lower: lowerId,
+          includeLower: includeLower,
+          upper: upperId,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterWhereClause>
-      dateStringEqualTo(String dateString) {
+  dateStringEqualTo(String dateString) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'dateString',
-        value: [dateString],
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'dateString', value: [dateString]),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterWhereClause>
-      dateStringNotEqualTo(String dateString) {
+  dateStringNotEqualTo(String dateString) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'dateString',
-              lower: [],
-              upper: [dateString],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'dateString',
-              lower: [dateString],
-              includeLower: false,
-              upper: [],
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'dateString',
+                lower: [],
+                upper: [dateString],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'dateString',
+                lower: [dateString],
+                includeLower: false,
+                upper: [],
+              ),
+            );
       } else {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'dateString',
-              lower: [dateString],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'dateString',
-              lower: [],
-              upper: [dateString],
-              includeUpper: false,
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'dateString',
+                lower: [dateString],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'dateString',
+                lower: [],
+                upper: [dateString],
+                includeUpper: false,
+              ),
+            );
       }
     });
   }
@@ -311,109 +322,111 @@ extension DailyReflectionQueryWhere
 extension DailyReflectionQueryFilter
     on QueryBuilder<DailyReflection, DailyReflection, QFilterCondition> {
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      completedCountEqualTo(int value) {
+  completedCountEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'completedCount',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'completedCount', value: value),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      completedCountGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
+  completedCountGreaterThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'completedCount',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'completedCount',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      completedCountLessThan(
-    int value, {
-    bool include = false,
-  }) {
+  completedCountLessThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'completedCount',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'completedCount',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      completedCountBetween(
+  completedCountBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'completedCount',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'completedCount',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  dateStringEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'dateString',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'dateString',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'dateString',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringLessThan(
+  dateStringGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'dateString',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'dateString',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringBetween(
+  dateStringLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'dateString',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+  dateStringBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -421,247 +434,250 @@ extension DailyReflectionQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'dateString',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'dateString',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  dateStringStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'dateString',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'dateString',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  dateStringEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'dateString',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'dateString',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringContains(String value, {bool caseSensitive = true}) {
+  dateStringContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'dateString',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'dateString',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringMatches(String pattern, {bool caseSensitive = true}) {
+  dateStringMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'dateString',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'dateString',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringIsEmpty() {
+  dateStringIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'dateString',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'dateString', value: ''),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      dateStringIsNotEmpty() {
+  dateStringIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'dateString',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'dateString', value: ''),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      feelingEqualTo(ReflectionFeeling value) {
+  feelingEqualTo(ReflectionFeeling value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'feeling',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'feeling', value: value),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      feelingGreaterThan(
-    ReflectionFeeling value, {
-    bool include = false,
-  }) {
+  feelingGreaterThan(ReflectionFeeling value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'feeling',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'feeling',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      feelingLessThan(
-    ReflectionFeeling value, {
-    bool include = false,
-  }) {
+  feelingLessThan(ReflectionFeeling value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'feeling',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'feeling',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      feelingBetween(
+  feelingBetween(
     ReflectionFeeling lower,
     ReflectionFeeling upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'feeling',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'feeling',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      idEqualTo(Id value) {
+  idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'id', value: value),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      idGreaterThan(
-    Id value, {
-    bool include = false,
-  }) {
+  idGreaterThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      idLessThan(
-    Id value, {
-    bool include = false,
-  }) {
+  idLessThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      idBetween(
+  idBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'id',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'id',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  noteEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteLessThan(
+  noteGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteBetween(
+  noteLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+  noteBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -669,135 +685,140 @@ extension DailyReflectionQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'note',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'note',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  noteStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  noteEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteContains(String value, {bool caseSensitive = true}) {
+  noteContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'note',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteMatches(String pattern, {bool caseSensitive = true}) {
+  noteMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'note',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'note',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteIsEmpty() {
+  noteIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'note',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'note', value: ''),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      noteIsNotEmpty() {
+  noteIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'note',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'note', value: ''),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  proudOfTodayEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'proudOfToday',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'proudOfToday',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'proudOfToday',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayLessThan(
+  proudOfTodayGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'proudOfToday',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'proudOfToday',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayBetween(
+  proudOfTodayLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'proudOfToday',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
+  proudOfTodayBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -805,196 +826,196 @@ extension DailyReflectionQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'proudOfToday',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'proudOfToday',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  proudOfTodayStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'proudOfToday',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'proudOfToday',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  proudOfTodayEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'proudOfToday',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'proudOfToday',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayContains(String value, {bool caseSensitive = true}) {
+  proudOfTodayContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'proudOfToday',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'proudOfToday',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayMatches(String pattern, {bool caseSensitive = true}) {
+  proudOfTodayMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'proudOfToday',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'proudOfToday',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayIsEmpty() {
+  proudOfTodayIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'proudOfToday',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'proudOfToday', value: ''),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      proudOfTodayIsNotEmpty() {
+  proudOfTodayIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'proudOfToday',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'proudOfToday', value: ''),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      totalCountEqualTo(int value) {
+  totalCountEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'totalCount',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'totalCount', value: value),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      totalCountGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
+  totalCountGreaterThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'totalCount',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'totalCount',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      totalCountLessThan(
-    int value, {
-    bool include = false,
-  }) {
+  totalCountLessThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'totalCount',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'totalCount',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      totalCountBetween(
+  totalCountBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'totalCount',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'totalCount',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      updatedAtEqualTo(DateTime value) {
+  updatedAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'updatedAt', value: value),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      updatedAtGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  updatedAtGreaterThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'updatedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      updatedAtLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  updatedAtLessThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'updatedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterFilterCondition>
-      updatedAtBetween(
+  updatedAtBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'updatedAt',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'updatedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 }
@@ -1008,28 +1029,28 @@ extension DailyReflectionQueryLinks
 extension DailyReflectionQuerySortBy
     on QueryBuilder<DailyReflection, DailyReflection, QSortBy> {
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByCompletedCount() {
+  sortByCompletedCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedCount', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByCompletedCountDesc() {
+  sortByCompletedCountDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedCount', Sort.desc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByDateString() {
+  sortByDateString() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dateString', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByDateStringDesc() {
+  sortByDateStringDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dateString', Sort.desc);
     });
@@ -1042,7 +1063,7 @@ extension DailyReflectionQuerySortBy
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByFeelingDesc() {
+  sortByFeelingDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'feeling', Sort.desc);
     });
@@ -1055,49 +1076,49 @@ extension DailyReflectionQuerySortBy
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByNoteDesc() {
+  sortByNoteDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'note', Sort.desc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByProudOfToday() {
+  sortByProudOfToday() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'proudOfToday', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByProudOfTodayDesc() {
+  sortByProudOfTodayDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'proudOfToday', Sort.desc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByTotalCount() {
+  sortByTotalCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'totalCount', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByTotalCountDesc() {
+  sortByTotalCountDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'totalCount', Sort.desc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByUpdatedAt() {
+  sortByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      sortByUpdatedAtDesc() {
+  sortByUpdatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
@@ -1107,28 +1128,28 @@ extension DailyReflectionQuerySortBy
 extension DailyReflectionQuerySortThenBy
     on QueryBuilder<DailyReflection, DailyReflection, QSortThenBy> {
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByCompletedCount() {
+  thenByCompletedCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedCount', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByCompletedCountDesc() {
+  thenByCompletedCountDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedCount', Sort.desc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByDateString() {
+  thenByDateString() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dateString', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByDateStringDesc() {
+  thenByDateStringDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dateString', Sort.desc);
     });
@@ -1141,7 +1162,7 @@ extension DailyReflectionQuerySortThenBy
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByFeelingDesc() {
+  thenByFeelingDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'feeling', Sort.desc);
     });
@@ -1166,49 +1187,49 @@ extension DailyReflectionQuerySortThenBy
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByNoteDesc() {
+  thenByNoteDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'note', Sort.desc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByProudOfToday() {
+  thenByProudOfToday() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'proudOfToday', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByProudOfTodayDesc() {
+  thenByProudOfTodayDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'proudOfToday', Sort.desc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByTotalCount() {
+  thenByTotalCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'totalCount', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByTotalCountDesc() {
+  thenByTotalCountDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'totalCount', Sort.desc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByUpdatedAt() {
+  thenByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QAfterSortBy>
-      thenByUpdatedAtDesc() {
+  thenByUpdatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
@@ -1218,49 +1239,50 @@ extension DailyReflectionQuerySortThenBy
 extension DailyReflectionQueryWhereDistinct
     on QueryBuilder<DailyReflection, DailyReflection, QDistinct> {
   QueryBuilder<DailyReflection, DailyReflection, QDistinct>
-      distinctByCompletedCount() {
+  distinctByCompletedCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'completedCount');
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QDistinct>
-      distinctByDateString({bool caseSensitive = true}) {
+  distinctByDateString({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'dateString', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QDistinct>
-      distinctByFeeling() {
+  distinctByFeeling() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'feeling');
     });
   }
 
-  QueryBuilder<DailyReflection, DailyReflection, QDistinct> distinctByNote(
-      {bool caseSensitive = true}) {
+  QueryBuilder<DailyReflection, DailyReflection, QDistinct> distinctByNote({
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'note', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QDistinct>
-      distinctByProudOfToday({bool caseSensitive = true}) {
+  distinctByProudOfToday({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'proudOfToday', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QDistinct>
-      distinctByTotalCount() {
+  distinctByTotalCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'totalCount');
     });
   }
 
   QueryBuilder<DailyReflection, DailyReflection, QDistinct>
-      distinctByUpdatedAt() {
+  distinctByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'updatedAt');
     });
@@ -1276,7 +1298,7 @@ extension DailyReflectionQueryProperty
   }
 
   QueryBuilder<DailyReflection, int, QQueryOperations>
-      completedCountProperty() {
+  completedCountProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'completedCount');
     });
@@ -1289,7 +1311,7 @@ extension DailyReflectionQueryProperty
   }
 
   QueryBuilder<DailyReflection, ReflectionFeeling, QQueryOperations>
-      feelingProperty() {
+  feelingProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'feeling');
     });
@@ -1302,7 +1324,7 @@ extension DailyReflectionQueryProperty
   }
 
   QueryBuilder<DailyReflection, String, QQueryOperations>
-      proudOfTodayProperty() {
+  proudOfTodayProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'proudOfToday');
     });
@@ -1315,7 +1337,7 @@ extension DailyReflectionQueryProperty
   }
 
   QueryBuilder<DailyReflection, DateTime, QQueryOperations>
-      updatedAtProperty() {
+  updatedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'updatedAt');
     });

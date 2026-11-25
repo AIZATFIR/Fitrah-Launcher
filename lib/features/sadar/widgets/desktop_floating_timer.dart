@@ -25,7 +25,10 @@ class DesktopFloatingTimer extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AppPalette.card,
-          border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6), width: 1.5),
+          border: Border.all(
+            color: AppPalette.accent.withValues(alpha: 0.6),
+            width: 1.5,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -47,10 +50,28 @@ class DesktopFloatingTimer extends ConsumerWidget {
                 ),
                 InkWell(
                   onTap: () => engine.restoreNormalWindow(),
-                  child: const Icon(Icons.open_in_full_rounded, size: 14, color: AppPalette.textDim),
+                  child: const Icon(
+                    Icons.open_in_full_rounded,
+                    size: 14,
+                    color: AppPalette.textDim,
+                  ),
                 ),
               ],
             ),
+            if (timer.recoveryUncertain) ...[
+              const SizedBox(height: 4),
+              const Text(
+                timerRecoveryNotice,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppPalette.sand,
+                  fontSize: 10,
+                  height: 1.15,
+                ),
+              ),
+            ],
             const SizedBox(height: 6),
 
             // Big readable timer
@@ -70,16 +91,30 @@ class DesktopFloatingTimer extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 InkWell(
-                  onTap: () {
+                  onTap: () async {
                     HapticFeedback.selectionClick();
-                    if (timer.isRunning) {
-                      engine.pause();
-                    } else {
-                      engine.resume();
+                    try {
+                      if (timer.isRunning) {
+                        await engine.pause();
+                      } else {
+                        await engine.resume();
+                      }
+                    } catch (_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Perubahan belum tersimpan. Coba lagi.',
+                            ),
+                          ),
+                        );
+                      }
                     }
                   },
                   child: Icon(
-                    timer.isRunning ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+                    timer.isRunning
+                        ? Icons.pause_circle_filled_rounded
+                        : Icons.play_circle_fill_rounded,
                     size: 26,
                     color: AppPalette.accent,
                   ),
@@ -99,10 +134,21 @@ class DesktopFloatingTimer extends ConsumerWidget {
                 ),
                 const SizedBox(width: 16),
                 InkWell(
-                  onTap: () {
+                  onTap: () async {
                     HapticFeedback.selectionClick();
-                    engine.cancel();
-                    engine.restoreNormalWindow();
+                    try {
+                      await engine.cancel();
+                    } catch (_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Sesi belum bisa dihapus. Coba lagi.',
+                            ),
+                          ),
+                        );
+                      }
+                    }
                   },
                   child: const Icon(
                     Icons.stop_circle_outlined,

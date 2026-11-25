@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme.dart';
+import '../../../widgets/activity_icon.dart';
 import '../../../models/habit.dart';
 import '../../../providers/sadar_providers.dart';
 
@@ -19,15 +20,16 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
 
-  final Set<String> _selectedTopics = {'Fokus', 'Olahraga', 'Membaca'};
+  final Set<String> _selectedTopics = {'Ibadah', 'Belajar', 'Olahraga'};
 
-  static const List<({String title, String icon, int target, int color})> _inspirations = [
-    (title: 'Fokus / Deep Work', icon: '💻', target: 45, color: 0xFF10B981),
-    (title: 'Olahraga / Health', icon: '🏃', target: 30, color: 0xFFF97316),
-    (title: 'Membaca / Reading', icon: '📚', target: 20, color: 0xFF8B5CF6),
-    (title: 'Meditasi / Mindfulness', icon: '🧘', target: 15, color: 0xFF06B6D4),
-    (title: 'Belajar Bahasa', icon: '🌐', target: 20, color: 0xFF3B82F6),
-    (title: 'Menulis / Journaling', icon: '✍️', target: 15, color: 0xFFF59E0B),
+  static const List<({String title, String icon, int target, int color})>
+  _inspirations = [
+    (title: 'Fokus', icon: 'computer', target: 45, color: 0xFFF0C987),
+    (title: 'Olahraga', icon: 'running', target: 30, color: 0xFFF0C987),
+    (title: 'Membaca', icon: 'book', target: 20, color: 0xFFF0C987),
+    (title: 'Meditasi', icon: 'meditate', target: 15, color: 0xFFF0C987),
+    (title: 'Belajar bahasa', icon: 'language', target: 20, color: 0xFFF0C987),
+    (title: 'Menulis jurnal', icon: 'writing', target: 15, color: 0xFFF0C987),
   ];
 
   void _nextPage() {
@@ -122,7 +124,11 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             shape: BoxShape.circle,
             border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4)),
           ),
-          child: const Icon(Icons.spa_rounded, size: 54, color: AppPalette.accent),
+          child: const Icon(
+            Icons.spa_rounded,
+            size: 54,
+            color: AppPalette.accent,
+          ),
         ),
         const SizedBox(height: 32),
         const Text(
@@ -136,9 +142,13 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Become conscious of how you live.',
+          'Lihat tujuanmu. Pilih satu langkah untuk hari ini.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, color: AppPalette.textDim, height: 1.4),
+          style: TextStyle(
+            fontSize: 15,
+            color: AppPalette.textDim,
+            height: 1.4,
+          ),
         ),
         const Spacer(),
         FilledButton(
@@ -146,10 +156,15 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             backgroundColor: AppPalette.accent,
             foregroundColor: Colors.black,
             minimumSize: const Size.fromHeight(50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
           onPressed: _nextPage,
-          child: const Text('Begin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          child: const Text(
+            'Mulai',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
         ),
         const SizedBox(height: 24),
       ],
@@ -161,40 +176,57 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
       children: [
         const Spacer(),
         const Text(
-          'What matters to you?',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppPalette.text),
+          'Apa yang ingin kamu jaga?',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppPalette.text,
+          ),
         ),
         const SizedBox(height: 12),
         const Text(
-          'Choose a few things you genuinely want to make space for every day.',
-          style: TextStyle(fontSize: 14, color: AppPalette.textDim, height: 1.5),
+          'Pilih hal yang ingin kamu beri ruang dalam hari ini.',
+          style: TextStyle(
+            fontSize: 14,
+            color: AppPalette.textDim,
+            height: 1.5,
+          ),
         ),
         const SizedBox(height: 32),
         Wrap(
           spacing: 10,
           runSpacing: 10,
-          children: ['Quran', 'Learning', 'Exercise', 'Language', 'Creative Work', 'Family', 'Reflection'].map((topic) {
-            final isSel = _selectedTopics.contains(topic);
-            return FilterChip(
-              selected: isSel,
-              label: Text(topic),
-              labelStyle: TextStyle(
-                color: isSel ? Colors.black : AppPalette.text,
-                fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
-              ),
-              selectedColor: AppPalette.accent,
-              backgroundColor: AppPalette.card,
-              onSelected: (val) {
-                setState(() {
-                  if (val) {
-                    _selectedTopics.add(topic);
-                  } else {
-                    _selectedTopics.remove(topic);
-                  }
-                });
-              },
-            );
-          }).toList(),
+          children:
+              [
+                'Ibadah',
+                'Belajar',
+                'Olahraga',
+                'Bahasa',
+                'Kreativitas',
+                'Keluarga',
+                'Refleksi',
+              ].map((topic) {
+                final isSel = _selectedTopics.contains(topic);
+                return FilterChip(
+                  selected: isSel,
+                  label: Text(topic),
+                  labelStyle: TextStyle(
+                    color: isSel ? Colors.black : AppPalette.text,
+                    fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                  ),
+                  selectedColor: AppPalette.accent,
+                  backgroundColor: AppPalette.card,
+                  onSelected: (val) {
+                    setState(() {
+                      if (val) {
+                        _selectedTopics.add(topic);
+                      } else {
+                        _selectedTopics.remove(topic);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
         ),
         const Spacer(),
         FilledButton(
@@ -202,10 +234,15 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             backgroundColor: AppPalette.accent,
             foregroundColor: Colors.black,
             minimumSize: const Size.fromHeight(50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
           onPressed: _nextPage,
-          child: const Text('Next', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text(
+            'Next',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         const SizedBox(height: 24),
       ],
@@ -218,11 +255,15 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
         const SizedBox(height: 16),
         const Text(
           'Inspirasi Kebiasaan',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppPalette.text),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: AppPalette.text,
+          ),
         ),
         const SizedBox(height: 8),
         const Text(
-          'Kamu memegang kendali penuh atas waktumu.',
+          'Mulai dari contoh kecil. Target bisa diubah kapan saja.',
           style: TextStyle(fontSize: 13, color: AppPalette.textDim),
         ),
         const SizedBox(height: 20),
@@ -233,7 +274,10 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             itemBuilder: (context, i) {
               final item = _inspirations[i];
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: AppPalette.card,
                   borderRadius: BorderRadius.circular(14),
@@ -241,17 +285,28 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
                 ),
                 child: Row(
                   children: [
-                    Text(item.icon, style: const TextStyle(fontSize: 20)),
+                    ActivityIcon(
+                      iconKey: item.icon,
+                      size: 20,
+                      color: AppPalette.accent,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         item.title,
-                        style: const TextStyle(fontWeight: FontWeight.w600, color: AppPalette.text),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppPalette.text,
+                        ),
                       ),
                     ),
                     Text(
                       '${item.target} min',
-                      style: const TextStyle(fontSize: 12, color: AppPalette.accent, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppPalette.accent,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -264,10 +319,15 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             backgroundColor: AppPalette.accent,
             foregroundColor: Colors.black,
             minimumSize: const Size.fromHeight(50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
           onPressed: _nextPage,
-          child: const Text('Next', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text(
+            'Next',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         const SizedBox(height: 24),
       ],
@@ -279,13 +339,21 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
       children: [
         const Spacer(),
         const Text(
-          'How much is realistic?',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppPalette.text),
+          'Target yang masuk akal',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppPalette.text,
+          ),
         ),
         const SizedBox(height: 12),
         const Text(
-          'Start small. Repetition is more powerful than occasional intensity.\n15 minutes practiced 100 times shapes your life.',
-          style: TextStyle(fontSize: 14, color: AppPalette.textDim, height: 1.5),
+          'Mulai dengan ringan. Kebiasaan bisa tumbuh seiring waktu.',
+          style: TextStyle(
+            fontSize: 14,
+            color: AppPalette.textDim,
+            height: 1.5,
+          ),
         ),
         const SizedBox(height: 24),
         Container(
@@ -300,24 +368,30 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Fokus / Deep Work', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('45 minutes', style: TextStyle(color: AppPalette.accent)),
+                  Text('Fokus', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('45 menit', style: TextStyle(color: AppPalette.accent)),
                 ],
               ),
               Divider(height: 20, color: AppPalette.stroke),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Olahraga / Exercise', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('30 minutes', style: TextStyle(color: AppPalette.accent)),
+                  Text(
+                    'Olahraga',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text('30 menit', style: TextStyle(color: AppPalette.accent)),
                 ],
               ),
               Divider(height: 20, color: AppPalette.stroke),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Membaca / Reading', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('20 minutes', style: TextStyle(color: AppPalette.accent)),
+                  Text(
+                    'Membaca',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text('20 menit', style: TextStyle(color: AppPalette.accent)),
                 ],
               ),
             ],
@@ -329,10 +403,15 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             backgroundColor: AppPalette.accent,
             foregroundColor: Colors.black,
             minimumSize: const Size.fromHeight(50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
           onPressed: _nextPage,
-          child: const Text('Next', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text(
+            'Next',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         const SizedBox(height: 24),
       ],
@@ -343,17 +422,29 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
     return _buildContainer(
       children: [
         const Spacer(),
-        const Icon(Icons.check_circle_outline_rounded, size: 64, color: Color(0xFF22C55E)),
+        const Icon(
+          Icons.check_circle_outline_rounded,
+          size: 64,
+          color: AppPalette.accent,
+        ),
         const SizedBox(height: 24),
         const Text(
-          "That's enough.",
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: AppPalette.text),
+          'Siap mulai',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+            color: AppPalette.text,
+          ),
         ),
         const SizedBox(height: 12),
         const Text(
-          'Start living your day intentionally.\none fulfilled action at a time.',
+          'Tujuanmu tersimpan. Pilih satu tindakan untuk memulainya.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, color: AppPalette.textDim, height: 1.5),
+          style: TextStyle(
+            fontSize: 15,
+            color: AppPalette.textDim,
+            height: 1.5,
+          ),
         ),
         const Spacer(),
         FilledButton(
@@ -361,11 +452,13 @@ class _OnboardingViewState extends ConsumerState<OnboardingView> {
             backgroundColor: AppPalette.accent,
             foregroundColor: Colors.black,
             minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
           onPressed: _finishOnboarding,
           child: const Text(
-            'Enter Sadar',
+            'Buka Sadar',
             style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
           ),
         ),

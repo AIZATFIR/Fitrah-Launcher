@@ -1,129 +1,358 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/services.dart';
 import 'package:fitrah_launcher/features/launcher/widgets/focus_clock_home_view.dart';
+import 'package:fitrah_launcher/features/launcher/widgets/launcher_customization_sheet.dart';
+import 'package:fitrah_launcher/features/launcher/models/launcher_settings.dart';
+import 'package:fitrah_launcher/features/settings/settings_screen.dart';
+import 'package:fitrah_launcher/providers/providers.dart';
+import 'package:fitrah_launcher/providers/sadar_providers.dart';
+import 'package:fitrah_launcher/data/repositories/sadar_repository.dart';
+import 'package:fitrah_launcher/domain/focus_intent.dart';
+import 'package:fitrah_launcher/providers/intent_providers.dart';
+import 'package:fitrah_launcher/models/timer_session.dart';
 import 'package:fitrah_launcher/services/secure_storage_service.dart';
-import 'dart:convert';
-
-class _MemorySecureStorage extends SecureStorageService {
-  final Map<String, String> values = {};
-
-  @override
-  Future<String?> readCustomKey(String key) async => values[key];
-
-  @override
-  Future<void> writeCustomKey(String key, String value) async {
-    values[key] = value;
-  }
-
-  @override
-  Future<void> deleteCustomKey(String key) async {
-    values.remove(key);
-  }
-}
+import 'launcher_daily_note_test.dart' show NoteStorage;
 
 void main() {
-  test('Active timer preserves start date and elapsed time through restoration', () {
-    final startedAt = DateTime(2026, 11, 11, 23, 59);
-    final timer = ActiveTimer(
-      label: 'Fokus malam',
-      totalSeconds: 45 * 60,
-      leftSeconds: 45 * 60,
-      isRunning: true,
-      startHour: 23.0,
-      hasStarted: true,
-      sessionStartedAt: startedAt,
-      runningSince: startedAt,
-    );
-
-    final restored = ActiveTimer.fromJson(
-      jsonDecode(jsonEncode(timer.toJson())) as Map<String, dynamic>,
-    );
-
-    expect(restored.sessionStartedAt, startedAt);
-    expect(restored.entryDateString(DateTime(2026, 11, 12)), '2026-11-11');
-    expect(restored.elapsedSecondsAt(startedAt.add(const Duration(minutes: 2))), 120);
-    expect(restored.remainingAt(startedAt.add(const Duration(minutes: 2))), 45 * 60 - 120);
-  });
-
   group('FocusClockHomeView Lampiran 1 & Future Self Sadar System Tests', () {
-    Widget createWidgetUnderTest({SecureStorageService? storage}) {
+    Finder homeScrollable() => find
+        .descendant(
+          of: find.byKey(const ValueKey('focus-clock-home-list')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
+    Future<void> expandSupportTools(WidgetTester tester) async {
+      final tile = find.text('Catatan & alat');
+      await tester.scrollUntilVisible(tile, 300, scrollable: homeScrollable());
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+    }
+
+    Widget createWidgetUnderTest({
+      bool useSampleData = true,
+      bool emptyTasks = false,
+      double textScale = 1,
+      bool showUnverifiedPrayerSchedule = false,
+      bool emptySchedule = false,
+      SadarRepository? sadarRepository,
+    }) {
+      final storage = NoteStorage()
+        ..raw = LauncherSettings(
+          widgetDisplayMode: showUnverifiedPrayerSchedule
+              ? 'prayer'
+              : 'focus_clock',
+          showPrayerTimes: true,
+        ).toJson();
       return ProviderScope(
         overrides: [
-          if (storage != null) secureStorageServiceProvider.overrideWithValue(storage),
+          secureStorageServiceProvider.overrideWithValue(storage),
+          if (emptySchedule)
+            activitiesByDateProvider.overrideWith(
+              (ref) => Stream.value(const []),
+            ),
+          if (emptyTasks)
+            eisenhowerTasksProvider.overrideWith(
+              (ref) => Stream.value(const []),
+            ),
+          if (emptyTasks)
+            intentStateProvider.overrideWith(
+              (ref) => Stream.value(
+                IntentState(sourceStoreId: 'test-store', legacyImported: true),
+              ),
+            ),
+          if (emptyTasks)
+            intentSourceDataProvider.overrideWith(
+              (ref) => Stream.value(const IntentSourceData([], [], [])),
+            ),
+          if (sadarRepository != null)
+            sadarRepoProvider.overrideWithValue(sadarRepository),
         ],
         child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
           home: FocusClockHomeView(
             onOpenFocusClock: () {},
             onOpenAppDrawer: () {},
-            useSampleData: true,
+            useSampleData: useSampleData,
           ),
         ),
       );
     }
 
-    testWidgets('Renders top agenda carousel by default and toggles Prayer schedule', (tester) async {
+    testWidgets(
+      'Renders top agenda carousel by default and toggles Prayer schedule',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('home-agenda-carousel')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('home-menu-button')), findsOneWidget);
+
+        // Prayer display is an explicit menu preference, not a header icon toggle.
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Tampilkan waktu salat'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('home-prayer-setup-cue')),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Tampilkan agenda Focus Clock'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('home-agenda-carousel')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'unverified default prayer times open setup without showing a clock time',
+      (tester) async {
+        await tester.pumpWidget(
+          createWidgetUnderTest(showUnverifiedPrayerSchedule: true),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('home-prayer-setup-cue')),
+          findsOneWidget,
+        );
+        expect(find.text('11:52'), findsNothing);
+
+        await tester.tap(find.byKey(const ValueKey('home-prayer-setup-cue')));
+        await tester.pumpAndSettle();
+        expect(find.byType(LauncherCustomizationSheet), findsOneWidget);
+        expect(
+          find.text(
+            'Nilai awal hanya contoh, bukan hasil lokasi otomatis. Cocokkan dengan sumber waktu di wilayahmu:',
+          ),
+          findsOneWidget,
+        );
+        final verifiedSwitch = find.widgetWithText(
+          SwitchListTile,
+          'Saya sudah mencocokkan semua waktu ini',
+        );
+        await tester.ensureVisible(verifiedSwitch);
+        await tester.pumpAndSettle();
+        await tester.tap(verifiedSwitch);
+        await tester.pumpAndSettle();
+        expect(tester.widget<SwitchListTile>(verifiedSwitch).value, isTrue);
+        Navigator.of(tester.element(verifiedSwitch)).pop();
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('home-prayer-setup-cue')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('home-prayer-schedule-cue')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('Focus Clock menu exposes settings route', (tester) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('home-menu-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pengaturan Focus Clock'), findsOneWidget);
+    });
+
+    testWidgets('SettingsScreen shows backup controls', (tester) async {
+      tester.view.physicalSize = const Size(800, 6000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        const ProviderScope(child: MaterialApp(home: SettingsScreen())),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('BACKUP & RESTORE'), findsOneWidget);
+      expect(find.text('Export backup'), findsOneWidget);
+      expect(find.text('Restore backup'), findsOneWidget);
+    });
+
+    testWidgets('AI setup opens at the provider controls on a phone', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(home: SettingsScreen(focusAiConfiguration: true)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final config = find.byKey(const ValueKey('ai-provider-settings'));
+      final providerLabel = find.text('Provider');
+      expect(config, findsOneWidget);
+      expect(providerLabel, findsOneWidget);
+      expect(tester.getRect(providerLabel).top, greaterThan(56));
+      expect(tester.getRect(providerLabel).bottom, lessThan(844));
+    });
+
+    testWidgets('Renders today note card with scratchpad', (tester) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pump();
+      await expandSupportTools(tester);
+
+      final homeList = find.byType(ListView).first;
+      await tester.scrollUntilVisible(
+        find.text('Catatan hari ini'),
+        300,
+        scrollable: find
+            .descendant(of: homeList, matching: find.byType(Scrollable))
+            .first,
+      );
+      expect(find.text('Catatan hari ini'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('home-daily-note-input')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'Renders Clock Dial Controls with AM/PM switcher, Cari, Daftar, Timer',
+      (tester) async {
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('home-agenda-carousel')),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
+        await tester.pumpAndSettle();
+        expect(find.text('Cari jadwal'), findsOneWidget);
+        expect(find.text('Lihat daftar jadwal'), findsOneWidget);
+        await tester.tapAt(const Offset(4, 4));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('home-open-focus-timer')),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const ValueKey('home-open-focus-timer')));
+        await tester.pumpAndSettle();
+        expect(find.text('Pusat Timer Fokus'), findsOneWidget);
+      },
+    );
+
+    testWidgets('Keeps clock controls visible without overflow on a phone', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
 
-      // Top bar toggle button starts on schedule_rounded (agenda mode)
-      expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
-
-      // Tap toggle button to switch to prayer schedule
-      await tester.tap(find.byIcon(Icons.schedule_rounded));
-      await tester.pumpAndSettle();
-
-      // Now prayer times are visible
-      expect(find.text('Subuh'), findsOneWidget);
-      expect(find.text('Dzuhur'), findsOneWidget);
-      expect(find.text('Asar'), findsOneWidget);
-      expect(find.text('Maghrib'), findsOneWidget);
-      expect(find.text('Isya'), findsOneWidget);
-
-      // Tap again to switch back
-      await tester.tap(find.byIcon(Icons.mosque_rounded));
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('home-agenda-carousel')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('home-open-focus-timer')),
+        findsOneWidget,
+      );
+      await expandSupportTools(tester);
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Renders Obsidian Daily Note Card with scratchpad', (tester) async {
-      await tester.pumpWidget(createWidgetUnderTest());
+    testWidgets('Home Hijri date wraps at 200% text scale', (tester) async {
+      tester.view.physicalSize = const Size(360, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(createWidgetUnderTest(textScale: 2));
       await tester.pump();
 
-      expect(find.text('DAILY NOTE'), findsOneWidget);
-      expect(find.text('Tulis pemikiran, niat, atau catatan hari ini...'), findsOneWidget);
+      final hijriDate = find.textContaining('Hijriah ·');
+      expect(hijriDate, findsOneWidget);
+      final goalHeading = find.text('TUJUAN HARI INI');
+      expect(goalHeading, findsOneWidget);
+      expect(
+        tester.getTopLeft(goalHeading).dy,
+        lessThan(tester.getTopLeft(hijriDate).dy),
+      );
+      final dateParagraph = tester.renderObject<RenderParagraph>(hijriDate);
+      expect(dateParagraph.size.height, greaterThan(30));
+      expect(dateParagraph.didExceedMaxLines, isFalse);
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Renders Clock Dial Controls with AM/PM switcher, Cari, Daftar, Timer', (tester) async {
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pump();
+    testWidgets('Empty Home does not repeat its schedule status at 200%', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-      expect(find.text('AM'), findsOneWidget);
-      expect(find.text('PM'), findsOneWidget);
-      expect(find.text('Cari'), findsOneWidget);
-      expect(find.text('Daftar'), findsOneWidget);
-      expect(find.text('Timer'), findsOneWidget);
-    });
-
-    testWidgets('Toggles chronological list view and circular clock face dial', (tester) async {
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pump();
-
-      // Tap Daftar
-      await tester.tap(find.text('Daftar'));
+      await tester.pumpWidget(
+        createWidgetUnderTest(
+          useSampleData: false,
+          emptyTasks: true,
+          emptySchedule: true,
+          textScale: 2,
+        ),
+      );
       await tester.pumpAndSettle();
 
-      // In list view, SE - Orkestrasi AI should be listed
-      expect(find.text('SE - Orkestrasi AI'), findsWidgets);
-
-      // Tap Ke Jam to return to Dial
-      await tester.tap(find.text('Ke Jam'));
-      await tester.pumpAndSettle();
+      expect(find.text('Belum ada jadwal hari ini.'), findsNothing);
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Renders Stacked Identity Cards with Presets and Habits', (tester) async {
+    testWidgets(
+      'Toggles chronological list view and circular clock face dial',
+      (tester) async {
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
+
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Lihat daftar jadwal'));
+        await tester.pumpAndSettle();
+
+        // In list view, SE - Orkestrasi AI should be listed
+        expect(find.text('SE - Orkestrasi AI'), findsWidgets);
+
+        // Tap Ke Jam to return to Dial
+        await tester.tap(find.text('Ke Jam'));
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets('Renders Stacked Identity Cards with Presets and Habits', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -131,6 +360,7 @@ void main() {
 
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
+      await expandSupportTools(tester);
 
       expect(find.text('Identitas: Programmer'), findsOneWidget);
       expect(find.text('Preset Blok Waktu'), findsWidgets);
@@ -139,251 +369,122 @@ void main() {
       expect(find.text('LKS ITSSB'), findsOneWidget);
     });
 
-    testWidgets('Starting preset timer transitions to Timer screen', (tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'Starting preset timer stays open when completion cannot be stored',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pump();
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
+        await expandSupportTools(tester);
 
-      // Find first play arrow button in presets
-      final playBtn = find.byKey(const ValueKey('preset_play_1'));
-      await tester.scrollUntilVisible(playBtn, 300, scrollable: find.byType(Scrollable).first);
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -100));
-      await tester.pumpAndSettle();
-      await tester.tap(playBtn);
-      await tester.pumpAndSettle();
-
-      // Should be on Timer screen
-      expect(find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'), findsOneWidget);
-      expect(find.text('Selesai sekarang'), findsOneWidget);
-      expect(find.text('Batalkan timer'), findsOneWidget);
-
-      // Finish now returns to Home
-      await tester.tap(find.text('Selesai sekarang'));
-      await tester.pumpAndSettle();
-
-      final identitasText = find.text('Identitas: Programmer');
-      await tester.scrollUntilVisible(identitasText, -300, scrollable: find.byType(Scrollable).first);
-      expect(identitasText, findsOneWidget);
-    });
-
-    testWidgets('Starting a timed habit row opens its real timer session', (tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pump();
-
-      const habitTitle = 'Deep Coding & Refactoring 30m';
-      final title = find.text(habitTitle);
-      await tester.scrollUntilVisible(
-        title,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-
-      final habitRow = find.ancestor(of: title, matching: find.byType(Row)).first;
-      await tester.tap(
-        find.descendant(
-          of: habitRow,
-          matching: find.byIcon(Icons.play_arrow_rounded),
-        ).first,
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text(habitTitle), findsOneWidget);
-      expect(find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'), findsOneWidget);
-      expect(find.text('30:00'), findsOneWidget);
-    });
-
-    testWidgets('The habit row pauses its active timer without losing the session', (tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pump();
-
-      const habitTitle = 'Deep Coding & Refactoring 30m';
-      final title = find.text(habitTitle);
-      await tester.scrollUntilVisible(
-        title,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      final habitRow = find.ancestor(of: title, matching: find.byType(Row)).first;
-      await tester.tap(
-        find.descendant(
-          of: habitRow,
-          matching: find.byIcon(Icons.play_arrow_rounded),
-        ).first,
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
-      await tester.pumpAndSettle();
-      final visibleTitle = find.text(habitTitle);
-      final visibleRow = find.ancestor(
-        of: visibleTitle,
-        matching: find.byType(Row),
-      ).first;
-      await tester.tap(
-        find.descendant(
-          of: visibleRow,
-          matching: find.byIcon(Icons.pause_rounded),
-        ).first,
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Lanjut'), findsOneWidget);
-      expect(find.text(habitTitle), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
-      await tester.pumpAndSettle();
-      final pausedTitle = find.text(habitTitle);
-      final pausedRow = find.ancestor(
-        of: pausedTitle,
-        matching: find.byType(Row),
-      ).first;
-      await tester.tap(
-        find.descendant(
-          of: pausedRow,
-          matching: find.byIcon(Icons.play_arrow_rounded),
-        ).first,
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Jeda'), findsOneWidget);
-    });
-
-    testWidgets('Cancelling a habit timer clears the session and returns home', (tester) async {
-      final storage = _MemorySecureStorage();
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await tester.pumpWidget(createWidgetUnderTest(storage: storage));
-      await tester.pump();
-
-      const habitTitle = 'Deep Coding & Refactoring 30m';
-      final title = find.text(habitTitle);
-      await tester.scrollUntilVisible(
-        title,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      final habitRow = find.ancestor(of: title, matching: find.byType(Row)).first;
-      await tester.tap(
-        find.descendant(
-          of: habitRow,
-          matching: find.byIcon(Icons.play_arrow_rounded),
-        ).first,
-      );
-      await tester.pumpAndSettle();
-      expect(storage.values, contains('focus_clock_active_timer_v1'));
-
-      await tester.tap(find.text('Batalkan timer'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'), findsNothing);
-      expect(find.text(habitTitle), findsOneWidget);
-      expect(storage.values, isNot(contains('focus_clock_active_timer_v1')));
-    });
-
-    testWidgets('Restored timer accounts for elapsed wall-clock time', (tester) async {
-      final storage = _MemorySecureStorage();
-      final now = DateTime.now();
-      storage.values['focus_clock_active_timer_v1'] = jsonEncode({
-        'label': 'LKS ITSSB',
-        'totalSeconds': 2700,
-        'elapsedBeforeRun': 0,
-        'isRunning': true,
-        'runningSince': now.subtract(const Duration(minutes: 4)).toIso8601String(),
-        'source': 'preset',
-        'sourceId': 2,
-        'identity': 'Programmer',
-        'startHour': 8.0,
-        'hasStarted': true,
-      });
-      const channel = MethodChannel('fitrah_launcher/apps');
-      final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-      messenger.setMockMethodCallHandler(channel, (_) async => null);
-      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
-
-      await tester.pumpWidget(createWidgetUnderTest(storage: storage));
-      await tester.pump();
-
-      expect(find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'), findsOneWidget);
-      expect(
-        find.byWidgetPredicate(
-          (widget) => widget is Text && RegExp(r'^(40|41):[0-5][0-9]$').hasMatch(widget.data ?? ''),
-        ),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('Renders Habits section with done toggle and 5-action popover', (tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pump();
-
-      for (int i = 0; i < 6; i++) {
-        if (find.text('Deep Coding & Refactoring 30m').evaluate().isNotEmpty) break;
-        await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+        // Find first play arrow button in presets
+        final playBtn = find.byKey(const ValueKey('preset_play_1'));
+        final homeList = find.byType(ListView).first;
+        final homeScrollable = find
+            .descendant(of: homeList, matching: find.byType(Scrollable))
+            .first;
+        await tester.scrollUntilVisible(
+          playBtn,
+          300,
+          scrollable: homeScrollable,
+        );
+        await tester.drag(homeList, const Offset(0, -100));
         await tester.pumpAndSettle();
-      }
+        await tester.tap(playBtn);
+        await tester.pumpAndSettle();
 
-      expect(find.text('Deep Coding & Refactoring 30m'), findsOneWidget);
+        // Should be on Timer screen
+        expect(
+          find.text('Saat selesai, hasilnya dicatat otomatis ke jam.'),
+          findsOneWidget,
+        );
+        expect(find.text('Selesai sekarang'), findsOneWidget);
+        expect(find.text('Batalkan timer'), findsOneWidget);
 
-      // Tap habit title to open the 5-action popover
-      await tester.tap(find.text('Deep Coding & Refactoring 30m'));
-      await tester.pumpAndSettle();
+        // Empty test storage cannot commit this preset; keep it available to retry.
+        await tester.tap(find.text('Selesai sekarang'));
+        await tester.pumpAndSettle();
 
-      // Verify the 5 actions from Lampiran 1
-      expect(find.text('Ya'), findsOneWidget);
-      expect(find.text('Tidak'), findsOneWidget);
-      expect(find.text('Mulai'), findsOneWidget);
-      expect(find.text('Catatan'), findsWidgets);
-      expect(find.text('Gambar'), findsOneWidget);
-    });
+        expect(find.text('Selesai sekarang'), findsOneWidget);
+        expect(find.text('Batalkan timer'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Navigating to Jelas screen displays 3 emotions and 3 gratitude journal items', (tester) async {
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pump();
+    testWidgets(
+      'Renders Habits section with done toggle and 5-action popover',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      // Open menu
-      await tester.tap(find.byIcon(Icons.menu_rounded));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
+        await expandSupportTools(tester);
 
-      // Tap Jelas
-      await tester.tap(find.text('Jelas: visual dan syukur'));
-      await tester.pumpAndSettle();
+        for (int i = 0; i < 6; i++) {
+          if (find
+              .text('Deep Coding & Refactoring 30m')
+              .evaluate()
+              .isNotEmpty) {
+            break;
+          }
+          await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+          await tester.pumpAndSettle();
+        }
 
-      // Verify Jelas screen content
-      expect(find.text('Jelas'), findsOneWidget);
-      expect(find.text('Mulai visualisasi 3 menit'), findsOneWidget);
-      expect(find.text('3 emosi utama'), findsOneWidget);
+        expect(find.text('Deep Coding & Refactoring 30m'), findsOneWidget);
 
-      // Scroll down to see gratitude section
-      await tester.drag(find.byType(ListView).first, const Offset(0, -350));
-      await tester.pumpAndSettle();
+        // Tap habit title to open the 5-action popover
+        await tester.ensureVisible(find.text('Deep Coding & Refactoring 30m'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Deep Coding & Refactoring 30m'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Jurnal syukur, 3 hal'), findsOneWidget);
-      expect(find.text('Simpan syukur ke catatan'), findsOneWidget);
-    });
+        // Verify the 5 actions from Lampiran 1
+        expect(find.text('Ya'), findsOneWidget);
+        expect(find.text('Tidak'), findsOneWidget);
+        expect(find.text('Mulai'), findsOneWidget);
+        expect(find.text('Catatan'), findsWidgets);
+        expect(find.text('Gambar'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Adds a new Identity block dynamically via Tambah Blok Identitas Baru', (tester) async {
+    testWidgets(
+      'Navigating to Jelas screen displays 3 emotions and 3 gratitude journal items',
+      (tester) async {
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
+
+        // Open menu
+        await tester.tap(find.byKey(const ValueKey('home-menu-button')));
+        await tester.pumpAndSettle();
+
+        // Tap Jelas
+        await tester.tap(find.text('Jelas: visual dan syukur'));
+        await tester.pumpAndSettle();
+
+        // Verify Jelas screen content
+        expect(find.text('Jelas'), findsOneWidget);
+        expect(find.text('Mulai visualisasi 3 menit'), findsOneWidget);
+        expect(find.text('3 emosi utama'), findsOneWidget);
+
+        // Scroll down to see gratitude section
+        await tester.drag(find.byType(ListView).first, const Offset(0, -350));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Jurnal syukur, 3 hal'), findsOneWidget);
+        expect(find.text('Simpan syukur ke catatan'), findsOneWidget);
+      },
+    );
+
+    testWidgets('Adds a new Identity block dynamically via Tambah identitas', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -391,12 +492,9 @@ void main() {
 
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pump();
-
-      final addIdentityBtn = find.text('Tambah Blok Identitas Baru');
-      await tester.scrollUntilVisible(addIdentityBtn, 400, scrollable: find.byType(Scrollable).first);
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -150));
+      await tester.tap(find.byKey(const ValueKey('home-menu-button')));
       await tester.pumpAndSettle();
-      await tester.tap(addIdentityBtn);
+      await tester.tap(find.text('Tambah Identitas Baru'));
       await tester.pumpAndSettle();
 
       // Verify bottom sheet for new identity is open
@@ -404,56 +502,210 @@ void main() {
       expect(find.text('Buat Identitas'), findsOneWidget);
 
       // Enter identity name
-      await tester.enterText(find.byKey(const ValueKey('new_identity_name_field')), 'Penulis');
+      await tester.enterText(
+        find.byKey(const ValueKey('new_identity_name_field')),
+        'Penulis',
+      );
       await tester.pumpAndSettle();
 
       // Tap create
       await tester.tap(find.text('Buat Identitas'));
       await tester.pumpAndSettle();
-
-      // Scroll up to locate the updated preset section
-      for (int i = 0; i < 8; i++) {
-        if (find.text('Identitas: Penulis').evaluate().isNotEmpty) break;
-        await tester.drag(find.byType(ListView).first, const Offset(0, 300), warnIfMissed: false);
-        await tester.pumpAndSettle();
-      }
+      await expandSupportTools(tester);
 
       // New identity card block should be rendered
       expect(find.text('Identitas: Penulis'), findsOneWidget);
     });
 
-    testWidgets('Clean minimalist interface without bottom dock, and schedules task dump to clock face', (tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
+    testWidgets(
+      'late preview defaults to tomorrow and retains unsupported task',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: FocusClockHomeView(
+                onOpenFocusClock: () {},
+                onOpenAppDrawer: () {},
+                useSampleData: true,
+                now: () => DateTime(2026, 11, 7, 23, 59, 30),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await expandSupportTools(tester);
+        for (
+          var i = 0;
+          i < 6 && find.text('Task & Habit Dump (Inbox)').evaluate().isEmpty;
+          i++
+        ) {
+          await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.text('Pasang').first);
+        await tester.pumpAndSettle();
+        expect(find.byType(RangeSlider), findsNothing);
+        expect(find.text('Besok 00:00'), findsWidgets);
+        await tester.ensureVisible(
+          find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'),
+        );
+        await tester.tap(
+          find.widgetWithText(ElevatedButton, 'Pasang ke Focus Clock'),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Pratinjau belum mendukung jadwal melewati tengah malam.'),
+          findsOneWidget,
+        );
+        expect(find.text('Selesaikan modul UI Focus Clock'), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'Clean minimalist interface without bottom dock, and schedules task dump to clock face',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
+        await expandSupportTools(tester);
+
+        // 1. Verify Floating Bottom Dock is removed for clean minimalist experience
+        expect(find.text('Beranda'), findsNothing);
+
+        // 2. Scroll to Task Dump section
+        for (int i = 0; i < 6; i++) {
+          if (find.text('Kotak masuk kegiatan').evaluate().isNotEmpty) {
+            break;
+          }
+          await tester.drag(find.byType(ListView).first, const Offset(0, -400));
+          await tester.pumpAndSettle();
+        }
+
+        // 3. Verify Task Dump section
+        expect(find.text('Kotak masuk kegiatan'), findsOneWidget);
+        expect(find.text('Selesaikan modul UI Focus Clock'), findsOneWidget);
+        expect(find.text('Sekarang'), findsWidgets);
+
+        // 4. Tap "Pasang" on a dumped task
+        final pasangBtn = find.text('Pasang').first;
+        await tester.tap(pasangBtn);
+        await tester.pumpAndSettle();
+
+        // Verify Interactive Scheduling Sheet is open
+        expect(find.text('Pasang ke Focus Clock'), findsWidgets);
+        expect(find.byType(RangeSlider), findsNothing);
+        expect(find.text('Selesaikan modul UI Focus Clock'), findsWidgets);
+      },
+    );
+
+    testWidgets('quick add opens as a calm, text-first inbox capture', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 760);
+      tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pump();
-
-      // 1. Verify Floating Bottom Dock is removed for clean minimalist experience
-      expect(find.text('Beranda'), findsNothing);
-
-      // 2. Scroll to Task Dump section
-      for (int i = 0; i < 6; i++) {
-        if (find.text('Task & Habit Dump (Inbox)').evaluate().isNotEmpty) break;
+      await tester.pumpAndSettle();
+      await expandSupportTools(tester);
+      for (var i = 0; i < 6; i++) {
+        if (find.text('Kotak masuk kegiatan').evaluate().isNotEmpty) break;
         await tester.drag(find.byType(ListView).first, const Offset(0, -400));
         await tester.pumpAndSettle();
       }
-
-      // 3. Verify Task Dump section
-      expect(find.text('Task & Habit Dump (Inbox)'), findsOneWidget);
-      expect(find.text('Selesaikan modul UI Focus Clock'), findsOneWidget);
-      expect(find.text('Sekarang'), findsWidgets);
-
-      // 4. Tap "Pasang" on a dumped task
-      final pasangBtn = find.text('Pasang').first;
-      await tester.tap(pasangBtn);
+      await tester.ensureVisible(find.text('Tambah').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tambah').first);
       await tester.pumpAndSettle();
 
-      // Verify Interactive Scheduling Sheet is open
-      expect(find.text('Pasang ke Focus Clock'), findsWidgets);
-      expect(find.byType(RangeSlider), findsOneWidget);
+      expect(find.text('Catat Cepat ke Dump Inbox'), findsOneWidget);
+      expect(find.text('Pilih yang Ada'), findsNothing);
+      expect(find.text('Pilih Identitas:'), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      final captureField = find.byKey(const ValueKey('home-quick-task-input'));
+      await tester.enterText(captureField, 'Latihan LKS');
+      expect(
+        tester.widget<TextField>(captureField).controller?.text,
+        'Latihan LKS',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'empty production capture hides empty source and identity choices',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 760);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final emptyRepository = SadarRepository.store(null);
+        for (final habit in await emptyRepository.getHabits()) {
+          await emptyRepository.deleteHabit(habit.id);
+        }
+        await tester.pumpWidget(
+          createWidgetUnderTest(
+            useSampleData: false,
+            emptyTasks: true,
+            sadarRepository: emptyRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final addActivity = find.text('Tambah kegiatan');
+        await tester.ensureVisible(addActivity);
+        await tester.pumpAndSettle();
+        await tester.tap(addActivity);
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('Pilih yang Ada'), findsNothing);
+        expect(find.text('Pilih Identitas:'), findsNothing);
+        expect(find.text('Tambah tindakan hari ini'), findsOneWidget);
+        expect(find.text('Pilih yang Ada'), findsNothing);
+        expect(find.text('Pilih Identitas:'), findsNothing);
+      },
+    );
+
+    testWidgets('timer hub focuses on an existing paused session', (
+      tester,
+    ) async {
+      final repository = SadarRepository(null);
+      final now = DateTime.now();
+      await repository.saveTimerSession(
+        TimerSession()
+          ..habitName = 'Latihan LKS'
+          ..sourceKind = TimerSessionSourceKind.free
+          ..targetSeconds = 900
+          ..accumulatedDurationSeconds = 120
+          ..startedAt = now.subtract(const Duration(minutes: 2))
+          ..pausedAt = now
+          ..status = TimerStateStatus.paused
+          ..updatedAt = now,
+      );
+      await tester.pumpWidget(
+        createWidgetUnderTest(sadarRepository: repository),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('home-open-focus-timer')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sesi dijeda'), findsOneWidget);
+      expect(find.text('Latihan LKS').last, findsOneWidget);
+      expect(find.text('Fokus Bebas Cepat:'), findsNothing);
+      expect(find.text('Buka sesi'), findsOneWidget);
+
+      await tester.tap(find.text('Buka sesi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Latihan LKS'), findsOneWidget);
     });
   });
 }

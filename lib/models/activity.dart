@@ -1,4 +1,4 @@
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import '../core/time_math.dart';
 
 part 'activity.g.dart';
@@ -7,6 +7,9 @@ part 'activity.g.dart';
 @Name('Activity81850')
 class Activity {
   Id id = Isar.autoIncrement;
+
+  /// Explicit source habit; never inferred from the title.
+  int? habitId;
 
   int? presetId;
   String? iconKey; // emoji from preset
@@ -43,14 +46,17 @@ class Activity {
   /// Whether this activity has been completed.
   bool isCompleted = false;
 
+  /// Measured seconds from the focus timer associated with this activity.
+  int actualDurationSeconds = 0;
+
   /// Whether this activity is locked against accidental edit/drag/delete.
   bool isLocked = false;
 
   /// Excluded dates for single-day deletions of a recurring activity series.
   List<DateTime> excludedDates = [];
 
-  late DateTime createdAt;
-  late DateTime updatedAt;
+  DateTime createdAt = DateTime.now();
+  DateTime updatedAt = DateTime.now();
 
   /// Urgency: true if deadline is within 3 days or already past.
   bool get isUrgent {

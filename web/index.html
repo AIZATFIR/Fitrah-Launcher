@@ -18,12 +18,12 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A calm home for your goals, habits, and next action.">
+  <meta name="description" content="Focus Clock helps you see what matters today and begin the next meaningful action.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Fitrah Launcher">
+  <meta name="apple-mobile-web-app-title" content="Focus Clock">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
@@ -32,10 +32,64 @@
   <!-- Google Sign In Web Client ID -->
   <meta name="google-signin-client_id" content="607666586504-2somn7b2p1mrfbflls09st7ovh1hi9r8.apps.googleusercontent.com">
 
-  <title>Fitrah Launcher</title>
+  <title>Focus Clock</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #18181f; }
+    #app-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: grid;
+      place-items: center;
+      background: #18181f;
+      opacity: 1;
+      transition: opacity 180ms ease;
+    }
+    #app-loading[aria-hidden="true"] { opacity: 0; visibility: hidden; }
+    .loading-clock {
+      position: relative;
+      width: 42px;
+      aspect-ratio: 1;
+      border: 1px solid #403c4b;
+      border-radius: 50%;
+    }
+    .loading-clock::before {
+      position: absolute;
+      left: calc(50% - 1px);
+      top: 50%;
+      width: 2px;
+      height: 14px;
+      border-radius: 2px;
+      background: #f0c987;
+      content: "";
+      transform: rotate(-35deg);
+      transform-origin: 50% 0;
+      animation: loading-clock-turn 2.4s linear infinite;
+    }
+    .loading-clock::after {
+      position: absolute;
+      inset: calc(50% - 2px);
+      border-radius: 50%;
+      background: #f0c987;
+      content: "";
+    }
+    @keyframes loading-clock-turn { to { transform: rotate(325deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .loading-clock::before { animation: none; }
+      #app-loading { transition: none; }
+    }
+  </style>
 </head>
 <body>
+  <div id="app-loading" role="status" aria-label="Memuat aplikasi">
+    <div class="loading-clock" aria-hidden="true"></div>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', () => {
+      document.getElementById('app-loading')?.setAttribute('aria-hidden', 'true');
+    }, { once: true });
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

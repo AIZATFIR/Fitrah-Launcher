@@ -1,11 +1,11 @@
 {
-    "name": "Fitrah Launcher",
-    "short_name": "Fitrah",
+    "name": "Focus Clock",
+    "short_name": "Focus",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0B0F19",
     "theme_color": "#10B981",
-    "description": "A calm home for your goals, habits, and next action.",
+    "description": "A calm daily view of what matters and what to do next.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

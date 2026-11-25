@@ -7,7 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/theme.dart';
-import 'data/isar_service.dart';
+import 'data/store/focus_store.dart';
+import 'data/store/store_factory.dart';
+import 'data/storage_unavailable_app.dart';
 import 'features/sadar/sadar_home_screen.dart';
 import 'firebase_options.dart';
 import 'providers/providers.dart';
@@ -41,12 +43,13 @@ Future<void> main() async {
     });
   }
 
-  late final IsarService isarService;
+  late final FocusStore store;
   try {
-    isarService = await IsarService.open();
+    store = await openFocusStore();
   } catch (e) {
-    debugPrint('IsarService init fallback: $e');
-    isarService = IsarService.fallback();
+    debugPrint('Storage open failed: $e');
+    runApp(StorageUnavailableApp(onRetry: main));
+    return;
   }
 
   final notifier = NotificationService();
@@ -59,7 +62,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [
-        isarProvider.overrideWithValue(isarService.isar),
+        focusStoreProvider.overrideWithValue(store),
         notificationServiceProvider.overrideWithValue(notifier),
       ],
       child: const SadarStandaloneApp(),
@@ -83,7 +86,7 @@ class SadarStandaloneApp extends StatelessWidget {
           primary: AppPalette.accent,
           surface: AppPalette.card,
         ),
-        textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+        textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
       ),
       home: const SadarHomeScreen(),
     );

@@ -60,6 +60,12 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# firebase_auth 5.7.0 uses an MSVC extension that raises C4238; keep /WX for
+# the app and other plugins while allowing this upstream target to compile.
+if(MSVC AND TARGET firebase_auth_plugin)
+  target_compile_options(firebase_auth_plugin PRIVATE /wd4238)
+endif()
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can

@@ -6,6 +6,7 @@ import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../models/preset.dart';
 import '../../providers/providers.dart';
+import '../../widgets/activity_icon.dart';
 import 'blueprint_editor_sheet.dart';
 import 'preset_form_sheet.dart';
 import 'widgets/blueprint_card.dart';
@@ -30,9 +31,9 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
           child: Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: AppPalette.card,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: AppPalette.stroke),
             ),
             child: Row(
               children: [
@@ -44,12 +45,12 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                         color: _selectedSegment == 0
-                            ? const Color(0xFFEAB308).withOpacity(0.18)
+                            ? AppPalette.accent.withOpacity(0.18)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: _selectedSegment == 0
-                              ? const Color(0xFFEAB308).withOpacity(0.5)
+                              ? AppPalette.accent.withOpacity(0.5)
                               : Colors.transparent,
                         ),
                       ),
@@ -61,16 +62,16 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                             Icons.auto_stories_rounded,
                             size: 16,
                             color: _selectedSegment == 0
-                                ? const Color(0xFFEAB308)
-                                : Colors.white60,
+                                ? AppPalette.accent
+                                : AppPalette.textDim,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Routine Blueprints',
                             style: TextStyle(
                               color: _selectedSegment == 0
-                                  ? Colors.white
-                                  : Colors.white60,
+                                  ? AppPalette.text
+                                  : AppPalette.textDim,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -88,12 +89,12 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                         color: _selectedSegment == 1
-                            ? const Color(0xFFEAB308).withOpacity(0.18)
+                            ? AppPalette.accent.withOpacity(0.18)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: _selectedSegment == 1
-                              ? const Color(0xFFEAB308).withOpacity(0.5)
+                              ? AppPalette.accent.withOpacity(0.5)
                               : Colors.transparent,
                         ),
                       ),
@@ -105,16 +106,16 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                             Icons.label_outline_rounded,
                             size: 16,
                             color: _selectedSegment == 1
-                                ? const Color(0xFFEAB308)
-                                : Colors.white60,
+                                ? AppPalette.accent
+                                : AppPalette.textDim,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             'Category Tags',
                             style: TextStyle(
                               color: _selectedSegment == 1
-                                  ? Colors.white
-                                  : Colors.white60,
+                                  ? AppPalette.text
+                                  : AppPalette.textDim,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),
@@ -152,8 +153,11 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded,
-                        color: Color(0xFFEAB308), size: 18),
+                    const Icon(
+                      Icons.star_rounded,
+                      color: AppPalette.accent,
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'OFFICIAL DEV BLUEPRINTS (LIFE RECIPES)',
@@ -161,25 +165,32 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                         fontSize: 11,
                         letterSpacing: 1.2,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white.withOpacity(0.6),
+                        color: AppPalette.textDim,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                ...list.where((b) => b.author == 'Official Dev').map((b) => Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: BlueprintCard(
-                        blueprint: b,
-                        onCustomize: () =>
-                            BlueprintEditorSheet.show(context, blueprint: b),
+                ...list
+                    .where((b) => b.author == 'Official Dev')
+                    .map(
+                      (b) => Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: BlueprintCard(
+                          blueprint: b,
+                          onCustomize: () =>
+                              BlueprintEditorSheet.show(context, blueprint: b),
+                        ),
                       ),
-                    )),
+                    ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.palette_outlined,
-                        color: Color(0xFF06B6D4), size: 18),
+                    const Icon(
+                      Icons.palette_outlined,
+                      color: AppPalette.accent,
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'MY CUSTOM & COMMUNITY BLUEPRINTS',
@@ -187,7 +198,7 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                         fontSize: 11,
                         letterSpacing: 1.2,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white.withOpacity(0.6),
+                        color: AppPalette.textDim,
                       ),
                     ),
                   ],
@@ -197,23 +208,26 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.02),
+                      color: AppPalette.card,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.06),
+                        color: AppPalette.stroke,
                         style: BorderStyle.solid,
                       ),
                     ),
                     alignment: Alignment.center,
                     child: Column(
                       children: [
-                        const Icon(Icons.auto_stories_outlined,
-                            color: Colors.white30, size: 36),
+                        const Icon(
+                          Icons.auto_stories_outlined,
+                          color: AppPalette.textDim,
+                          size: 36,
+                        ),
                         const SizedBox(height: 10),
                         const Text(
                           'Belum ada Blueprint Kustom',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: AppPalette.textDim,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
@@ -223,7 +237,7 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                           'Buat pola rutinitas harian Anda sendiri dengan menekan tombol "+ Buat Blueprint".',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.4),
+                            color: AppPalette.textDim,
                             fontSize: 12,
                           ),
                         ),
@@ -231,14 +245,20 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                     ),
                   )
                 else
-                  ...list.where((b) => b.author != 'Official Dev').map((b) => Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: BlueprintCard(
-                          blueprint: b,
-                          onCustomize: () =>
-                              BlueprintEditorSheet.show(context, blueprint: b),
+                  ...list
+                      .where((b) => b.author != 'Official Dev')
+                      .map(
+                        (b) => Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: BlueprintCard(
+                            blueprint: b,
+                            onCustomize: () => BlueprintEditorSheet.show(
+                              context,
+                              blueprint: b,
+                            ),
+                          ),
                         ),
-                      )),
+                      ),
               ],
             );
           },
@@ -247,7 +267,7 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
           right: 16,
           bottom: 16,
           child: FloatingActionButton.extended(
-            backgroundColor: const Color(0xFFEAB308),
+            backgroundColor: AppPalette.accent,
             foregroundColor: Colors.black,
             icon: const Icon(Icons.add_rounded),
             label: const Text(
@@ -287,16 +307,18 @@ class _PresetsTabState extends ConsumerState<PresetsTab> {
                   child: Text(
                     'LONG-PRESS TO DRAG ONTO CLOCK',
                     style: TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 1.2,
-                        color: AppPalette.textDim),
+                      fontSize: 11,
+                      letterSpacing: 1.2,
+                      color: AppPalette.textDim,
+                    ),
                   ),
                 ),
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
                     itemCount: list.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
                     itemBuilder: (context, i) => _PresetCard(preset: list[i]),
                   ),
                 ),
@@ -347,13 +369,20 @@ class _PresetCard extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (hasIcon) ...[
-                Text(preset.iconKey!, style: const TextStyle(fontSize: 18)),
+                ActivityIcon(
+                  iconKey: preset.iconKey,
+                  size: 18,
+                  color: AppPalette.accent,
+                ),
                 const SizedBox(width: 8),
               ],
               Text(
                 preset.name,
                 style: const TextStyle(
-                    color: Colors.black, fontWeight: FontWeight.w700, fontSize: 15),
+                  color: Colors.black,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
               ),
             ],
           ),
@@ -369,38 +398,42 @@ class _PresetCard extends ConsumerWidget {
   }
 
   Widget _row(Color color, bool hasIcon) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppPalette.card,
-          borderRadius: BorderRadius.circular(12),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(
+      color: AppPalette.card,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        if (hasIcon)
+          ActivityIcon(
+            iconKey: preset.iconKey,
+            size: 22,
+            color: AppPalette.accent,
+          )
+        else
+          Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Text(
+            preset.name,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
         ),
-        child: Row(
-          children: [
-            if (hasIcon)
-              Text(preset.iconKey!, style: const TextStyle(fontSize: 22))
-            else
-              Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                preset.name,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-            ),
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.drag_indicator, color: AppPalette.textDim),
-          ],
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-      );
+        const SizedBox(width: 8),
+        const Icon(Icons.drag_indicator, color: AppPalette.textDim),
+      ],
+    ),
+  );
 }
 
 /// Helper to build an Activity from a dragged Preset.

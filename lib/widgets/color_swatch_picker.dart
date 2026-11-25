@@ -17,7 +17,7 @@ class ColorSwatchPicker extends StatefulWidget {
 }
 
 class _ColorSwatchPickerState extends State<ColorSwatchPicker> {
-  int _activeCategory = 0; // 0: Pastel Book, 1: Classic
+  int _activeCategory = 0; // 0: Bookpaper, 1: classic colors
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +29,9 @@ class _ColorSwatchPickerState extends State<ColorSwatchPicker> {
       children: [
         Row(
           children: [
-            _tabButton(0, '📖 Pastel Book (Ramah Mata)'),
+            _tabButton(0, 'Bookpaper'),
             const SizedBox(width: 8),
-            _tabButton(1, '✨ Classic Vibrant'),
+            _tabButton(1, 'Warna cerah'),
           ],
         ),
         const SizedBox(height: 10),
@@ -59,7 +59,7 @@ class _ColorSwatchPickerState extends State<ColorSwatchPicker> {
                             color: Color(c).withValues(alpha: 0.35),
                             blurRadius: 6,
                             spreadRadius: 1,
-                          )
+                          ),
                         ]
                       : null,
                 ),
@@ -81,7 +81,9 @@ class _ColorSwatchPickerState extends State<ColorSwatchPicker> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: active ? AppPalette.accent.withValues(alpha: 0.15) : AppPalette.bg,
+          color: active
+              ? AppPalette.accent.withValues(alpha: 0.15)
+              : AppPalette.bg,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: active ? AppPalette.accent : AppPalette.stroke,

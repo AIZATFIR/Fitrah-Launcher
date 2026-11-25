@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 
 import '../core/time_math.dart';
+import '../data/store/focus_store.dart';
+import '../data/store/native_focus_store.dart';
 import '../data/repositories/activity_repository.dart';
 import '../data/repositories/blueprint_repository.dart';
 import '../data/repositories/preset_repository.dart';
@@ -14,43 +16,59 @@ import '../models/preset.dart';
 import '../models/routine_blueprint.dart';
 import '../models/task.dart';
 import '../services/ai_service.dart';
+import '../services/ai_provider_probe.dart';
+import '../services/goal_plan_application_service.dart';
 import '../services/blueprint_applier_service.dart';
-import '../services/gcal_service.dart';
 import '../services/notification_service.dart';
 import '../services/secure_storage_service.dart';
 
 /// Overridden in main().
 final isarProvider = Provider<Isar?>((_) => null);
-final notificationServiceProvider =
-    Provider<NotificationService>((_) => throw UnimplementedError());
-
-final presetRepoProvider = Provider<PresetRepository>(
-  (ref) => PresetRepository(ref.watch(isarProvider)),
+final focusStoreProvider = Provider<FocusStore?>((ref) {
+  final isar = ref.watch(isarProvider);
+  return isar == null ? null : NativeFocusStore(isar);
+});
+final notificationServiceProvider = Provider<NotificationService>(
+  (_) => throw UnimplementedError(),
 );
 
-final blueprintRepoProvider = Provider<BlueprintRepository>((_) => BlueprintRepository());
+final aiProviderProbeProvider = Provider<AiProviderProbe>((ref) {
+  final probe = AiProviderProbe();
+  ref.onDispose(probe.close);
+  return probe;
+});
+
+final presetRepoProvider = Provider<PresetRepository>(
+  (ref) => PresetRepository.store(ref.watch(focusStoreProvider)),
+);
+
+final blueprintRepoProvider = Provider<BlueprintRepository>(
+  (_) => BlueprintRepository(),
+);
 
 final blueprintsProvider = StreamProvider<List<RoutineBlueprint>>((ref) {
   return ref.watch(blueprintRepoProvider).watchAll();
 });
 
-final blueprintApplierServiceProvider = Provider<BlueprintApplierService>((ref) {
+final blueprintApplierServiceProvider = Provider<BlueprintApplierService>((
+  ref,
+) {
   return BlueprintApplierService(ref.watch(activityRepoProvider));
 });
 
 final activityRepoProvider = Provider<ActivityRepository>(
-  (ref) => ActivityRepository(
-    ref.watch(isarProvider),
+  (ref) => ActivityRepository.store(
+    ref.watch(focusStoreProvider),
     ref.watch(notificationServiceProvider),
   ),
 );
 
 final taskRepoProvider = Provider<TaskRepository>(
-  (ref) => TaskRepository(ref.watch(isarProvider)),
+  (ref) => TaskRepository.store(ref.watch(focusStoreProvider)),
 );
 
 final settingsRepoProvider = Provider<SettingsRepository>(
-  (ref) => SettingsRepository(ref.watch(isarProvider)),
+  (ref) => SettingsRepository.store(ref.watch(focusStoreProvider)),
 );
 
 final settingsProvider = StreamProvider<AppSettings>(
@@ -62,12 +80,12 @@ final presetsProvider = StreamProvider<List<Preset>>(
 );
 
 /// Current date being viewed (default today).
-final currentDateProvider =
-    StateProvider<DateTime>((_) => dateOnly(DateTime.now()));
+final currentDateProvider = StateProvider<DateTime>(
+  (_) => dateOnly(DateTime.now()),
+);
 
 /// Current AM/PM half being viewed in FocusClock.
-final ampmHalfProvider =
-    StateProvider<AmPmHalf>((_) => halfOfNow());
+final ampmHalfProvider = StateProvider<AmPmHalf>((_) => halfOfNow());
 
 /// Realtime clock tick.
 final currentTimeProvider = StreamProvider<DateTime>(
@@ -98,12 +116,6 @@ final weekActivitiesProvider = StreamProvider<List<Activity>>((ref) {
   return ref.watch(activityRepoProvider).watchWeek(DateTime.now());
 });
 
-/// Google Calendar service singleton.
-final gcalServiceProvider = Provider<GCalService>((_) => GCalService());
-
-/// Whether the user is currently signed into GCal (updated after sign-in/out).
-final gcalSignedInProvider = StateProvider<bool>((_) => false);
-
 /// Tasks for Eisenhower Matrix.
 final eisenhowerTasksProvider = StreamProvider<List<Task>>((ref) {
   return ref.watch(taskRepoProvider).watchAll();
@@ -114,40 +126,55 @@ final tasksByHalfProvider = Provider<List<Task>>((ref) {
   final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
   final date = ref.watch(currentDateProvider);
   final half = ref.watch(ampmHalfProvider);
-  final activities = ref.watch(activitiesByHalfProvider).valueOrNull ?? const [];
+  final activities =
+      ref.watch(activitiesByHalfProvider).valueOrNull ?? const [];
   final activityIds = activities.map((a) => a.id).toSet();
-  
+
   return tasks.where((t) {
     if (t.startMinute == null || t.endMinute == null) return false;
     if (t.activityId != null) {
       return activityIds.contains(t.activityId);
     }
-    return t.date != null && 
-           t.date!.year == date.year &&
-           t.date!.month == date.month &&
-           t.date!.day == date.day &&
-           t.ampmHalf == half;
+    return t.date != null &&
+        t.date!.year == date.year &&
+        t.date!.month == date.month &&
+        t.date!.day == date.day &&
+        t.ampmHalf == half;
   }).toList();
 });
 
 /// Unscheduled tasks (Inbox) that don't have start/end minutes.
 final unscheduledTasksProvider = Provider<List<Task>>((ref) {
   final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
-  return tasks.where((t) => t.startMinute == null || t.endMinute == null).toList();
+  return tasks
+      .where((t) => t.startMinute == null || t.endMinute == null)
+      .toList();
 });
 
 /// Tasks assigned to a specific activity.
-final tasksForActivityProvider = StreamProvider.family<List<Task>, int>((ref, activityId) {
+final tasksForActivityProvider = StreamProvider.family<List<Task>, int>((
+  ref,
+  activityId,
+) {
   return ref.watch(taskRepoProvider).watchByActivity(activityId);
 });
 
 /// The task currently being scheduled into the clock.
 final schedulingTaskProvider = StateProvider<Task?>((_) => null);
 
-/// Chat transcript — survives panel open/close so conversation continues.
+/// Ephemeral chat transcript — survives panel open/close in process memory.
+/// Never persist it; process recreation starts with an empty transcript.
 /// "New chat" replaces it with an empty list.
-final aiTranscriptProvider =
-    StateProvider<List<ChatMessage>>((_) => <ChatMessage>[]);
+final aiTranscriptProvider = StateProvider<List<ChatMessage>>(
+  (_) => <ChatMessage>[],
+);
+
+final goalPlanApplicationServiceProvider =
+    Provider<GoalPlanApplicationService?>((ref) {
+      final store = ref.watch(focusStoreProvider);
+      if (store == null || !store.isDurable) return null;
+      return GoalPlanApplicationService(store);
+    });
 
 // ── Planning Mode & App Mode State ───────────────────────────────────────
 
@@ -180,7 +207,9 @@ final selectedAppModeProvider = StateProvider<String>((ref) => initialAppMode);
 final planningModeProvider = StateProvider<bool>((ref) => false);
 
 /// Tracks the specific date being planned. Defaults to today.
-final planningDateProvider = StateProvider<DateTime>((ref) => dateOnly(DateTime.now()));
+final planningDateProvider = StateProvider<DateTime>(
+  (ref) => dateOnly(DateTime.now()),
+);
 
 /// Tracks whether the clock is in Precision Mode (1-minute snapping)
 final precisionModeProvider = StateProvider<bool>((ref) => false);
@@ -194,28 +223,23 @@ final isClockDraggingProvider = StateProvider<bool>((ref) => false);
 /// Tracks the selected duration interval for Instant Mode (default 60 minutes)
 final instantIntervalProvider = StateProvider<int>((ref) => 60);
 
-// ── Quick Focus Timer State ─────────────────────────────────────────────
-final activeTimerEndTimeProvider = StateProvider<DateTime?>((_) => null);
-final activeTimerTotalSecondsProvider = StateProvider<int>((_) => 0);
-final activeTimerTitleProvider = StateProvider<String>((_) => 'Deep Focus');
-final activeTimerIsPausedProvider = StateProvider<bool>((_) => false);
-
 /// Tasks scheduled for the currently selected date (entire 24h day).
 final tasksByDateProvider = Provider<List<Task>>((ref) {
   final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
   final date = ref.watch(currentDateProvider);
-  final activities = ref.watch(activitiesByDateProvider).valueOrNull ?? const [];
+  final activities =
+      ref.watch(activitiesByDateProvider).valueOrNull ?? const [];
   final activityIds = activities.map((a) => a.id).toSet();
-  
+
   return tasks.where((t) {
     if (t.startMinute == null || t.endMinute == null) return false;
     if (t.activityId != null) {
       return activityIds.contains(t.activityId);
     }
-    return t.date != null && 
-           t.date!.year == date.year &&
-           t.date!.month == date.month &&
-           t.date!.day == date.day;
+    return t.date != null &&
+        t.date!.year == date.year &&
+        t.date!.month == date.month &&
+        t.date!.day == date.day;
   }).toList();
 });
 
@@ -227,8 +251,15 @@ final aiServiceProvider = Provider<AiService>((ref) {
     baseUrl: settings?.aiBaseUrl ?? 'https://openrouter.ai/api/v1',
     apiKey: settings?.aiApiKey ?? '',
     model: settings?.aiModel ?? 'google/gemini-2.0-flash-exp:free',
+    allowUnauthenticatedProvider:
+        settings != null &&
+        settings.aiBaseUrl.trim().isNotEmpty &&
+        settings.aiBaseUrl !=
+            'https://generativelanguage.googleapis.com/v1beta/openai' &&
+        settings.aiBaseUrl != 'https://openrouter.ai/api/v1',
     activityRepo: ref.watch(activityRepoProvider),
     presetRepo: ref.watch(presetRepoProvider),
+    goalPlanApplicationService: ref.watch(goalPlanApplicationServiceProvider),
     secureStorage: ref.watch(secureStorageServiceProvider),
   );
 });

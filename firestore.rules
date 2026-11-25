@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isRegisteredOwner(userId) {
+      return request.auth != null
+        && request.auth.uid == userId
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    match /users/{userId}/activities/{activityId} {
+      allow read, write: if isRegisteredOwner(userId);
+    }
+
+    match /users/{userId}/blueprints/{blueprintId} {
+      allow read, write: if isRegisteredOwner(userId);
+    }
+  }
+}

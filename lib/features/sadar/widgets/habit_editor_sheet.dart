@@ -6,15 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme.dart';
 import '../../../models/habit.dart';
 import '../../../providers/sadar_providers.dart';
+import '../../../widgets/activity_icon.dart';
 import 'allowed_apps_selector_dialog.dart';
 import 'progression_editor_dialog.dart';
 
 class HabitEditorSheet extends ConsumerStatefulWidget {
-  const HabitEditorSheet({
-    super.key,
-    this.habit,
-    required this.onSaved,
-  });
+  const HabitEditorSheet({super.key, this.habit, required this.onSaved});
 
   final Habit? habit;
   final VoidCallback onSaved;
@@ -34,9 +31,21 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   late List<String> _allowedPackages;
   late List<ProgressionStep> _progressionSteps;
   late int _selectedColor;
+  String? _validationMessage;
+  bool _saving = false;
 
   static const List<String> _popularIcons = [
-    '📖', '💻', '🏋️', '🏃', '🇫🇷', '🧘', '📚', '✍️', '💧', '🥗', '🎯', '⚡'
+    'book',
+    'computer',
+    'strength',
+    'running',
+    'language',
+    'meditate',
+    'writing',
+    'water',
+    'nutrition',
+    'target',
+    'bolt',
   ];
 
   static const List<int> _colorOptions = [
@@ -54,14 +63,20 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
     super.initState();
     final h = widget.habit;
     _nameCtrl = TextEditingController(text: h?.name ?? '');
-    _targetCtrl = TextEditingController(text: (h?.target ?? 20).toString());
-    _hybridSetsCtrl = TextEditingController(text: (h?.hybridSets ?? 3).toString());
-    _hybridSecsCtrl = TextEditingController(text: (h?.hybridDurationSeconds ?? 60).toString());
-    _selectedIcon = h?.iconKey.isNotEmpty == true ? h!.iconKey : '🎯';
+    _targetCtrl = TextEditingController(text: h == null ? '' : '${h.target}');
+    _hybridSetsCtrl = TextEditingController(
+      text: h == null ? '' : '${h.hybridSets}',
+    );
+    _hybridSecsCtrl = TextEditingController(
+      text: h == null ? '' : '${h.hybridDurationSeconds}',
+    );
+    _selectedIcon = h?.iconKey.isNotEmpty == true ? h!.iconKey : 'target';
     _selectedUnit = h?.unit ?? HabitUnit.min;
     _habitType = h?.effectiveHabitType ?? 'timed';
     _allowedPackages = List.from(h?.allowedPackages ?? []);
-    _progressionSteps = List.from(h?.progressionSteps ?? defaultBodybuildingSteps);
+    _progressionSteps = List.from(
+      h?.progressionSteps ?? const <ProgressionStep>[],
+    );
     _selectedColor = h?.colorValue ?? _colorOptions[0];
   }
 
@@ -75,32 +90,75 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
     final name = _nameCtrl.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty) {
+      _message('Isi nama kebiasaan dulu.');
+      return;
+    }
 
-    final target = int.tryParse(_targetCtrl.text.trim()) ?? 20;
-    final hybridSets = int.tryParse(_hybridSetsCtrl.text.trim()) ?? 3;
-    final hybridSecs = int.tryParse(_hybridSecsCtrl.text.trim()) ?? 60;
+    final parsedTarget = int.tryParse(_targetCtrl.text.trim());
+    final parsedHybridSets = int.tryParse(_hybridSetsCtrl.text.trim());
+    final parsedHybridSecs = int.tryParse(_hybridSecsCtrl.text.trim());
+    if ((_habitType == 'timed' || _habitType == 'count') &&
+        (parsedTarget == null || parsedTarget < 1 || parsedTarget > 9999)) {
+      _message('Isi target antara 1 dan 9.999.');
+      return;
+    }
+    if (_habitType == 'hybrid' &&
+        (parsedHybridSets == null ||
+            parsedHybridSets < 1 ||
+            parsedHybridSets > 100 ||
+            parsedHybridSecs == null ||
+            parsedHybridSecs < 5 ||
+            parsedHybridSecs > 3600)) {
+      _message('Isi jumlah set (1–100) dan detik per set (5–3.600).');
+      return;
+    }
+    if (_habitType == 'progression' && _progressionSteps.isEmpty) {
+      _message('Tambahkan jadwal progresi dulu.');
+      return;
+    }
 
     final habit = widget.habit ?? Habit();
     habit.name = name;
     habit.iconKey = _selectedIcon;
-    habit.target = target.clamp(1, 9999);
+    habit.target = (parsedTarget ?? habit.target).clamp(1, 9999);
     habit.unit = _selectedUnit;
     habit.habitType = _habitType;
     habit.timerEnabled = _habitType == 'timed' || _habitType == 'hybrid';
     habit.allowedPackages = _allowedPackages;
-    habit.progressionPlanJson = jsonEncode(_progressionSteps.map((s) => s.toJson()).toList());
-    habit.hybridSets = hybridSets.clamp(1, 100);
-    habit.hybridDurationSeconds = hybridSecs.clamp(5, 3600);
+    habit.progressionPlanJson = jsonEncode(
+      _progressionSteps.map((s) => s.toJson()).toList(),
+    );
+    habit.hybridSets = (parsedHybridSets ?? habit.hybridSets).clamp(1, 100);
+    habit.hybridDurationSeconds =
+        (parsedHybridSecs ?? habit.hybridDurationSeconds).clamp(5, 3600);
     habit.colorValue = _selectedColor;
     if (widget.habit == null) {
       habit.createdAt = DateTime.now();
     }
 
     HapticFeedback.mediumImpact();
-    await ref.read(sadarRepoProvider).upsertHabit(habit);
-    widget.onSaved();
+    setState(() {
+      _saving = true;
+      _validationMessage = null;
+    });
+    try {
+      await ref.read(sadarRepoProvider).upsertHabit(habit);
+      widget.onSaved();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _validationMessage = 'Belum tersimpan. Coba lagi.';
+        });
+      }
+    }
+  }
+
+  void _message(String text) {
+    setState(() => _validationMessage = text);
   }
 
   Future<void> _delete() async {
@@ -148,12 +206,20 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
               children: [
                 Text(
                   isEditing ? 'Ubah Kebiasaan' : 'Kebiasaan Bermakna Baru',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppPalette.text),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppPalette.text,
+                  ),
                 ),
                 const Spacer(),
                 if (isEditing)
                   IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 22),
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Color(0xFFEF4444),
+                      size: 22,
+                    ),
                     tooltip: 'Hapus Kebiasaan',
                     onPressed: _delete,
                   ),
@@ -168,7 +234,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
               style: const TextStyle(fontSize: 15, color: AppPalette.text),
               decoration: InputDecoration(
                 labelText: 'Nama Kebiasaan',
-                hintText: 'misal: Deep Work, Olahraga, Belajar Bahasa, Membaca',
                 labelStyle: const TextStyle(color: AppPalette.textDim),
                 filled: true,
                 fillColor: AppPalette.bg,
@@ -184,8 +249,14 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Emoji Picker Row
-            const Text('Pilih Simbol / Emoji', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppPalette.textDim)),
+            const Text(
+              'Simbol',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppPalette.textDim,
+              ),
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -199,18 +270,27 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    width: 40,
-                    height: 40,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: isSelected ? AppPalette.accent.withValues(alpha: 0.25) : AppPalette.bg,
+                      color: isSelected
+                          ? AppPalette.accent.withValues(alpha: 0.25)
+                          : AppPalette.bg,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isSelected ? AppPalette.accent : AppPalette.stroke,
+                        color: isSelected
+                            ? AppPalette.accent
+                            : AppPalette.stroke,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
                     alignment: Alignment.center,
-                    child: Text(icon, style: const TextStyle(fontSize: 20)),
+                    child: ActivityIcon(
+                      iconKey: icon,
+                      color: isSelected
+                          ? AppPalette.accent
+                          : AppPalette.textDim,
+                    ),
                   ),
                 );
               }).toList(),
@@ -222,20 +302,24 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
             // Tipe Kebiasaan Selector
             const Text(
               'Tipe Kebiasaan',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppPalette.textDim),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppPalette.textDim,
+              ),
             ),
             const SizedBox(height: 8),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildTypeChip('timed', '⏱️ Timed (YPT)'),
+                  _buildTypeChip('timed', 'Timer'),
                   const SizedBox(width: 8),
-                  _buildTypeChip('count', '🔢 Count'),
+                  _buildTypeChip('count', 'Hitungan'),
                   const SizedBox(width: 8),
-                  _buildTypeChip('progression', '🏋️ Bodybuilding'),
+                  _buildTypeChip('progression', 'Latihan bertahap'),
                   const SizedBox(width: 8),
-                  _buildTypeChip('hybrid', '⚡ Hybrid'),
+                  _buildTypeChip('hybrid', 'Campuran'),
                 ],
               ),
             ),
@@ -250,7 +334,10 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                     child: TextField(
                       controller: _targetCtrl,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(fontSize: 14, color: AppPalette.text),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppPalette.text,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Durasi Fokus (Menit)',
                         labelStyle: const TextStyle(color: AppPalette.textDim),
@@ -258,7 +345,9 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                         fillColor: AppPalette.bg,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppPalette.stroke),
+                          borderSide: const BorderSide(
+                            color: AppPalette.stroke,
+                          ),
                         ),
                       ),
                     ),
@@ -281,7 +370,10 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                 },
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppPalette.bg,
                     borderRadius: BorderRadius.circular(14),
@@ -289,17 +381,28 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.shield_outlined, size: 18, color: AppPalette.accent),
+                      const Icon(
+                        Icons.shield_outlined,
+                        size: 18,
+                        color: AppPalette.accent,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           _allowedPackages.isEmpty
                               ? 'Pilih Aplikasi Diizinkan (Whitelist: Belum Ada)'
                               : '${_allowedPackages.length} Aplikasi Diizinkan selama Fokus',
-                          style: const TextStyle(fontSize: 13, color: Colors.white),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                      const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.white54),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: Colors.white54,
+                      ),
                     ],
                   ),
                 ),
@@ -312,7 +415,6 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                 style: const TextStyle(fontSize: 14, color: AppPalette.text),
                 decoration: InputDecoration(
                   labelText: 'Target Jumlah / Repetisi',
-                  hintText: 'misal: 1 untuk course/kegiatan harian, 20 untuk push up',
                   labelStyle: const TextStyle(color: AppPalette.textDim),
                   filled: true,
                   fillColor: AppPalette.bg,
@@ -343,15 +445,24 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                 },
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     color: AppPalette.bg,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: AppPalette.accent.withValues(alpha: 0.5),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.fitness_center_rounded, size: 20, color: AppPalette.accent),
+                      const Icon(
+                        Icons.fitness_center_rounded,
+                        size: 20,
+                        color: AppPalette.accent,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -359,17 +470,28 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                           children: [
                             Text(
                               'Konfigurasi Jadwal Mingguan (${_progressionSteps.length} Hari)',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             const Text(
                               'Target tidak berubah jika hari ini belum di-accomplish.',
-                              style: TextStyle(fontSize: 11, color: Colors.white54),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.white54,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.edit_note_rounded, size: 20, color: AppPalette.accent),
+                      const Icon(
+                        Icons.edit_note_rounded,
+                        size: 20,
+                        color: AppPalette.accent,
+                      ),
                     ],
                   ),
                 ),
@@ -382,16 +504,20 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                     child: TextField(
                       controller: _hybridSetsCtrl,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(fontSize: 14, color: AppPalette.text),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppPalette.text,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Jumlah Set',
-                        hintText: '3',
                         labelStyle: const TextStyle(color: AppPalette.textDim),
                         filled: true,
                         fillColor: AppPalette.bg,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppPalette.stroke),
+                          borderSide: const BorderSide(
+                            color: AppPalette.stroke,
+                          ),
                         ),
                       ),
                     ),
@@ -401,16 +527,20 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                     child: TextField(
                       controller: _hybridSecsCtrl,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(fontSize: 14, color: AppPalette.text),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppPalette.text,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Detik per Set',
-                        hintText: '60',
                         labelStyle: const TextStyle(color: AppPalette.textDim),
                         filled: true,
                         fillColor: AppPalette.bg,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: AppPalette.stroke),
+                          borderSide: const BorderSide(
+                            color: AppPalette.stroke,
+                          ),
                         ),
                       ),
                     ),
@@ -418,15 +548,18 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                 ],
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Kombinasi Repetisi Set x Timer. Contoh: Plank 3 set @ 60 detik.',
-                style: TextStyle(fontSize: 11, color: Colors.white38),
-              ),
             ],
             const SizedBox(height: 16),
 
             // Color Accent Selection
-            const Text('Warna Tag', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppPalette.textDim)),
+            const Text(
+              'Warna Tag',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppPalette.textDim,
+              ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: _colorOptions.map((c) {
@@ -450,10 +583,22 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
                           width: 2.5,
                         ),
                         boxShadow: isSelected
-                            ? [BoxShadow(color: Color(c).withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1)]
+                            ? [
+                                BoxShadow(
+                                  color: Color(c).withValues(alpha: 0.5),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ]
                             : null,
                       ),
-                      child: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                      child: isSelected
+                          ? const Icon(
+                              Icons.check,
+                              size: 16,
+                              color: Colors.white,
+                            )
+                          : null,
                     ),
                   ),
                 );
@@ -461,17 +606,34 @@ class _HabitEditorSheetState extends ConsumerState<HabitEditorSheet> {
             ),
             const SizedBox(height: 24),
 
+            if (_validationMessage != null) ...[
+              Text(
+                _validationMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppPalette.danger, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+            ],
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppPalette.accent,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
-              onPressed: _save,
+              onPressed: _saving ? null : _save,
               child: Text(
-                isEditing ? 'Simpan Perubahan' : 'Buat Kebiasaan',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                _saving
+                    ? 'Menyimpan…'
+                    : isEditing
+                    ? 'Simpan Perubahan'
+                    : 'Buat Kebiasaan',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],

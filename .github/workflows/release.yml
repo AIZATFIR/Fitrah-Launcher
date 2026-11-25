@@ -1,6 +1,8 @@
 name: Fitrah Launcher Multiplatform Release
 
 on:
+  pull_request:
+    branches: [master]
   push:
     tags:
       - 'v*'
@@ -19,8 +21,52 @@ jobs:
         with:
           flutter-version: '3.41.9'
           channel: 'stable'
+      - name: Restore stable owner-preview Android signing key
+        if: github.event_name != 'pull_request'
+        env:
+          ANDROID_PREVIEW_KEYSTORE_B64: ${{ secrets.ANDROID_PREVIEW_KEYSTORE_B64 }}
+        run: |
+          if [[ -z "$ANDROID_PREVIEW_KEYSTORE_B64" ]]; then
+            echo 'ANDROID_PREVIEW_KEYSTORE_B64 secret is required for tagged/manual owner-preview builds.' >&2
+            exit 1
+          fi
+          mkdir -p "$HOME/.android"
+          printf '%s' "$ANDROID_PREVIEW_KEYSTORE_B64" | base64 --decode > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+      - name: Verify owner-preview signing key
+        if: github.event_name != 'pull_request'
+        run: |
+          fingerprint="$(keytool -list -v -alias androiddebugkey -keystore "$HOME/.android/debug.keystore" -storepass android | awk -F ': ' '/SHA256:/{gsub(":", "", $2); print tolower($2)}')"
+          if [[ "$fingerprint" != "b8af9d95bd72793e817c2bec78f3e1360d96456ef47db5260ed0d5a19934fe3e" ]]; then
+            echo "Owner-preview keystore fingerprint mismatch: $fingerprint" >&2
+            exit 1
+          fi
       - name: Build Android APK
         run: flutter build apk --release --android-skip-build-dependency-validation
+      - name: Verify owner-preview APK signature
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          sdk_dir="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [[ -z "$sdk_dir" || ! -d "$sdk_dir/build-tools" ]]; then
+            sdk_dir="$(sed -n 's/^sdk\.dir=//p' android/local.properties)"
+          fi
+          if [[ -z "$sdk_dir" || ! -d "$sdk_dir/build-tools" ]]; then
+            echo 'Android SDK build-tools directory was not found.' >&2
+            exit 1
+          fi
+          apksigner="$(find "$sdk_dir/build-tools" -maxdepth 2 -type f -name apksigner -print | sort -V | tail -n 1)"
+          if [[ -z "$apksigner" || ! -x "$apksigner" ]]; then
+            echo "Android apksigner was not found under $sdk_dir/build-tools." >&2
+            exit 1
+          fi
+          apk='build/app/outputs/flutter-apk/app-release.apk'
+          "$apksigner" verify --verbose "$apk"
+          fingerprint="$(keytool -printcert -jarfile "$apk" | awk -F ': ' '/SHA256:/{gsub(":", "", $2); print tolower($2); exit}')"
+          if [[ "$fingerprint" != "b8af9d95bd72793e817c2bec78f3e1360d96456ef47db5260ed0d5a19934fe3e" ]]; then
+            echo "Owner-preview APK fingerprint mismatch: $fingerprint" >&2
+            exit 1
+          fi
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -80,15 +126,29 @@ jobs:
         with:
           flutter-version: '3.41.9'
           channel: 'stable'
-      - name: Build Web
+      - name: Build Fitrah, Focus Clock and Sadar
         run: |
-          flutter build web --release
-          cd build/web && zip -r ../../Fitrah-Launcher-Web.zip .
-      - name: Upload Web Artifact
+          npm run build:fitrah -- --output=build/web/fitrah
+          npm run build:focus -- --output=build/web/focus
+          npm run build:sadar -- --output=build/web/sadar
+          (cd build/web/fitrah && zip -qr ../../../Fitrah-Launcher-Web-Fitrah.zip .)
+          (cd build/web/focus && zip -qr ../../../Fitrah-Launcher-Web-Focus-Clock.zip .)
+          (cd build/web/sadar && zip -qr ../../../Fitrah-Launcher-Web-Sadar.zip .)
+      - name: Upload Fitrah Web Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Fitrah-Launcher-Web
-          path: Fitrah-Launcher-Web.zip
+          name: Fitrah-Launcher-Web-Fitrah
+          path: Fitrah-Launcher-Web-Fitrah.zip
+      - name: Upload Focus Clock Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fitrah-Launcher-Web-Focus-Clock
+          path: Fitrah-Launcher-Web-Focus-Clock.zip
+      - name: Upload Sadar Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fitrah-Launcher-Web-Sadar
+          path: Fitrah-Launcher-Web-Sadar.zip
   publish-release:
     if: startsWith(github.ref, 'refs/tags/')
     needs: [build-android, build-linux, build-windows, build-web]
@@ -108,10 +168,64 @@ jobs:
           mv release-assets/Fitrah-Launcher-Android-APK/app-release.apk release-assets/Fitrah-Launcher-Android-APK.apk
           mv release-assets/Fitrah-Launcher-Linux-x64/Fitrah-Launcher-Linux-x64.tar.gz release-assets/Fitrah-Launcher-Linux-x64.tar.gz
           mv release-assets/Fitrah-Launcher-Windows-x64/Fitrah-Launcher-Windows-x64.zip release-assets/Fitrah-Launcher-Windows-x64.zip
-          mv release-assets/Fitrah-Launcher-Web/Fitrah-Launcher-Web.zip release-assets/Fitrah-Launcher-Web.zip
+          mv release-assets/Fitrah-Launcher-Web-Fitrah/Fitrah-Launcher-Web-Fitrah.zip release-assets/Fitrah-Launcher-Web-Fitrah.zip
+          mv release-assets/Fitrah-Launcher-Web-Focus-Clock/Fitrah-Launcher-Web-Focus-Clock.zip release-assets/Fitrah-Launcher-Web-Focus-Clock.zip
+          mv release-assets/Fitrah-Launcher-Web-Sadar/Fitrah-Launcher-Web-Sadar.zip release-assets/Fitrah-Launcher-Web-Sadar.zip
+          cd release-assets
+          sha256sum Fitrah-Launcher-Android-APK.apk Fitrah-Launcher-Linux-x64.tar.gz Fitrah-Launcher-Windows-x64.zip Fitrah-Launcher-Web-Fitrah.zip Fitrah-Launcher-Web-Focus-Clock.zip Fitrah-Launcher-Web-Sadar.zip > SHA256SUMS.txt
+          version="${TAG_NAME#v}"
+          bundle_name="Focus_Clock_Ecosystem_${version/-/_}.zip"
+          cat > INSTALL.md <<'INSTALL_EOF'
+          # Focus Clock ecosystem owner preview
+
+          This bundle contains the Android launcher APK, Windows and Linux desktop builds, and static web builds for Fitrah, Focus Clock, and Sadar.
+
+          ## Android
+          Install `Fitrah-Launcher-Android-APK.apk`. For upgrades, install over the existing app to retain local data. Set Fitrah Launcher as the phone's Home app in Android settings if desired. The APK uses the owner-preview signing key; it is not Play Store signed.
+
+          ## Desktop
+          Extract `Fitrah-Launcher-Windows-x64.zip` and run `focus_clock.exe`. Extract `Fitrah-Launcher-Linux-x64.tar.gz` and run `./focus_clock`.
+
+          ## Web
+          Fitrah: https://fitrah-web-three.vercel.app/
+          Focus Clock: https://focus-clock-web.vercel.app/
+          Sadar: https://sadar-web.vercel.app/
+
+          The web ZIP files are static exports for separate hosting. Local app data is not synchronized between Android and web or between browsers.
+
+          Verify the six platform files with `sha256sum --check SHA256SUMS.txt`.
+          INSTALL_EOF
+          cat > BUILD-MANIFEST.json <<MANIFEST_EOF
+          {
+            "release_tag": "${TAG_NAME}",
+            "source_commit": "${GITHUB_SHA}",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "included_artifacts": [
+              "Fitrah-Launcher-Android-APK.apk",
+              "Fitrah-Launcher-Linux-x64.tar.gz",
+              "Fitrah-Launcher-Windows-x64.zip",
+              "Fitrah-Launcher-Web-Fitrah.zip",
+              "Fitrah-Launcher-Web-Focus-Clock.zip",
+              "Fitrah-Launcher-Web-Sadar.zip"
+            ]
+          }
+          MANIFEST_EOF
+          zip -q "$bundle_name" \
+            Fitrah-Launcher-Android-APK.apk \
+            Fitrah-Launcher-Linux-x64.tar.gz \
+            Fitrah-Launcher-Windows-x64.zip \
+            Fitrah-Launcher-Web-Fitrah.zip \
+            Fitrah-Launcher-Web-Focus-Clock.zip \
+            Fitrah-Launcher-Web-Sadar.zip \
+            INSTALL.md BUILD-MANIFEST.json SHA256SUMS.txt
+          sha256sum "$bundle_name" >> SHA256SUMS.txt
           gh release create "$TAG_NAME" \
-            release-assets/Fitrah-Launcher-Android-APK.apk \
-            release-assets/Fitrah-Launcher-Linux-x64.tar.gz \
-            release-assets/Fitrah-Launcher-Windows-x64.zip \
-            release-assets/Fitrah-Launcher-Web.zip \
+            Fitrah-Launcher-Android-APK.apk \
+            Fitrah-Launcher-Linux-x64.tar.gz \
+            Fitrah-Launcher-Windows-x64.zip \
+            Fitrah-Launcher-Web-Fitrah.zip \
+            Fitrah-Launcher-Web-Focus-Clock.zip \
+            Fitrah-Launcher-Web-Sadar.zip \
+            "$bundle_name" \
+            SHA256SUMS.txt \
             --verify-tag --title "Fitrah Launcher $TAG_NAME — Ecosystem Preview" --generate-notes --prerelease

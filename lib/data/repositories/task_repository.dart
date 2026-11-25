@@ -1,25 +1,43 @@
 import 'dart:async';
-import 'package:isar/isar.dart';
+import '../store/focus_store.dart';
+import '../store/native_focus_store.dart';
+import 'package:isar_community/isar.dart';
 
 import '../../models/task.dart';
 
 class TaskRepository {
-  TaskRepository(this.isar);
-  final Isar? isar;
+  TaskRepository(Isar? isar)
+    : isar = isar == null ? null : NativeFocusStore(isar);
+  TaskRepository.store(this.isar);
+  final FocusStore? isar;
 
   final List<Task> _memoryTasks = [];
-  final StreamController<void> _memController = StreamController<void>.broadcast();
+  int _nextMemoryId = 1;
+  final StreamController<void> _memController =
+      StreamController<void>.broadcast();
 
   Future<List<Task>> getAll() async {
     if (isar == null) return List.unmodifiable(_memoryTasks);
-    return isar!.tasks.where().sortByCreatedAtDesc().findAll();
+    return isar!.tasks
+        .select(
+          compare: (a, b) {
+            return b.createdAt.compareTo(a.createdAt);
+          },
+        )
+        .findAll();
   }
 
   Stream<List<Task>> watchAll() {
     if (isar == null) {
       return _watchMemoryAll();
     }
-    return isar!.tasks.where().sortByCreatedAtDesc().watch(fireImmediately: true);
+    return isar!.tasks
+        .select(
+          compare: (a, b) {
+            return b.createdAt.compareTo(a.createdAt);
+          },
+        )
+        .watch(fireImmediately: true);
   }
 
   Stream<List<Task>> _watchMemoryAll() async* {
@@ -33,11 +51,14 @@ class TaskRepository {
     if (isar == null) {
       return _watchMemoryByActivity(activityId);
     }
-    return isar!.tasks.filter().activityIdEqualTo(activityId).watch(fireImmediately: true);
+    return isar!.tasks
+        .select(where: (x) => x.activityId == activityId)
+        .watch(fireImmediately: true);
   }
 
   Stream<List<Task>> _watchMemoryByActivity(int activityId) async* {
-    List<Task> query() => _memoryTasks.where((t) => t.activityId == activityId).toList();
+    List<Task> query() =>
+        _memoryTasks.where((t) => t.activityId == activityId).toList();
     yield query();
     await for (final _ in _memController.stream) {
       yield query();
@@ -47,7 +68,7 @@ class TaskRepository {
   Future<int> add(Task task) async {
     if (isar == null) {
       task.createdAt = DateTime.now();
-      task.id = _memoryTasks.length + 1;
+      task.id = _nextMemoryId++;
       _memoryTasks.add(task);
       _memController.add(null);
       return task.id;
@@ -86,7 +107,10 @@ class TaskRepository {
 
   Future<void> toggleCompletion(int id) async {
     if (isar == null) {
-      final task = _memoryTasks.firstWhere((t) => t.id == id, orElse: () => Task());
+      final task = _memoryTasks.firstWhere(
+        (t) => t.id == id,
+        orElse: () => Task(),
+      );
       if (task.title.isNotEmpty) {
         task.isCompleted = !task.isCompleted;
         task.updatedAt = DateTime.now();
@@ -106,7 +130,10 @@ class TaskRepository {
 
   Future<void> updateEisenhower(int id, int quadrant) async {
     if (isar == null) {
-      final task = _memoryTasks.firstWhere((t) => t.id == id, orElse: () => Task());
+      final task = _memoryTasks.firstWhere(
+        (t) => t.id == id,
+        orElse: () => Task(),
+      );
       if (task.title.isNotEmpty) {
         task.importance = (quadrant == 0 || quadrant == 1) ? 1 : 0;
         if (quadrant == 0 || quadrant == 2) {

@@ -100,7 +100,7 @@ class NaturalIntentParser {
     final dbEnd = toDbEndMinute(end24, dbHalf);
 
     // 3. Infer category, icon, and eye-friendly pastel color
-    String icon = '🎯';
+    String icon = 'target';
     int color = pastelBookColors[3]; // Warm Ochre
     String cleanedTitle = input
         .replaceAll(RegExp(r'\b\d+\s*(?:jam|hours?|hr|h|menit|mins?|minutes?|m)\b', caseSensitive: false), '')
@@ -116,22 +116,22 @@ class NaturalIntentParser {
     }
 
     if (lower.contains('gym') || lower.contains('olahraga') || lower.contains('run') || lower.contains('workout') || lower.contains('exercise') || lower.contains('lari') || lower.contains('fitness')) {
-      icon = '🏃';
+      icon = 'running';
       color = pastelBookColors[6]; // Soft Terracotta
     } else if (lower.contains('code') || lower.contains('coding') || lower.contains('program') || lower.contains('dev') || lower.contains('laptop') || RegExp(r'\bwork\b').hasMatch(lower) || lower.contains('project')) {
-      icon = '💻';
+      icon = 'computer';
       color = pastelBookColors[2]; // Soft Periwinkle
     } else if (lower.contains('study') || lower.contains('belajar') || lower.contains('baca') || lower.contains('read') || lower.contains('book') || lower.contains('buku') || lower.contains('kursus')) {
-      icon = '📖';
+      icon = 'book';
       color = pastelBookColors[0]; // Muted Sage Green
     } else if (lower.contains('rest') || lower.contains('istirahat') || lower.contains('sleep') || lower.contains('tidur') || lower.contains('nap') || lower.contains('santai') || lower.contains('meditasi')) {
-      icon = '🧘';
+      icon = 'meditate';
       color = pastelBookColors[4]; // Soft Lavender
     } else if (lower.contains('write') || lower.contains('nulis') || lower.contains('tulis') || lower.contains('draft') || lower.contains('essay') || lower.contains('journal')) {
-      icon = '✍️';
+      icon = 'writing';
       color = pastelBookColors[1]; // Dusty Rose
     } else if (lower.contains('makan') || lower.contains('lunch') || lower.contains('dinner') || lower.contains('breakfast') || lower.contains('coffee') || lower.contains('kopi') || lower.contains('tea')) {
-      icon = '☕';
+      icon = 'coffee';
       color = pastelBookColors[8]; // Muted Sand
     }
 

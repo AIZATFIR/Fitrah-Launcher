@@ -3,129 +3,299 @@ import '../../../services/secure_storage_service.dart';
 import '../models/launcher_settings.dart';
 
 class LauncherSettingsNotifier extends StateNotifier<LauncherSettings> {
-  LauncherSettingsNotifier(this._storage) : super(const LauncherSettings()) {
-    _loadSettings();
+  LauncherSettingsNotifier(this._storage) : super(LauncherSettings()) {
+    hydration = _loadSettings();
   }
 
+  late final Future<void> hydration;
   final SecureStorageService _storage;
   static const _storageKey = 'fitrah_launcher_settings_v1';
+  Future<void> _queue = Future.value();
+  bool _loaded = false;
+  bool get isLoaded => _loaded;
+  bool get loadFailed => !_loaded && _loadAttempted;
+  bool _loadAttempted = false;
+  final Map<String, String> noteDrafts = {};
+  final Map<String, bool> noteSaving = {};
+  final Map<String, int> _noteRevisions = {};
 
-  Future<void> _loadSettings() async {
+  Future<bool> _readSettings() async {
     try {
-      final jsonStr = await _storage.readCustomKey(_storageKey);
-      if (jsonStr != null && jsonStr.isNotEmpty) {
-        state = LauncherSettings.fromJson(jsonStr);
-      }
+      final raw = await _storage.readCustomKey(_storageKey);
+      final loaded = raw == null || raw.isEmpty
+          ? LauncherSettings()
+          : LauncherSettings.fromJson(raw);
+      _loaded = true;
+      _loadAttempted = true;
+      state = loaded;
+      return true;
     } catch (_) {
-      // Keep default settings on error
+      _loaded = false;
+      _loadAttempted = true;
+      state = state.copyWith();
+      return false;
     }
   }
 
-  Future<void> _saveSettings() async {
-    try {
-      await _storage.writeCustomKey(_storageKey, state.toJson());
-    } catch (_) {}
+  Future<void> _loadSettings() async {
+    await _enqueue(() async {
+      await _readSettings();
+    });
   }
 
-  Future<void> updateSettings(LauncherSettings newSettings) async {
-    state = newSettings;
-    await _saveSettings();
+  Future<void> _enqueue(Future<void> Function() operation) {
+    final result = _queue.then((_) => operation());
+    _queue = result.catchError((_) {});
+    return result;
+  }
+
+  Future<void> reload() => _enqueue(() async {
+    await _readSettings();
+  });
+
+  Future<T> exportAfterWrites<T>(Future<T> Function() export) async {
+    late T result;
+    await _enqueue(() async {
+      if ((!_loaded && !await _readSettings()) || noteDrafts.isNotEmpty) {
+        throw StateError(
+          'Catatan belum tersimpan. Coba simpan lagi sebelum export.',
+        );
+      }
+      result = await export();
+    });
+    return result;
+  }
+
+  Future<T> restoreWithReload<T>(Future<T> Function() restore) async {
+    late T result;
+    await _enqueue(() async {
+      if (!_loaded && !await _readSettings()) {
+        throw StateError('Unable to read launcher settings');
+      }
+      result = await restore();
+      if (!await _readSettings()) {
+        throw StateError('Unable to reload launcher settings');
+      }
+    });
+    return result;
+  }
+
+  Future<bool> _mutate(
+    LauncherSettings Function(LauncherSettings) change, {
+    void Function()? onSaved,
+    void Function()? onFailed,
+  }) async {
+    var success = false;
+    await _enqueue(() async {
+      if (!_loaded && !await _readSettings()) {
+        onFailed?.call();
+        if (onFailed != null) state = state.copyWith();
+        return;
+      }
+      final updated = change(state);
+      try {
+        await _storage.writeCustomKey(_storageKey, updated.toJson());
+        onSaved?.call();
+        state = updated;
+        success = true;
+      } catch (_) {
+        onFailed?.call();
+        if (onFailed != null) state = state.copyWith();
+      }
+    });
+    return success;
+  }
+
+  Future<void> updateSettings(LauncherSettings value) async {
+    await _mutate((_) => value);
   }
 
   Future<void> setWallpaperType(String type, {String? customUrl}) async {
-    state = state.copyWith(
-      wallpaperType: type,
-      customImageUrl: customUrl ?? state.customImageUrl,
+    await _mutate(
+      (s) => s.copyWith(wallpaperType: type, customImageUrl: customUrl),
     );
-    await _saveSettings();
   }
 
-  Future<void> setWallpaperDimming(double dimming) async {
-    state = state.copyWith(wallpaperDimming: dimming.clamp(0.0, 0.9));
-    await _saveSettings();
+  Future<void> setWallpaperDimming(double value) async {
+    await _mutate((s) => s.copyWith(wallpaperDimming: value.clamp(0.0, 0.9)));
   }
 
-  Future<void> setWallpaperBlur(double blur) async {
-    state = state.copyWith(wallpaperBlur: blur.clamp(0.0, 20.0));
-    await _saveSettings();
+  Future<void> setWallpaperBlur(double value) async {
+    await _mutate((s) => s.copyWith(wallpaperBlur: value.clamp(0.0, 20.0)));
   }
 
-  Future<void> setClockFormat({bool? is24h, bool? showSeconds, bool? showDate}) async {
-    state = state.copyWith(
-      is24h: is24h ?? state.is24h,
-      showSeconds: showSeconds ?? state.showSeconds,
-      showDate: showDate ?? state.showDate,
+  Future<void> setClockFormat({
+    bool? is24h,
+    bool? showSeconds,
+    bool? showDate,
+  }) async {
+    await _mutate(
+      (s) => s.copyWith(
+        is24h: is24h,
+        showSeconds: showSeconds,
+        showDate: showDate,
+      ),
     );
-    await _saveSettings();
   }
 
-  Future<void> toggleWidget({bool? showHero, bool? showAgenda, bool? showHabits}) async {
-    state = state.copyWith(
-      showHeroEvent: showHero ?? state.showHeroEvent,
-      showAgendaWidget: showAgenda ?? state.showAgendaWidget,
-      showHabitsWidget: showHabits ?? state.showHabitsWidget,
+  Future<void> toggleWidget({
+    bool? showHero,
+    bool? showAgenda,
+    bool? showHabits,
+  }) async {
+    await _mutate(
+      (s) => s.copyWith(
+        showHeroEvent: showHero,
+        showAgendaWidget: showAgenda,
+        showHabitsWidget: showHabits,
+      ),
     );
-    await _saveSettings();
   }
 
   Future<void> togglePrayerTimes(bool enabled) async {
-    state = state.copyWith(showPrayerTimes: enabled);
-    await _saveSettings();
+    await _mutate((s) => s.copyWith(showPrayerTimes: enabled));
   }
 
-  Future<void> setPrayerTime(String prayerKey, String time) async {
-    switch (prayerKey.toLowerCase()) {
-      case 'subuh':
-        state = state.copyWith(prayerSubuh: time);
-        break;
-      case 'syuruq':
-        state = state.copyWith(prayerSyuruq: time);
-        break;
-      case 'dzuhur':
-        state = state.copyWith(prayerDzuhur: time);
-        break;
-      case 'ashar':
-        state = state.copyWith(prayerAshar: time);
-        break;
-      case 'maghrib':
-        state = state.copyWith(prayerMaghrib: time);
-        break;
-      case 'isya':
-        state = state.copyWith(prayerIsya: time);
-        break;
-    }
-    await _saveSettings();
+  Future<bool> setPrayerTimesVerified(bool verified) =>
+      _mutate((s) => s.copyWith(prayerTimesVerified: verified));
+
+  Future<void> setPrayerTime(String key, String time) async {
+    await _mutate((s) {
+      switch (key.toLowerCase()) {
+        case 'subuh':
+          return s.copyWith(prayerSubuh: time);
+        case 'syuruq':
+          return s.copyWith(prayerSyuruq: time);
+        case 'dzuhur':
+          return s.copyWith(prayerDzuhur: time);
+        case 'ashar':
+          return s.copyWith(prayerAshar: time);
+        case 'maghrib':
+          return s.copyWith(prayerMaghrib: time);
+        case 'isya':
+          return s.copyWith(prayerIsya: time);
+        default:
+          return s;
+      }
+    });
   }
 
   Future<void> setDockPackage(int slotIndex, String packageName) async {
     if (slotIndex < 0 || slotIndex >= 4) return;
-    final updated = List<String>.from(state.dockPackages);
-    while (updated.length < 4) {
-      updated.add('com.android.browser');
+    await _mutate((s) {
+      final updated = List<String>.from(s.dockPackages);
+      while (updated.length < 4) {
+        updated.add('com.android.browser');
+      }
+      updated[slotIndex] = packageName;
+      return s.copyWith(dockPackages: updated);
+    });
+  }
+
+  Future<bool> setWidgetDisplayMode(String mode) =>
+      _mutate((s) => s.copyWith(widgetDisplayMode: mode));
+
+  int _drawerWrites = 0;
+  bool get drawerSaving => _drawerWrites > 0;
+  final Map<String, bool> drawerFailedValues = {};
+
+  Future<bool> _saveDrawerPreference(String key, bool value) async {
+    _drawerWrites++;
+    drawerFailedValues.remove(key);
+    state = state.copyWith();
+    final saved = await _mutate(
+      (s) => key == 'icons'
+          ? s.copyWith(showAppIcons: value)
+          : s.copyWith(autoFocusSearch: value),
+    );
+    _drawerWrites--;
+    if (saved) {
+      drawerFailedValues.remove(key);
+    } else {
+      drawerFailedValues[key] = value;
     }
-    updated[slotIndex] = packageName;
-    state = state.copyWith(dockPackages: updated);
-    await _saveSettings();
+    state = state.copyWith();
+    return saved;
   }
 
-  Future<void> setWidgetDisplayMode(String mode) async {
-    state = state.copyWith(widgetDisplayMode: mode);
-    await _saveSettings();
+  Future<bool> setAutoFocusSearch(bool enabled) =>
+      _saveDrawerPreference('keyboard', enabled);
+
+  Future<bool> setShowAppIcons(bool enabled) =>
+      _saveDrawerPreference('icons', enabled);
+
+  Future<bool> setThemePalette(String palette) =>
+      _mutate((s) => s.copyWith(themePalette: palette));
+
+  Future<bool> setFavoritePackage(String package, bool favorite) {
+    if (!LauncherSettings.isValidPackage(package)) return Future.value(false);
+    return _mutate((s) {
+      final packages = {...s.favoritePackages};
+      if (favorite) {
+        packages.add(package);
+      } else {
+        packages.remove(package);
+      }
+      return s.copyWith(favoritePackages: packages);
+    });
   }
 
-  Future<void> setAutoFocusSearch(bool enabled) async {
-    state = state.copyWith(autoFocusSearch: enabled);
-    await _saveSettings();
+  Future<bool> setHiddenPackage(String package, bool hidden) {
+    if (!LauncherSettings.isValidPackage(package)) return Future.value(false);
+    return _mutate((s) {
+      final packages = {...s.hiddenPackages};
+      if (hidden) {
+        packages.add(package);
+      } else {
+        packages.remove(package);
+      }
+      return s.copyWith(hiddenPackages: packages);
+    });
   }
 
-  Future<void> setThemePalette(String palette) async {
-    state = state.copyWith(themePalette: palette);
-    await _saveSettings();
+  Future<bool> setFocusGoal(String goal) =>
+      _mutate((s) => s.copyWith(focusGoal: goal.trim()));
+
+  Future<bool> setScreenTimeCueEnabled(bool enabled) =>
+      _mutate((s) => s.copyWith(screenTimeCueEnabled: enabled));
+
+  Future<bool> setLockScreenGoalCueEnabled(bool enabled) =>
+      _mutate((s) => s.copyWith(lockScreenGoalCueEnabled: enabled));
+
+  Future<bool> setGentleLimitEnabled(bool enabled) =>
+      _mutate((s) => s.copyWith(gentleLimitEnabled: enabled));
+
+  Future<bool> setScreenTimeThreshold({int? limitMinutes, int? waitSeconds}) =>
+      _mutate(
+        (s) => s.copyWith(
+          dailyLimitMinutes: limitMinutes?.clamp(15, 1440),
+          gentleWaitSeconds: waitSeconds?.clamp(5, 300),
+        ),
+      );
+
+  Future<bool> setDailyNote(String date, String value) async {
+    final revision = (_noteRevisions[date] ?? 0) + 1;
+    _noteRevisions[date] = revision;
+    noteDrafts[date] = value;
+    noteSaving[date] = true;
+    state = state.copyWith();
+    return _mutate(
+      (s) => s.copyWith(dailyNotes: {...s.dailyNotes, date: value}),
+      onSaved: () {
+        if (_noteRevisions[date] == revision) {
+          noteDrafts.remove(date);
+          noteSaving.remove(date);
+        }
+      },
+      onFailed: () {
+        if (_noteRevisions[date] == revision) noteSaving[date] = false;
+      },
+    );
   }
 }
 
 final launcherSettingsProvider =
     StateNotifierProvider<LauncherSettingsNotifier, LauncherSettings>((ref) {
-  final storage = ref.watch(secureStorageServiceProvider);
-  return LauncherSettingsNotifier(storage);
-});
+      final storage = ref.watch(secureStorageServiceProvider);
+      return LauncherSettingsNotifier(storage);
+    });

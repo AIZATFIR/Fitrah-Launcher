@@ -219,8 +219,6 @@ class _TaskDetailSheetState extends ConsumerState<_TaskDetailSheet> {
                     onSubmitted: (_) => _addSubtask(),
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'Add a subtask...',
-                      hintStyle: const TextStyle(color: AppPalette.textDim),
                       filled: true,
                       fillColor: AppPalette.bg,
                       border: OutlineInputBorder(

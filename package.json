@@ -3,11 +3,12 @@
   "version": "0.3.3",
   "private": true,
   "scripts": {
-    "build": "echo 'Deploying static web bundle'",
-    "build:sadar": "flutter build web -t lib/main_sadar.dart --no-wasm-dry-run",
-    "build:fitrah": "flutter build web -t lib/main.dart --release",
+    "build": "bash scripts/vercel_build.sh",
+    "build:sadar": "bash scripts/vercel_build.sh -t lib/main_sadar.dart",
+    "build:fitrah": "bash scripts/vercel_build.sh -t lib/main.dart",
     "deploy:fitrah": "npm run build:fitrah && npx -y vercel deploy build/web --project fitrah-web --prod --yes",
     "deploy:sadar": "npm run build:sadar && npx -y vercel deploy build/web --project sadar-web --prod --yes",
-    "deploy:focus": "npm run build:focus && npx -y vercel deploy build/web --project focus-clock-web --prod --yes"
+    "deploy:focus": "npm run build:focus && npx -y vercel deploy build/web --project focus-clock-web --prod --yes",
+    "build:focus": "bash scripts/vercel_build.sh -t lib/main.dart --dart-define=APP_MODE=focus"
   }
 }

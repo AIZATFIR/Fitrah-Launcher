@@ -15,7 +15,8 @@ class ProgressionEditorDialog extends StatefulWidget {
   final ValueChanged<List<ProgressionStep>> onSaved;
 
   @override
-  State<ProgressionEditorDialog> createState() => _ProgressionEditorDialogState();
+  State<ProgressionEditorDialog> createState() =>
+      _ProgressionEditorDialogState();
 }
 
 class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
@@ -26,7 +27,7 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
     super.initState();
     _steps = widget.initialSteps.isNotEmpty
         ? List.from(widget.initialSteps)
-        : List.from(defaultBodybuildingSteps);
+        : [];
   }
 
   void _applyPreset(List<ProgressionStep> preset) {
@@ -36,14 +37,16 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
     });
   }
 
-  void _editStep(int index) {
+  Future<bool?> _editStep(int index) {
     final step = _steps[index];
     final titleCtrl = TextEditingController(text: step.title);
-    final targetCtrl = TextEditingController(text: step.target.toString());
+    final targetCtrl = TextEditingController(
+      text: step.target > 0 ? '${step.target}' : '',
+    );
     final unitCtrl = TextEditingController(text: step.unit);
     bool isRest = step.isRest;
 
-    showDialog(
+    return showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
@@ -54,7 +57,11 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
           ),
           title: Text(
             'Edit ${step.dayName}',
-            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -63,7 +70,10 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
               // Rest Day toggle
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Hari Istirahat (Rest Day)', style: TextStyle(color: Colors.white, fontSize: 14)),
+                title: const Text(
+                  'Hari Istirahat (Rest Day)',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                ),
                 value: isRest,
                 activeColor: AppPalette.accent,
                 onChanged: (val) {
@@ -96,7 +106,10 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
                       child: TextField(
                         controller: targetCtrl,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
                         decoration: const InputDecoration(
                           labelText: 'Jumlah',
                           labelStyle: TextStyle(color: Colors.white60),
@@ -109,7 +122,10 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
                       flex: 2,
                       child: TextField(
                         controller: unitCtrl,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
                         decoration: const InputDecoration(
                           labelText: 'Satuan (reps/sets)',
                           labelStyle: TextStyle(color: Colors.white60),
@@ -125,24 +141,47 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal', style: TextStyle(color: Colors.white54)),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Colors.white54),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppPalette.accent),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppPalette.accent,
+              ),
               onPressed: () {
-                final targetVal = int.tryParse(targetCtrl.text.trim()) ?? 20;
+                final targetVal = int.tryParse(targetCtrl.text.trim());
+                if (!isRest &&
+                    (titleCtrl.text.trim().isEmpty ||
+                        targetVal == null ||
+                        targetVal < 1 ||
+                        unitCtrl.text.trim().isEmpty)) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Isi nama, jumlah, dan satuan dulu.'),
+                    ),
+                  );
+                  return;
+                }
                 setState(() {
                   _steps[index] = ProgressionStep(
                     dayName: step.dayName,
                     title: isRest ? 'Rest Day' : titleCtrl.text.trim(),
-                    target: isRest ? 0 : targetVal,
+                    target: isRest ? 0 : targetVal!,
                     unit: isRest ? '' : unitCtrl.text.trim(),
                     isRest: isRest,
                   );
                 });
-                Navigator.pop(ctx);
+                Navigator.pop(ctx, true);
               },
-              child: const Text('Simpan', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Simpan',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -168,16 +207,28 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
               // Header
               Row(
                 children: [
-                  const Icon(Icons.fitness_center_rounded, color: AppPalette.accent, size: 22),
+                  const Icon(
+                    Icons.fitness_center_rounded,
+                    color: AppPalette.accent,
+                    size: 22,
+                  ),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
                       'Jadwal Progresi Harian',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white60,
+                      size: 20,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -185,7 +236,11 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
               const SizedBox(height: 6),
               const Text(
                 'Target hanya akan bergeser ke hari berikutnya jika sudah di-accomplish. Jika belum, target tetap diam.',
-                style: TextStyle(fontSize: 12, color: Colors.white54, height: 1.3),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white54,
+                  height: 1.3,
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -197,37 +252,113 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
                     ActionChip(
                       backgroundColor: const Color(0xFF202024),
                       side: const BorderSide(color: Color(0xFF333338)),
-                      label: const Text('Push-Pull-Legs', style: TextStyle(color: Colors.white, fontSize: 11)),
+                      label: const Text(
+                        'Push-Pull-Legs',
+                        style: TextStyle(color: Colors.white, fontSize: 11),
+                      ),
                       onPressed: () => _applyPreset(defaultBodybuildingSteps),
                     ),
                     const SizedBox(width: 8),
                     ActionChip(
                       backgroundColor: const Color(0xFF202024),
                       side: const BorderSide(color: Color(0xFF333338)),
-                      label: const Text('Full Body 100 Reps', style: TextStyle(color: Colors.white, fontSize: 11)),
+                      label: const Text(
+                        'Full Body 100 Reps',
+                        style: TextStyle(color: Colors.white, fontSize: 11),
+                      ),
                       onPressed: () => _applyPreset([
-                        const ProgressionStep(dayName: 'Senin', title: 'Push Up', target: 50, unit: 'reps'),
-                        const ProgressionStep(dayName: 'Selasa', title: 'Squat', target: 50, unit: 'reps'),
-                        const ProgressionStep(dayName: 'Rabu', title: 'Rest & Stretch', isRest: true),
-                        const ProgressionStep(dayName: 'Kamis', title: 'Pull Up / Rows', target: 30, unit: 'reps'),
-                        const ProgressionStep(dayName: 'Jumat', title: 'Sit Up / Core', target: 50, unit: 'reps'),
-                        const ProgressionStep(dayName: 'Sabtu', title: 'Plank Challenge', target: 3, unit: 'sets'),
-                        const ProgressionStep(dayName: 'Minggu', title: 'Rest Day', isRest: true),
+                        const ProgressionStep(
+                          dayName: 'Senin',
+                          title: 'Push Up',
+                          target: 50,
+                          unit: 'reps',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Selasa',
+                          title: 'Squat',
+                          target: 50,
+                          unit: 'reps',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Rabu',
+                          title: 'Rest & Stretch',
+                          isRest: true,
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Kamis',
+                          title: 'Pull Up / Rows',
+                          target: 30,
+                          unit: 'reps',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Jumat',
+                          title: 'Sit Up / Core',
+                          target: 50,
+                          unit: 'reps',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Sabtu',
+                          title: 'Plank Challenge',
+                          target: 3,
+                          unit: 'sets',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Minggu',
+                          title: 'Rest Day',
+                          isRest: true,
+                        ),
                       ]),
                     ),
                     const SizedBox(width: 8),
                     ActionChip(
                       backgroundColor: const Color(0xFF202024),
                       side: const BorderSide(color: Color(0xFF333338)),
-                      label: const Text('Kalaam Course Rotation', style: TextStyle(color: Colors.white, fontSize: 11)),
+                      label: const Text(
+                        'Kalaam Course Rotation',
+                        style: TextStyle(color: Colors.white, fontSize: 11),
+                      ),
                       onPressed: () => _applyPreset([
-                        const ProgressionStep(dayName: 'Senin', title: 'Kalaam Modul 1', target: 1, unit: 'course'),
-                        const ProgressionStep(dayName: 'Selasa', title: 'Kalaam Modul 2', target: 1, unit: 'course'),
-                        const ProgressionStep(dayName: 'Rabu', title: 'Murojaah / Review', target: 1, unit: 'session'),
-                        const ProgressionStep(dayName: 'Kamis', title: 'Kalaam Modul 3', target: 1, unit: 'course'),
-                        const ProgressionStep(dayName: 'Jumat', title: 'Kalaam Modul 4', target: 1, unit: 'course'),
-                        const ProgressionStep(dayName: 'Sabtu', title: 'Kuis & Praktik', target: 1, unit: 'quiz'),
-                        const ProgressionStep(dayName: 'Minggu', title: 'Rest Day', isRest: true),
+                        const ProgressionStep(
+                          dayName: 'Senin',
+                          title: 'Kalaam Modul 1',
+                          target: 1,
+                          unit: 'course',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Selasa',
+                          title: 'Kalaam Modul 2',
+                          target: 1,
+                          unit: 'course',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Rabu',
+                          title: 'Murojaah / Review',
+                          target: 1,
+                          unit: 'session',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Kamis',
+                          title: 'Kalaam Modul 3',
+                          target: 1,
+                          unit: 'course',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Jumat',
+                          title: 'Kalaam Modul 4',
+                          target: 1,
+                          unit: 'course',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Sabtu',
+                          title: 'Kuis & Praktik',
+                          target: 1,
+                          unit: 'quiz',
+                        ),
+                        const ProgressionStep(
+                          dayName: 'Minggu',
+                          title: 'Rest Day',
+                          isRest: true,
+                        ),
                       ]),
                     ),
                   ],
@@ -236,24 +367,58 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
               const SizedBox(height: 14),
 
               // Steps List
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    final index = _steps.length;
+                    setState(() {
+                      _steps.add(
+                        ProgressionStep(
+                          dayName: 'Hari ${index + 1}',
+                          title: '',
+                          target: 0,
+                          unit: '',
+                        ),
+                      );
+                    });
+                    final saved = await _editStep(index);
+                    if (saved != true && mounted) {
+                      setState(() => _steps.removeAt(index));
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Tambah hari'),
+                ),
+              ),
+              const SizedBox(height: 8),
               Expanded(
                 child: ListView.separated(
                   itemCount: _steps.length,
-                  separatorBuilder: (_, __) => const Divider(color: Color(0xFF27272A), height: 1),
+                  separatorBuilder: (_, __) =>
+                      const Divider(color: Color(0xFF27272A), height: 1),
                   itemBuilder: (ctx, idx) {
                     final s = _steps[idx];
                     return InkWell(
                       onTap: () => _editStep(idx),
                       borderRadius: BorderRadius.circular(10),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 8,
+                        ),
                         child: Row(
                           children: [
                             Container(
                               width: 65,
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: s.isRest ? const Color(0xFF1E293B) : const Color(0xFF27272A),
+                                color: s.isRest
+                                    ? const Color(0xFF1E293B)
+                                    : const Color(0xFF27272A),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -262,7 +427,9 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: s.isRest ? const Color(0xFF60A5FA) : Colors.white,
+                                  color: s.isRest
+                                      ? const Color(0xFF60A5FA)
+                                      : Colors.white,
                                 ),
                               ),
                             ),
@@ -276,21 +443,44 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: s.isRest ? Colors.white60 : Colors.white,
+                                      color: s.isRest
+                                          ? Colors.white60
+                                          : Colors.white,
                                     ),
                                   ),
                                   if (!s.isRest)
                                     Text(
                                       'Target: ${s.target} ${s.unit}',
-                                      style: const TextStyle(fontSize: 12, color: AppPalette.accent),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppPalette.accent,
+                                      ),
                                     ),
                                 ],
                               ),
                             ),
-                            Icon(
-                              s.isRest ? Icons.nightlight_round : Icons.edit_outlined,
-                              size: 16,
-                              color: s.isRest ? const Color(0xFF60A5FA) : Colors.white38,
+                            IconButton(
+                              tooltip: 'Ubah hari',
+                              onPressed: () => _editStep(idx),
+                              icon: Icon(
+                                s.isRest
+                                    ? Icons.nightlight_round
+                                    : Icons.edit_outlined,
+                                size: 16,
+                                color: s.isRest
+                                    ? const Color(0xFF60A5FA)
+                                    : Colors.white38,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Hapus hari',
+                              onPressed: () =>
+                                  setState(() => _steps.removeAt(idx)),
+                              icon: const Icon(
+                                Icons.remove_circle_outline,
+                                size: 18,
+                                color: Colors.white38,
+                              ),
                             ),
                           ],
                         ),
@@ -308,9 +498,19 @@ class _ProgressionEditorDialogState extends State<ProgressionEditorDialog> {
                   backgroundColor: AppPalette.accent,
                   foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 onPressed: () {
+                  if (_steps.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Tambahkan minimal satu hari.'),
+                      ),
+                    );
+                    return;
+                  }
                   HapticFeedback.mediumImpact();
                   widget.onSaved(_steps);
                   Navigator.pop(context);

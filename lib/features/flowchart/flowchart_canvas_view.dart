@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
+import '../../widgets/activity_icon.dart';
 
 class FlowchartNode {
   FlowchartNode({
@@ -11,7 +12,7 @@ class FlowchartNode {
     required this.position,
     this.durationMinutes = 30,
     this.color = const Color(0xFFE6B800),
-    this.icon = '🎯',
+    this.icon = 'target',
     this.isCompleted = false,
   });
 
@@ -42,21 +43,21 @@ final flowchartNodesProvider = StateProvider<List<FlowchartNode>>((ref) {
   return [
     FlowchartNode(
       id: 'node-1',
-      title: '🎯 Deep Work Sesi 1',
+      title: 'Deep Work Sesi 1',
       position: const Offset(150, 200),
       durationMinutes: 45,
       color: const Color(0xFFE6B800),
     ),
     FlowchartNode(
       id: 'node-2',
-      title: '☕ Istirahat & Kopi',
+      title: 'Istirahat & kopi',
       position: const Offset(420, 200),
       durationMinutes: 15,
       color: const Color(0xFF4EAA86),
     ),
     FlowchartNode(
       id: 'node-3',
-      title: '💻 Review & Refactor Kode',
+      title: 'Review & refactor kode',
       position: const Offset(420, 360),
       durationMinutes: 60,
       color: const Color(0xFF8C9EFF),
@@ -64,7 +65,9 @@ final flowchartNodesProvider = StateProvider<List<FlowchartNode>>((ref) {
   ];
 });
 
-final flowchartConnectionsProvider = StateProvider<List<FlowchartConnection>>((ref) {
+final flowchartConnectionsProvider = StateProvider<List<FlowchartConnection>>((
+  ref,
+) {
   return [
     FlowchartConnection(
       id: 'conn-1',
@@ -87,11 +90,13 @@ class FlowchartCanvasView extends ConsumerStatefulWidget {
   final VoidCallback? onClose;
 
   @override
-  ConsumerState<FlowchartCanvasView> createState() => _FlowchartCanvasViewState();
+  ConsumerState<FlowchartCanvasView> createState() =>
+      _FlowchartCanvasViewState();
 }
 
 class _FlowchartCanvasViewState extends ConsumerState<FlowchartCanvasView> {
-  final TransformationController _transformationController = TransformationController();
+  final TransformationController _transformationController =
+      TransformationController();
   String? _selectedNodeId;
   String? _connectingFromNodeId;
   Offset? _dragConnectionCurrentPos;
@@ -113,15 +118,23 @@ class _FlowchartCanvasViewState extends ConsumerState<FlowchartCanvasView> {
       color: AppPalette.accent,
     );
 
-    ref.read(flowchartNodesProvider.notifier).update((list) => [...list, newNode]);
+    ref
+        .read(flowchartNodesProvider.notifier)
+        .update((list) => [...list, newNode]);
     setState(() => _selectedNodeId = newId);
   }
 
   void _deleteNode(String nodeId) {
     HapticFeedback.mediumImpact();
-    ref.read(flowchartNodesProvider.notifier).update((list) => list.where((n) => n.id != nodeId).toList());
-    ref.read(flowchartConnectionsProvider.notifier).update(
-          (list) => list.where((c) => c.fromNodeId != nodeId && c.toNodeId != nodeId).toList(),
+    ref
+        .read(flowchartNodesProvider.notifier)
+        .update((list) => list.where((n) => n.id != nodeId).toList());
+    ref
+        .read(flowchartConnectionsProvider.notifier)
+        .update(
+          (list) => list
+              .where((c) => c.fromNodeId != nodeId && c.toNodeId != nodeId)
+              .toList(),
         );
     if (_selectedNodeId == nodeId) {
       setState(() => _selectedNodeId = null);
@@ -140,7 +153,9 @@ class _FlowchartCanvasViewState extends ConsumerState<FlowchartCanvasView> {
           // Infinite Canvas Interactive Area
           GestureDetector(
             onDoubleTapDown: (details) {
-              final sceneOffset = _transformationController.toScene(details.localPosition);
+              final sceneOffset = _transformationController.toScene(
+                details.localPosition,
+              );
               _addNodeAtOffset(sceneOffset);
             },
             onTap: () {
@@ -180,7 +195,8 @@ class _FlowchartCanvasViewState extends ConsumerState<FlowchartCanvasView> {
                             isConnectingFrom: _connectingFromNodeId == node.id,
                             onTap: () {
                               HapticFeedback.selectionClick();
-                              if (_connectingFromNodeId != null && _connectingFromNodeId != node.id) {
+                              if (_connectingFromNodeId != null &&
+                                  _connectingFromNodeId != node.id) {
                                 // Create connection
                                 final newConn = FlowchartConnection(
                                   id: 'conn-${DateTime.now().millisecondsSinceEpoch}',
@@ -229,15 +245,24 @@ class _FlowchartCanvasViewState extends ConsumerState<FlowchartCanvasView> {
               children: [
                 // Minimal Glass Title Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppPalette.card.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppPalette.stroke.withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: AppPalette.stroke.withValues(alpha: 0.5),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.account_tree_rounded, size: 16, color: AppPalette.accent),
+                      const Icon(
+                        Icons.account_tree_rounded,
+                        size: 16,
+                        color: AppPalette.accent,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'FLOWCHART CANVAS (${nodes.length} NODES)',
@@ -267,9 +292,15 @@ class _FlowchartCanvasViewState extends ConsumerState<FlowchartCanvasView> {
                     decoration: BoxDecoration(
                       color: AppPalette.card.withValues(alpha: 0.7),
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppPalette.stroke.withValues(alpha: 0.5)),
+                      border: Border.all(
+                        color: AppPalette.stroke.withValues(alpha: 0.5),
+                      ),
                     ),
-                    child: const Icon(Icons.close_rounded, size: 18, color: AppPalette.text),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: AppPalette.text,
+                    ),
                   ),
                 ),
               ],
@@ -283,15 +314,24 @@ class _FlowchartCanvasViewState extends ConsumerState<FlowchartCanvasView> {
             right: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppPalette.card.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppPalette.stroke.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: AppPalette.stroke.withValues(alpha: 0.4),
+                  ),
                 ),
                 child: const Text(
-                  '💡 Double-tap canvas untuk tambah node • Drag node untuk geser • Tap titik kanan untuk hubungkan',
-                  style: TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.w500),
+                  'Ketuk dua kali untuk menambah langkah. Geser untuk memindahkan, lalu hubungkan antar langkah.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppPalette.textDim,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
@@ -338,8 +378,8 @@ class _NodeWidget extends StatelessWidget {
             color: isSelected
                 ? AppPalette.accent
                 : isConnectingFrom
-                    ? Colors.greenAccent
-                    : AppPalette.stroke,
+                ? Colors.greenAccent
+                : AppPalette.stroke,
             width: isSelected || isConnectingFrom ? 2 : 1,
           ),
           boxShadow: [
@@ -363,12 +403,15 @@ class _NodeWidget extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(node.icon, style: const TextStyle(fontSize: 16)),
+                ActivityIcon(iconKey: node.icon, color: AppPalette.accent),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     node.title,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -376,7 +419,11 @@ class _NodeWidget extends StatelessWidget {
                 if (isSelected)
                   GestureDetector(
                     onTap: onDelete,
-                    child: const Icon(Icons.close, size: 14, color: AppPalette.danger),
+                    child: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: AppPalette.danger,
+                    ),
                   ),
               ],
             ),
@@ -385,14 +432,21 @@ class _NodeWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: node.color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     '${node.durationMinutes} m',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: node.color),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: node.color,
+                    ),
                   ),
                 ),
 
@@ -404,10 +458,16 @@ class _NodeWidget extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: isConnectingFrom ? Colors.greenAccent : AppPalette.accent,
+                        color: isConnectingFrom
+                            ? Colors.greenAccent
+                            : AppPalette.accent,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.arrow_forward_rounded, size: 10, color: Colors.black),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 10,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                 ),

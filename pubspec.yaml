@@ -1,7 +1,7 @@
 name: fitrah_launcher
 description: "Fitrah Launcher - Minimalist Niagara-style launcher with Focus Clock integration."
 publish_to: 'none'
-version: 0.5.5+9
+version: 0.5.71+8163
 
 environment:
   sdk: ^3.11.4
@@ -13,8 +13,9 @@ dependencies:
 
   flutter_riverpod: ^2.5.1
 
-  isar: ^3.1.0+1
-  isar_flutter_libs: ^3.1.0+1
+  drift: 2.35.3
+  isar_community: 3.4.1
+  isar_community_flutter_libs: 3.4.1
   path_provider: ^2.1.4
 
   flutter_local_notifications: ^17.2.4
@@ -24,26 +25,26 @@ dependencies:
   uuid: ^4.5.1
   http: ^1.6.0
   google_sign_in: ^6.2.1
-  googleapis: ^13.2.0
   flutter_markdown: ^0.7.7+1
   google_fonts: ^8.1.0
   window_manager: ^0.5.1
   tray_manager: ^0.5.3
   url_launcher: ^6.3.1
-  google_generative_ai: ^0.4.6
   flutter_secure_storage: ^9.2.4
   flutter_tts: ^4.2.3
   speech_to_text: ^7.3.0
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
+  file_picker: ^8.1.7
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   build_runner: ^2.4.13
-  isar_generator: ^3.1.0+1
+  isar_community_generator: 3.4.1
   flutter_launcher_icons: ^0.13.1
 
 flutter_launcher_icons:

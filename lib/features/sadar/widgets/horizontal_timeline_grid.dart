@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme.dart';
+import '../../../widgets/activity_icon.dart';
 import '../../../models/habit.dart';
 import '../../../models/habit_entry.dart';
 import '../../../providers/sadar_providers.dart';
@@ -19,17 +20,27 @@ class HorizontalTimelineGrid extends ConsumerStatefulWidget {
   final ValueChanged<Habit> onEditHabit;
 
   @override
-  ConsumerState<HorizontalTimelineGrid> createState() => _HorizontalTimelineGridState();
+  ConsumerState<HorizontalTimelineGrid> createState() =>
+      _HorizontalTimelineGridState();
 }
 
-class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid> {
+class _HorizontalTimelineGridState
+    extends ConsumerState<HorizontalTimelineGrid> {
   late DateTime _currentMonday;
   late DateTime _selectedDate;
   int? _activeHabitId;
   bool _isNoteExpanded = false;
   late TextEditingController _noteCtrl;
 
-  static const List<String> _dayNames = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
+  static const List<String> _dayNames = [
+    'SEN',
+    'SEL',
+    'RAB',
+    'KAM',
+    'JUM',
+    'SAB',
+    'MIN',
+  ];
 
   @override
   void initState() {
@@ -51,14 +62,16 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
     super.dispose();
   }
 
-  List<DateTime> get _weekDays => List.generate(
-        7,
-        (i) => _currentMonday.add(Duration(days: i)),
-      );
+  List<DateTime> get _weekDays =>
+      List.generate(7, (i) => _currentMonday.add(Duration(days: i)));
 
   bool get _isCurrentWeek {
     final now = DateTime.now();
-    final thisMonday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+    final thisMonday = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - 1));
     return _currentMonday.year == thisMonday.year &&
         _currentMonday.month == thisMonday.month &&
         _currentMonday.day == thisMonday.day;
@@ -72,11 +85,27 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
   }
 
   static const List<String> _monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
   ];
   static const List<String> _fullDayNames = [
-    'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
   ];
 
   String _formatWeekRange() {
@@ -136,15 +165,19 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
     final currentEntry = entriesMap[key];
 
     // Toggle back to unmarked if tapping same status
-    final targetStatus = (currentEntry?.status == status) ? HabitStatus.unmarked : status;
+    final targetStatus = (currentEntry?.status == status)
+        ? HabitStatus.unmarked
+        : status;
 
-    await ref.read(sadarRepoProvider).recordEntryStatus(
-      habitId: habit.id,
-      dateString: dateStr,
-      status: targetStatus,
-      valueCompleted: targetStatus == HabitStatus.yes ? habit.target : 0,
-      note: currentEntry?.note,
-    );
+    await ref
+        .read(sadarRepoProvider)
+        .recordEntryStatus(
+          habitId: habit.id,
+          dateString: dateStr,
+          status: targetStatus,
+          valueCompleted: targetStatus == HabitStatus.yes ? habit.target : 0,
+          note: currentEntry?.note,
+        );
 
     ref.invalidate(dailyFulfillmentProvider);
     ref.invalidate(whatIRepeatProvider);
@@ -157,16 +190,14 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
   }) async {
     HapticFeedback.lightImpact();
     final dateStr = _formatDate(_selectedDate);
-    final key = '${habit.id}-$dateStr';
-    final currentEntry = entriesMap[key];
     final text = _noteCtrl.text.trim();
-
-    await ref.read(sadarRepoProvider).recordEntryStatus(
-      habitId: habit.id,
-      dateString: dateStr,
-      status: currentEntry?.status ?? HabitStatus.unmarked,
-      note: text.isEmpty ? null : text,
-    );
+    await ref
+        .read(sadarRepoProvider)
+        .updateHabitEntryNote(
+          habitId: habit.id,
+          dateString: dateStr,
+          note: text,
+        );
 
     setState(() => _isNoteExpanded = false);
     ref.invalidate(dailyFulfillmentProvider);
@@ -220,7 +251,11 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.chevron_left_rounded, color: AppPalette.text, size: 26),
+                  icon: const Icon(
+                    Icons.chevron_left_rounded,
+                    color: AppPalette.text,
+                    size: 26,
+                  ),
                   tooltip: 'Minggu Kemarin',
                   onPressed: _previousWeek,
                 ),
@@ -228,7 +263,10 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                   onTap: _isCurrentWeek ? null : _jumpToToday,
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -245,20 +283,32 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                           const SizedBox(width: 8),
                           Text(
                             '(${_formatWeekRange()})',
-                            style: const TextStyle(fontSize: 12, color: AppPalette.textDim),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppPalette.textDim,
+                            ),
                           ),
                         ] else ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppPalette.accent.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4)),
+                              border: Border.all(
+                                color: AppPalette.accent.withValues(alpha: 0.4),
+                              ),
                             ),
                             child: const Text(
                               'Kembali ke Hari Ini',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppPalette.accent),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppPalette.accent,
+                              ),
                             ),
                           ),
                         ],
@@ -267,7 +317,11 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.chevron_right_rounded, color: AppPalette.text, size: 26),
+                  icon: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppPalette.text,
+                    size: 26,
+                  ),
                   tooltip: 'Minggu Depan',
                   onPressed: _nextWeek,
                 ),
@@ -279,12 +333,23 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
 
           // ── 7-Day Column Header Row (Senin - Minggu) ───────────────────
           Padding(
-            padding: const EdgeInsets.only(left: 12, right: 12, top: 10, bottom: 8),
+            padding: const EdgeInsets.only(
+              left: 12,
+              right: 12,
+              top: 10,
+              bottom: 8,
+            ),
             child: Row(
               children: List.generate(7, (i) {
                 final d = weekDays[i];
-                final isToday = d.year == today.year && d.month == today.month && d.day == today.day;
-                final isSelected = d.year == _selectedDate.year && d.month == _selectedDate.month && d.day == _selectedDate.day;
+                final isToday =
+                    d.year == today.year &&
+                    d.month == today.month &&
+                    d.day == today.day;
+                final isSelected =
+                    d.year == _selectedDate.year &&
+                    d.month == _selectedDate.month &&
+                    d.day == _selectedDate.day;
                 final dayName = _dayNames[i];
 
                 return Expanded(
@@ -301,9 +366,16 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                       margin: const EdgeInsets.symmetric(horizontal: 2),
                       padding: const EdgeInsets.symmetric(vertical: 6),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppPalette.stroke.withValues(alpha: 0.45) : Colors.transparent,
+                        color: isSelected
+                            ? AppPalette.stroke.withValues(alpha: 0.45)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
-                        border: isSelected ? Border.all(color: AppPalette.accent.withValues(alpha: 0.6), width: 1.2) : null,
+                        border: isSelected
+                            ? Border.all(
+                                color: AppPalette.accent.withValues(alpha: 0.6),
+                                width: 1.2,
+                              )
+                            : null,
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -312,13 +384,22 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                             dayName,
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
-                              color: isToday ? AppPalette.accent : (isSelected ? AppPalette.text : AppPalette.textDim),
+                              fontWeight: isToday
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              color: isToday
+                                  ? AppPalette.accent
+                                  : (isSelected
+                                        ? AppPalette.text
+                                        : AppPalette.textDim),
                             ),
                           ),
                           const SizedBox(height: 3),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: isToday
                                 ? BoxDecoration(
                                     color: AppPalette.accent,
@@ -329,8 +410,14 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                               '${d.day}',
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: isToday ? FontWeight.w900 : FontWeight.w600,
-                                color: isToday ? Colors.black : (isSelected ? Colors.white : AppPalette.textDim),
+                                fontWeight: isToday
+                                    ? FontWeight.w900
+                                    : FontWeight.w600,
+                                color: isToday
+                                    ? Colors.black
+                                    : (isSelected
+                                          ? Colors.white
+                                          : AppPalette.textDim),
                               ),
                             ),
                           ),
@@ -350,7 +437,10 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
             const Padding(
               padding: EdgeInsets.all(32),
               child: Center(
-                child: Text('Belum ada kebiasaan. Tambah kebiasaan pertama Anda.', style: TextStyle(color: AppPalette.textDim)),
+                child: Text(
+                  'Belum ada kebiasaan. Tambah kebiasaan pertama Anda.',
+                  style: TextStyle(color: AppPalette.textDim),
+                ),
               ),
             )
           else
@@ -358,7 +448,8 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: widget.habits.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: AppPalette.stroke),
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 1, color: AppPalette.stroke),
               itemBuilder: (context, idx) {
                 final habit = widget.habits[idx];
                 final isHabitActive = _activeHabitId == habit.id;
@@ -368,12 +459,18 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                   children: [
                     // Habit Title & Details Row
                     Padding(
-                      padding: const EdgeInsets.only(left: 14, right: 10, top: 12, bottom: 8),
+                      padding: const EdgeInsets.only(
+                        left: 14,
+                        right: 10,
+                        top: 12,
+                        bottom: 8,
+                      ),
                       child: Row(
                         children: [
-                          Text(
-                            habit.iconKey.isNotEmpty ? habit.iconKey : '🎯',
-                            style: const TextStyle(fontSize: 16),
+                          ActivityIcon(
+                            iconKey: habit.iconKey,
+                            size: 16,
+                            color: AppPalette.accent,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -389,7 +486,10 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                           ),
                           if (habit.target > 0) ...[
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppPalette.bg,
                                 borderRadius: BorderRadius.circular(6),
@@ -397,16 +497,27 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                               ),
                               child: Text(
                                 '${habit.target}${_formatUnit(habit.unit)}',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppPalette.textDim),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppPalette.textDim,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 4),
                           ],
                           IconButton(
-                            icon: const Icon(Icons.more_horiz_rounded, size: 18, color: AppPalette.textDim),
+                            icon: const Icon(
+                              Icons.more_horiz_rounded,
+                              size: 18,
+                              color: AppPalette.textDim,
+                            ),
                             tooltip: 'Opsi Kebiasaan',
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                            constraints: const BoxConstraints(
+                              minWidth: 28,
+                              minHeight: 28,
+                            ),
                             onPressed: () => widget.onEditHabit(habit),
                           ),
                         ],
@@ -415,7 +526,11 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
 
                     // The 7-Day Bar (Matching the 7 Columns)
                     Padding(
-                      padding: const EdgeInsets.only(left: 12, right: 12, bottom: 10),
+                      padding: const EdgeInsets.only(
+                        left: 12,
+                        right: 12,
+                        bottom: 10,
+                      ),
                       child: Row(
                         children: List.generate(7, (i) {
                           final d = weekDays[i];
@@ -423,12 +538,18 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                           final key = '${habit.id}-$dateStr';
                           final entry = entriesMap[key];
                           final status = entry?.status ?? HabitStatus.unmarked;
-                          final hasNote = entry?.note != null && entry!.note!.trim().isNotEmpty;
-                          final isSelectedCell = isHabitActive &&
+                          final hasNote =
+                              entry?.note != null &&
+                              entry!.note!.trim().isNotEmpty;
+                          final isSelectedCell =
+                              isHabitActive &&
                               d.year == _selectedDate.year &&
                               d.month == _selectedDate.month &&
                               d.day == _selectedDate.day;
-                          final isTodayCell = d.year == today.year && d.month == today.month && d.day == today.day;
+                          final isTodayCell =
+                              d.year == today.year &&
+                              d.month == today.month &&
+                              d.day == today.day;
 
                           return Expanded(
                             child: GestureDetector(
@@ -443,25 +564,34 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                               },
                               child: Container(
                                 height: 38,
-                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: _getCellColor(status, isTodayCell),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: isSelectedCell
                                         ? Colors.white
-                                        : (isTodayCell && status == HabitStatus.unmarked
-                                            ? AppPalette.accent.withValues(alpha: 0.5)
-                                            : AppPalette.stroke.withValues(alpha: 0.4)),
+                                        : (isTodayCell &&
+                                                  status == HabitStatus.unmarked
+                                              ? AppPalette.accent.withValues(
+                                                  alpha: 0.5,
+                                                )
+                                              : AppPalette.stroke.withValues(
+                                                  alpha: 0.4,
+                                                )),
                                     width: isSelectedCell ? 2.0 : 1.0,
                                   ),
                                   boxShadow: isSelectedCell
                                       ? [
                                           BoxShadow(
-                                            color: Colors.white.withValues(alpha: 0.2),
+                                            color: Colors.white.withValues(
+                                              alpha: 0.2,
+                                            ),
                                             blurRadius: 6,
                                             spreadRadius: 1,
-                                          )
+                                          ),
                                         ]
                                       : null,
                                 ),
@@ -529,7 +659,11 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
             children: [
               Row(
                 children: [
-                  const Icon(Icons.arrow_drop_up_rounded, color: AppPalette.accent, size: 20),
+                  const Icon(
+                    Icons.arrow_drop_up_rounded,
+                    color: AppPalette.accent,
+                    size: 20,
+                  ),
                   Text(
                     _formatSelectedDateLabel(),
                     style: const TextStyle(
@@ -545,20 +679,33 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                   onTap: () => _startTimerForHabit(habit),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppPalette.accent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppPalette.accent.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppPalette.accent.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.timer_outlined, size: 14, color: AppPalette.accent),
+                        Icon(
+                          Icons.timer_outlined,
+                          size: 14,
+                          color: AppPalette.accent,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'Mulai Timer',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppPalette.accent),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppPalette.accent,
+                          ),
                         ),
                       ],
                     ),
@@ -578,7 +725,8 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                   icon: Icons.description_rounded,
                   label: 'Catatan',
                   color: const Color(0xFFEAB308), // Yellow
-                  isActive: entry?.note != null && entry!.note!.trim().isNotEmpty,
+                  isActive:
+                      entry?.note != null && entry!.note!.trim().isNotEmpty,
                   onTap: () {
                     HapticFeedback.lightImpact();
                     setState(() {
@@ -655,21 +803,28 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
                     child: TextField(
                       controller: _noteCtrl,
                       autofocus: true,
-                      style: const TextStyle(fontSize: 13, color: AppPalette.text),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppPalette.text,
+                      ),
                       decoration: const InputDecoration(
-                        hintText: 'Tulis catatan harian singkat...',
-                        hintStyle: TextStyle(fontSize: 13, color: AppPalette.textDim),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(vertical: 8),
                       ),
-                      onSubmitted: (_) => _saveNote(habit: habit, entriesMap: entriesMap),
+                      onSubmitted: (_) =>
+                          _saveNote(habit: habit, entriesMap: entriesMap),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.check_rounded, size: 18, color: AppPalette.accent),
+                    icon: const Icon(
+                      Icons.check_rounded,
+                      size: 18,
+                      color: AppPalette.accent,
+                    ),
                     tooltip: 'Simpan Catatan',
-                    onPressed: () => _saveNote(habit: habit, entriesMap: entriesMap),
+                    onPressed: () =>
+                        _saveNote(habit: habit, entriesMap: entriesMap),
                   ),
                 ],
               ),
@@ -703,7 +858,11 @@ class _HorizontalTimelineGridState extends ConsumerState<HorizontalTimelineGrid>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: isActive ? color : color.withValues(alpha: 0.8), size: 20),
+            Icon(
+              icon,
+              color: isActive ? color : color.withValues(alpha: 0.8),
+              size: 20,
+            ),
             const SizedBox(height: 2),
             Text(
               label,
@@ -771,7 +930,8 @@ class DogEarPainter extends CustomPainter {
       ..close();
 
     final paint = Paint()
-      ..color = const Color(0xFFFDE047) // Soft Golden fold
+      ..color =
+          const Color(0xFFFDE047) // Soft Golden fold
       ..style = PaintingStyle.fill;
 
     canvas.drawPath(path, paint);

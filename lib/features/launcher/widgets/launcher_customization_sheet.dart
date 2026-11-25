@@ -1,3 +1,5 @@
+import 'drawer_preferences_controls.dart';
+import 'launcher_action_feedback.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -102,7 +104,11 @@ class _LauncherCustomizationSheetState
                   const Divider(color: AppPalette.stroke, height: 1),
                   Expanded(
                     child: appsAsync.when(
+                      skipLoadingOnRefresh: false,
                       data: (apps) {
+                        if (apps.isEmpty) {
+                          return const Center(child: Text('Tidak ada aplikasi terpasang yang dapat dibuka.', style: TextStyle(color: Colors.white70)));
+                        }
                         return ListView.separated(
                           controller: scrollCtrl,
                           itemCount: apps.length,
@@ -159,7 +165,7 @@ class _LauncherCustomizationSheetState
                         );
                       },
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Error: $e')),
+                      error: (e, _) => LauncherAppListFailure(error: e),
                     ),
                   ),
                 ],
@@ -206,7 +212,7 @@ class _LauncherCustomizationSheetState
                 children: [
                   const Icon(Icons.tune_rounded, color: AppPalette.accent, size: 22),
                   const SizedBox(width: 10),
-                  const Text(
+                  const Expanded(child: Text(
                     'PENGATURAN FITRAH LAUNCHER',
                     style: TextStyle(
                       fontSize: 14,
@@ -214,8 +220,7 @@ class _LauncherCustomizationSheetState
                       letterSpacing: 1.5,
                       color: AppPalette.text,
                     ),
-                  ),
-                  const Spacer(),
+                  )),
                   IconButton(
                     icon: const Icon(Icons.close_rounded, color: AppPalette.textDim, size: 20),
                     onPressed: () => Navigator.of(context).pop(),
@@ -239,10 +244,10 @@ class _LauncherCustomizationSheetState
                       children: [
                         Icon(Icons.home_filled, size: 18, color: AppPalette.accent),
                         SizedBox(width: 8),
-                        Text(
+                        Expanded(child: Text(
                           'Aplikasi Beranda Utama',
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppPalette.text),
-                        ),
+                        )),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -262,7 +267,7 @@ class _LauncherCustomizationSheetState
                         ),
                         onPressed: () {
                           HapticFeedback.mediumImpact();
-                          ref.read(appLauncherServiceProvider).openHomeSettings();
+                          runLauncherAction(context, ref.read(appLauncherServiceProvider), (service) => service.openHomeSettings());
                         },
                         icon: const Icon(Icons.launch_rounded, size: 16),
                         label: const Text(
@@ -291,7 +296,7 @@ class _LauncherCustomizationSheetState
 
               // Wallpaper Presets
               SizedBox(
-                height: 100,
+                height: 100 + MediaQuery.textScalerOf(context).scale(22) - 22,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: _wallpaperPresets.length,
@@ -386,7 +391,7 @@ class _LauncherCustomizationSheetState
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppPalette.text),
                       ),
                     ),
-                    TextButton(
+                    Flexible(child: TextButton(
                       onPressed: () {
                         _showCustomImageDialog(context, notifier, settings);
                       },
@@ -394,7 +399,7 @@ class _LauncherCustomizationSheetState
                         settings.wallpaperType == 'custom_image' ? 'Ubah URL / Gambar' : 'Pilih Gambar',
                         style: const TextStyle(fontSize: 12, color: AppPalette.accent, fontWeight: FontWeight.bold),
                       ),
-                    ),
+                    )),
                   ],
                 ),
               ),
@@ -404,11 +409,10 @@ class _LauncherCustomizationSheetState
               // Dimming & Blur Sliders (For maintaining readability)
               Row(
                 children: [
-                  const Text(
+                  const Expanded(child: Text(
                     'Kegelapan Wallpaper (Dimming)',
                     style: TextStyle(fontSize: 12, color: AppPalette.textDim),
-                  ),
-                  const Spacer(),
+                  )),
                   Text(
                     '${(settings.wallpaperDimming * 100).round()}%',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppPalette.accent),
@@ -432,11 +436,10 @@ class _LauncherCustomizationSheetState
 
               Row(
                 children: [
-                  const Text(
+                  const Expanded(child: Text(
                     'Efek Blur Wallpaper',
                     style: TextStyle(fontSize: 12, color: AppPalette.textDim),
-                  ),
-                  const Spacer(),
+                  )),
                   Text(
                     '${settings.wallpaperBlur.round()}px',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppPalette.accent),
@@ -659,14 +662,7 @@ class _LauncherCustomizationSheetState
                 value: settings.showHabitsWidget,
                 onChanged: (val) => notifier.toggleWidget(showHabits: val),
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                activeColor: AppPalette.accent,
-                title: const Text('Otomatis Buka Keyboard di Tab Apps', style: TextStyle(fontSize: 13, color: AppPalette.text)),
-                subtitle: const Text('Fokus pencarian dan tampilkan keyboard otomatis saat geser ke tab kanan', style: TextStyle(fontSize: 11, color: AppPalette.textDim)),
-                value: settings.autoFocusSearch,
-                onChanged: (val) => notifier.setAutoFocusSearch(val),
-              ),
+              const DrawerPreferencesControls(),
 
               const SizedBox(height: 20),
 
@@ -693,7 +689,7 @@ class _LauncherCustomizationSheetState
               if (settings.showPrayerTimes) ...[
                 const SizedBox(height: 8),
                 const Text(
-                  'Ketuk waktu untuk menyesuaikan jadwal sholat di kotamu:',
+                  'Nilai awal hanya contoh, bukan hasil lokasi otomatis. Cocokkan dengan sumber waktu di wilayahmu:',
                   style: TextStyle(fontSize: 11, color: AppPalette.textDim),
                 ),
                 const SizedBox(height: 10),
@@ -708,6 +704,21 @@ class _LauncherCustomizationSheetState
                     _buildPrayerTimeChip('Maghrib', settings.prayerMaghrib, notifier),
                     _buildPrayerTimeChip('Isya', settings.prayerIsya, notifier),
                   ],
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: AppPalette.accent,
+                  title: const Text(
+                    'Saya sudah mencocokkan semua waktu ini',
+                    style: TextStyle(fontSize: 13, color: AppPalette.text),
+                  ),
+                  subtitle: const Text(
+                    'Waktu salat akan tampil setelah kamu mengonfirmasi.',
+                    style: TextStyle(fontSize: 11, color: AppPalette.textDim),
+                  ),
+                  value: settings.prayerTimesVerified,
+                  onChanged: notifier.setPrayerTimesVerified,
                 ),
               ],
 
@@ -746,7 +757,6 @@ class _LauncherCustomizationSheetState
               controller: _urlCtrl,
               style: const TextStyle(fontSize: 13, color: AppPalette.text),
               decoration: InputDecoration(
-                hintText: 'https://images.unsplash.com/...',
                 hintStyle: const TextStyle(color: AppPalette.textDim),
                 filled: true,
                 fillColor: AppPalette.bg,
@@ -807,14 +817,15 @@ class _LauncherCustomizationSheetState
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: AppPalette.stroke),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
               name,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppPalette.text),
             ),
-            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(

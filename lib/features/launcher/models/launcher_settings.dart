@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 class LauncherSettings {
-  final String wallpaperType; // 'amoled_black', 'midnight_slate', 'forest_night', 'deep_obsidian', 'warm_charcoal', 'custom_image'
+  final String
+  wallpaperType; // 'amoled_black', 'midnight_slate', 'forest_night', 'deep_obsidian', 'warm_charcoal', 'custom_image'
   final String customImageUrl;
   final double wallpaperDimming; // 0.0 to 0.9
   final double wallpaperBlur; // 0.0 to 20.0
@@ -15,6 +16,7 @@ class LauncherSettings {
 
   // Waktu Sholat (Muslim Fitrah Anchor)
   final bool showPrayerTimes;
+  final bool prayerTimesVerified;
   final String prayerSubuh;
   final String prayerSyuruq;
   final String prayerDzuhur;
@@ -27,11 +29,59 @@ class LauncherSettings {
 
   /// Automatically focus search and open keyboard on app drawer tab
   final bool autoFocusSearch;
+  final bool showAppIcons;
 
   /// Dynamic Theme Palette: 'fino_green', 'sky_blue', 'ocean_blue'
   final String themePalette;
+  final String focusGoal;
+  final bool screenTimeCueEnabled;
+  final bool lockScreenGoalCueEnabled;
+  final bool gentleLimitEnabled;
+  final int dailyLimitMinutes;
+  final int gentleWaitSeconds;
+  // Stored with preferences; move to a database if note volume grows large.
+  final Map<String, String> _dailyNotes;
+  Map<String, String> get dailyNotes => Map.unmodifiable(_dailyNotes);
 
-  const LauncherSettings({
+  static const defaultFavorites = {
+    'com.android.dialer',
+    'com.android.mms',
+    'com.android.browser',
+    'com.android.camera',
+  };
+  final Set<String> favoritePackages;
+  final Set<String> hiddenPackages;
+
+  // Android also exposes single-segment system packages such as "android".
+  static bool isValidPackage(String value) => RegExp(
+    r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$',
+  ).hasMatch(value);
+
+  static Set<String> packageSet(Iterable<String> values) {
+    final result = <String>{};
+    for (final value in values) {
+      if (!isValidPackage(value)) {
+        throw const FormatException('Invalid package identifier');
+      }
+      result.add(value);
+    }
+    return Set.unmodifiable(result);
+  }
+
+  static Set<String> decodePackages(
+    Map<String, dynamic> map,
+    String key,
+    Set<String> defaults,
+  ) {
+    if (!map.containsKey(key)) return defaults;
+    final value = map[key];
+    if (value is! List || value.any((item) => item is! String)) {
+      throw FormatException('Invalid $key');
+    }
+    return packageSet(value.cast<String>());
+  }
+
+  LauncherSettings({
     this.wallpaperType = 'system',
     this.customImageUrl = '',
     this.wallpaperDimming = 0.0,
@@ -49,16 +99,29 @@ class LauncherSettings {
       'com.android.camera',
     ],
     this.showPrayerTimes = true,
+    this.prayerTimesVerified = false,
     this.prayerSubuh = '04:32',
     this.prayerSyuruq = '05:46',
     this.prayerDzuhur = '11:52',
     this.prayerAshar = '15:10',
     this.prayerMaghrib = '17:54',
     this.prayerIsya = '19:03',
-    this.widgetDisplayMode = 'prayer',
+    this.widgetDisplayMode = 'focus_clock',
     this.autoFocusSearch = false,
-    this.themePalette = 'ocean_blue',
-  });
+    this.showAppIcons = true,
+    this.themePalette = 'full_book',
+    this.focusGoal = '',
+    this.screenTimeCueEnabled = false,
+    this.lockScreenGoalCueEnabled = false,
+    this.gentleLimitEnabled = false,
+    this.dailyLimitMinutes = 120,
+    this.gentleWaitSeconds = 20,
+    Iterable<String> favoritePackages = defaultFavorites,
+    Iterable<String> hiddenPackages = const {},
+    Map<String, String> dailyNotes = const {},
+  }) : favoritePackages = packageSet(favoritePackages),
+       hiddenPackages = packageSet(hiddenPackages),
+       _dailyNotes = Map.unmodifiable(dailyNotes);
 
   LauncherSettings copyWith({
     String? wallpaperType,
@@ -73,6 +136,7 @@ class LauncherSettings {
     bool? showHabitsWidget,
     List<String>? dockPackages,
     bool? showPrayerTimes,
+    bool? prayerTimesVerified,
     String? prayerSubuh,
     String? prayerSyuruq,
     String? prayerDzuhur,
@@ -81,7 +145,17 @@ class LauncherSettings {
     String? prayerIsya,
     String? widgetDisplayMode,
     bool? autoFocusSearch,
+    bool? showAppIcons,
     String? themePalette,
+    String? focusGoal,
+    bool? screenTimeCueEnabled,
+    bool? lockScreenGoalCueEnabled,
+    bool? gentleLimitEnabled,
+    int? dailyLimitMinutes,
+    int? gentleWaitSeconds,
+    Iterable<String>? favoritePackages,
+    Iterable<String>? hiddenPackages,
+    Map<String, String>? dailyNotes,
   }) {
     return LauncherSettings(
       wallpaperType: wallpaperType ?? this.wallpaperType,
@@ -96,6 +170,7 @@ class LauncherSettings {
       showHabitsWidget: showHabitsWidget ?? this.showHabitsWidget,
       dockPackages: dockPackages ?? this.dockPackages,
       showPrayerTimes: showPrayerTimes ?? this.showPrayerTimes,
+      prayerTimesVerified: prayerTimesVerified ?? this.prayerTimesVerified,
       prayerSubuh: prayerSubuh ?? this.prayerSubuh,
       prayerSyuruq: prayerSyuruq ?? this.prayerSyuruq,
       prayerDzuhur: prayerDzuhur ?? this.prayerDzuhur,
@@ -104,7 +179,18 @@ class LauncherSettings {
       prayerIsya: prayerIsya ?? this.prayerIsya,
       widgetDisplayMode: widgetDisplayMode ?? this.widgetDisplayMode,
       autoFocusSearch: autoFocusSearch ?? this.autoFocusSearch,
+      showAppIcons: showAppIcons ?? this.showAppIcons,
       themePalette: themePalette ?? this.themePalette,
+      focusGoal: focusGoal ?? this.focusGoal,
+      screenTimeCueEnabled: screenTimeCueEnabled ?? this.screenTimeCueEnabled,
+      lockScreenGoalCueEnabled:
+          lockScreenGoalCueEnabled ?? this.lockScreenGoalCueEnabled,
+      gentleLimitEnabled: gentleLimitEnabled ?? this.gentleLimitEnabled,
+      dailyLimitMinutes: dailyLimitMinutes ?? this.dailyLimitMinutes,
+      gentleWaitSeconds: gentleWaitSeconds ?? this.gentleWaitSeconds,
+      favoritePackages: favoritePackages ?? this.favoritePackages,
+      hiddenPackages: hiddenPackages ?? this.hiddenPackages,
+      dailyNotes: Map.unmodifiable(dailyNotes ?? this.dailyNotes),
     );
   }
 
@@ -122,6 +208,7 @@ class LauncherSettings {
       'showHabitsWidget': showHabitsWidget,
       'dockPackages': dockPackages,
       'showPrayerTimes': showPrayerTimes,
+      'prayerTimesVerified': prayerTimesVerified,
       'prayerSubuh': prayerSubuh,
       'prayerSyuruq': prayerSyuruq,
       'prayerDzuhur': prayerDzuhur,
@@ -130,12 +217,26 @@ class LauncherSettings {
       'prayerIsya': prayerIsya,
       'widgetDisplayMode': widgetDisplayMode,
       'autoFocusSearch': autoFocusSearch,
+      'showAppIcons': showAppIcons,
       'themePalette': themePalette,
+      'focusGoal': focusGoal,
+      'screenTimeCueEnabled': screenTimeCueEnabled,
+      'lockScreenGoalCueEnabled': lockScreenGoalCueEnabled,
+      'gentleLimitEnabled': gentleLimitEnabled,
+      'dailyLimitMinutes': dailyLimitMinutes,
+      'gentleWaitSeconds': gentleWaitSeconds,
+      'favoritePackages': favoritePackages.toList(),
+      'hiddenPackages': hiddenPackages.toList(),
+      'dailyNotes': dailyNotes,
     };
   }
 
   factory LauncherSettings.fromMap(Map<String, dynamic> map) {
+    if (map.containsKey('showAppIcons') && map['showAppIcons'] is! bool) {
+      throw const FormatException('Invalid showAppIcons');
+    }
     return LauncherSettings(
+      showAppIcons: map['showAppIcons'] as bool? ?? true,
       wallpaperType: map['wallpaperType'] as String? ?? 'system',
       customImageUrl: map['customImageUrl'] as String? ?? '',
       wallpaperDimming: (map['wallpaperDimming'] as num?)?.toDouble() ?? 0.0,
@@ -146,7 +247,10 @@ class LauncherSettings {
       showHeroEvent: map['showHeroEvent'] as bool? ?? true,
       showAgendaWidget: map['showAgendaWidget'] as bool? ?? true,
       showHabitsWidget: map['showHabitsWidget'] as bool? ?? true,
-      dockPackages: (map['dockPackages'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+      dockPackages:
+          (map['dockPackages'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
           const [
             'com.android.dialer',
             'com.android.mms',
@@ -154,16 +258,56 @@ class LauncherSettings {
             'com.android.camera',
           ],
       showPrayerTimes: map['showPrayerTimes'] as bool? ?? true,
+      prayerTimesVerified: map['prayerTimesVerified'] as bool? ?? false,
       prayerSubuh: map['prayerSubuh'] as String? ?? '04:32',
       prayerSyuruq: map['prayerSyuruq'] as String? ?? '05:46',
       prayerDzuhur: map['prayerDzuhur'] as String? ?? '11:52',
       prayerAshar: map['prayerAshar'] as String? ?? '15:10',
       prayerMaghrib: map['prayerMaghrib'] as String? ?? '17:54',
       prayerIsya: map['prayerIsya'] as String? ?? '19:03',
-      widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'prayer',
+      widgetDisplayMode: map['widgetDisplayMode'] as String? ?? 'focus_clock',
       autoFocusSearch: map['autoFocusSearch'] as bool? ?? false,
-      themePalette: map['themePalette'] as String? ?? 'ocean_blue',
+      themePalette: switch (map['themePalette'] as String? ?? 'full_book') {
+        'ocean_blue' || 'sage' => 'full_book',
+        final palette => palette,
+      },
+      focusGoal: map['focusGoal'] as String? ?? '',
+      screenTimeCueEnabled: map['screenTimeCueEnabled'] as bool? ?? false,
+      lockScreenGoalCueEnabled:
+          map['lockScreenGoalCueEnabled'] as bool? ?? false,
+      gentleLimitEnabled: map['gentleLimitEnabled'] as bool? ?? false,
+      dailyLimitMinutes: ((map['dailyLimitMinutes'] as num?)?.toInt() ?? 120)
+          .clamp(15, 1440),
+      gentleWaitSeconds: ((map['gentleWaitSeconds'] as num?)?.toInt() ?? 20)
+          .clamp(5, 300),
+      favoritePackages: decodePackages(
+        map,
+        'favoritePackages',
+        defaultFavorites,
+      ),
+      hiddenPackages: decodePackages(map, 'hiddenPackages', const {}),
+      dailyNotes: decodeDailyNotes(map['dailyNotes']),
     );
+  }
+
+  static Map<String, String> decodeDailyNotes(Object? value) {
+    if (value == null) return const {};
+    if (value is! Map) throw const FormatException('Invalid daily notes');
+    final result = <String, String>{};
+    for (final entry in value.entries) {
+      if (entry.key is! String || entry.value is! String) {
+        throw const FormatException('Invalid daily note');
+      }
+      final key = entry.key as String;
+      final date = DateTime.tryParse(key);
+      if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(key) ||
+          date == null ||
+          date.toIso8601String().substring(0, 10) != key) {
+        throw const FormatException('Invalid daily note date');
+      }
+      result[key] = entry.value as String;
+    }
+    return Map.unmodifiable(result);
   }
 
   String toJson() => json.encode(toMap());

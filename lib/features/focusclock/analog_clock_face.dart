@@ -78,37 +78,38 @@ class AnalogClockFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-        painter: _ClockPainter(
-          now: now,
-          activities: activities,
-          viewHalf: viewHalf,
-          previewStart: previewStartMinute,
-          previewEnd: previewEndMinute,
-          previewColor: previewColor,
-          previewConflict: previewConflict,
-          pulse: pulse,
-          clockHandsMode: clockHandsMode,
-          is24hDial: is24hDial,
-          is24hTime: is24hTime,
-          floatTimeText: floatTimeText,
-          showCurrentTime: showCurrentTime,
-          currentTimeFormat: currentTimeFormat,
-          glowStyle: glowStyle,
-          isToday: isToday,
-          outerReveal: outerReveal,
-          tasks: tasks,
-          hoverMinute: hoverMinute,
-          isPrecisionMode: isPrecisionMode,
-          aimLockProgress: aimLockProgress,
-          isPlanning: isPlanning,
-          clockFaceTheme: clockFaceTheme,
-        ),
-      );
+    painter: _ClockPainter(
+      now: now,
+      activities: activities,
+      viewHalf: viewHalf,
+      previewStart: previewStartMinute,
+      previewEnd: previewEndMinute,
+      previewColor: previewColor,
+      previewConflict: previewConflict,
+      pulse: pulse,
+      clockHandsMode: clockHandsMode,
+      is24hDial: is24hDial,
+      is24hTime: is24hTime,
+      floatTimeText: floatTimeText,
+      showCurrentTime: showCurrentTime,
+      currentTimeFormat: currentTimeFormat,
+      glowStyle: glowStyle,
+      isToday: isToday,
+      outerReveal: outerReveal,
+      tasks: tasks,
+      hoverMinute: hoverMinute,
+      isPrecisionMode: isPrecisionMode,
+      aimLockProgress: aimLockProgress,
+      isPlanning: isPlanning,
+      clockFaceTheme: clockFaceTheme,
+    ),
+  );
 }
 
 /// Geometry scale shared with hit-testing: clock occupies more space in planning mode.
 double clockGrowFactor(double outerReveal, bool isPlanning) =>
-    isPlanning ? (0.92 + 0.06 * outerReveal) : (0.88 + 0.08 * outerReveal);
+    (isPlanning ? (0.92 + 0.06 * outerReveal) : (0.88 + 0.08 * outerReveal)) *
+    0.97; // Reserve a safe rim for the hour numerals outside the bezel.
 
 class _ClockPainter extends CustomPainter {
   _ClockPainter({
@@ -163,8 +164,15 @@ class _ClockPainter extends CustomPainter {
 
   static final Map<String, TextPainter> _tpCache = {};
 
-  TextPainter _getPainter(String text, double fontSize, FontWeight weight, Color color, {double? letterSpacing}) {
-    final key = '${text}_${fontSize}_${weight.value}_${color.toARGB32()}_$letterSpacing';
+  TextPainter _getPainter(
+    String text,
+    double fontSize,
+    FontWeight weight,
+    Color color, {
+    double? letterSpacing,
+  }) {
+    final key =
+        '${text}_${fontSize}_${weight.value}_${color.toARGB32()}_$letterSpacing';
     if (_tpCache.containsKey(key)) {
       return _tpCache[key]!;
     }
@@ -215,7 +223,7 @@ class _ClockPainter extends CustomPainter {
       case 6: // Simple Classic
         themeAccentColor = const Color(0xFFFFD54F);
         break;
-      case 7: // Pastel Book / Warm Journal (Parchment Paper - Eye Friendly)
+      case 7: // Focus Clock Bookpaper amber face.
         themeAccentColor = const Color(0xFFD6BE93);
         break;
       case 1:
@@ -260,7 +268,9 @@ class _ClockPainter extends CustomPainter {
       canvas.drawCircle(center, outerRadius + 1.5, bezelPaint);
     } else {
       final double borderWidth = theme == 6 ? 2.0 : 1.5;
-      final Color borderColor = theme == 6 ? AppPalette.stroke : AppPalette.stroke.withValues(alpha: 0.5);
+      final Color borderColor = theme == 6
+          ? AppPalette.stroke
+          : AppPalette.stroke.withValues(alpha: 0.5);
       canvas.drawCircle(
         center,
         outerRadius + (borderWidth / 2),
@@ -274,7 +284,8 @@ class _ClockPainter extends CustomPainter {
     // 3. Face with radial gradient or Flat Paper color
     final Paint facePaint;
     if (theme == 7) {
-      facePaint = Paint()..color = const Color(0xFF221F1B); // Eye-friendly warm journal charcoal
+      facePaint = Paint()
+        ..color = const Color(0xFF221F1B); // Eye-friendly warm journal charcoal
     } else if (enableGlows) {
       facePaint = Paint()
         ..shader = ui.Gradient.radial(
@@ -287,7 +298,10 @@ class _ClockPainter extends CustomPainter {
           [0.0, 1.0],
         );
     } else {
-      facePaint = Paint()..color = theme == 6 ? const Color(0xFF222222) : const Color(0xFF16171C);
+      facePaint = Paint()
+        ..color = theme == 6
+            ? const Color(0xFF222222)
+            : const Color(0xFF16171C);
     }
     canvas.drawCircle(center, outerRadius, facePaint);
 
@@ -310,22 +324,40 @@ class _ClockPainter extends CustomPainter {
     for (final a in activities) {
       final start = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24hDial);
       final end = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24hDial);
-      _drawArc(canvas, center, taskInner, arcOuter, start, end,
-          Color(a.colorValue),
-          label: a.title, icon: a.iconKey);
+      _drawArc(
+        canvas,
+        center,
+        taskInner,
+        arcOuter,
+        start,
+        end,
+        Color(a.colorValue),
+        label: a.title,
+        icon: a.iconKey,
+      );
     }
-    
+
     // Task arcs
     for (final t in tasks) {
       if (t.startMinute != null && t.endMinute != null) {
         final start = toUiMinute(t.startMinute!, t.ampmHalf, is24h: is24hDial);
         final end = toUiMinute(t.endMinute!, t.ampmHalf, is24h: is24hDial);
-        final pCv = activities.where((a) => a.id == t.activityId).firstOrNull?.colorValue;
+        final pCv = activities
+            .where((a) => a.id == t.activityId)
+            .firstOrNull
+            ?.colorValue;
         final pC = pCv != null ? Color(pCv) : themeAccentColor;
         final taskColor = Color.lerp(pC, Colors.white, 0.45)!;
-        _drawArc(canvas, center, taskInner, taskOuter, start, end,
-            taskColor.withValues(alpha: 0.95),
-            label: t.title);
+        _drawArc(
+          canvas,
+          center,
+          taskInner,
+          taskOuter,
+          start,
+          end,
+          taskColor.withValues(alpha: 0.95),
+          label: t.title,
+        );
       }
     }
 
@@ -333,29 +365,39 @@ class _ClockPainter extends CustomPainter {
     if (hoverMinute != null && isPrecisionMode && theme <= 4) {
       final scale = is24hDial ? 1440 : 720;
       final angle = (hoverMinute! / scale) * 2 * math.pi - math.pi / 2;
-      
+
       // Draw ghost line
       canvas.drawLine(
-        center, 
-        Offset(center.dx + math.cos(angle) * outerRadius, center.dy + math.sin(angle) * outerRadius),
+        center,
+        Offset(
+          center.dx + math.cos(angle) * outerRadius,
+          center.dy + math.sin(angle) * outerRadius,
+        ),
         Paint()
           ..color = themeAccentColor.withValues(alpha: 0.25)
           ..strokeWidth = 1.5
           ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
+          ..strokeCap = StrokeCap.round,
       );
     }
 
     // Pulse ring on the activity happening right now
     if (isToday) {
-      final m = is24hDial 
+      final m = is24hDial
           ? (now.hour * 60 + now.minute)
           : ((now.hour % 12) * 60 + now.minute);
       for (final a in activities) {
         final start = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24hDial);
         final end = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24hDial);
         if (m >= start && m < end) {
-          _drawPulseRing(canvas, center, arcOuter, start, end, Color(a.colorValue));
+          _drawPulseRing(
+            canvas,
+            center,
+            arcOuter,
+            start,
+            end,
+            Color(a.colorValue),
+          );
           break;
         }
       }
@@ -369,21 +411,42 @@ class _ClockPainter extends CustomPainter {
       final startInClock = previewStart!.clamp(0, scale);
       final endInClock = previewEnd!.clamp(0, scale);
       if (startInClock < endInClock) {
-        _drawArc(canvas, center, taskInner, arcOuter, startInClock, endInClock,
-            base.withValues(alpha: 0.55),
-            dashed: true);
+        _drawArc(
+          canvas,
+          center,
+          taskInner,
+          arcOuter,
+          startInClock,
+          endInClock,
+          base.withValues(alpha: 0.55),
+          dashed: true,
+        );
       }
       // Span continues past midnight
       if (previewEnd! > scale) {
-        _drawArc(canvas, center, taskInner, arcOuter, 0, previewEnd! - scale,
-            base.withValues(alpha: 0.28),
-            dashed: true);
+        _drawArc(
+          canvas,
+          center,
+          taskInner,
+          arcOuter,
+          0,
+          previewEnd! - scale,
+          base.withValues(alpha: 0.28),
+          dashed: true,
+        );
       }
       // Span starts before noon/midnight
       if (previewStart! < 0) {
-        _drawArc(canvas, center, taskInner, arcOuter, scale + previewStart!, scale,
-            base.withValues(alpha: 0.28),
-            dashed: true);
+        _drawArc(
+          canvas,
+          center,
+          taskInner,
+          arcOuter,
+          scale + previewStart!,
+          scale,
+          base.withValues(alpha: 0.28),
+          dashed: true,
+        );
       }
     }
 
@@ -395,20 +458,50 @@ class _ClockPainter extends CustomPainter {
       final isHour = m % 60 == 0;
       final is30 = m % 30 == 0;
       final is15 = m % 15 == 0;
-      
+
       final double tickLen;
       final double sw;
       final double opacity;
       if (is24hDial) {
-        tickLen = isHour ? 15.0 : is30 ? 10.0 : 6.0;
-        sw = isHour ? 3.0 : is30 ? 1.8 : 1.0;
-        opacity = isHour ? 0.90 : is30 ? 0.65 : 0.35;
+        tickLen = isHour
+            ? 15.0
+            : is30
+            ? 10.0
+            : 6.0;
+        sw = isHour
+            ? 3.0
+            : is30
+            ? 1.8
+            : 1.0;
+        opacity = isHour
+            ? 0.90
+            : is30
+            ? 0.65
+            : 0.35;
       } else {
-        tickLen = isHour ? 14.0 : is30 ? 10.0 : is15 ? 7.0 : 4.0;
-        sw = isHour ? 2.5 : is30 ? 1.8 : is15 ? 1.2 : 0.8;
-        opacity = isHour ? 0.90 : is30 ? 0.60 : is15 ? 0.40 : 0.25;
+        tickLen = isHour
+            ? 14.0
+            : is30
+            ? 10.0
+            : is15
+            ? 7.0
+            : 4.0;
+        sw = isHour
+            ? 2.5
+            : is30
+            ? 1.8
+            : is15
+            ? 1.2
+            : 0.8;
+        opacity = isHour
+            ? 0.90
+            : is30
+            ? 0.60
+            : is15
+            ? 0.40
+            : 0.25;
       }
-      
+
       final s = Offset(
         center.dx + math.cos(angle) * (outerRadius - tickLen),
         center.dy + math.sin(angle) * (outerRadius - tickLen),
@@ -417,7 +510,7 @@ class _ClockPainter extends CustomPainter {
         center.dx + math.cos(angle) * outerRadius,
         center.dy + math.sin(angle) * outerRadius,
       );
-      
+
       canvas.drawLine(
         s,
         e,
@@ -428,37 +521,9 @@ class _ClockPainter extends CustomPainter {
       );
     }
 
-    // Draw static 5-minute labels around the clock face
+    // Minute tick marks carry the fine-grained time; keep the rim free of
+    // repeated 00/05/10 labels so the hour markers remain easy to scan.
     final bool showHoverEffects = (hoverMinute != null && theme <= 4);
-    for (int m = 5; m <= 60; m += 5) {
-      final minVal = m == 60 ? 0 : m;
-      
-      bool isHovered = false;
-      if (showHoverEffects) {
-        final hoverMinVal = hoverMinute! % 60;
-        if ((hoverMinVal - minVal).abs() <= 1 || (hoverMinVal - minVal).abs() >= 59) {
-          isHovered = true;
-        }
-      }
-      
-      if (!isHovered) {
-        final angle = (m / 60) * 2 * math.pi - math.pi / 2;
-        final textRadius = outerRadius + 14;
-        final pos = Offset(
-          center.dx + math.cos(angle) * textRadius,
-          center.dy + math.sin(angle) * textRadius,
-        );
-        
-        final label = minVal.toString().padLeft(2, '0');
-        final tp = _getPainter(
-          label,
-          9.0,
-          FontWeight.w600,
-          (theme >= 5) ? themeAccentColor.withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.12),
-        );
-        tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
-      }
-    }
 
     // Draw 1 precise minute label inside a premium glassmorphic capsule chip
     if (showHoverEffects) {
@@ -470,16 +535,18 @@ class _ClockPainter extends CustomPainter {
       } else {
         final displayHour = h == 0 ? 12 : h;
         final suffix = viewHalf == AmPmHalf.pm ? ' PM' : ' AM';
-        txt = '${displayHour.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}$suffix';
+        txt =
+            '${displayHour.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}$suffix';
       }
-      final angle = (hoverMinute! / (is24hDial ? 1440 : 720)) * 2 * math.pi - math.pi / 2;
-      
+      final angle =
+          (hoverMinute! / (is24hDial ? 1440 : 720)) * 2 * math.pi - math.pi / 2;
+
       final textRadius = outerRadius + 22;
       final txtCenter = Offset(
         center.dx + math.cos(angle) * textRadius,
         center.dy + math.sin(angle) * textRadius,
       );
-      
+
       // Spotlight glow behind the precision time
       if (enableGlows) {
         canvas.drawCircle(
@@ -490,15 +557,30 @@ class _ClockPainter extends CustomPainter {
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
         );
       }
-      
-      final tp = _getPainter(txt, 11, FontWeight.w800, theme >= 5 ? Colors.black : Colors.white);
-      final chipRect = Rect.fromCenter(center: txtCenter, width: tp.width + 14, height: tp.height + 8);
-      final chipRRect = RRect.fromRectAndRadius(chipRect, const Radius.circular(8));
-      
+
+      final tp = _getPainter(
+        txt,
+        11,
+        FontWeight.w800,
+        theme >= 5 ? Colors.black : Colors.white,
+      );
+      final chipRect = Rect.fromCenter(
+        center: txtCenter,
+        width: tp.width + 14,
+        height: tp.height + 8,
+      );
+      final chipRRect = RRect.fromRectAndRadius(
+        chipRect,
+        const Radius.circular(8),
+      );
+
       // Paint capsule background
       canvas.drawRRect(
         chipRRect,
-        Paint()..color = theme >= 5 ? themeAccentColor : Colors.black.withValues(alpha: 0.80),
+        Paint()
+          ..color = theme >= 5
+              ? themeAccentColor
+              : Colors.black.withValues(alpha: 0.80),
       );
       if (theme < 5) {
         canvas.drawRRect(
@@ -509,11 +591,15 @@ class _ClockPainter extends CustomPainter {
             ..color = themeAccentColor.withValues(alpha: 0.35),
         );
       }
-      
-      tp.paint(canvas, Offset(txtCenter.dx - tp.width / 2, txtCenter.dy - tp.height / 2));
+
+      tp.paint(
+        canvas,
+        Offset(txtCenter.dx - tp.width / 2, txtCenter.dy - tp.height / 2),
+      );
     }
 
-    // Hour numbers — 12h dial shows 1..12 (or 0..11 if theme >= 5), 24h dial shows 0..23
+    // Hour numbers: 12-hour labels sit outside the bezel; minute ticks mark
+    // the face itself. The 24-hour dial keeps its denser 0..23 inner labels.
     if (is24hDial) {
       for (int h = 0; h < 24; h++) {
         final angle = (h / 24) * 2 * math.pi - math.pi / 2;
@@ -522,26 +608,45 @@ class _ClockPainter extends CustomPainter {
           center.dy + math.sin(angle) * (outerRadius - 38),
         );
         final label = '$h';
-        final tp = _getPainter(label, 11, FontWeight.w600, AppPalette.text, letterSpacing: -0.5);
+        final tp = _getPainter(
+          label,
+          11,
+          FontWeight.w600,
+          AppPalette.text,
+          letterSpacing: -0.5,
+        );
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
       }
     } else {
-      final bool useZeroToEleven = (theme == 5 || theme == 6);
       for (int h = 1; h <= 12; h++) {
         final angle = (h / 12) * 2 * math.pi - math.pi / 2;
         final pos = Offset(
-          center.dx + math.cos(angle) * (outerRadius - 38),
-          center.dy + math.sin(angle) * (outerRadius - 38),
+          center.dx + math.cos(angle) * (outerRadius + 14),
+          center.dy + math.sin(angle) * (outerRadius + 14),
         );
-        final label = useZeroToEleven ? (h == 12 ? '0' : '$h') : '$h';
-        final tp = _getPainter(label, 14, FontWeight.w600, AppPalette.text, letterSpacing: -0.5);
+        final label = '$h';
+        final tp = _getPainter(
+          label,
+          14,
+          FontWeight.w600,
+          AppPalette.text,
+          letterSpacing: -0.5,
+        );
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
       }
     }
 
     // Hands sweep only if today and viewed half matches actual time (or in 24h)
     if (isToday && (is24hDial || halfOfNow(now) == viewHalf)) {
-      _drawHands(canvas, center, r, outerRadius, themeAccentColor, enableGlows);
+      _drawHands(
+        canvas,
+        center,
+        r,
+        outerRadius,
+        themeAccentColor,
+        enableGlows,
+        size,
+      );
     }
 
     // Elegant center pin
@@ -556,7 +661,13 @@ class _ClockPainter extends CustomPainter {
 
   /// Soft breathing glow just outside the current activity's arc.
   void _drawPulseRing(
-      Canvas canvas, Offset center, double arcOuter, int startMin, int endMin, Color color) {
+    Canvas canvas,
+    Offset center,
+    double arcOuter,
+    int startMin,
+    int endMin,
+    Color color,
+  ) {
     final wave = 0.5 - 0.5 * math.cos(pulse * 2 * math.pi);
     final scale = is24hDial ? 1440 : 720;
     final startAngle = (startMin / scale) * 2 * math.pi - math.pi / 2;
@@ -574,7 +685,12 @@ class _ClockPainter extends CustomPainter {
     );
   }
 
-  void _drawGridLines(Canvas canvas, Offset center, double inner, double outer) {
+  void _drawGridLines(
+    Canvas canvas,
+    Offset center,
+    double inner,
+    double outer,
+  ) {
     final scale = is24hDial ? 1440 : 720;
     final paint = Paint()
       ..color = AppPalette.stroke.withValues(alpha: 0.35)
@@ -610,9 +726,18 @@ class _ClockPainter extends CustomPainter {
     final startAngle = (startMin / scale) * 2 * math.pi - math.pi / 2;
     final sweep = ((endMin - startMin) / scale) * 2 * math.pi;
     final path = Path()
-      ..arcTo(Rect.fromCircle(center: center, radius: outer), startAngle, sweep, true)
-      ..arcTo(Rect.fromCircle(center: center, radius: inner), startAngle + sweep,
-          -sweep, false)
+      ..arcTo(
+        Rect.fromCircle(center: center, radius: outer),
+        startAngle,
+        sweep,
+        true,
+      )
+      ..arcTo(
+        Rect.fromCircle(center: center, radius: inner),
+        startAngle + sweep,
+        -sweep,
+        false,
+      )
       ..close();
 
     final Paint paint;
@@ -622,16 +747,15 @@ class _ClockPainter extends CustomPainter {
         ..color = Color.lerp(color, const Color(0xFFD6BE93), 0.12)!
         ..style = PaintingStyle.fill;
     } else if (clockFaceTheme >= 5) {
-      paint = Paint()..color = color..style = PaintingStyle.fill;
+      paint = Paint()
+        ..color = color
+        ..style = PaintingStyle.fill;
     } else {
       paint = Paint()
         ..shader = ui.Gradient.radial(
           center,
           outer,
-          [
-            color,
-            Color.lerp(color, Colors.black, 0.24)!,
-          ],
+          [color, Color.lerp(color, Colors.black, 0.24)!],
           [inner / outer, 1.0],
         );
     }
@@ -669,40 +793,68 @@ class _ClockPainter extends CustomPainter {
 
       if (icon != null && icon.isNotEmpty) {
         final tp = TextPainter(
-          text: TextSpan(text: icon, style: TextStyle(fontSize: sweep > 0.25 ? 16 : 11)),
+          text: TextSpan(
+            text: icon,
+            style: TextStyle(fontSize: sweep > 0.25 ? 16 : 11),
+          ),
           textDirection: TextDirection.ltr,
         )..layout();
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
-        if (label != null && label.isNotEmpty && sweep > 0.22) {
+        final labelMaxWidth = math.min(outer - inner - 4, midR * sweep - 10);
+        if (label != null &&
+            label.isNotEmpty &&
+            sweep > 0.22 &&
+            labelMaxWidth >= 36) {
           final lp = TextPainter(
             text: TextSpan(
-                text: label,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+              text: label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             textDirection: TextDirection.ltr,
             maxLines: 1,
             ellipsis: '…',
-          )..layout(maxWidth: outer - inner - 4);
-          lp.paint(canvas, Offset(pos.dx - lp.width / 2, pos.dy + tp.height / 2));
+          )..layout(maxWidth: labelMaxWidth);
+          lp.paint(
+            canvas,
+            Offset(pos.dx - lp.width / 2, pos.dy + tp.height / 2),
+          );
         }
-      } else if (label != null && label.isNotEmpty && sweep > 0.12) {
+      } else if (label != null && label.isNotEmpty) {
+        final labelMaxWidth = math.min(outer - inner - 8, midR * sweep - 10);
+        if (labelMaxWidth < 36) return;
         final tp = TextPainter(
           text: TextSpan(
-              text: label,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+            text: label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           textDirection: TextDirection.ltr,
           maxLines: 1,
           ellipsis: '…',
-        )..layout(maxWidth: outer - inner - 8);
+        )..layout(maxWidth: labelMaxWidth);
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
       }
     }
   }
 
-  void _drawHands(Canvas canvas, Offset center, double r, double outerRadius, Color accentColor, bool enableGlows) {
+  void _drawHands(
+    Canvas canvas,
+    Offset center,
+    double r,
+    double outerRadius,
+    Color accentColor,
+    bool enableGlows,
+    Size size,
+  ) {
     final scale = is24hDial ? 1440.0 : 720.0;
-    final totalMins = is24hDial 
+    final totalMins = is24hDial
         ? (now.hour * 60 + now.minute + now.second / 60.0)
         : ((now.hour % 12) * 60 + now.minute + now.second / 60.0);
     final pAngle = (totalMins / scale) * 2 * math.pi - math.pi / 2;
@@ -715,58 +867,149 @@ class _ClockPainter extends CustomPainter {
     switch (clockHandsMode) {
       case 1:
         // Single precision hand only
-        _hand(canvas, center, pAngle, outerRadius, precisionWidth, accentColor, enableGlows);
+        _hand(
+          canvas,
+          center,
+          pAngle,
+          outerRadius,
+          precisionWidth,
+          accentColor,
+          enableGlows,
+        );
         if (showTooltip) {
-          _drawTimeTip(canvas, center, pAngle, outerRadius, accentColor, enableGlows);
+          _drawTimeTip(
+            canvas,
+            center,
+            pAngle,
+            outerRadius,
+            accentColor,
+            enableGlows,
+            size,
+          );
         }
         break;
       case 2:
         // Hour + Minute hands, plus yellow/accent precision hand
         final hAngle = pAngle;
-        final mAngle = ((now.minute + now.second / 60.0) / 60) * 2 * math.pi - math.pi / 2;
-        _hand(canvas, center, hAngle, r * 0.50, hourWidth, AppPalette.text, enableGlows);
-        _hand(canvas, center, mAngle, r * 0.75, minuteWidth, AppPalette.text, enableGlows);
-        _hand(canvas, center, pAngle, outerRadius, precisionWidth, accentColor, enableGlows);
+        final mAngle =
+            ((now.minute + now.second / 60.0) / 60) * 2 * math.pi - math.pi / 2;
+        _hand(
+          canvas,
+          center,
+          hAngle,
+          r * 0.50,
+          hourWidth,
+          AppPalette.text,
+          enableGlows,
+        );
+        _hand(
+          canvas,
+          center,
+          mAngle,
+          r * 0.75,
+          minuteWidth,
+          AppPalette.text,
+          enableGlows,
+        );
+        _hand(
+          canvas,
+          center,
+          pAngle,
+          outerRadius,
+          precisionWidth,
+          accentColor,
+          enableGlows,
+        );
         if (showTooltip) {
-          _drawTimeTip(canvas, center, pAngle, outerRadius, accentColor, enableGlows);
+          _drawTimeTip(
+            canvas,
+            center,
+            pAngle,
+            outerRadius,
+            accentColor,
+            enableGlows,
+            size,
+          );
         }
         break;
       default: // 3
         // Hour + Minute + Second hands, plus yellow/accent precision hand
         final hAngle = pAngle;
-        final mAngle = ((now.minute + now.second / 60.0) / 60) * 2 * math.pi - math.pi / 2;
+        final mAngle =
+            ((now.minute + now.second / 60.0) / 60) * 2 * math.pi - math.pi / 2;
         final sAngle = (now.second / 60.0) * 2 * math.pi - math.pi / 2;
-        _hand(canvas, center, hAngle, r * 0.50, hourWidth, AppPalette.text, enableGlows);
-        _hand(canvas, center, mAngle, r * 0.75, minuteWidth, AppPalette.text, enableGlows);
-        _hand(canvas, center, sAngle, r * 0.82, 1.2, AppPalette.text.withValues(alpha: 0.5), enableGlows);
-        
+        _hand(
+          canvas,
+          center,
+          hAngle,
+          r * 0.50,
+          hourWidth,
+          AppPalette.text,
+          enableGlows,
+        );
+        _hand(
+          canvas,
+          center,
+          mAngle,
+          r * 0.75,
+          minuteWidth,
+          AppPalette.text,
+          enableGlows,
+        );
+        _hand(
+          canvas,
+          center,
+          sAngle,
+          r * 0.82,
+          1.2,
+          AppPalette.text.withValues(alpha: 0.5),
+          enableGlows,
+        );
+
         // Draw the yellow/accent precision hand with the tooltip
-        _hand(canvas, center, pAngle, outerRadius, precisionWidth, accentColor, enableGlows);
+        _hand(
+          canvas,
+          center,
+          pAngle,
+          outerRadius,
+          precisionWidth,
+          accentColor,
+          enableGlows,
+        );
         if (showTooltip) {
-          _drawTimeTip(canvas, center, pAngle, outerRadius, accentColor, enableGlows);
+          _drawTimeTip(
+            canvas,
+            center,
+            pAngle,
+            outerRadius,
+            accentColor,
+            enableGlows,
+            size,
+          );
         }
         break;
     }
   }
 
-  void _drawTimeTip(Canvas canvas, Offset center, double angle, double handLen, Color accentColor, bool enableGlows) {
+  void _drawTimeTip(
+    Canvas canvas,
+    Offset center,
+    double angle,
+    double handLen,
+    Color accentColor,
+    bool enableGlows,
+    Size size,
+  ) {
     final tipOffset = Offset(
       center.dx + math.cos(angle) * (handLen + 28),
       center.dy + math.sin(angle) * (handLen + 28),
     );
-    final String txt = formatCurrentTime(now, is24h: is24hTime, format: currentTimeFormat);
-    
-    // Spotlight glow behind the current time (further outside the dial)
-    if (enableGlows && glowStyle != 'subtle') {
-      canvas.drawCircle(
-        tipOffset,
-        24,
-        Paint()
-          ..color = accentColor.withValues(alpha: 0.27)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
-      );
-    }
-    
+    final String txt = formatCurrentTime(
+      now,
+      is24h: is24hTime,
+      format: currentTimeFormat,
+    );
+
     final bool isFloating = floatTimeText || glowStyle == 'floating';
     final Color textColor;
     if (isFloating) {
@@ -774,17 +1017,44 @@ class _ClockPainter extends CustomPainter {
     } else {
       textColor = clockFaceTheme >= 5 ? Colors.black : Colors.white;
     }
-    
+
     final tp = _getPainter(txt, 11, FontWeight.w800, textColor);
-    
+    final halfWidth = (tp.width + (isFloating ? 0 : 16)) / 2 + 4;
+    final halfHeight = (tp.height + (isFloating ? 0 : 8)) / 2 + 4;
+    final safeTipOffset = Offset(
+      tipOffset.dx.clamp(halfWidth, size.width - halfWidth).toDouble(),
+      tipOffset.dy.clamp(halfHeight, size.height - halfHeight).toDouble(),
+    );
+
+    // Keep the optional time label and its glow inside the visible canvas.
+    if (enableGlows && glowStyle != 'subtle') {
+      canvas.drawCircle(
+        safeTipOffset,
+        24,
+        Paint()
+          ..color = accentColor.withValues(alpha: 0.27)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+      );
+    }
+
     if (!isFloating) {
-      final chipRect = Rect.fromCenter(center: tipOffset, width: tp.width + 16, height: tp.height + 8);
-      final chipRRect = RRect.fromRectAndRadius(chipRect, const Radius.circular(8));
-      
+      final chipRect = Rect.fromCenter(
+        center: safeTipOffset,
+        width: tp.width + 16,
+        height: tp.height + 8,
+      );
+      final chipRRect = RRect.fromRectAndRadius(
+        chipRect,
+        const Radius.circular(8),
+      );
+
       // Paint capsule background
       canvas.drawRRect(
         chipRRect,
-        Paint()..color = clockFaceTheme >= 5 ? accentColor : Colors.black.withValues(alpha: 0.80),
+        Paint()
+          ..color = clockFaceTheme >= 5
+              ? accentColor
+              : Colors.black.withValues(alpha: 0.80),
       );
       if (clockFaceTheme < 5) {
         canvas.drawRRect(
@@ -796,14 +1066,27 @@ class _ClockPainter extends CustomPainter {
         );
       }
     }
-    
-    tp.paint(canvas, Offset(tipOffset.dx - tp.width / 2, tipOffset.dy - tp.height / 2));
+
+    tp.paint(
+      canvas,
+      Offset(safeTipOffset.dx - tp.width / 2, safeTipOffset.dy - tp.height / 2),
+    );
   }
 
-  void _hand(Canvas canvas, Offset center, double angle, double len,
-      double width, Color color, bool enableGlows) {
-    final end = Offset(center.dx + math.cos(angle) * len, center.dy + math.sin(angle) * len);
-    
+  void _hand(
+    Canvas canvas,
+    Offset center,
+    double angle,
+    double len,
+    double width,
+    Color color,
+    bool enableGlows,
+  ) {
+    final end = Offset(
+      center.dx + math.cos(angle) * len,
+      center.dy + math.sin(angle) * len,
+    );
+
     // Hand drop shadow
     if (enableGlows) {
       canvas.drawLine(

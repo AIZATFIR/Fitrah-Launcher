@@ -33,7 +33,11 @@ migrate_working_dir/
 .pub/
 /build/*
 !/build/web
+/build/web/fitrah/
+/build/web/focus/
+/build/web/sadar/
 /coverage/
+/.worktrees/
 
 # Symbolication related
 app.*.symbols

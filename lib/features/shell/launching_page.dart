@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
-import '../../widgets/google_auth_dialog.dart';
 
 class LaunchingPage extends ConsumerStatefulWidget {
   const LaunchingPage({super.key});
@@ -62,46 +61,6 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Top Row: Google Sync Status
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final gcalSigned = ref.watch(gcalSignedInProvider);
-                          return InkWell(
-                            onTap: () => showGoogleAuthDialog(context, ref),
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: gcalSigned ? AppPalette.accent.withValues(alpha: 0.15) : AppPalette.card,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: gcalSigned ? AppPalette.accent : AppPalette.stroke),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.sync_rounded, size: 14, color: AppPalette.accent),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    gcalSigned ? 'Google Sync: Terhubung' : 'Sinkronkan Akun Google',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: gcalSigned ? AppPalette.accent : AppPalette.textDim,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
                   // Logo Icon (Enlarged)
                   Container(
                     padding: const EdgeInsets.all(22),

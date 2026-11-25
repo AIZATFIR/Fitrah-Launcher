@@ -7,6 +7,7 @@ import '../../../core/time_math.dart';
 import '../../../models/activity.dart';
 import '../../../providers/providers.dart';
 import '../../../services/natural_intent_parser.dart';
+import '../../../widgets/activity_icon.dart';
 import 'focus_session_view.dart';
 
 class NowNextCard extends ConsumerStatefulWidget {
@@ -41,11 +42,17 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
 
-    final parsed = NaturalIntentParser.parse(trimmed, referenceTime: widget.now, targetDate: widget.date);
+    final parsed = NaturalIntentParser.parse(
+      trimmed,
+      referenceTime: widget.now,
+      targetDate: widget.date,
+    );
     final activity = parsed.toActivity();
 
     final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-    await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
+    await ref
+        .read(activityRepoProvider)
+        .upsert(activity, notifLeadMinutes: lead);
 
     _intentCtrl.clear();
     _focusNode.unfocus();
@@ -56,10 +63,16 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
         SnackBar(
           content: Row(
             children: [
-              Text(activity.iconKey ?? '🎯', style: const TextStyle(fontSize: 16)),
+              ActivityIcon(
+                iconKey: activity.iconKey,
+                size: 16,
+                color: AppPalette.accent,
+              ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('Jadwal "${activity.title}" (${activity.startMinute ~/ 60}:${(activity.startMinute % 60).toString().padLeft(2, '0')}) ditambahkan.'),
+                child: Text(
+                  'Jadwal "${activity.title}" (${activity.startMinute ~/ 60}:${(activity.startMinute % 60).toString().padLeft(2, '0')}) ditambahkan.',
+                ),
               ),
             ],
           ),
@@ -72,7 +85,9 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
 
   @override
   Widget build(BuildContext context) {
-    final is24h = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false));
+    final is24h = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false),
+    );
     final half = halfOfNow(widget.now);
     final nowMinOfHalf = minuteOfHalf(widget.now);
     final isToday = dateOnly(widget.date) == dateOnly(widget.now);
@@ -82,7 +97,9 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
 
     if (isToday) {
       for (final a in widget.activities) {
-        if (a.ampmHalf == half && nowMinOfHalf >= a.startMinute && nowMinOfHalf < a.endMinute) {
+        if (a.ampmHalf == half &&
+            nowMinOfHalf >= a.startMinute &&
+            nowMinOfHalf < a.endMinute) {
           currentActivity = a;
           break;
         }
@@ -143,16 +160,28 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
               if (currentActivity != null)
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: Color(currentActivity.colorValue).withValues(alpha: 0.2),
+                    backgroundColor: Color(
+                      currentActivity.colorValue,
+                    ).withValues(alpha: 0.2),
                     foregroundColor: Color(currentActivity.colorValue),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Color(currentActivity.colorValue).withValues(alpha: 0.5)),
+                      side: BorderSide(
+                        color: Color(
+                          currentActivity.colorValue,
+                        ).withValues(alpha: 0.5),
+                      ),
                     ),
                   ),
                   icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
-                  label: const Text('Mulai Fokus', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Mulai Fokus',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                   onPressed: () {
                     HapticFeedback.mediumImpact();
                     Navigator.of(context).push(
@@ -161,25 +190,27 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
                           activity: currentActivity!,
                           onClose: () => Navigator.of(context).pop(),
                         ),
-                        transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
+                        transitionsBuilder: (_, a, __, c) =>
+                            FadeTransition(opacity: a, child: c),
                       ),
                     );
                   },
                 )
               else
-
-              IconButton(
-                icon: Icon(
-                  _isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
-                  color: AppPalette.accent,
-                  size: 22,
+                IconButton(
+                  icon: Icon(
+                    _isExpanded
+                        ? Icons.keyboard_arrow_down_rounded
+                        : Icons.keyboard_arrow_up_rounded,
+                    color: AppPalette.accent,
+                    size: 22,
+                  ),
+                  tooltip: _isExpanded ? 'Sembunyikan Niat' : 'Buka Input Niat',
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _isExpanded = !_isExpanded);
+                  },
                 ),
-                tooltip: _isExpanded ? 'Sembunyikan Niat' : 'Buka Input Niat',
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _isExpanded = !_isExpanded);
-                },
-              ),
             ],
           ),
 
@@ -189,11 +220,25 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  const Icon(Icons.arrow_forward_rounded, size: 12, color: AppPalette.textDim),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 12,
+                    color: AppPalette.textDim,
+                  ),
                   const SizedBox(width: 6),
+                  ActivityIcon(
+                    iconKey: nextActivity.iconKey,
+                    size: 14,
+                    color: AppPalette.textDim,
+                  ),
+                  const SizedBox(width: 4),
                   Text(
-                    'Berikutnya: ${nextActivity.iconKey ?? ''} ${nextActivity.title} (${formatMinuteOfHalf(nextActivity.startMinute, nextActivity.ampmHalf, is24h: is24h)})',
-                    style: const TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.w500),
+                    'Berikutnya: ${nextActivity.title} (${formatMinuteOfHalf(nextActivity.startMinute, nextActivity.ampmHalf, is24h: is24h)})',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppPalette.textDim,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -203,20 +248,24 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
             const Divider(height: 1, color: AppPalette.stroke),
             const SizedBox(height: 12),
 
-            // Row 3: Frictionless Natural Intent Bar
+            // Keep the intent field open for the user's own wording.
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _intentCtrl,
                     focusNode: _focusNode,
-                    style: const TextStyle(fontSize: 13, color: AppPalette.text),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppPalette.text,
+                    ),
                     onSubmitted: _submitIntent,
                     decoration: InputDecoration(
-                      hintText: 'Tulis niat (misal: "Belajar coding 1 jam jam 8 malam")',
-                      hintStyle: const TextStyle(fontSize: 12, color: AppPalette.textDim),
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       filled: true,
                       fillColor: AppPalette.bg,
                       border: OutlineInputBorder(
@@ -232,32 +281,17 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
                         borderSide: const BorderSide(color: AppPalette.accent),
                       ),
                       suffixIcon: IconButton(
-                        icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: AppPalette.accent),
+                        icon: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: AppPalette.accent,
+                        ),
                         onPressed: () => _submitIntent(_intentCtrl.text),
                       ),
                     ),
                   ),
                 ),
               ],
-            ),
-
-            // Row 4: Quick Intent Chips (Intelligent Suggestions)
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _suggestionChip('💻 Deep Work 45m', 'Deep Work 45m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('📖 Belajar 30m', 'Belajar 30m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('🧘 Istirahat 15m', 'Istirahat 15m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('🏃 Olahraga 30m', 'Olahraga 30m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('✍️ Menulis 30m', 'Menulis 30m'),
-                ],
-              ),
             ),
           ],
         ],
@@ -280,7 +314,7 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
             border: Border.all(color: color.withValues(alpha: 0.4)),
           ),
           alignment: Alignment.center,
-          child: Text(a.iconKey?.isNotEmpty == true ? a.iconKey! : '🎯', style: const TextStyle(fontSize: 18)),
+          child: ActivityIcon(iconKey: a.iconKey, size: 18, color: color),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -292,12 +326,20 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
                 a.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppPalette.text),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppPalette.text,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 'Fokus Sekarang • ${remainingMins}m tersisa',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
               ),
             ],
           ),
@@ -318,7 +360,11 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
             border: Border.all(color: AppPalette.accent.withValues(alpha: 0.3)),
           ),
           alignment: Alignment.center,
-          child: const Icon(Icons.wb_sunny_outlined, size: 18, color: AppPalette.accent),
+          child: const Icon(
+            Icons.wb_sunny_outlined,
+            size: 18,
+            color: AppPalette.accent,
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -328,38 +374,23 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
             children: [
               const Text(
                 'Waktu Luang',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppPalette.text),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppPalette.text,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
-                next != null ? 'Berikutnya: ${next.title}' : 'Tidak ada jadwal tersisa',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                next != null
+                    ? 'Berikutnya: ${next.title}'
+                    : 'Tidak ada jadwal tersisa',
                 style: const TextStyle(fontSize: 11, color: AppPalette.textDim),
               ),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _suggestionChip(String label, String intent) {
-    return InkWell(
-      onTap: () => _submitIntent(intent),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppPalette.bg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppPalette.stroke),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: AppPalette.textDim, fontWeight: FontWeight.w500),
-        ),
-      ),
     );
   }
 }
