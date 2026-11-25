@@ -17,7 +17,8 @@ The release workflow now assembles one all-platform ZIP containing the Android A
 - API 36 x86_64 emulator upgraded in place. Home and Jam screenshots show 1–12 outside the circle and no 00/05 minute numerals.
 - Fitrah, Focus Clock, and Sadar web bundles built and passed `verify_web_bundle.sh`.
 - Production deployments are READY; each `/version.json` reports 0.5.67 / 8159. Deployment IDs: Fitrah `dpl_6Zzk64nknNTDjSkAmGVcCRoPA47B`, Focus Clock `dpl_FnkFgBisGDDMTQxqqMzaufSHCQBU`, Sadar `dpl_3vhnRn2UFr2TqTtDGwZvihpJpy4i`.
-- GitHub release workflow shell syntax and YAML parse clean. Windows/Linux CI artifacts and the published all-platform bundle are pending the tagged workflow run.
+- Tagged workflow [45616793651](https://github.com/AIZATFIR/Fitrah-Launcher/actions/runs/45616793651) succeeded: Android signature verification, Windows, Linux, all three web exports, and release publishing passed.
+- The GitHub release contains eight assets, including `Focus_Clock_Ecosystem_0.5.67_v8159.zip` (125 MB) and `SHA256SUMS.txt`.
 
 ## Limits
 
